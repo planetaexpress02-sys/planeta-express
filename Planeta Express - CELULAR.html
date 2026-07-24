@@ -700,7 +700,7 @@ body{background:radial-gradient(1100px 600px at 100% -5%,#e8eefc 0%,transparent 
         <div class="btxt"><b>PLANETA</b><span>Express</span></div>
       </div>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v4.3</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v4.4</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -1377,6 +1377,14 @@ function todosArquivos(){
 function arquivoPorId(id){ return todosArquivos().find(a=>a.id===id); }
 function filesDe(entidade, refId){ return todosArquivos().filter(f=>f.entidade===entidade && f.refId===refId); }
 function totalArquivos(){ return todosArquivos().length; }
+/* Procura um arquivo anexado (enviado na plataforma) de um tipo para um registro */
+function anexoTipo(ent, ref, re){ return todosArquivos().find(f=>f.entidade===ent && f.refId===ref && re.test(((f.categoria||'')+' '+(f.name||'')))); }
+/* Selo verde "Anexado" (clicável p/ ver) OU botão "Anexar" */
+function badgeAnexo(ent, ref, re, categoria){
+  const f=anexoTipo(ent,ref,re);
+  if(f) return `<span class="st ok" style="cursor:pointer" title="Ver ${esc(f.name)}" onclick="event.stopPropagation();verArquivo('${f.id}')">${svg('clip')} Anexado</span>`;
+  return `<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('${ent}','${ref}','${esc(categoria)}')">${svg('upload')} Anexar</button>`;
+}
 
 /* ================================================================== */
 /*  3. UTILIDADES                                                      */
@@ -1908,8 +1916,9 @@ function viewVeiculo(id){
         <div class="r no-print"><button class="btn sm" onclick="modalVencimento(null,'veiculo','${v.id}')">${svg('plus')}</button></div></div>
       <div class="card-b p0">
         ${vencs.length? `<div class="tbl-wrap"><table class="tbl"><tbody>${vencs.map(x=>`
-          <tr class="clickable" onclick="modalVencimento('${x.id}')"><td><b>${esc(x.tipo)}</b>${x.obs?`<div class="muted" style="font-size:12px">${esc(x.obs)}</div>`:''}</td>
-          <td class="mono">${fmtD(x.validade)}</td><td>${stBadge(x.validade)}</td></tr>`).join('')}</tbody></table></div>` : emptyState('Sem vencimentos cadastrados.')}
+          <tr><td class="clickable" onclick="modalVencimento('${x.id}')"><b>${esc(x.tipo)}</b>${x.obs?`<div class="muted" style="font-size:12px">${esc(x.obs)}</div>`:''}</td>
+          <td class="mono clickable" onclick="modalVencimento('${x.id}')">${fmtD(x.validade)}</td><td class="clickable" onclick="modalVencimento('${x.id}')">${stBadge(x.validade)}</td>
+          <td style="text-align:right">${x._origem==='venc'?badgeAnexo('veiculo', v.id, new RegExp((x.tipo||'').replace(/[^\wçãáéíóúâê ]/gi,'').split(' ')[0],'i'), x.tipo):''}</td></tr>`).join('')}</tbody></table></div>` : emptyState('Sem vencimentos cadastrados.')}
       </div>
     </div>
     <div class="grid" style="gap:18px">
@@ -2019,11 +2028,13 @@ function viewMotorista(id){
 /* ================================================================== */
 function viewExames(){
   const tipos=['ASO','Toxicológico','Opentech Funcionário'];
+  const reDe={'ASO':/\baso\b/i,'Toxicológico':/tox/i,'Opentech Funcionário':/opentech/i};
   const cel=(m,tipo)=>{
     const v=DB.vencimentos.find(x=>x.entidade==='motorista'&&x.refId===m.id&&x.tipo===tipo);
-    if(!v) return `<td><button class="btn ghost sm" onclick="modalVencimento(null,'motorista','${m.id}','${tipo}')">${svg('plus')} Add</button></td>`;
+    const bg=`<div style="margin-top:5px">${badgeAnexo('motorista', m.id, reDe[tipo]||new RegExp(tipo,'i'), tipo)}</div>`;
+    if(!v) return `<td><button class="btn ghost sm" onclick="modalVencimento(null,'motorista','${m.id}','${tipo}')">${svg('plus')} Add</button>${bg}</td>`;
     const s=situacao(v.validade);
-    return `<td class="clickable" onclick="modalVencimento('${v.id}')"><div class="st ${s.cls}">${s.label}</div><div class="muted mono" style="font-size:11.5px;margin-top:3px">${fmtD(v.validade)}</div></td>`;
+    return `<td><div class="clickable" onclick="modalVencimento('${v.id}')"><div class="st ${s.cls}">${s.label}</div><div class="muted mono" style="font-size:11.5px;margin-top:3px">${fmtD(v.validade)}</div></div>${bg}</td>`;
   };
   const rows=DB.motoristas.map(m=>`<tr>
     <td><div style="display:flex;align-items:center;gap:10px">${avatarFoto(m,36)}<div><b>${esc(m.nome)}</b><div class="muted" style="font-size:11.5px">${esc(m.funcao)}</div></div></div></td>
@@ -2071,18 +2082,20 @@ function viewDirecao(){
       <td class="mono muted">${v?fmtD(v.emissao):'—'}</td>
       <td class="mono">${v?fmtD(v.validade):'—'}</td>
       <td>${v?`<span class="st ${s.cls}">${s.label}</span>`:'<span class="st neutro">Não cadastrado</span>'}</td>
+      <td>${badgeAnexo('motorista', m.id, /defensiv|dire[çc][ãa]o/i, 'Direção Defensiva')}</td>
       <td class="no-print" style="text-align:right">${v?`<button class="btn ghost sm" onclick="modalVencimento('${v.id}')">${svg('edit')}</button>`:`<button class="btn sm" onclick="modalVencimento(null,'motorista','${m.id}','Direção Defensiva')">${svg('plus')} Add</button>`}</td></tr>`;
   }).join('');
   const arr=DB.vencimentos.filter(x=>x.tipo==='Direção Defensiva').map(x=>situacao(x.validade));
+  const comCert=DB.motoristas.filter(m=>anexoTipo('motorista',m.id,/defensiv|dire[çc][ãa]o/i)).length;
   return `
-  <div class="banner">${svg('wheel')}<div><b>Direção Defensiva</b><span>Certificado de direção defensiva dos motoristas (válido por 1 ano). Cadastre a validade de cada um.</span></div></div>
+  <div class="banner">${svg('wheel')}<div><b>Direção Defensiva</b><span>Certificado de direção defensiva dos motoristas (válido por 1 ano). Anexe o certificado; ele aparece como "Anexado" e abre ao clicar.</span></div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('wheel','i-blue', arr.length, 'Certificados cadastrados','')}
     ${kpi('bell', arr.filter(s=>s.ord<=1).length?'i-red':'i-green', arr.filter(s=>s.ord<=1).length, 'Vencidos / críticos','')}
-    ${kpi('user','i-amber', DB.motoristas.length-arr.length, 'Sem cadastro','')}
+    ${kpi('clip','i-green', comCert, 'Com certificado anexado','')}
   </div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Motorista</th><th>Emissão</th><th>Validade</th><th>Situação</th><th class="no-print"></th></tr></thead>
+    <thead><tr><th>Motorista</th><th>Emissão</th><th>Validade</th><th>Situação</th><th>Certificado</th><th class="no-print"></th></tr></thead>
     <tbody>${rows}</tbody></table></div></div></div>`;
 }
 
