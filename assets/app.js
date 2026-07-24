@@ -20,6 +20,17 @@ function ensureCollections(){
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
+  corrigirValoresAntigos();
+}
+/* Conserta valores gravados errados pelo bug antigo (÷1000). Só mexe em valor
+   com mais de 2 casas decimais (assinatura da corrupção); valores corretos ficam intactos. */
+function fixMoney1000(v){ const n=Number(v); if(!n||isNaN(n)) return n;
+  if(Math.abs(n*100 - Math.round(n*100)) > 0.01){ return Math.round(n*1000*100)/100; }
+  return n; }
+function corrigirValoresAntigos(){
+  (DB.notas||[]).forEach(n=>{ ['alexandria','notasGerais','combustivel'].forEach(k=>{ if(n[k]!=null) n[k]=fixMoney1000(n[k]); }); });
+  [['faturamento','valor'],['vales','valor'],['ctes','valor'],['servicos','valor'],['descargas','valor'],['baterias','valor'],['abastecimentos','valor']]
+    .forEach(([col,f])=>{ (DB[col]||[]).forEach(x=>{ if(x[f]!=null) x[f]=fixMoney1000(x[f]); }); });
 }
 function loadDB(){
   const raw = localStorage.getItem(KEY);
@@ -2333,7 +2344,7 @@ async function fazerLogin(){
 async function aposLogin(){
   try{
     const remoto=await nuvemCarregar();
-    if(remoto){ DB=remoto; ensureCollections(); saveLocal(); }
+    if(remoto){ DB=remoto; ensureCollections(); saveDB(); }
     else { await nuvemSalvar(DB); }            // primeira vez: envia a base atual p/ a nuvem
     nuvemRealtime(aplicarRemoto);
   }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
