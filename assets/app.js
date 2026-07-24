@@ -988,7 +988,7 @@ function modalServico(id){
       <div class="field-row">${fld('Data','f_data',x.data,'date')}
         <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${x.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.tipo)}</option>`).join('')}</select></div></div>
       ${fld('Serviço / reparo','f_desc',x.descricao,'text','Ex.: Troca de lonas de freio')}
-      <div class="field-row">${fld('Oficina','f_ofi',x.oficina)}${fld('Valor (R$)','f_val',x.valor,'number')}</div>
+      <div class="field-row">${fld('Oficina','f_ofi',x.oficina)}${fldR$('Valor (R$)','f_val',x.valor)}</div>
       ${fld('KM / Horas (opcional)','f_km',x.km,'number')}
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs)}"></div>
     </div>
@@ -996,7 +996,7 @@ function modalServico(id){
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarServico('${id||''}')">Salvar</button></div>`);
 }
 function salvarServico(id){ if(!val('f_desc')){toast('Descreva o serviço.','err');return;}
-  const d={data:val('f_data'),veiculoId:val('f_veic'),descricao:val('f_desc'),oficina:val('f_ofi'),km:numOrNull('f_km'),valor:parseFloat(val('f_val'))||0,obs:val('f_obs')};
+  const d={data:val('f_data'),veiculoId:val('f_veic'),descricao:val('f_desc'),oficina:val('f_ofi'),km:numOrNull('f_km'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
   if(id)Object.assign(DB.servicos.find(y=>y.id===id),d); else{ d.id=uid('sv'); DB.servicos.push(d); } saveDB(); closeModal(); toast('Serviço salvo.'); router(); }
 function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.servicos=DB.servicos.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
@@ -1399,7 +1399,7 @@ function modalBateria(id){
     <div class="m-b">
       <div class="field-row">${fld('Data da compra','f_data',b.data,'date')}
         <div class="field"><label>Placa</label><select id="f_placa">${DB.veiculos.map(v=>`<option ${b.placa===v.placa?'selected':''}>${esc(v.placa)}</option>`).join('')}</select></div></div>
-      <div class="field-row">${fld('Marca / capacidade','f_marca',b.marca)}${fld('Valor (R$)','f_valor',b.valor,'number')}</div>
+      <div class="field-row">${fld('Marca / capacidade','f_marca',b.marca)}${fldR$('Valor (R$)','f_valor',b.valor)}</div>
       ${fld('Local de compra','f_local',b.local)}
       <div class="field-row">${fld('Garantia (meses)','f_gm',b.garantiaMeses,'number')}${fld('Garantia até','f_ga',b.garantiaAte,'date')}</div>
       ${fld('Telefone do fornecedor','f_tel',b.telefone)}
@@ -1408,7 +1408,7 @@ function modalBateria(id){
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="salvarBateria('${id||''}')">Salvar</button></div>`);
 }
-function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseFloat(val('f_valor'))||0,garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),telefone:val('f_tel')};
+function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),telefone:val('f_tel')};
   if(id)Object.assign(DB.baterias.find(x=>x.id===id),d); else{ d.id=uid('b'); DB.baterias.push(d); } saveDB(); closeModal(); toast('Bateria salva.'); router(); }
 function excluirBateria(id){ if(!confirm('Excluir esta bateria?'))return; DB.baterias=DB.baterias.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
@@ -1531,25 +1531,47 @@ function viewNotas(){
     <td class="mono">${money(n.alexandria)}</td><td class="mono">${money(n.notasGerais)}</td><td class="mono">${money(n.combustivel)}</td>
     <td class="mono"><b>${money(totalNota(n))}</b></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalNota('${n.id}')">${svg('edit')}</button></td></tr>`).join('');
+  const AZ='#4a90d9', LA='#e0812f', CZ='#a6a6a6';
+  const pizza = ultimo? [
+    {label:'Alexandria', value:Number(ultimo.alexandria)||0, color:AZ},
+    {label:'Notas em geral', value:Number(ultimo.notasGerais)||0, color:LA},
+    {label:'Combustível', value:Number(ultimo.combustivel)||0, color:CZ}
+  ]:[];
   return `
+  <div class="banner">${svg('money')}<div><b>Notas de Despesa</b><span>Despesas somadas por período (Alexandria + Notas em geral + Combustível). Digite os valores no padrão R$ (ex.: 50.490,84).</span></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalNota()">${svg('plus')} Novo período</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('money','i-green', ultimo?money(totalNota(ultimo)):money(0), 'Último período', ultimo?fmtD(ultimo.inicio)+' a '+fmtD(ultimo.fim):'—')}
-    ${kpi('export','i-blue', money(acumulado), 'Acumulado registrado', notas.length+' período(s)')}
-    ${kpi('doc','i-amber', money(somaAlex), 'Alexandria (total)','')}
-    ${kpi('truck','i-orange', money(somaComb), 'Combustível (total)','')}
+    ${kpi('doc','i-blue', ultimo?money(ultimo.alexandria):money(0), 'Alexandria (período)','')}
+    ${kpi('export','i-amber', ultimo?money(ultimo.notasGerais):money(0), 'Notas em geral (período)','')}
+    ${kpi('truck','i-orange', ultimo?money(ultimo.combustivel):money(0), 'Combustível (período)','')}
   </div>
   <div class="grid two-col">
     <div class="card"><div class="card-h">${svg('money')}<h3>Despesas por período</h3>
       <div class="r no-print"><button class="btn sm" onclick="window.print()">${svg('print')}</button><button class="btn primary sm" onclick="modalNota()">${svg('plus')} Novo</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Período</th><th>Alexandria</th><th>Notas em geral</th><th>Combustível</th><th>Total</th><th class="no-print"></th></tr></thead>
-        <tbody>${rows||`<tr><td colspan="6">${emptyState('Nenhum período lançado.')}</td></tr>`}</tbody></table></div></div></div>
-    <div class="card"><div class="card-h">${svg('dash')}<h3>Evolução das despesas</h3></div>
-      <div class="card-b">${notas.length?barChart(barras):emptyState('Lance períodos para ver o gráfico.')}</div></div>
-  </div>`;
+        <tbody>${rows||`<tr><td colspan="6">${emptyState('Nenhum período lançado.')}</td></tr>`}
+        ${notas.length?`<tr style="background:#f7f9fc;font-weight:800"><td>TOTAL GERAL</td><td class="mono">${money(somaAlex)}</td><td class="mono">${money(notas.reduce((s,n)=>s+(Number(n.notasGerais)||0),0))}</td><td class="mono">${money(somaComb)}</td><td class="mono">${money(acumulado)}</td><td class="no-print"></td></tr>`:''}</tbody></table></div></div></div>
+    <div class="card"><div class="card-h">${svg('dash')}<h3>Composição do último período</h3></div>
+      <div class="card-b">${ultimo?`<div class="donut-wrap">
+        ${donut(pizza,{center:'R$',sub:'último'})}
+        <div class="legend">
+          <div class="li"><span class="dot" style="background:${AZ}"></span>Alexandria<b>${money(ultimo.alexandria)}</b></div>
+          <div class="li"><span class="dot" style="background:${LA}"></span>Notas em geral<b>${money(ultimo.notasGerais)}</b></div>
+          <div class="li"><span class="dot" style="background:${CZ}"></span>Combustível<b>${money(ultimo.combustivel)}</b></div>
+        </div></div>`:emptyState('Lance um período para ver a pizza.')}</div></div>
+  </div>
+  ${notas.length>1?`<div class="card" style="margin-top:18px"><div class="card-h">${svg('dash')}<h3>Evolução por período</h3></div>
+    <div class="card-b">${barChart(barras)}</div></div>`:''}`;
 }
-function r2(v){ if(v==null||v==='')return ''; const x=Math.round(Number(v)*100)/100; return isNaN(x)?'':x; }
-function fldR$(label,id,v){ return `<div class="field"><label>${label}</label><input id="${id}" type="number" step="0.01" inputmode="decimal" value="${esc(r2(v))}"></div>`; }
+/* Converte texto no padrão brasileiro (50.490,84) para número (50490.84) */
+function parseBRL(s){ if(s==null)return 0; s=String(s).replace(/[^\d.,\-]/g,'').trim(); if(!s)return 0;
+  if(s.indexOf(',')>=0){ s=s.replace(/\./g,'').replace(',','.'); }
+  const n=parseFloat(s); return isNaN(n)?0:Math.round(n*100)/100; }
+function r2(v){ return parseBRL(v); }
+function fmtBRLin(v){ if(v==null||v===''){return '';} const n=Number(v); if(isNaN(n)){return '';} return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fldR$(label,id,v){ return `<div class="field"><label>${label}</label><input id="${id}" type="text" inputmode="decimal" placeholder="0,00" value="${esc(fmtBRLin(v))}"><div class="hint">Use vírgula para centavos. Ex.: 50490,84</div></div>`; }
 function modalNota(id){
   const n=id?DB.notas.find(x=>x.id===id):{inicio:'',fim:'',alexandria:'',notasGerais:'',combustivel:'',obs:''};
   openModal(`<div class="m-h">${svg('money')}<h3>${id?'Editar período':'Novo período de notas'}</h3><button class="x" onclick="closeModal()">×</button></div>
@@ -1988,13 +2010,13 @@ function modalDescarga(id){
       <div class="field-row">${fld('Data','f_data',d.data,'date')}
         <div class="field"><label>Placa</label><select id="f_placa">${DB.veiculos.map(x=>`<option ${d.placa===x.placa?'selected':''}>${esc(x.placa)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Nº Transporte','f_transp',d.transporte)}${fld('Senha','f_senha',d.senha)}</div>
-      <div class="field-row">${fld('Valor (R$)','f_valor',d.valor,'number')}${fld('Pago por','f_pago',d.pago)}</div>
+      <div class="field-row">${fldR$('Valor (R$)','f_valor',d.valor)}${fld('Pago por','f_pago',d.pago)}</div>
       ${fld('Local','f_local',d.local)}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirDescarga('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarDescarga('${id||''}')">Salvar</button></div>`);
 }
-function salvarDescarga(id){ const d={data:val('f_data'),placa:val('f_placa'),transporte:val('f_transp'),senha:val('f_senha'),valor:parseFloat(val('f_valor'))||0,pago:val('f_pago'),local:val('f_local')};
+function salvarDescarga(id){ const d={data:val('f_data'),placa:val('f_placa'),transporte:val('f_transp'),senha:val('f_senha'),valor:parseBRL(val('f_valor')),pago:val('f_pago'),local:val('f_local')};
   if(id)Object.assign(DB.descargas.find(x=>x.id===id),d); else{ d.id=uid('dc'); DB.descargas.push(d); } saveDB(); closeModal(); toast('Descarga salva.'); router(); }
 function excluirDescarga(id){ if(!confirm('Excluir esta descarga?'))return; DB.descargas=DB.descargas.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
@@ -2044,7 +2066,7 @@ function modalAbastec(id){
     <div class="m-b">
       <div class="field-row">${fld('Data','f_data',a.data,'date')}
         <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${a.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.tipo)}</option>`).join('')}</select></div></div>
-      <div class="field-row">${fld('Litros','f_lit',a.litros,'number')}${fld('Valor (R$)','f_val',a.valor,'number')}</div>
+      <div class="field-row">${fld('Litros','f_lit',a.litros,'number')}${fldR$('Valor (R$)','f_val',a.valor)}</div>
       <div class="field-row">${fld('KM (cavalo)','f_km',a.km,'number')}${fld('Horas (carreta)','f_h',a.horas,'number')}</div>
       <div class="field"><label>Posto</label><input id="f_posto" value="${esc(a.posto)}"></div>
       <div class="hint">Cavalos: preencha o KM. Carretas: preencha as horas do Thermo King.</div>
@@ -2053,7 +2075,7 @@ function modalAbastec(id){
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarAbastec('${id||''}')">Salvar</button></div>`);
 }
 function salvarAbastec(id){ if(!val('f_lit')){toast('Informe os litros.','err');return;}
-  const d={data:val('f_data'),veiculoId:val('f_veic'),litros:parseFloat(val('f_lit'))||0,valor:parseFloat(val('f_val'))||0,km:numOrNull('f_km'),horas:numOrNull('f_h'),posto:val('f_posto')};
+  const d={data:val('f_data'),veiculoId:val('f_veic'),litros:parseFloat(val('f_lit'))||0,valor:parseBRL(val('f_val')),km:numOrNull('f_km'),horas:numOrNull('f_h'),posto:val('f_posto')};
   if(id)Object.assign(DB.abastecimentos.find(x=>x.id===id),d); else{ d.id=uid('ab'); DB.abastecimentos.push(d); } saveDB(); closeModal(); toast('Abastecimento salvo.'); router(); }
 function excluirAbastec(id){ if(!confirm('Excluir este abastecimento?'))return; DB.abastecimentos=DB.abastecimentos.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
@@ -2172,14 +2194,14 @@ function modalFaturamento(id){
   const f=id?DB.faturamento.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),cliente:'',valor:'',obs:''};
   openModal(`<div class="m-h">${svg('money')}<h3>${id?'Editar faturamento':'Novo faturamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      <div class="field-row">${fld('Data','f_data',f.data,'date')}${fld('Valor (R$)','f_val',f.valor,'number')}</div>
+      <div class="field-row">${fld('Data','f_data',f.data,'date')}${fldR$('Valor (R$)','f_val',f.valor)}</div>
       ${fld('Cliente / origem','f_cli',f.cliente)}
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(f.obs)}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirFaturamento('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarFaturamento('${id||''}')">Salvar</button></div>`);
 }
-function salvarFaturamento(id){ const d={data:val('f_data'),cliente:val('f_cli'),valor:parseFloat(val('f_val'))||0,obs:val('f_obs')};
+function salvarFaturamento(id){ const d={data:val('f_data'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
   if(id)Object.assign(DB.faturamento.find(x=>x.id===id),d); else{ d.id=uid('ft'); DB.faturamento.push(d); } saveDB(); closeModal(); toast('Faturamento salvo.'); router(); }
 function excluirFaturamento(id){ if(!confirm('Excluir este faturamento?'))return; DB.faturamento=DB.faturamento.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 function modalVale(id){
@@ -2187,7 +2209,7 @@ function modalVale(id){
   openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar lançamento':'Novo vale / pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Motorista</label><select id="f_mot">${DB.motoristas.map(m=>`<option value="${m.id}" ${v.motoristaId===m.id?'selected':''}>${esc(m.nome)}</option>`).join('')}</select></div>
-      <div class="field-row">${sel('Tipo','f_tipo',v.tipo,['Vale','Pagamento'])}${fld('Valor (R$)','f_val',v.valor,'number')}</div>
+      <div class="field-row">${sel('Tipo','f_tipo',v.tipo,['Vale','Pagamento'])}${fldR$('Valor (R$)','f_val',v.valor)}</div>
       ${fld('Data','f_data',v.data,'date')}
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(v.obs)}"></div>
       <div class="hint">"Vale" = adiantamento ao motorista. "Pagamento" = quitação/desconto. O saldo por motorista é somado automaticamente.</div>
@@ -2195,7 +2217,7 @@ function modalVale(id){
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirVale('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarVale('${id||''}')">Salvar</button></div>`);
 }
-function salvarVale(id){ const d={data:val('f_data'),motoristaId:val('f_mot'),tipo:val('f_tipo'),valor:parseFloat(val('f_val'))||0,obs:val('f_obs')};
+function salvarVale(id){ const d={data:val('f_data'),motoristaId:val('f_mot'),tipo:val('f_tipo'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
   if(id)Object.assign(DB.vales.find(x=>x.id===id),d); else{ d.id=uid('vl'); DB.vales.push(d); } saveDB(); closeModal(); toast('Lançamento salvo.'); router(); }
 function excluirVale(id){ if(!confirm('Excluir este lançamento?'))return; DB.vales=DB.vales.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
@@ -2249,13 +2271,13 @@ function modalCte(id){
       <div class="field-row">
         <div class="field"><label>Placa</label><select id="f_placa"><option value="">—</option>${DB.veiculos.map(v=>`<option ${c.placa===v.placa?'selected':''}>${esc(v.placa)}</option>`).join('')}</select></div>
         ${sel('Situação','f_status',c.status,CTE_STATUS)}</div>
-      <div class="field-row">${fld('Cliente / Tomador','f_cli',c.cliente)}${fld('Valor (R$)','f_val',c.valor,'number')}</div>
+      <div class="field-row">${fld('Cliente / Tomador','f_cli',c.cliente)}${fldR$('Valor (R$)','f_val',c.valor)}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(c.obs)}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirCte('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarCte('${id||''}')">Salvar</button></div>`);
 }
-function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:val('f_placa'),cliente:val('f_cli'),valor:parseFloat(val('f_val'))||0,status:val('f_status'),obs:val('f_obs')};
+function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:val('f_placa'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),status:val('f_status'),obs:val('f_obs')};
   if(id)Object.assign(DB.ctes.find(x=>x.id===id),d); else{ d.id=uid('ct'); DB.ctes.push(d); } saveDB(); closeModal(); toast('CT-e salvo.'); router(); }
 function excluirCte(id){ if(!confirm('Excluir este CT-e?'))return; DB.ctes=DB.ctes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
