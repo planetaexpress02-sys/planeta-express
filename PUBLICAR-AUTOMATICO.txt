@@ -1,0 +1,66 @@
+====================================================================
+   PLANETA EXPRESS — PUBLICAÇÃO AUTOMÁTICA (nunca mais arrastar pasta)
+====================================================================
+
+Depois deste setup (uma única vez), toda melhoria vai para o site
+sozinha. No dia a dia você só clica "Push" uma vez.
+
+Eu já deixei a pasta pronta (controle de versão criado). Faça assim:
+
+
+PARTE 1 — Conta e programa (uma vez)
+--------------------------------------------------------------------
+1. Crie uma conta grátis no GitHub:  https://github.com  (Sign up).
+2. Baixe e instale o "GitHub Desktop":  https://desktop.github.com
+3. Abra o GitHub Desktop e faça login com a conta do GitHub.
+
+
+PARTE 2 — Publicar a pasta no GitHub (uma vez)
+--------------------------------------------------------------------
+1. No GitHub Desktop: menu "File" > "Add local repository..."
+2. Em "Local path", clique em "Choose..." e selecione a pasta:
+       Sistema Planeta Express
+   (dentro de Planeta Express Transportes) > "Add repository".
+3. Vai aparecer o botão "Publish repository" (ou uma faixa azul no
+   topo). Clique nele.
+   - Name: planeta-express-sistema
+   - DEIXE marcado "Keep this code private"
+   - Clique "Publish repository".
+   Pronto: seu sistema está no GitHub.
+
+
+PARTE 3 — Ligar o Netlify ao GitHub (uma vez)
+--------------------------------------------------------------------
+Opção mais simples (novo site, ganha link novo):
+1. Entre no Netlify:  https://app.netlify.com
+2. "Add new site" > "Import an existing project" > "Deploy with GitHub".
+3. Autorize o Netlify a acessar o GitHub (botão "Authorize").
+4. Escolha o repositório "planeta-express-sistema".
+5. Nas configurações de deploy, deixe TUDO em branco:
+   - Build command: (vazio)
+   - Publish directory: (vazio ou "/")
+   Clique "Deploy".
+6. Quando terminar, em "Site configuration" > "Change site name",
+   coloque:  planetaexpress   (ou planetaexpress-transportes).
+   Esse vira o SEU link definitivo.
+
+(Se quiser manter o link atual do Netlify em vez de criar um novo,
+me avise que eu te passo o caminho para "linkar" o repositório ao
+site que já existe.)
+
+
+PRONTO! COMO FICA O DIA A DIA
+--------------------------------------------------------------------
+- Quando eu te mandar uma melhoria, eu já deixo tudo pronto e
+  "commitado" na pasta.
+- Você abre o GitHub Desktop e clica em "Push origin" (canto
+  superior direito). Só isso.
+- Em ~1 minuto o site atualiza SOZINHO. Você abre o link e já está
+  na versão nova.
+
+- Se o GitHub Desktop mostrar "changes" (mudanças) em vez do botão
+  Push: escreva qualquer palavra no campo de baixo à esquerda,
+  clique "Commit to main" e depois "Push origin".
+
+Dúvida em qualquer passo? Tire um print da tela que eu te guio.
+====================================================================
