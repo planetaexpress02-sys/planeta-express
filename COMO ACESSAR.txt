@@ -1,0 +1,84 @@
+====================================================================
+   PLANETA EXPRESS — COMO ACESSAR O SISTEMA
+   Offline no computador e no celular
+====================================================================
+
+--------------------------------------------------------------------
+1) NO COMPUTADOR  (offline — já funciona)
+--------------------------------------------------------------------
+• Abra a pasta "Sistema Planeta Express" e dê dois cliques em
+  "index.html". Pronto: funciona sem internet, para sempre.
+• Navegador recomendado: Google Chrome ou Microsoft Edge
+  (necessário para o UPLOAD de arquivos funcionar).
+• Atalho na Área de Trabalho: botão direito em "index.html" >
+  Enviar para > Área de Trabalho (criar atalho). Renomeie para
+  "Planeta Express".
+
+
+--------------------------------------------------------------------
+2) NO CELULAR
+--------------------------------------------------------------------
+Você tem 3 formas. A OPÇÃO A é a mais simples.
+
+  ---- OPÇÃO A: Arquivo único (mais fácil, offline) ----
+  Use o arquivo:  "Planeta Express - CELULAR.html"
+  (é o sistema inteiro em 1 arquivo só — logo e fotos já embutidas)
+
+  Como levar para o celular (qualquer uma serve):
+   • WhatsApp: mande o arquivo para você mesmo e abra no celular.
+   • E-mail: envie o arquivo em anexo para o seu e-mail.
+   • OneDrive: a pasta já está no OneDrive; abra o app OneDrive no
+     celular, ache o arquivo e baixe.
+   • Cabo USB: copie o arquivo para o celular.
+
+  Abrir:
+   • ANDROID: app "Arquivos" (ou "Downloads") > toque no arquivo >
+     "Abrir com" > Chrome. Depois, no menu do Chrome (⋮), toque em
+     "Adicionar à tela inicial" para virar um ícone de app.
+   • iPHONE: salve em "Arquivos". O Safari não abre HTML local
+     direto; instale o app gratuito "Documents" (Readdle) e abra o
+     arquivo por ele. (No iPhone essa opção é mais limitada — para
+     iPhone, a OPÇÃO B costuma ser melhor.)
+
+  Funciona sem internet. IMPORTANTE: os dados do celular são
+  separados dos do computador (cada aparelho guarda os seus).
+  Para deixar igual, use Exportar/Importar backup (ver item 3).
+
+  ---- OPÇÃO B: Virar um "aplicativo" de verdade (offline) ----
+  Ideal para ter o mesmo link no PC e no celular, com ícone.
+   1. Suba a pasta "Sistema Planeta Express" num site estático
+      gratuito. O mais fácil: entre em  https://app.netlify.com/drop
+      e ARRASTE a pasta para a página. Você recebe um link (URL).
+   2. Abra esse link no celular.
+   3. No menu do navegador, toque em "Instalar aplicativo" /
+      "Adicionar à tela inicial".
+   4. Pronto: abre como app e funciona OFFLINE após a 1ª vez
+      (o sistema já vem preparado para isso).
+   ATENÇÃO DE PRIVACIDADE: o sistema tem dados de motoristas
+   (CPF, fotos). Quem tiver o link consegue ver. Não divulgue o
+   link e, se possível, use um serviço com proteção por senha.
+
+  ---- OPÇÃO C: Rede local da empresa (Wi-Fi) ----
+   Rodar um servidor no computador e acessar pelo celular na mesma
+   rede Wi-Fi. É mais técnico — posso montar isso para você se
+   preferir esse caminho.
+
+
+--------------------------------------------------------------------
+3) DEIXAR OS DADOS IGUAIS EM VÁRIOS APARELHOS
+--------------------------------------------------------------------
+Hoje cada aparelho guarda os próprios dados (offline, no navegador).
+Para passar de um para o outro:
+   • No aparelho de origem: Configurações > Exportar backup (.json)
+   • Leve o arquivo ao outro aparelho: Configurações > Importar backup
+
+Quer que TODOS vejam o mesmo em tempo real (sincronização em nuvem)?
+Isso é o próximo passo e precisa de um banco de dados online —
+posso montar quando você quiser.
+
+====================================================================
+Resumo rápido:
+  • Computador  -> index.html (dois cliques)
+  • Celular     -> "Planeta Express - CELULAR.html" (mande e abra)
+  • Como app    -> hospedar a pasta (Netlify) e "instalar"
+====================================================================

@@ -1,0 +1,95 @@
+====================================================================
+   PLANETA EXPRESS — SISTEMA DE GESTÃO OPERACIONAL  (v2.0)
+   Guia rápido de uso
+====================================================================
+
+COMO ABRIR  (100% OFFLINE)
+------------------------------------------------------------------
+1. Abra a pasta "Sistema Planeta Express".
+2. Dê dois cliques em "index.html". Abre no navegador (recomendado
+   Google Chrome ou Microsoft Edge). Não precisa de internet.
+
+DICA: botão direito em "index.html" > Enviar para > Área de Trabalho
+(criar atalho). Renomeie para "Planeta Express".
+
+IMPORTANTE: para o UPLOAD de arquivos funcionar, use Chrome ou Edge.
+
+
+MÓDULOS
+------------------------------------------------------------------
+• PAINEL DE CONTROLE — indicadores com GRÁFICOS. Os cartões são
+  CLICÁVEIS: clique em "Veículos ativos", "Motoristas ativos",
+  "Vencimentos críticos" ou "Documentos vencidos" e o sistema te
+  leva direto ao local certo, já filtrado.
+
+• VENCIMENTOS — agenda central detalhada (tipo, número do documento,
+  órgão emissor, emissão, validade e situação por cores). Filtre por
+  situação/tipo, imprima, anexe arquivo ao vencimento.
+
+• FROTA — cartões dos cavalos e reboques. Clique para a ficha
+  completa (documentos, manutenção, baterias, KM/horas, anexos).
+
+• MOTORISTAS — cartões COM FOTO. Ficha com CNH, exames e anexos.
+
+• EXAMES — matriz por colaborador de ASO, Toxicológico e Opentech
+  (BRF), com status por cor. Clique numa célula para lançar/editar.
+
+• KM / HORAS — aba rápida: digite o KM atual de cada cavalo (ou as
+  horas do Thermo King das carretas) e o sistema recalcula sozinho
+  quanto FALTA para a próxima troca de óleo/filtros, com barra de
+  progresso e alerta quando estiver perto.
+
+• MANUTENÇÃO — trocas por veículo, com a coluna "Faltam" calculada
+  a partir do KM/horas atual.
+
+• BATERIAS — controle de compras, valores e GARANTIAS. (A garantia
+  aparece SÓ aqui — não gera alerta no Painel.)
+
+• DOCUMENTOS — central de arquivos: faça UPLOAD e DOWNLOAD de PDF,
+  JPG, PNG, Word, Excel e XML de nota fiscal. Os arquivos ficam
+  guardados dentro do sistema, neste computador. Também é possível
+  anexar arquivos direto na ficha de cada motorista/veículo.
+
+
+TUDO CONVERSA ENTRE SI
+------------------------------------------------------------------
+Cadastrou um veículo ou motorista → aparece em todas as telas.
+Lançou um vencimento → entra no painel e nos alertas na hora.
+Atualizou o KM → a manutenção recalcula automaticamente.
+
+
+BACKUP  (MUITO IMPORTANTE)
+------------------------------------------------------------------
+Os dados ficam NESTE computador (navegador). Faça backup:
+  Configurações > Exportar backup (.json) — guarde em pendrive/nuvem.
+Para migrar de computador: Configurações > Importar backup.
+Observação: os ARQUIVOS enviados (uploads) ficam no navegador; se for
+trocar de computador, baixe os que precisar antes.
+
+
+PERSONALIZAR ALERTAS
+------------------------------------------------------------------
+Em Configurações você define os prazos de alerta (dias) e o quanto de
+KM / horas restantes deve disparar o aviso de troca.
+
+
+PRÓXIMOS PASSOS (podemos ampliar)
+------------------------------------------------------------------
+Controle de Viagens BRF, financeiro (CTE, vales, acertos, NFs),
+check-list de veículos, login por usuário e alerta por e-mail.
+
+NOVIDADES v2.2
+------------------------------------------------------------------
+• Abertura premium (preto & dourado), mais lenta e elegante.
+• Painel mais completo (2 linhas de indicadores + gráficos de
+  faturamento, frota e últimos check-lists).
+• PNEUS — controle por posição (marca, medida, DOT, sulco, km rodado).
+• CHECK-LIST — inspeção de cavalo e carreta (OK/NOK), pode ser feito
+  no celular e importado no computador (botão Importar/Exportar).
+• ALARMES THERMO KING — tabela de referência com busca por código.
+• NOTAS FISCAIS — valores por período (Alexandria, Notas em geral,
+  Combustível) com total automático e gráfico de evolução.
+
+====================================================================
+Versão 2.2
+====================================================================

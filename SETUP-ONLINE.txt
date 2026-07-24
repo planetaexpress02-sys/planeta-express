@@ -1,0 +1,87 @@
+====================================================================
+   PLANETA EXPRESS — ACESSO ONLINE (login + sincronização)
+====================================================================
+
+O sistema JÁ ESTÁ CONFIGURADO para conectar sozinho ao seu servidor.
+Ao abrir, ele cai direto na tela de LOGIN. Faltam só 3 passos rápidos
+no painel do Supabase e a publicação do link.
+
+
+PASSO A — Criar a tabela (se ainda não fez)
+--------------------------------------------------------------------
+Supabase > menu esquerdo "SQL Editor" > "New query" > cole o texto
+abaixo > "Run":
+
+--------------------- COPIE DAQUI ---------------------
+create table if not exists public.dados (
+  id text primary key,
+  conteudo jsonb,
+  atualizado_em timestamptz default now()
+);
+alter table public.dados enable row level security;
+create policy "logados_select" on public.dados for select to authenticated using (true);
+create policy "logados_insert" on public.dados for insert to authenticated with check (true);
+create policy "logados_update" on public.dados for update to authenticated using (true) with check (true);
+alter publication supabase_realtime add table public.dados;
+--------------------- ATÉ AQUI ---------------------
+
+
+PASSO B — Criar os 2 usuários (Uilian e Marcelo)
+--------------------------------------------------------------------
+Supabase > "Authentication" > "Users" > "Add user" > "Create new user"
+  Usuário 1:  email  uilian@planetaexpress.com   senha (à sua escolha)
+  Usuário 2:  email  marcelo@planetaexpress.com  mesma senha
+  -> EM AMBOS, marque "Auto Confirm User" antes de criar.
+(Use esses e-mails exatos para aparecer "Bem-vindo Uilian / Marcelo".)
+
+
+PASSO A2 — Criar o "cofre" de arquivos (para anexos sincronizarem)
+--------------------------------------------------------------------
+1. Supabase > menu esquerdo "Storage" > "New bucket".
+2. Name: escreva exatamente  arquivos   (tudo minúsculo).
+3. Deixe "Public bucket" DESMARCADO (privado) > "Create bucket".
+4. Volte no "SQL Editor" > "New query" > cole e "Run":
+
+--------------------- COPIE DAQUI ---------------------
+create policy "arq_logados_ver" on storage.objects
+  for select to authenticated using (bucket_id = 'arquivos');
+create policy "arq_logados_enviar" on storage.objects
+  for insert to authenticated with check (bucket_id = 'arquivos');
+create policy "arq_logados_apagar" on storage.objects
+  for delete to authenticated using (bucket_id = 'arquivos');
+--------------------- ATÉ AQUI ---------------------
+
+   Pronto: os PDFs/fotos que você enviar passam a aparecer em
+   qualquer aparelho.
+
+
+PASSO C — SEGURANÇA: desligar cadastros públicos  (IMPORTANTE)
+--------------------------------------------------------------------
+Como a chave fica no aplicativo, desligue a criação livre de contas
+para que SÓ os usuários que você criou possam entrar:
+
+Supabase > "Authentication" > "Sign In / Providers" (ou "Providers")
+> "Email" > DESMARQUE / desligue "Allow new users to sign up"
+(ou "Enable Sign-ups") > Save.
+
+Você continua conseguindo criar usuários pelo painel (Passo B).
+
+
+PASSO D — Publicar o link (bonito e formal)
+--------------------------------------------------------------------
+1. Acesse https://app.netlify.com/drop
+2. ARRASTE a pasta inteira "Sistema Planeta Express" para a página.
+3. Clique em "Sign up" (grátis) para salvar o site.
+4. Em "Site configuration" > "Change site name" digite:
+        planetaexpress
+   O link fica:  https://planetaexpress.netlify.app
+5. Abra esse link no computador e no celular -> cai na tela de login.
+   Entre com uilian@planetaexpress.com (ou marcelo@...) e a senha.
+
+   Celular (Android): menu do navegador > "Adicionar à tela inicial"
+   -> vira um app com o logo da Planeta Express.
+
+
+PRONTO. Tudo que você editar em um aparelho aparece nos outros.
+Dúvida em qualquer passo? Manda um print que eu te guio.
+====================================================================

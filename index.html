@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Planeta Express — Sistema de Gestão</title>
+  <meta name="theme-color" content="#0b1424">
+  <meta name="description" content="Sistema de Gestão Operacional — Planeta Express Transportes">
+  <!-- Celular / instalável -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Planeta Express">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+  <link rel="stylesheet" href="assets/estilo.css?v=41">
+  <link rel="stylesheet" href="assets/estilo2.css?v=41">
+</head>
+<body>
+  <!-- SPLASH / ABERTURA -->
+  <div id="splash">
+    <div class="sp-orb sp-orb1"></div>
+    <div class="sp-orb sp-orb2"></div>
+    <div class="sp-grid"></div>
+    <div class="sp-core">
+      <div class="sp-logo"><img src="assets/logo.png" alt="Planeta Express"><i class="sp-shine"></i></div>
+      <div class="sp-title">PLANETA<b>EXPRESS</b></div>
+      <div class="sp-line"></div>
+      <div class="sp-tag">Sistema de Gestão Operacional</div>
+      <div class="sp-loader"><span></span></div>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-badge"><img src="assets/logo.png" alt="Planeta Express"></div>
+        <div class="btxt"><b>PLANETA</b><span>Express</span></div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v4.1</b> · dados locais e seguros</div>
+    </aside>
+    <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-toggle no-print" onclick="toggleSidebar()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button class="back-btn no-print" onclick="history.back()" title="Voltar">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="page-title" id="pageTitle">Painel de Controle</div>
+        <div class="search no-print">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2"/></svg>
+          <input id="gsearch" placeholder="Buscar placa, motorista, CPF…" autocomplete="off">
+        </div>
+        <div class="userbadge no-print" id="userbadge"></div>
+        <div class="clock no-print" id="clock"></div>
+      </header>
+      <main class="content" id="view" style="transition:opacity .18s"></main>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div id="loginScreen" class="login-screen"></div>
+  <div class="toasts" id="toasts"></div>
+
+  <!-- Biblioteca da nuvem (só é usada no modo online; offline funciona sem ela) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="assets/config-online.js?v=41"></script>
+  <script src="assets/nuvem.js?v=41"></script>
+
+  <script src="assets/viagens.js?v=41"></script>
+  <script src="assets/dados.js?v=41"></script>
+  <script src="assets/alarmes.js?v=41"></script>
+  <script src="assets/arquivos.js?v=41"></script>
+  <script src="assets/app.js?v=41"></script>
+  <script>
+    /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
+    if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){
+      var _pexRefreshing=false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){ if(_pexRefreshing) return; _pexRefreshing=true; location.reload(); });
+      navigator.serviceWorker.register('service-worker.js').then(function(reg){
+        try{ reg.update(); }catch(e){}
+        setInterval(function(){ try{ reg.update(); }catch(e){} }, 60000); /* verifica atualização a cada 1 min */
+        reg.addEventListener('updatefound', function(){
+          var nw = reg.installing;
+          if(nw){ nw.addEventListener('statechange', function(){
+            if(nw.state==='installed' && navigator.serviceWorker.controller && !_pexRefreshing){ _pexRefreshing=true; location.reload(); }
+          }); }
+        });
+      }).catch(function(){});
+    }
+  </script>
+</body>
+</html>
