@@ -109,7 +109,7 @@ function iaExec(intent, raw){
 /* ================================================================== */
 /*  3. INTERPRETADOR PRINCIPAL                                         */
 /* ================================================================== */
-function _iaEhPergunta(n){ return /\?|\b(quant|qual|quais|quando|onde|cade|me diga|me fala|me informa|mostr|list|resumo|status|situacao|vence|venc|validade|quanto tem|tem quantos)\b/.test(n); }
+function _iaEhPergunta(n){ return /\?|\b(quant|qual|quais|quando|onde|cade|me diga|me fala|me informa|me mostr|mostr|list|resumo|status|situacao|vence|venc|validade|quanto tem|tem quantos|dado|dados|informac|ficha|sobre|detalhe|consulta|buscar|procur|pesquis|encontr|alarme|quem)\b/.test(n); }
 function _iaIntent(n){
   if(/pneu|\bpne\b/.test(n)) return 'pneu';
   if(/oleo|filtr|lubrific/.test(n)) return 'oleo';
@@ -253,8 +253,92 @@ function iaCmdServico(t,n){
 /*  5. CONSULTAS (integração com todos os dados)                      */
 /* ================================================================== */
 function _iaVencBadge(x){ const s=situacao(x.validade); return `<span class="st ${s.cls}" style="font-size:10px;padding:1px 7px">${s.label}</span>`; }
+function _iaMotoristas(t){ const n=_iaNorm(t); const out=[];
+  DB.motoristas.forEach(m=>{ const parts=_iaNorm(m.nome).split(/\s+/); if(parts.some(p=>p.length>=3 && n.indexOf(p)>=0)) out.push(m); });
+  return out; }
+function _iaPrimeiroNome(m){ return (m&&m.nome||'').split(' ')[0]; }
+function _iaIdade(nasc){ const d=parseD(nasc); if(!d) return null; const h=new Date(); let a=h.getFullYear()-d.getFullYear();
+  const mm=h.getMonth()-d.getMonth(); if(mm<0||(mm===0&&h.getDate()<d.getDate())) a--; return a; }
+function _iaFichaVeiculo(v){
+  const cav=!isReb(v); const un=cav?'km':'h'; const atual=cav?v.kmAtual:v.horaAtual; const dt=cav?v.kmData:v.horaData;
+  const tot=pneuTotal(DB.pneus.filter(p=>p.veiculoId===v.id));
+  const p=primaryItem(v); let ol='—'; if(p){ const mi=manutInfo(p,v); ol= mi.ok?(mi.restante<=0?'⚠️ vencida há '+num(-mi.restante)+' '+un:'faltam '+num(mi.restante)+' '+un):'sem cálculo'; }
+  const vencs=DB.vencimentos.filter(x=>x.entidade==='veiculo'&&x.refId===v.id).sort((a,b)=>(a.validade||'').localeCompare(b.validade||''));
+  const vtxt=vencs.length?vencs.map(x=>`${esc(x.tipo)} ${fmtD(x.validade)} ${_iaVencBadge(x)}`).join('<br>&nbsp;&nbsp;&nbsp;'):'—';
+  const bat=DB.baterias.filter(b=>String(b.placa||'').replace(/\W/g,'').toUpperCase()===v.placa.replace(/\W/g,'').toUpperCase()).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0];
+  return `🚚 <b>${esc(v.placa)}</b> — ${esc(v.tipo)}`+
+    `<br>• Marca/modelo: <b>${esc(v.marca||'—')} ${esc(v.modelo||'')}</b> (${esc(v.anoModelo||'—')})`+
+    `<br>• Chassi: ${esc(v.chassi||'—')}`+
+    `<br>• Renavam: ${esc(v.renavam||'—')} · Cor: ${esc(v.cor||'—')}`+
+    `<br>• ${cav?'KM':'Horas'}: <b>${atual!=null?num(atual)+' '+un:'—'}</b>${dt?' <span class="ia-dim">('+fmtD(dt)+')</span>':''}`+
+    `<br>• Óleo: ${ol} · Pneus: <b>${tot}</b>`+
+    (bat?`<br>• Bateria: ${esc(bat.marca||'—')} (garantia até ${fmtD(bat.garantiaAte)})`:'')+
+    `<br>• Documentos:<br>&nbsp;&nbsp;&nbsp;${vtxt}`;
+}
+function _iaFichaMotorista(m){
+  const id=_iaIdade(m.nascimento);
+  const vencs=DB.vencimentos.filter(x=>x.entidade==='motorista'&&x.refId===m.id).sort((a,b)=>(a.validade||'').localeCompare(b.validade||''));
+  const vtxt=vencs.length?vencs.map(x=>`${esc(x.tipo)} ${fmtD(x.validade)} ${_iaVencBadge(x)}`).join('<br>&nbsp;&nbsp;&nbsp;'):'—';
+  return `👤 <b>${esc(m.nome)}</b> — ${esc(m.funcao||'Motorista')}`+
+    `<br>• CPF: <b>${esc(m.cpf||'—')}</b> · RG: ${esc(m.rg||'—')}${m.emissorRg?' ('+esc(m.emissorRg)+')':''}`+
+    `<br>• Nascimento: ${fmtD(m.nascimento)}${id?' — <b>'+id+' anos</b>':''}`+
+    `<br>• Celular: <b>${esc(m.celular||m.telefone||'—')}</b>${m.email?' · '+esc(m.email):''}`+
+    `<br>• CNH: nº ${esc(m.cnh||'—')}, cat. <b>${esc(m.categoria||'—')}</b>, val. ${fmtD(m.cnhValidade)} ${_iaVencBadge({validade:m.cnhValidade})}`+
+    (m.endereco?`<br>• Endereço: ${esc(m.endereco)}`:'')+
+    `<br>• Documentos:<br>&nbsp;&nbsp;&nbsp;${vtxt}`;
+}
 function iaConsulta(t,n){
-  const v=_iaVeiculo(t); const mot=_iaMotorista(t);
+  const v=_iaVeiculo(t); const mots=_iaMotoristas(t); const mot=mots[0]||null;
+
+  /* ALARME THERMO KING */
+  if(/alarme|thermo|termo\s*king|codigo de erro|erro\s*\d/.test(n)){
+    const arr=(typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]);
+    const cod=(String(t).match(/\d{1,4}/)||[])[0];
+    if(cod){ const a=arr.find(x=>String(x.c)===String(cod)||String(x.c)===String(parseInt(cod,10)));
+      if(a) return `🔔 <b>Alarme ${esc(a.c)}</b> — ${esc(a.d)}<br>• <b>Significa:</b> ${esc(a.ex||'—')}<br>• <b>O que fazer:</b> ${esc(a.so||'—')}`;
+      return `Não encontrei o alarme ${esc(cod)} na lista Thermo King (${arr.length} códigos cadastrados).`; }
+    return `Me diga o número do alarme. Ex.: <i>"alarme 128"</i>.`;
+  }
+
+  /* FINANCEIRO é protegido por senha — não exponho pelo chat */
+  if(/faturament|\bfatura\b|receita|\bvale\b|\bvales\b|pagamento|financeir|lucro|sal[aá]rio|acerto/.test(n)){
+    return `🔒 O <b>Financeiro</b> (faturamento, vales e pagamentos) é protegido por senha. Abra a aba <b>Financeiro</b> e informe o PIN para ver esses valores.`;
+  }
+
+  /* Ambiguidade de nome (ex.: mais de um Marcelo) */
+  if(mots.length>1 && !v && /motorist|condutor|cpf|\brg\b|cnh|telefone|celular|email|endereco|nasc|idade|habilita|carteira|exame|aso|tox|opentech|direcao|\bdado|ficha|sobre|documento|quem/.test(n)){
+    return `Temos mais de um com esse nome: ${mots.map(m=>'<b>'+esc(m.nome)+'</b>').join(' · ')}. De qual você quer saber?`;
+  }
+
+  /* CAMPO ESPECÍFICO — MOTORISTA */
+  if(mot){
+    if(/\bcpf\b/.test(n)) return `🪪 CPF de <b>${esc(_iaPrimeiroNome(mot))}</b>: <b>${esc(mot.cpf||'—')}</b>.`;
+    if(/\brg\b|identidade/.test(n)) return `🪪 RG de <b>${esc(_iaPrimeiroNome(mot))}</b>: <b>${esc(mot.rg||'—')}</b>${mot.emissorRg?' ('+esc(mot.emissorRg)+')':''}.`;
+    if(/telefone|celular|contato|whats|\bnumero\b|fone/.test(n)) return `📞 ${esc(_iaPrimeiroNome(mot))}: <b>${esc(mot.celular||mot.telefone||'—')}</b>.`;
+    if(/email|e-mail/.test(n)) return `✉️ ${esc(_iaPrimeiroNome(mot))}: <b>${esc(mot.email||'—')}</b>.`;
+    if(/endereco|mora|reside|onde vive/.test(n)) return `🏠 ${esc(_iaPrimeiroNome(mot))}: ${esc(mot.endereco||mot.municipioEnd||'—')}.`;
+    if(/idade|nasc|aniversar/.test(n)){ const id=_iaIdade(mot.nascimento); return `🎂 ${esc(_iaPrimeiroNome(mot))} nasceu em ${fmtD(mot.nascimento)}${id?' — <b>'+id+' anos</b>':''}.`; }
+    if(/cnh|habilita|carteira/.test(n)) return `🪪 CNH de <b>${esc(_iaPrimeiroNome(mot))}</b>: nº ${esc(mot.cnh||'—')}, categoria <b>${esc(mot.categoria||'—')}</b>, validade ${fmtD(mot.cnhValidade)} ${_iaVencBadge({validade:mot.cnhValidade})}. 1ª habilitação em ${fmtD(mot.primeiraHab)}.`;
+    if(/exame|\baso\b|tox|opentech|saude/.test(n)){ const ex=DB.vencimentos.filter(x=>x.entidade==='motorista'&&x.refId===mot.id&&/ASO|Toxicol|Opentech/i.test(x.tipo)); if(ex.length) return `🧪 Exames de <b>${esc(_iaPrimeiroNome(mot))}</b>:<br>`+ex.map(x=>`• ${esc(x.tipo)}: ${fmtD(x.validade)} ${_iaVencBadge(x)}`).join('<br>'); }
+    if(/dado|ficha|sobre|informac|detalhe|tudo|quem e|quem é/.test(n)) return _iaFichaMotorista(mot);
+  }
+
+  /* CAMPO ESPECÍFICO — VEÍCULO */
+  if(v){
+    if(/chassi/.test(n)) return `🚚 Chassi do <b>${esc(v.placa)}</b>: <b>${esc(v.chassi||'—')}</b>.`;
+    if(/renavam/.test(n)) return `🚚 Renavam do <b>${esc(v.placa)}</b>: <b>${esc(v.renavam||'—')}</b>.`;
+    if(/\bano\b|ano modelo|anomodelo/.test(n)) return `🚚 <b>${esc(v.placa)}</b>: ano ${esc(v.anoModelo||'—')}.`;
+    if(/\bcor\b/.test(n)) return `🚚 <b>${esc(v.placa)}</b>: cor ${esc(v.cor||'—')}.`;
+    if(/crlv|licenciament/.test(n)){ const c=DB.vencimentos.find(x=>x.entidade==='veiculo'&&x.refId===v.id&&/CRLV/i.test(x.tipo)); return c?`📄 CRLV do <b>${esc(v.placa)}</b>: validade ${fmtD(c.validade)} ${_iaVencBadge(c)}.`:`Não achei CRLV cadastrado para o ${esc(v.placa)}.`; }
+    if(/marca|modelo/.test(n) && !/pneu/.test(n)) return `🚚 <b>${esc(v.placa)}</b>: ${esc(v.marca||'—')} ${esc(v.modelo||'')} (${esc(v.anoModelo||'—')}).`;
+    if(/dado|ficha|sobre|informac|detalhe|tudo/.test(n)) return _iaFichaVeiculo(v);
+  }
+
+  /* MÉDIA DE CONSUMO */
+  if(/media|consumo|km\/l|km por litro|rendiment/.test(n) && v){
+    if(typeof mediaVeiculo==='function'){ const md=mediaVeiculo(v); if(md) return `⛽ Média do <b>${esc(v.placa)}</b>: <b>${md.valor.toFixed(2)}</b> ${esc(md.tipo)}.`; }
+    return `Ainda não tenho abastecimentos suficientes do ${esc(v.placa)} para calcular a média (preciso de ao menos 2).`;
+  }
 
   /* PNEUS */
   if(/pneu|\bpne\b/.test(n)){
@@ -268,19 +352,41 @@ function iaConsulta(t,n){
   }
 
   /* VENCIMENTOS / DOCUMENTOS */
-  if(/vence|venc|validade|cnh|tacograf|aso|toxicol|licenc|crlv|opentech|documento|exame|vigil|sanitar/.test(n)){
-    const tipos=[['cnh','CNH'],['toxicol','Toxicológico'],['aso','ASO'],['tacograf','Tacógrafo'],['crlv','CRLV'],['opentech','Opentech'],['vigil','Vigilância'],['sanitar','Vigilância']];
+  if(/vence|venc|validade|cnh|tacograf|aso|toxicol|licenc|crlv|opentech|documento|exame|vigil|sanitar|vencid|em dia/.test(n)){
+    const tipos=[['cnh','CNH'],['toxicol','Toxicológico'],['aso','ASO'],['tacograf','Tacógrafo'],['crlv','CRLV'],['opentech','Opentech'],['vigil','Vigilância'],['sanitar','Vigilância'],['pgr','PGR'],['pcmso','PCMSO']];
     let filtroTipo=''; tipos.forEach(([k,val])=>{ if(new RegExp(k).test(n)) filtroTipo=val; });
+    const soVencidos=/vencid/.test(n);
+    const soMes=/(este|esse|deste|neste|do)\s*mes|mes atual|mes que vem|proximo mes/.test(n);
     let lista;
     if(mot){ lista=DB.vencimentos.filter(x=>x.entidade==='motorista'&&x.refId===mot.id); }
     else if(v){ lista=DB.vencimentos.filter(x=>x.entidade==='veiculo'&&x.refId===v.id); }
-    else { lista=DB.vencimentos.filter(x=>{ const d=diasAte(x.validade); return d!=null && d<=90; }); }
+    else { lista=DB.vencimentos.filter(x=>{ const d=diasAte(x.validade); if(d==null) return false; if(soVencidos) return d<0; if(soMes){ const dt=parseD(x.validade); const h=hoje(); return dt&&dt.getMonth()===h.getMonth()&&dt.getFullYear()===h.getFullYear(); } return d<=90; }); }
     if(filtroTipo) lista=lista.filter(x=>(x.tipo||'').indexOf(filtroTipo)>=0);
+    if((mot||v)&&soVencidos) lista=lista.filter(x=>{ const d=diasAte(x.validade); return d!=null&&d<0; });
     lista=lista.slice().sort((a,b)=>(a.validade||'').localeCompare(b.validade||''));
-    if(!lista.length) return mot||v? `Não achei ${filtroTipo||'documentos'} para <b>${esc((mot||v).nome||(v&&v.placa))}</b>.` : 'Nada vencendo nos próximos 90 dias. 👍';
-    const alvo= mot? mot.nome : (v? v.placa : 'próximos 90 dias');
-    const linhas=lista.slice(0,12).map(x=>{ const quem= mot||v? '' : ' <span class="ia-dim">('+esc(nomeEntidade(x))+')</span>'; return `• <b>${esc(x.tipo)}</b>${quem}: ${fmtD(x.validade)} ${_iaVencBadge(x)}`; }).join('<br>');
+    if(!lista.length) return mot||v? `Não achei ${filtroTipo||'documentos'}${soVencidos?' vencidos':''} para <b>${esc((mot||v).nome||(v&&v.placa))}</b>. 👍` : (soVencidos?'Nada vencido. 👍':'Nada vencendo nesse período. 👍');
+    const alvo= mot? mot.nome : (v? v.placa : (soVencidos?'documentos vencidos':(soMes?'vencendo este mês':'próximos 90 dias')));
+    const linhas=lista.slice(0,15).map(x=>{ const quem= mot||v? '' : ' <span class="ia-dim">('+esc(nomeEntidade(x))+')</span>'; return `• <b>${esc(x.tipo)}</b>${quem}: ${fmtD(x.validade)} ${_iaVencBadge(x)}`; }).join('<br>');
     return `📋 ${filtroTipo?esc(filtroTipo)+' — ':''}<b>${esc(alvo)}</b>:<br>${linhas}`;
+  }
+
+  /* VIAGENS */
+  if(/viage|viagens/.test(n)){
+    let lista=DB.viagens.slice();
+    if(v){ const key=v.placa.replace(/\W/g,'').toUpperCase(); lista=lista.filter(x=>String(x.placa||'').replace(/\W/g,'').toUpperCase()===key); }
+    const meses=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const mi=meses.findIndex(mn=>n.indexOf(mn)>=0);
+    if(mi>=0) lista=lista.filter(x=>{ const d=parseD(x.data); return d&&d.getMonth()===mi; });
+    return `🛣️ ${lista.length} viagem(ns)${v?' do <b>'+esc(v.placa)+'</b>':''}${mi>=0?' em '+meses[mi]:''} registrada(s).`;
+  }
+
+  /* DESCARGAS */
+  if(/descarg/.test(n)){
+    let lista=DB.descargas.slice();
+    if(v){ const key=v.placa.replace(/\W/g,'').toUpperCase(); lista=lista.filter(x=>String(x.placa||'').replace(/\W/g,'').toUpperCase()===key); }
+    const total=lista.reduce((s,x)=>s+(+x.valor||0),0);
+    if(!lista.length) return `Nenhuma descarga${v?' do '+esc(v.placa):''} registrada.`;
+    return `📦 ${lista.length} descarga(s)${v?' do <b>'+esc(v.placa)+'</b>':''}, somando <b>${money(total)}</b>.`;
   }
 
   /* KM / HORAS */
@@ -321,27 +427,37 @@ function iaConsulta(t,n){
   }
 
   /* RESUMO / FICHA DO VEÍCULO */
-  if(v && /resumo|status|situacao|ficha|tudo|geral/.test(n)){
-    const cav=!isReb(v); const un=cav?'km':'h'; const atual=cav?v.kmAtual:v.horaAtual;
-    const tot=pneuTotal(DB.pneus.filter(p=>p.veiculoId===v.id));
-    const p=primaryItem(v); let ol='—'; if(p){ const mi=manutInfo(p,v); ol= mi.ok? (mi.restante<=0?'vencida há '+num(-mi.restante)+' '+un:'faltam '+num(mi.restante)+' '+un):'sem cálculo'; }
-    const venc=DB.vencimentos.filter(x=>x.entidade==='veiculo'&&x.refId===v.id).map(x=>`${esc(x.tipo)} ${_iaVencBadge(x)}`).join(', ')||'—';
-    return `🚚 <b>${esc(v.placa)}</b> — ${esc(v.marca)} ${esc(v.modelo)}<br>• ${cav?'KM':'Horas'}: <b>${atual!=null?num(atual)+' '+un:'—'}</b><br>• Óleo: ${ol}<br>• Pneus: <b>${tot}</b><br>• Documentos: ${venc}`;
-  }
+  if(v && /resumo|status|situacao|ficha|tudo|geral/.test(n)) return _iaFichaVeiculo(v);
 
-  /* LISTAS GERAIS */
-  if(/veicul|frota|caminha|cavalo|carreta|quantos.*(veicul|carr|caminh)/.test(n)){
+  /* LISTAS GERAIS / CONTAGENS */
+  if(/veicul|frota|caminha|cavalo|carreta/.test(n)){
     const cav=DB.veiculos.filter(x=>x.tipo==='Cavalo'&&x.status!=='Arquivado');
     const reb=DB.veiculos.filter(x=>isReb(x)&&x.status!=='Arquivado');
     return `🚛 A frota tem <b>${cav.length} cavalo(s)</b> e <b>${reb.length} carreta(s)</b>.<br>Cavalos: ${cav.map(x=>esc(x.placa)).join(', ')}<br>Carretas: ${reb.map(x=>esc(x.placa)).join(', ')}`;
   }
-  if(/motorist|condutor|funcionar|quantos.*(motor|condut)/.test(n)){
-    if(mot){ return `👤 <b>${esc(mot.nome)}</b> — ${esc(mot.funcao||'Motorista')}. CPF ${esc(mot.cpf||'—')}, CNH cat. ${esc(mot.categoria||'—')} (val. ${fmtD(mot.cnhValidade)}). Celular ${esc(mot.celular||'—')}.`; }
+  if(/motorist|condutor|funcionar|colaborador/.test(n)){
     const at=DB.motoristas.filter(m=>m.status==='Ativo');
-    return `👥 São <b>${at.length} motorista(s) ativo(s)</b>: ${at.map(m=>esc(m.nome.split(' ')[0])).join(', ')}.`;
+    return `👥 São <b>${at.length} motorista(s) ativo(s)</b>: ${at.map(m=>esc(_iaPrimeiroNome(m))).join(', ')}. Peça "dados do <nome>" para ver a ficha completa.`;
   }
 
-  return `Posso consultar: pneus, KM/horas, trocas de óleo, vencimentos (CNH, tacógrafo, ASO…), baterias, gastos, resumo de um veículo, e listas da frota/motoristas. Ex.: <i>"quantos pneus tem o IRU-4G62"</i>, <i>"quando vence a CNH do Reinaldo"</i>, <i>"resumo do BDP-1B55"</i>.`;
+  /* BUSCA GENÉRICA (placa, nome, CPF, local…) */
+  if(/buscar|procur|pesquis|encontr|localiz|onde (esta|fica)/.test(n)){
+    let termo=String(t).replace(/.*\b(buscar|procur[ae]?|pesquis[ae]?|encontr[ae]?|localiz[ae]?|onde esta|onde fica)\b/i,'').trim();
+    if(v) return _iaFichaVeiculo(v);
+    if(mot) return _iaFichaMotorista(mot);
+    if(termo.length>=2){ const tn=_iaNorm(termo);
+      const vv=DB.veiculos.filter(x=>_iaNorm(x.placa+' '+x.marca+' '+x.modelo).indexOf(tn)>=0);
+      const mm=DB.motoristas.filter(x=>_iaNorm(x.nome+' '+(x.cpf||'')).indexOf(tn)>=0);
+      const out=[]; if(vv.length) out.push('🚚 '+vv.map(x=>esc(x.placa)).join(', ')); if(mm.length) out.push('👤 '+mm.map(x=>esc(x.nome)).join(', '));
+      return out.length? `Encontrei:<br>${out.join('<br>')}` : `Não encontrei nada para "<b>${esc(termo)}</b>".`;
+    }
+  }
+
+  /* Se identifiquei um veículo/motorista mas nenhum tópico específico, mostro a ficha */
+  if(v) return _iaFichaVeiculo(v);
+  if(mot) return _iaFichaMotorista(mot);
+
+  return `Posso informar qualquer dado do sistema. Exemplos:<br>• <i>dados do IRU-4G62</i> · <i>chassi do JSX-4D55</i> · <i>quantos pneus tem o BDP-1B55</i><br>• <i>CPF do Reinaldo</i> · <i>telefone do Odecio</i> · <i>quando vence a CNH do Marcelo</i><br>• <i>o que vence este mês</i> · <i>documentos vencidos</i> · <i>alarme 128</i><br>• <i>média do QIO-9J07</i> · <i>quantas viagens em junho</i> · <i>gastos</i>`;
 }
 
 /* ================================================================== */
@@ -358,9 +474,15 @@ function iaAjuda(){
     <li>⛽ <i>abasteci 320 litros no QIO-9J07 por R$ 2100 com 673000 km</i></li>
     <li>📦 <i>descarga do IRU-4G62 no Muffato por R$ 800 hoje</i></li>
     <li>🔧 <i>troca de lonas de freio no EJZ-4I65 oficina Rede Única por R$ 1200</i></li>
-    <li>❓ <i>quantos pneus tem o IRU-4G62</i> · <i>quando vence a CNH do Reinaldo</i> · <i>resumo do BDP-1B55</i></li>
   </ul>
-  Depois de cada ação aparece o botão <b>Desfazer</b>.`;
+  <b>Consultar</b> — posso informar <b>qualquer dado</b> do sistema:
+  <ul class="ia-help">
+    <li>🚚 <i>dados do IRU-4G62</i> · <i>chassi do JSX-4D55</i> · <i>renavam do BDP</i> · <i>média do QIO-9J07</i></li>
+    <li>👤 <i>dados do Reinaldo</i> · <i>CPF do Odecio</i> · <i>telefone do Renato</i> · <i>idade do Marcelo</i></li>
+    <li>📋 <i>quando vence a CNH do Reinaldo</i> · <i>o que vence este mês</i> · <i>documentos vencidos</i></li>
+    <li>🛞 <i>quantos pneus tem o IRU-4G62</i> · 🔔 <i>alarme 128</i> · 💰 <i>gastos</i> · 🛣️ <i>quantas viagens em junho</i></li>
+  </ul>
+  Depois de cada lançamento aparece o botão <b>Desfazer</b>. Se faltar um dado, eu pergunto. 🙂`;
 }
 function iaSaudacao(){
   const h=new Date().getHours(); const s=h<12?'Bom dia':(h<18?'Boa tarde':'Boa noite');
@@ -370,7 +492,15 @@ function iaSaudacao(){
 /* ================================================================== */
 /*  7. INTERFACE (botão flutuante + painel)                            */
 /* ================================================================== */
+/* A IA aparece SEMPRE no modo offline; no modo online, só depois do login. */
+function iaPodeUsar(){
+  if(typeof nuvemAtiva!=='function' || !nuvemAtiva()) return true;   // offline
+  return !!(typeof nuvemUser==='function' && nuvemUser());           // online: precisa estar logado
+}
+function iaRemoverFab(){ ['iaFab','iaPanel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.remove(); }); IA.open=false; }
+function iaAtualizarAcesso(){ if(iaPodeUsar()) iaMontarFab(); else iaRemoverFab(); }
 function iaMontarFab(){
+  if(!iaPodeUsar()) return;
   if(document.getElementById('iaFab')) return;
   const fab=document.createElement('button');
   fab.id='iaFab'; fab.className='ia-fab no-print'; fab.title='Inteligência Artificial da Planeta Express';

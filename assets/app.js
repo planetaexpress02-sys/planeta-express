@@ -2428,6 +2428,7 @@ async function aposLogin(){
   }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
   esconderLogin();
   renderSidebar('inicio'); router(); hideSplash(); updateUserBadge();
+  if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();   /* libera a IA só depois do login */
   toast('Bem-vindo, '+(nomeUsuario()||'')+'!');
 }
 async function logoutNuvem(){ if(!confirm('Sair da sua conta?'))return; await nuvemLogout(); location.reload(); }
@@ -2481,7 +2482,7 @@ async function init(){
   document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
   document.addEventListener('input', aplicarMascaraInput);   /* pontuação automática (CPF, RG, telefone…) */
-  if(typeof iaMontarFab==='function') iaMontarFab();          /* botão do assistente inteligente */
+  if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();  /* IA: aparece offline; online só após login */
   const s=document.getElementById('gsearch'); s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
   // Sincronização: salva na hora ao fechar/minimizar; ao voltar, puxa o mais recente da nuvem
   window.addEventListener('beforeunload', flushNuvem);
