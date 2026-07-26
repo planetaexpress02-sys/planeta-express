@@ -20,7 +20,18 @@ function ensureCollections(){
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
+  importarManutencaoPlanilhas();
   corrigirValoresAntigos();
+}
+/* Importa (uma vez) as manutenções extraídas das planilhas de Relatório de Manutenção.
+   Não duplica: cada registro tem id fixo (mi_...). Roda em qualquer aparelho e sincroniza. */
+function importarManutencaoPlanilhas(){
+  if(typeof MANUT_SEED==='undefined' || !Array.isArray(MANUT_SEED)) return;
+  if(!Array.isArray(DB.servicos)) DB.servicos=[];
+  const existentes=new Set(DB.servicos.map(s=>s.id));
+  let add=0;
+  MANUT_SEED.forEach(r=>{ if(!existentes.has(r.id)){ DB.servicos.push(Object.assign({},r)); add++; } });
+  if(add>0){ DB.config._manutImp=true; }
 }
 /* Conserta valores gravados errados pelo bug antigo (÷1000). Só mexe em valor
    com mais de 2 casas decimais (assinatura da corrupção); valores corretos ficam intactos. */

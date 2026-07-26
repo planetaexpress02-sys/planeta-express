@@ -138,12 +138,27 @@ function iaResponder(raw){
   }
 
   if(/^(ajuda|help|\?|menu|comandos|o que voce faz|o que vc faz|o que voce sabe)/.test(n)) return iaAjuda();
-  if(/^(oi|ola|opa|bom dia|boa tarde|boa noite|e ai|eai|tudo bem|ei)\b/.test(n) && n.length<20) return iaSaudacao();
+  if(/^(oi+|ola|opa|bom dia|boa tarde|boa noite|e ai|eai|tudo bem|ei)\b/.test(n) && n.length<20) return iaSaudacao();
+
+  /* Perguntas explícitas → consulta */
   if(_iaEhPergunta(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+
+  /* Comandos de lançamento (têm intenção clara) */
   const intent=_iaIntent(n);
-  if(!intent) return `Não entendi 100% 🤔. Quer <b>lançar</b> algo (pneu, KM, óleo, bateria, abastecimento, descarga, serviço) ou <b>consultar</b> um dado (ex.: "quantos pneus tem o IRU-4G62", "quando vence a CNH do Reinaldo")? Escreva <b>ajuda</b> para ver exemplos.`;
-  return iaFinaliza(iaExec(intent, t), intent, t);
+  if(intent && intent!=='leitura') return iaFinaliza(iaExec(intent, t), intent, t);
+  if(intent==='leitura'){
+    /* "km IRU 1520000" = atualizar; "km IRU" (sem número) = consultar */
+    if(_iaNumeroSolto(t)!=null) return iaFinaliza(iaExec('leitura', t), 'leitura', t);
+    return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+  }
+
+  /* Frase curta pedindo um dado (ex.: "cpf uilian", "chassi IRU", "telefone odecio") */
+  if(_iaConsultaCurta(n) || _iaVeiculo(t) || _iaMotoristas(t).length) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+
+  return `Não entendi 🤔. Pode pedir um dado (ex.: <i>cpf uilian</i>, <i>chassi IRU-4G62</i>, <i>quando vence a CNH do Reinaldo</i>) ou lançar algo (ex.: <i>troca de óleo IRU hoje 1520000 km</i>). Escreva <b>ajuda</b> para exemplos.`;
 }
+/* Campos consultáveis mesmo sem palavra de pergunta */
+function _iaConsultaCurta(n){ return /\bcpf\b|\brg\b|telefone|celular|contato|\bfone\b|email|e-mail|chassi|renavam|\bcnh\b|habilita|carteira|endereco|\bmora\b|idade|nasciment|aniversar|\bano\b|\bcor\b|categoria|\bficha\b|\bdados?\b|\bquem\b|documento|venciment|\bvence|validade|alarme|media|consumo|\bkm\b|\bhora/.test(n); }
 
 /* ================================================================== */
 /*  4. COMANDOS QUE LANÇAM DADOS                                       */
@@ -486,7 +501,7 @@ function iaAjuda(){
 }
 function iaSaudacao(){
   const h=new Date().getHours(); const s=h<12?'Bom dia':(h<18?'Boa tarde':'Boa noite');
-  return `${s}! ✨ Sou a <b>Inteligência Artificial da Planeta Express</b>. Me diga qual comando devo executar — posso <b>lançar</b> pneus, KM/horas, trocas de óleo, baterias, abastecimentos, descargas e serviços, e também <b>consultar</b> qualquer dado do sistema. Se faltar alguma informação, eu pergunto. 🙂`;
+  return `${s} ✨ Sou a <b>IA da Planeta Express</b>. Como posso ajudar?`;
 }
 
 /* ================================================================== */
