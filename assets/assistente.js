@@ -109,7 +109,7 @@ function iaExec(intent, raw){
 /* ================================================================== */
 /*  3. INTERPRETADOR PRINCIPAL                                         */
 /* ================================================================== */
-function _iaEhPergunta(n){ return /\?|\b(quant|qual|quais|quando|onde|cade|me diga|me fala|me informa|me mostr|mostr|list|resumo|status|situacao|vence|venc|validade|quanto tem|tem quantos|dado|dados|informac|ficha|sobre|detalhe|consulta|buscar|procur|pesquis|encontr|alarme|quem)\b/.test(n); }
+function _iaEhPergunta(n){ return /\?|\b(quant|qual|quais|quando|onde|cade|me diga|me fala|me informa|me mostr|mostr|list|resumo|status|situacao|vence|venc|validade|quanto tem|tem quantos|dado|dados|informac|ficha|sobre|detalhe|consulta|buscar|procur|pesquis|encontr|alarme|quem|gast|despes|custo|corretiv|preventiv)\b/.test(n); }
 function _iaIntent(n){
   if(/pneu|\bpne\b/.test(n)) return 'pneu';
   if(/oleo|filtr|lubrific/.test(n)) return 'oleo';
@@ -433,12 +433,15 @@ function iaConsulta(t,n){
     return `🔋 Última bateria do <b>${esc(v.placa)}</b>: ${esc(b.marca||'—')}, de ${fmtD(b.data)}${b.valor?' ('+money(b.valor)+')':''}. Garantia até <b>${fmtD(b.garantiaAte)}</b> ${_iaVencBadge({validade:b.garantiaAte})}.`;
   }
 
-  /* GASTOS / DESPESAS */
-  if(/gast|despes|custo|quanto.*servi|servi.*total/.test(n)){
-    const serv=DB.servicos.reduce((s,x)=>s+(+x.valor||0),0);
-    const ab=DB.abastecimentos.reduce((s,x)=>s+(+x.valor||0),0);
-    const bat=DB.baterias.reduce((s,x)=>s+(+x.valor||0),0);
-    return `💰 Gastos registrados: serviços/reparos <b>${money(serv)}</b>, abastecimentos <b>${money(ab)}</b>, baterias <b>${money(bat)}</b>. Total <b>${money(serv+ab+bat)}</b>.`;
+  /* GASTOS / DESPESAS / MANUTENÇÃO */
+  if(/gast|despes|custo|manuten|repar|servi|corretiv|preventiv/.test(n)){
+    const sv=DB.servicos.filter(x=>v? x.veiculoId===v.id : true);
+    const somaS=a=>a.reduce((s,x)=>s+(+x.valor||0),0);
+    const corr=somaS(sv.filter(x=>(x.tipo||'Corretiva')==='Corretiva'));
+    const prev=somaS(sv.filter(x=>x.tipo==='Preventiva'));
+    if(v){ return `💰 Manutenção do <b>${esc(v.placa)}</b>: ${sv.length} serviço(s), total <b>${money(corr+prev)}</b> — corretiva ${money(corr)}, preventiva ${money(prev)}.`; }
+    const ab=somaS(DB.abastecimentos), bat=somaS(DB.baterias);
+    return `💰 Gastos registrados:<br>• Manutenção: <b>${money(corr+prev)}</b> (corretiva ${money(corr)} · preventiva ${money(prev)})<br>• Abastecimentos: <b>${money(ab)}</b><br>• Baterias: <b>${money(bat)}</b><br>• <b>Total geral: ${money(corr+prev+ab+bat)}</b>`;
   }
 
   /* RESUMO / FICHA DO VEÍCULO */

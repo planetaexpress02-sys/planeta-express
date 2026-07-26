@@ -28,10 +28,13 @@ function ensureCollections(){
 function importarManutencaoPlanilhas(){
   if(typeof MANUT_SEED==='undefined' || !Array.isArray(MANUT_SEED)) return;
   if(!Array.isArray(DB.servicos)) DB.servicos=[];
-  const existentes=new Set(DB.servicos.map(s=>s.id));
-  let add=0;
-  MANUT_SEED.forEach(r=>{ if(!existentes.has(r.id)){ DB.servicos.push(Object.assign({},r)); add++; } });
-  if(add>0){ DB.config._manutImp=true; }
+  const porId={}; DB.servicos.forEach(s=>{ porId[s.id]=s; });
+  MANUT_SEED.forEach(r=>{
+    const ex=porId[r.id];
+    if(!ex){ DB.servicos.push(Object.assign({},r)); }
+    else if(!ex.tipo){ ex.tipo=r.tipo; if(!ex.obs&&r.obs) ex.obs=r.obs; }  // preenche o tipo em quem foi importado antes
+  });
+  DB.servicos.forEach(s=>{ if(!s.tipo) s.tipo='Corretiva'; });  // qualquer serviço sem tipo vira Corretiva por padrão
 }
 /* Conserta valores gravados errados pelo bug antigo (÷1000). Só mexe em valor
    com mais de 2 casas decimais (assinatura da corrupção); valores corretos ficam intactos. */
@@ -140,6 +143,7 @@ function fmtDLong(s){ const d=parseD(s); if(!d) return '—'; return d.getDate()
 function diasAte(s){ const d=parseD(s); if(!d) return null; return Math.round((d-hoje())/86400000); }
 function money(v){ if(v==null||v==='') return '—'; return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function num(v){ if(v==null||v==='') return '—'; return Number(v).toLocaleString('pt-BR'); }
+function moneyK(v){ v=Number(v)||0; if(v>=1000) return 'R$ '+(v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:1})+'k'; return 'R$ '+v.toLocaleString('pt-BR'); }
 function initials(nome){ const p=(nome||'?').trim().split(/\s+/); return ((p[0]||'')[0]||'')+((p[p.length-1]||'')[0]||''); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function fileSize(b){ if(!b) return ''; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
@@ -300,7 +304,7 @@ function barChart(data, opts){
     return `<g${clk}>
       ${d.hash?`<rect x="${pad+i*gap}" y="0" width="${gap}" height="${h}" fill="transparent"/>`:''}
       <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${d.color||'url(#bg)'}"/>
-      ${d.value?`<text x="${x+bw/2}" y="${y-5}" text-anchor="middle" class="bar-val">${d.value}</text>`:''}
+      ${d.value?`<text x="${x+bw/2}" y="${y-5}" text-anchor="middle" class="bar-val">${d.vtxt!=null?esc(d.vtxt):d.value}</text>`:''}
       <text x="${x+bw/2}" y="${h-8}" text-anchor="middle" class="bar-lbl">${esc(d.label)}</text>
     </g>`;
   }).join('');
@@ -1042,45 +1046,88 @@ function viewOleo(){
 }
 
 /* ---------- RELATÓRIO DE MANUTENÇÃO (serviços / reparos) ---------- */
+let manutFiltro='todas';
+function manutTipoTag(t){ return (t==='Preventiva')
+  ? '<span class="st ok" style="font-size:10.5px">Preventiva</span>'
+  : '<span class="st warn" style="font-size:10.5px">Corretiva</span>'; }
+function _somaServ(arr){ return arr.reduce((s,x)=>s+(Number(x.valor)||0),0); }
 function viewManutencao(){
-  const total=DB.servicos.reduce((s,x)=>s+(Number(x.valor)||0),0);
+  const todos=DB.servicos.slice();
+  const ehTipo=(x,t)=> (x.tipo||'Corretiva')===t;
+  const filtr = manutFiltro==='corretiva'? todos.filter(x=>ehTipo(x,'Corretiva'))
+             : manutFiltro==='preventiva'? todos.filter(x=>ehTipo(x,'Preventiva')) : todos;
+  const total=_somaServ(todos), corr=_somaServ(todos.filter(x=>ehTipo(x,'Corretiva'))), prev=_somaServ(todos.filter(x=>ehTipo(x,'Preventiva')));
   const h=hoje();
-  const mesTot=DB.servicos.filter(x=>{ const d=parseD(x.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,x)=>s+(Number(x.valor)||0),0);
-  const rows=DB.servicos.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(x=>{ const v=veiculo(x.veiculoId);
-    return `<tr class="clickable" onclick="modalServico('${x.id}')"><td class="mono">${fmtD(x.data)}</td><td>${v?plate(v.placa,v.tipo):'—'}</td>
-      <td><b>${esc(x.descricao||'—')}</b>${x.obs?`<div class="muted" style="font-size:11.5px">${esc(x.obs)}</div>`:''}</td>
-      <td>${esc(x.oficina||'—')}</td><td class="mono muted">${x.km!=null&&x.km!==''?num(x.km)+' km':'—'}</td>
-      <td class="mono"><b>${money(x.valor)}</b></td>
-      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalServico('${x.id}')">${svg('edit')}</button></td></tr>`;
-  }).join('');
+  const mesTot=_somaServ(todos.filter(x=>{ const d=parseD(x.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }));
+  const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
+  const comGasto=veics.map(v=>({v,g:_somaServ(filtr.filter(x=>x.veiculoId===v.id))})).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
+  const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#0ea5a4':'#2563eb'}));
+  const cavalos=veics.filter(v=>v.tipo==='Cavalo'&&filtr.some(x=>x.veiculoId===v.id));
+  const carretas=veics.filter(v=>isReb(v)&&filtr.some(x=>x.veiculoId===v.id));
+  const cardsDe=(lst)=>lst.map(v=>manutCardVeiculo(v,filtr.filter(x=>x.veiculoId===v.id))).join('');
+  const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="manutFiltro='${k}';router()">${l}</button>`;
   return `
-  <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Registre reparos e serviços (freios, elétrica, borracharia, etc.) com valor e oficina. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
+  <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    ${kpi('wrench','i-blue',DB.servicos.length,'Serviços registrados','')}
-    ${kpi('money','i-green',money(mesTot),'Gasto no mês','')}
-    ${kpi('export','i-amber',money(total),'Gasto acumulado','')}
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kpi('money','i-blue',money(total),'Gasto total',DB.servicos.length+' serviços')}
+    ${kpi('wrench','i-amber',money(corr),'Corretiva','')}
+    ${kpi('shield','i-green',money(prev),'Preventiva','')}
+    ${kpi('cal','i-red',money(mesTot),'Gasto no mês','')}
   </div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Data</th><th>Veículo</th><th>Serviço</th><th>Oficina</th><th>KM</th><th>Valor</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum serviço registrado. Clique em "Novo serviço".')}</td></tr>`}</tbody></table></div></div></div>`;
+  <div class="grid" style="grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><div class="card-h">${svg('dash')}<h3 style="font-size:14px">Gasto por veículo</h3><span class="sub" style="margin-left:auto">azul = cavalos · verde = carretas</span></div>
+      <div class="card-b">${comGasto.length?barChart(barras,{h:180,w:460}):emptyState('Sem gastos lançados.')}</div></div>
+    <div class="card"><div class="card-h">${svg('shield')}<h3 style="font-size:14px">Corretiva × Preventiva</h3></div>
+      <div class="card-b" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+        ${donut([{value:corr,color:'#f59e0b'},{value:prev,color:'#16a34a'}],{center:'',sub:'',size:150})}
+        <div style="font-size:12.5px;text-align:center;line-height:1.9"><span class="st warn">Corretiva</span> <b>${money(corr)}</b><br><span class="st ok">Preventiva</span> <b>${money(prev)}</b></div>
+      </div></div>
+  </div>
+  <div class="toolbar"><div class="seg no-print">${fb('todas','Todas')}${fb('corretiva','Corretiva')}${fb('preventiva','Preventiva')}</div>
+    <div class="spacer"></div><div class="muted">${filtr.length} serviço(s) · <b>${money(_somaServ(filtr))}</b></div></div>
+  <div class="sectitulo">${svg('truck')} Cavalos</div>
+  <div class="grid" style="gap:18px">${cavalos.length?cardsDe(cavalos):emptyState('Nenhum serviço de cavalos neste filtro.')}</div>
+  <div class="sectitulo" style="margin-top:22px">${svg('battery')} Carretas</div>
+  <div class="grid" style="gap:18px">${carretas.length?cardsDe(carretas):emptyState('Nenhum serviço de carretas neste filtro.')}</div>`;
 }
-function modalServico(id){
-  const x=id?DB.servicos.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),veiculoId:(DB.veiculos[0]||{}).id,descricao:'',oficina:'',km:'',valor:'',obs:''};
+function manutCardVeiculo(v, servs){
+  const soma=_somaServ(servs);
+  const corr=servs.filter(x=>(x.tipo||'Corretiva')==='Corretiva').length;
+  const prev=servs.filter(x=>x.tipo==='Preventiva').length;
+  const rows=servs.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(x=>`
+    <tr class="clickable" onclick="modalServico('${x.id}')">
+      <td class="mono">${fmtD(x.data)}</td>
+      <td>${manutTipoTag(x.tipo)}</td>
+      <td><b>${esc(x.descricao||'—')}</b>${x.obs?`<div class="muted" style="font-size:11px">${esc(x.obs)}</div>`:''}</td>
+      <td>${esc(x.oficina||'—')}</td>
+      <td class="mono muted">${x.km!=null&&x.km!==''?num(x.km)+' km':'—'}</td>
+      <td class="mono"><b>${money(x.valor)}</b></td>
+      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalServico('${x.id}')">${svg('edit')}</button></td>
+    </tr>`).join('');
+  return `<div class="card"><div class="card-h">${plate(v.placa,v.tipo)}<h3 style="font-size:14px">${esc(v.marca)} ${esc(v.modelo)}</h3>
+    <span class="sub">${servs.length} serviço(s) · ${corr} corretiva / ${prev} preventiva</span>
+    <div class="r no-print" style="margin-left:auto;display:flex;align-items:center;gap:12px"><b style="font-size:15px">${money(soma)}</b><button class="btn sm" title="Novo serviço deste veículo" onclick="modalServico(null,'${v.id}')">${svg('plus')}</button></div></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Serviço</th><th>Oficina</th><th>KM/Horas</th><th>Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div></div>`;
+}
+function modalServico(id, vId){
+  const x=id?DB.servicos.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),veiculoId:vId||(DB.veiculos[0]||{}).id,descricao:'',oficina:'',km:'',valor:'',tipo:'Corretiva',obs:''};
   openModal(`<div class="m-h">${svg('wrench')}<h3>${id?'Editar serviço':'Novo serviço'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">${fld('Data','f_data',x.data,'date')}
         <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${x.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.tipo)}</option>`).join('')}</select></div></div>
       ${fld('Serviço / reparo','f_desc',x.descricao,'text','Ex.: Troca de lonas de freio')}
-      <div class="field-row">${fld('Oficina','f_ofi',x.oficina)}${fldR$('Valor (R$)','f_val',x.valor)}</div>
-      ${fld('KM / Horas (opcional)','f_km',x.km,'number')}
+      <div class="field-row">${sel('Tipo de manutenção','f_tipo',x.tipo||'Corretiva',['Corretiva','Preventiva'])}${fld('Oficina','f_ofi',x.oficina)}</div>
+      <div class="field-row">${fldR$('Valor (R$)','f_val',x.valor)}${fld('KM / Horas (opcional)','f_km',x.km,'number')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs)}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirServico('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarServico('${id||''}')">Salvar</button></div>`);
 }
 function salvarServico(id){ if(!val('f_desc')){toast('Descreva o serviço.','err');return;}
-  const d={data:val('f_data'),veiculoId:val('f_veic'),descricao:val('f_desc'),oficina:val('f_ofi'),km:numOrNull('f_km'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
+  const d={data:val('f_data'),veiculoId:val('f_veic'),descricao:val('f_desc'),oficina:val('f_ofi'),km:numOrNull('f_km'),valor:parseBRL(val('f_val')),tipo:val('f_tipo')||'Corretiva',obs:val('f_obs')};
   if(id)Object.assign(DB.servicos.find(y=>y.id===id),d); else{ d.id=uid('sv'); DB.servicos.push(d); } saveDB(); closeModal(); toast('Serviço salvo.'); router(); }
 function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.servicos=DB.servicos.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
