@@ -133,6 +133,30 @@ function initials(nome){ const p=(nome||'?').trim().split(/\s+/); return ((p[0]|
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function fileSize(b){ if(!b) return ''; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 
+/* ---------- PONTUAÇÃO AUTOMÁTICA (deixa CPF, RG, telefone... profissional) ---------- */
+function maskCPF(v){ const raw=String(v==null?'':v); const d=raw.replace(/\D/g,'').slice(0,11);
+  if(d.length!==11) return raw; return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
+function maskCNPJ(v){ const raw=String(v==null?'':v); const d=raw.replace(/\D/g,'').slice(0,14);
+  if(d.length!==14) return raw; return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); }
+function maskFone(v){ const raw=String(v==null?'':v); const d=raw.replace(/\D/g,'').slice(0,11);
+  if(d.length===11) return d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  if(d.length===10) return d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3');
+  return raw; }
+function maskRG(v){ const raw=String(v==null?'':v); const d=raw.replace(/[^\dxX]/g,'');
+  if(d.length===9) return d.replace(/(\d{2})(\d{3})(\d{3})([\dxX])/,'$1.$2.$3-$4').toUpperCase();
+  if(d.length===8) return d.replace(/(\d{1})(\d{3})(\d{3})([\dxX])/,'$1.$2.$3-$4').toUpperCase();
+  return raw; }
+function maskCEP(v){ const raw=String(v==null?'':v); const d=raw.replace(/\D/g,'').slice(0,8);
+  if(d.length===8) return d.replace(/(\d{5})(\d{3})/,'$1-$2'); return raw; }
+/* Campo com pontuação automática enquanto digita (usa data-mask + listener global) */
+function fldMask(label,id,v,mask,hint){
+  return `<div class="field"><label>${label}</label><input id="${id}" type="text" data-mask="${mask}" value="${esc(v==null?'':v)}">${hint?`<div class="hint">${hint}</div>`:''}</div>`; }
+const _MASKFN={cpf:maskCPF,cnpj:maskCNPJ,fone:maskFone,rg:maskRG,cep:maskCEP};
+function aplicarMascaraInput(e){ const el=e.target; if(!el||!el.getAttribute) return;
+  const m=el.getAttribute('data-mask'); const fn=_MASKFN[m]; if(!fn) return;
+  const before=el.value, after=fn(before);
+  if(after!==before){ const end=el.selectionStart===before.length; el.value=after; if(end){ try{ el.setSelectionRange(after.length,after.length); }catch(_){} } } }
+
 function situacao(validade){
   const dd = diasAte(validade), cfg = DB.config;
   if(dd===null) return {cls:'neutro', label:'Sem data', dias:null, ord:5};
@@ -221,6 +245,8 @@ const IC = {
   clinic:'<path d="M4 21V9l8-5 8 5v12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9v6M9 12h6" stroke="currentColor" stroke-width="1.8"/><path d="M2 21h20" stroke="currentColor" stroke-width="1.7"/>',
   wheel:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 9V4M9.5 14.5 5.5 18M14.5 14.5l4 3.5" stroke="currentColor" stroke-width="1.6"/>',
   taco:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 12l4-3M5 12h2M17 12h2M12 5v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
+  spark:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" fill="currentColor"/>',
+  send:'<path d="M4 12l16-8-6 16-3-6-7-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
@@ -928,9 +954,10 @@ function viewKM(){
           <input type="number" id="km_${v.id}" value="${atual!=null?atual:''}" placeholder="0">
           <button class="btn primary sm" onclick="salvarKM('${v.id}')">Atualizar</button>
         </div>
+        ${(cavalo?v.kmData:v.horaData)?`<div class="muted" style="font-size:11.5px;margin-top:6px">${svg('cal')} Última alteração: <b>${fmtD(cavalo?v.kmData:v.horaData)}</b> · <a href="#" onclick="event.preventDefault();modalHistLeitura('${v.id}')">ver histórico</a></div>`:''}
       </div>
       ${info&&info.ok?`
-        <div class="kmcard-item"><span>${esc(p.item)}</span><b class="st ${info.st}">${info.restante<=0?'Troca vencida':'faltam '+num(info.restante)+' '+un}</b></div>
+        <div class="kmcard-item"><span>${esc(p.item)}</span><b class="st ${info.st}">${info.restante<=0?'Vencida há '+num(-info.restante)+' '+un:'faltam '+num(info.restante)+' '+un}</b></div>
         <div class="bt"><i class="fill-${info.st}" style="width:${info.pct}%"></i></div>
         <div class="muted" style="font-size:11.5px;margin-top:4px">Próxima troca em ${num(info.prox)} ${un} · última ${fmtD(p.data)}</div>
       `:`<div class="muted" style="font-size:12px;margin-top:6px">Informe o ${cavalo?'KM':'horas'} para calcular a próxima troca.</div>`}
@@ -945,9 +972,31 @@ function viewKM(){
 }
 function salvarKM(id){
   const v=veiculo(id); const el=document.getElementById('km_'+id);
-  const val = el.value===''? null : parseFloat(el.value);
-  if(v.tipo==='Cavalo') v.kmAtual=val; else v.horaAtual=val;
+  const nv = el.value===''? null : parseFloat(el.value);
+  registrarLeitura(v, nv);
   saveDB(); toast('Atualizado: '+v.placa); router();
+}
+/* Grava a nova leitura de KM/horas E a data em que foi feita (histórico) */
+function registrarLeitura(v, nv, dataISO){
+  const dia=dataISO||new Date().toISOString().slice(0,10);
+  if(v.tipo==='Cavalo'){
+    if(nv!==v.kmAtual){ (v.histKm=v.histKm||[]).push({data:dia,valor:nv}); if(v.histKm.length>60)v.histKm=v.histKm.slice(-60); v.kmData=dia; }
+    v.kmAtual=nv;
+  } else {
+    if(nv!==v.horaAtual){ (v.histHora=v.histHora||[]).push({data:dia,valor:nv}); if(v.histHora.length>60)v.histHora=v.histHora.slice(-60); v.horaData=dia; }
+    v.horaAtual=nv;
+  }
+}
+function modalHistLeitura(id){ const v=veiculo(id); if(!v)return; const cavalo=v.tipo==='Cavalo';
+  const un=cavalo?'km':'h'; const hist=(cavalo?v.histKm:v.histHora)||[];
+  const linhas=hist.slice().reverse().map(h=>`<tr><td class="mono">${fmtD(h.data)}</td><td class="mono"><b>${h.valor!=null?num(h.valor)+' '+un:'—'}</b></td></tr>`).join('');
+  openModal(`<div class="m-h">${svg('gauge')}<h3>Histórico — ${esc(v.placa)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <p class="muted" style="margin-bottom:10px">Cada alteração do ${cavalo?'KM':'horas'} deste veículo, com a data em que foi feita.</p>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Data da alteração</th><th>${cavalo?'KM':'Horas'}</th></tr></thead>
+      <tbody>${linhas||`<tr><td colspan="2">${emptyState('Nenhuma alteração registrada ainda.')}</td></tr>`}</tbody></table></div>
+    </div>
+    <div class="m-f"><button class="btn primary" onclick="closeModal()">Fechar</button></div>`);
 }
 
 /* ================================================================== */
@@ -962,7 +1011,7 @@ function manutBloco(v){ const ms=DB.manutencoes.filter(m=>m.veiculoId===v.id);
         return `<tr class="clickable" onclick="modalManutencao('${m.id}')"><td><b>${esc(m.item)}</b><div class="muted" style="font-size:11px">${fmtD(m.data)}</div></td><td class="muted">${esc(m.intervalo||'—')}</td>
         <td class="mono muted">${m.kmTroca!=null?num(m.kmTroca)+' km':(m.horasTroca!=null?num(m.horasTroca)+' h':'—')}</td>
         <td class="mono"><b>${m.proxKm!=null?num(m.proxKm)+' km':(m.proxHoras!=null?num(m.proxHoras)+' h':'—')}</b></td>
-        <td>${mi.ok?`<span class="st ${mi.st}">${mi.restante<=0?'vencida':num(mi.restante)+' '+mi.un}</span>`:'<span class="muted">—</span>'}</td>
+        <td>${mi.ok?`<span class="st ${mi.st}">${mi.restante<=0?'vencida há '+num(-mi.restante)+' '+mi.un:num(mi.restante)+' '+mi.un}</span>`:'<span class="muted">—</span>'}</td>
         <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalManutencao('${m.id}')">${svg('edit')}</button></td></tr>`;
       }).join('')}</tbody></table></div></div></div>`;
 }
@@ -1285,13 +1334,13 @@ function modalMotorista(id){
       ${msec('Identificação')}
       <div class="field-row">${fld('Matrícula','f_mat',m.matricula)}${fld('Nome completo','f_nome',m.nome)}</div>
       <div class="field-row">${fld('Nascimento','f_nasc',m.nascimento,'date')}${sel('Gênero','f_gen',m.genero,['Masculino','Feminino'])}</div>
-      <div class="field-row">${fld('Celular','f_cel',m.celular)}${fld('Telefone','f_tel',m.telefone)}</div>
+      <div class="field-row">${fldMask('Celular','f_cel',m.celular,'fone','(  ) automático')}${fldMask('Telefone','f_tel',m.telefone,'fone','(  ) automático')}</div>
       ${fld('E-mail','f_email',m.email)}
       <div class="field-row">${sel('UF Naturalidade','f_ufnat',m.ufNat||'',UFS)}${fld('Município Naturalidade','f_munat',m.municipioNat)}</div>
       <div class="field-row">${fld('Tipo de Condutor','f_tipo',m.tipoCondutor)}${sel('Status','f_status',m.status,['Ativo','Inativo','Afastado','Férias'])}</div>
 
       ${msec('Documentos')}
-      <div class="field-row">${fld('CPF','f_cpf',m.cpf)}${fld('RG','f_rg',m.rg)}</div>
+      <div class="field-row">${fldMask('CPF','f_cpf',m.cpf,'cpf','000.000.000-00 automático')}${fldMask('RG','f_rg',m.rg,'rg','pontuação automática')}</div>
       ${fld('Emissor RG','f_emrg',m.emissorRg)}
 
       ${msec('Dados Trabalhistas')}
@@ -1312,7 +1361,7 @@ function modalMotorista(id){
       <div class="field-row">${fld('Data Cadastro','f_rntrccad',m.rntrcCadastro,'date')}${fld('Data Validade','f_rntrcval',m.rntrcValidade,'date')}</div>
 
       ${msec('Endereço')}
-      <div class="field-row">${fld('CEP','f_cep',m.cep)}${fld('Logradouro','f_log',m.logradouro)}</div>
+      <div class="field-row">${fldMask('CEP','f_cep',m.cep,'cep','00000-000 automático')}${fld('Logradouro','f_log',m.logradouro)}</div>
       <div class="field-row">${fld('Número','f_num',m.numero)}${fld('Complemento','f_comp',m.complemento)}</div>
       ${fld('Bairro','f_bairro',m.bairro)}
       <div class="field-row">${sel('UF','f_ufend',m.ufEnd||'',UFS)}${fld('Município','f_munend',m.municipioEnd)}</div>
@@ -1325,13 +1374,13 @@ function modalMotorista(id){
       <button class="btn primary" onclick="salvarMotorista('${id||''}')">Salvar</button></div>`, true);
 }
 function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');return;}
-  const d={matricula:val('f_mat'),nome:val('f_nome'),nascimento:val('f_nasc'),genero:val('f_gen'),celular:val('f_cel'),telefone:val('f_tel'),email:val('f_email'),
+  const d={matricula:val('f_mat'),nome:val('f_nome'),nascimento:val('f_nasc'),genero:val('f_gen'),celular:maskFone(val('f_cel')),telefone:maskFone(val('f_tel')),email:val('f_email'),
     ufNat:val('f_ufnat'),municipioNat:val('f_munat'),tipoCondutor:val('f_tipo'),status:val('f_status'),
-    cpf:val('f_cpf'),rg:val('f_rg'),emissorRg:val('f_emrg'),
+    cpf:maskCPF(val('f_cpf')),rg:maskRG(val('f_rg')),emissorRg:val('f_emrg'),
     cargo:val('f_cargo'),admissao:val('f_adm'),ctps:val('f_ctps'),pis:val('f_pis'),funcao:val('f_func'),socio:document.getElementById('f_socio').checked,
     categoria:val('f_cat'),cnh:val('f_cnhn'),primeiraHab:val('f_prim'),emissaoCnh:val('f_emis'),cnhValidade:val('f_cnh'),ear:val('f_ear'),cnhUf:val('f_cnhuf'),cnhMunicipio:val('f_cnhmun'),renach:val('f_renach'),espelho:val('f_esp'),
     rntrc:val('f_rntrc'),rntrcSituacao:val('f_rntrcsit'),rntrcCadastro:val('f_rntrccad'),rntrcValidade:val('f_rntrcval'),
-    cep:val('f_cep'),logradouro:val('f_log'),numero:val('f_num'),complemento:val('f_comp'),bairro:val('f_bairro'),ufEnd:val('f_ufend'),municipioEnd:val('f_munend'),foto:val('f_foto')};
+    cep:maskCEP(val('f_cep')),logradouro:val('f_log'),numero:val('f_num'),complemento:val('f_comp'),bairro:val('f_bairro'),ufEnd:val('f_ufend'),municipioEnd:val('f_munend'),foto:val('f_foto')};
   d.endereco=[d.logradouro, d.numero].filter(Boolean).join(', ')+(d.bairro?' — '+d.bairro:'')+(d.municipioEnd?', '+d.municipioEnd+(d.ufEnd?'/'+d.ufEnd:''):'');
   if(d.endereco===', ') d.endereco='';
   if(id){ Object.assign(motorista(id),d); const cv=DB.vencimentos.find(v=>v.tipo==='CNH'&&v.refId===id); if(cv){ if(d.cnhValidade)cv.validade=d.cnhValidade; if(d.cnh)cv.numero=d.cnh; } }
@@ -1426,13 +1475,13 @@ function modalBateria(id){
       <div class="field-row">${fld('Marca / capacidade','f_marca',b.marca)}${fldR$('Valor (R$)','f_valor',b.valor)}</div>
       ${fld('Local de compra','f_local',b.local)}
       <div class="field-row">${fld('Garantia (meses)','f_gm',b.garantiaMeses,'number')}${fld('Garantia até','f_ga',b.garantiaAte,'date')}</div>
-      ${fld('Telefone do fornecedor','f_tel',b.telefone)}
-    </div>
+      ${fldMask('Telefone do fornecedor','f_tel',b.telefone,'fone','(  ) automático')}
+</div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirBateria('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="salvarBateria('${id||''}')">Salvar</button></div>`);
 }
-function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),telefone:val('f_tel')};
+function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),telefone:maskFone(val('f_tel'))};
   if(id)Object.assign(DB.baterias.find(x=>x.id===id),d); else{ d.id=uid('b'); DB.baterias.push(d); } saveDB(); closeModal(); toast('Bateria salva.'); router(); }
 function excluirBateria(id){ if(!confirm('Excluir esta bateria?'))return; DB.baterias=DB.baterias.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
@@ -1627,13 +1676,14 @@ function viewPneus(){
       <span class="sub">${ps.length} pneu(s) · ${cavalo?'atual '+num(v.kmAtual)+' km':'atual '+num(v.horaAtual)+' h'}</span>
       <div class="r no-print"><a class="btn sm" href="#km">${svg('gauge')} KM/Horas</a><button class="btn sm" onclick="modalPneu(null,'${v.id}')">${svg('plus')}</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado (atualiza c/ o KM)</th><th>Status</th><th class="no-print"></th></tr></thead>
+        <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado (atualiza c/ o KM)</th><th>Status</th><th class="no-print"></th></tr></thead>
         <tbody>${ps.map(p=>{ const km=pneuKmRodado(p);
-          return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><b>${esc(p.posicao||'—')}</b></td>
-          <td>${p.qtd&&p.qtd>1?`<span class="tag cavalo">${p.qtd}×</span> `:''}<b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
+          return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}×</span></td>
+          <td><b>${esc(p.posicao||'—')}</b></td>
+          <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
           <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
           <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
-          <td><span class="tag">${esc(p.status||'—')}</span></td>
+          <td><span class="tag">${esc(p.status||'—')}</span>${(/usado|recap/i.test(p.status||'')&&p.borracha!=null&&p.borracha!=='')?`<br><span class="borracha-badge" title="Borracha restante">${p.borracha}% borracha</span>`:''}</td>
           <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPneu('${p.id}')">${svg('edit')}</button></td></tr>`;
         }).join('')}</tbody></table></div></div></div>`;
   }).join('');
@@ -1648,29 +1698,41 @@ function viewPneus(){
   <div class="grid" style="gap:18px">${blocos||emptyState('Nenhum pneu cadastrado. Clique em "Novo pneu".')}</div>`;
 }
 function modalPneu(id, vId){
-  const p=id?DB.pneus.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,posicao:'',marca:'',medida:'',dot:'',dataInstalacao:'',kmInstalacao:'',status:'Novo',obs:''};
+  const p=id?DB.pneus.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,qtd:1,posicao:'',marca:'',medida:'',dot:'',dataInstalacao:'',kmInstalacao:'',status:'Novo',borracha:'',obs:''};
   openModal(`<div class="m-h">${svg('tire')}<h3>${id?'Editar pneu':'Novo pneu'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${p.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join('')}</select></div>
       <div class="field-row">${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 pneus iguais nessa posição')}${fld('Posição','f_pos',p.posicao,'text','Ex.: Dianteira, Traseira, Estepe')}</div>
       <div class="field-row">${fld('Marca','f_marca',p.marca)}${fld('Medida','f_medida',p.medida,'text','Ex.: 295/80 R22.5')}</div>
-      <div class="field-row">${sel('Status','f_status',p.status,PNEU_STATUS)}${fld('DOT (semana/ano)','f_dot',p.dot)}</div>
+      <div class="field-row">
+        <div class="field"><label>Status</label><select id="f_status" onchange="pneuToggleBorracha(this.value)">${PNEU_STATUS.map(o=>`<option ${o===p.status?'selected':''}>${esc(o)}</option>`).join('')}</select></div>
+        ${fld('DOT (semana/ano)','f_dot',p.dot)}</div>
+      <div class="field-row" id="f_borracha_wrap" style="${/usado|recap/i.test(p.status||'')?'':'display:none'}">
+        ${fld('% de borracha restante','f_borracha',p.borracha,'number','Só para pneu usado/recapado. Ex.: 70')}
+        <div class="field"><label>&nbsp;</label><div class="hint">Quanto de vida útil o pneu ainda tem.</div></div></div>
       <div class="field-row">${fld('Data instalação','f_data',p.dataInstalacao,'date')}${fld('KM na instalação','f_km',p.kmInstalacao,'number')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(p.obs)}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirPneu('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarPneu('${id||''}')">Salvar</button></div>`);
 }
+function pneuToggleBorracha(v){ const w=document.getElementById('f_borracha_wrap'); if(w) w.style.display=/usado|recap/i.test(v||'')?'':'none'; }
 function salvarPneu(id){
   let q=parseInt(val('f_qtd'))||1; if(q<1)q=1; if(q>50)q=50;
+  const st=val('f_status');
   const d={veiculoId:val('f_veic'),qtd:q,posicao:val('f_pos'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),
-    status:val('f_status'),dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),obs:val('f_obs')};
+    status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),obs:val('f_obs')};
   if(id)Object.assign(DB.pneus.find(x=>x.id===id),d); else{ d.id=uid('pn'); DB.pneus.push(d); }
   saveDB(); closeModal(); toast('Pneu salvo.'); router(); }
 function excluirPneu(id){ if(!confirm('Excluir este pneu?'))return; DB.pneus=DB.pneus.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ---------- CHECK-LIST ---------- */
 function chkResumo(c){ let nok=0,tot=0; ['itensCavalo','itensCarreta'].forEach(k=>{ Object.values(c[k]||{}).forEach(v=>{ tot++; if(v==='NOK')nok++; }); }); const av=(c.pontos||[]).filter(p=>p.status==='avaria'||p.status==='atencao').length; return {nok,tot,av}; }
+/* Resultado final do check-list: APROVADO (verde) ou REPROVADO (vermelho) */
+function chkAprovado(c){ const r=chkResumo(c); return r.nok===0 && r.av===0; }
+function chkResultadoBadge(c){ return chkAprovado(c)
+  ? `<span class="st aprov">${svg('check')} APROVADO</span>`
+  : `<span class="st reprov">REPROVADO</span>`; }
 
 /* ---- Mapa do veículo (leve, SVG) — marcar pontos ---- */
 let _chkPontos=[], _chkView='lateral';
@@ -1727,7 +1789,7 @@ function viewChecklist(){
     return `<tr class="clickable" onclick="modalChecklist('${c.id}')">
       <td class="mono">${fmtD(c.data)}</td><td>${v?plate(v.placa,v.tipo):'—'}</td>
       <td>${m?esc(m.nome):esc(c.motoristaNome||'—')}</td><td class="mono muted">${c.km?num(c.km)+' km':'—'}</td>
-      <td>${r.nok?`<span class="st crit">${r.nok} NOK</span> `:'<span class="st ok">Sem pendências</span> '}${r.av?`<span class="st warn">${r.av} ponto(s)</span>`:''}</td>
+      <td>${chkResultadoBadge(c)}</td>
       <td class="no-print" style="text-align:right">
         <button class="btn ghost sm" title="Exportar" onclick="event.stopPropagation();exportarChecklist('${c.id}')">${svg('download')}</button>
         <button class="btn ghost sm" onclick="event.stopPropagation();modalChecklist('${c.id}')">${svg('edit')}</button></td></tr>`;
@@ -1738,7 +1800,7 @@ function viewChecklist(){
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('check','i-blue',cls.length,'Check-lists realizados','')}
     ${kpi('cal','i-green',mes,'Neste mês','')}
-    ${kpi('bell', comNok?'i-red':'i-green', comNok, 'Com pendências (NOK)','')}
+    ${kpi('bell', comNok?'i-red':'i-green', comNok, 'Reprovados','')}
   </div>
   <div class="toolbar"><div class="spacer"></div><button class="btn primary" onclick="modalChecklist()">${svg('plus')} Novo check-list</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
@@ -2415,6 +2477,8 @@ async function init(){
   window.addEventListener('hashchange',router);
   document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+  document.addEventListener('input', aplicarMascaraInput);   /* pontuação automática (CPF, RG, telefone…) */
+  if(typeof iaMontarFab==='function') iaMontarFab();          /* botão do assistente inteligente */
   const s=document.getElementById('gsearch'); s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
   // Sincronização: salva na hora ao fechar/minimizar; ao voltar, puxa o mais recente da nuvem
   window.addEventListener('beforeunload', flushNuvem);

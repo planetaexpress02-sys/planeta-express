@@ -371,3 +371,85 @@ body{background:radial-gradient(1100px 600px at 100% -5%,#e8eefc 0%,transparent 
 /* Gráfico de barras clicável */
 .bar-clk{cursor:pointer}
 .bar-clk:hover rect{opacity:.82}
+
+/* ==========================================================================
+   v4.5 — Resultado check-list, coluna Qtd/Borracha de pneus e ASSISTENTE IA
+   ========================================================================== */
+
+/* Check-list: resultado APROVADO (verde) / REPROVADO (vermelho) */
+.st.aprov{background:var(--ok-bg);color:var(--ok);font-weight:800;letter-spacing:.4px;padding:5px 14px;font-size:12px}
+.st.reprov{background:var(--danger-bg);color:var(--danger);font-weight:800;letter-spacing:.4px;padding:5px 14px;font-size:12px}
+.st.aprov svg{width:14px;height:14px}
+
+/* Pneus: coluna quantidade e selo de % de borracha */
+.qtd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:3px 8px;border-radius:8px;
+  background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:13px}
+.borracha-badge{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:12px;background:#fff5e6;color:#b45309;
+  font-weight:700;font-size:11px}
+
+/* ---------------- ASSISTENTE INTELIGENTE ---------------- */
+.ia-fab{position:fixed;right:22px;bottom:22px;z-index:1400;display:inline-flex;align-items:center;gap:9px;
+  padding:13px 20px 13px 16px;border:0;border-radius:40px;cursor:pointer;color:#fff;font-weight:700;font-size:14.5px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 12px 30px rgba(79,70,229,.42);
+  transition:transform .18s ease,box-shadow .18s ease,opacity .2s ease}
+.ia-fab:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(79,70,229,.5)}
+.ia-fab svg{width:22px;height:22px;color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.5));animation:iaPulse 2.6s ease-in-out infinite}
+.ia-fab.hide{opacity:0;pointer-events:none;transform:translateY(20px) scale(.9)}
+@keyframes iaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+
+.ia-panel{position:fixed;right:22px;bottom:22px;z-index:1401;width:390px;max-width:calc(100vw - 24px);height:600px;max-height:calc(100vh - 40px);
+  display:flex;flex-direction:column;background:#fff;border:1px solid #e6ebf3;border-radius:20px;overflow:hidden;
+  box-shadow:0 30px 70px rgba(15,23,42,.32);opacity:0;transform:translateY(24px) scale(.96);pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease}
+.ia-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.ia-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;color:#fff;
+  background:linear-gradient(135deg,#2563eb,#7c3aed)}
+.ia-head-t{display:flex;align-items:center;gap:11px}
+.ia-head-t>svg{width:26px;height:26px;color:#fff}
+.ia-head-txt{display:flex;flex-direction:column;line-height:1.2}
+.ia-head-txt b{font-size:15.5px;font-weight:800}
+.ia-head-txt span{font-size:11.5px;opacity:.9}
+.ia-x{background:rgba(255,255,255,.16);border:0;color:#fff;width:30px;height:30px;border-radius:9px;font-size:20px;cursor:pointer;line-height:1}
+.ia-x:hover{background:rgba(255,255,255,.3)}
+
+.ia-body{flex:1;overflow-y:auto;padding:16px;background:#f6f8fc;display:flex;flex-direction:column;gap:12px}
+.ia-msg{display:flex;gap:9px;align-items:flex-end;max-width:100%}
+.ia-msg.user{flex-direction:row-reverse}
+.ia-av{flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#2563eb,#7c3aed)}
+.ia-av svg{width:16px;height:16px;color:#fff}
+.ia-bubble{padding:11px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;max-width:82%;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.ia-msg.bot .ia-bubble{background:#fff;border:1px solid #e9eef6;border-bottom-left-radius:5px;color:#1f2937}
+.ia-msg.user .ia-bubble{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-bottom-right-radius:5px}
+.ia-bubble b{font-weight:800}
+.ia-bubble i{font-style:italic;opacity:.92}
+.ia-help{margin:8px 0 0;padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:7px}
+.ia-help li{font-size:12.5px;line-height:1.45}
+.ia-actions{margin-top:9px}
+.ia-undo{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e2c9c9;background:#fff;
+  color:var(--danger);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer}
+.ia-undo:hover{background:var(--danger-bg)}
+.ia-undo svg{width:13px;height:13px}
+
+.ia-typing{display:inline-flex;gap:4px;padding:3px 2px}
+.ia-typing i{width:7px;height:7px;border-radius:50%;background:#9aa8bd;animation:iaBlink 1.2s infinite}
+.ia-typing i:nth-child(2){animation-delay:.2s}.ia-typing i:nth-child(3){animation-delay:.4s}
+@keyframes iaBlink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+.ia-quick{display:flex;flex-wrap:wrap;gap:7px;padding:10px 14px 4px;background:#f6f8fc;border-top:1px solid #eef2f8}
+.ia-chip{border:1px solid #dbe3ef;background:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;
+  color:#334155;cursor:pointer;transition:.15s}
+.ia-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ia-input{display:flex;gap:8px;padding:12px 14px 14px;background:#f6f8fc;border-top:1px solid #eef2f8}
+.ia-input input{flex:1;border:1px solid #d8e0ee;border-radius:24px;padding:11px 16px;font-size:14px;outline:none;background:#fff}
+.ia-input input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ia-send{flex-shrink:0;width:44px;height:44px;border:0;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 6px 16px rgba(79,70,229,.35)}
+.ia-send svg{width:20px;height:20px;color:#fff}
+.ia-send:hover{filter:brightness(1.08)}
+
+@media (max-width:520px){
+  .ia-panel{right:0;left:0;bottom:0;width:100%;max-width:100%;height:82vh;border-radius:20px 20px 0 0}
+  .ia-fab span{display:none}
+  .ia-fab{padding:15px;right:16px;bottom:16px}
+}
