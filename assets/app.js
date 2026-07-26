@@ -1666,19 +1666,22 @@ function excluirNota(id){ if(!confirm('Excluir este período?'))return; DB.notas
 /* ---------- PNEUS ---------- */
 const PNEU_STATUS=['Novo','Usado','Recapado','Estepe','Descarte'];
 function pneuKmRodado(p){ const v=veiculo(p.veiculoId); if(!v||v.kmAtual==null||p.kmInstalacao==null) return null; const r=v.kmAtual-p.kmInstalacao; return r>=0?r:null; }
+/* Quantidade de um registro de pneu e total somado (cada linha pode ter vários pneus) */
+function pneuQtd(p){ return parseInt(p&&p.qtd)||1; }
+function pneuTotal(list){ return (list||DB.pneus).reduce((s,p)=>s+pneuQtd(p),0); }
 function viewPneus(){
-  const total=DB.pneus.length;
+  const total=pneuTotal();
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comPneus=veics.filter(v=>DB.pneus.some(p=>p.veiculoId===v.id));
   const blocos=comPneus.map(v=>{ const cavalo=v.tipo==='Cavalo';
     const ps=DB.pneus.filter(p=>p.veiculoId===v.id).sort((a,b)=>(a.posicao||'').localeCompare(b.posicao||''));
     return `<div class="card"><div class="card-h">${plate(v.placa,v.tipo)}<h3 style="font-size:14px">${esc(v.marca)} ${esc(v.modelo)}</h3>
-      <span class="sub">${ps.length} pneu(s) · ${cavalo?'atual '+num(v.kmAtual)+' km':'atual '+num(v.horaAtual)+' h'}</span>
+      <span class="sub">${pneuTotal(ps)} pneu(s) · ${cavalo?'atual '+num(v.kmAtual)+' km':'atual '+num(v.horaAtual)+' h'}</span>
       <div class="r no-print"><a class="btn sm" href="#km">${svg('gauge')} KM/Horas</a><button class="btn sm" onclick="modalPneu(null,'${v.id}')">${svg('plus')}</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado (atualiza c/ o KM)</th><th>Status</th><th class="no-print"></th></tr></thead>
         <tbody>${ps.map(p=>{ const km=pneuKmRodado(p);
-          return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}×</span></td>
+          return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
           <td><b>${esc(p.posicao||'—')}</b></td>
           <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
           <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
@@ -1689,9 +1692,9 @@ function viewPneus(){
   }).join('');
   return `
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    ${kpi('tire','i-blue',total,'Pneus cadastrados','')}
+    ${kpi('tire','i-blue',total,'Pneus no total','soma das quantidades')}
     ${kpi('truck','i-amber', comPneus.length, 'Veículos com pneus','')}
-    ${kpi('gauge','i-green', DB.pneus.filter(p=>pneuKmRodado(p)!=null).length, 'Com rodagem calculada','')}
+    ${kpi('gauge','i-green', DB.pneus.length, 'Registros de pneus','')}
   </div>
   <div class="toolbar"><div class="muted">O <b>Rodado</b> é calculado automaticamente (KM atual do veículo − KM da instalação) e acompanha a atualização feita na aba KM/Horas.</div>
     <div class="spacer"></div><button class="btn primary" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>

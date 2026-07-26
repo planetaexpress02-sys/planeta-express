@@ -425,6 +425,7 @@ body{background:radial-gradient(1100px 600px at 100% -5%,#e8eefc 0%,transparent 
 .ia-bubble i{font-style:italic;opacity:.92}
 .ia-help{margin:8px 0 0;padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:7px}
 .ia-help li{font-size:12.5px;line-height:1.45}
+.ia-dim{color:#94a3b8;font-size:.92em}
 .ia-actions{margin-top:9px}
 .ia-undo{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e2c9c9;background:#fff;
   color:var(--danger);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer}
