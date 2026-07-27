@@ -32,7 +32,11 @@ function importarManutencaoPlanilhas(){
   MANUT_SEED.forEach(r=>{
     const ex=porId[r.id];
     if(!ex){ DB.servicos.push(Object.assign({},r)); }
-    else if(!ex.tipo){ ex.tipo=r.tipo; if(!ex.obs&&r.obs) ex.obs=r.obs; }  // preenche o tipo em quem foi importado antes
+    else {  // preenche o que faltava em quem foi importado antes
+      if(!ex.tipo) ex.tipo=r.tipo;
+      if((ex.km===''||ex.km==null) && r.km!=='' && r.km!=null) ex.km=r.km;      // horas das carretas migram p/ o campo km
+      if(ex.obs && /^Hora TK/i.test(ex.obs)) ex.obs='';
+    }
   });
   DB.servicos.forEach(s=>{ if(!s.tipo) s.tipo='Corretiva'; });  // qualquer serviço sem tipo vira Corretiva por padrão
 }
@@ -363,9 +367,9 @@ function router(){
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
   else if(rota==='km') el.innerHTML=viewKM();
   else if(rota==='oleo') el.innerHTML=viewOleo();
-  else if(rota==='manutencao') el.innerHTML=viewManutencao();
-  else if(rota==='pneus') el.innerHTML=viewPneus();
-  else if(rota==='baterias') el.innerHTML=viewBaterias();
+  else if(rota==='manutencao'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Relatório de Manutenção'; } el.innerHTML=viewManutencaoVeiculo(arg); } else el.innerHTML=viewManutencao(); }
+  else if(rota==='pneus'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else el.innerHTML=viewPneus(); }
+  else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
   else if(rota==='abastecimento') el.innerHTML=viewAbastecimento();
   else if(rota==='viagens') el.innerHTML=viewViagens();
   else if(rota==='descargas') el.innerHTML=viewDescargas();
@@ -638,6 +642,38 @@ function viewFrota(){
     <button class="btn primary" onclick="modalVeiculo()">${svg('plus')} Novo veículo</button>
   </div>
   <div class="grid vgrid">${cards||emptyState('Nenhum veículo neste filtro.')}</div>`;
+}
+
+/* --- Cards de veículo estilo Frota, reutilizados em Manutenção/Pneus/Baterias --- */
+function vcardMini(v, rota, footHtml){
+  return `<div class="vcard" onclick="location.hash='${rota}/${v.id}'">
+    <div class="vcard-top"><div class="vplate">${plate(v.placa,v.tipo)}</div>
+      <span class="tag ${v.tipo==='Cavalo'?'cavalo':'rebo'}">${v.tipo==='Cavalo'?'Cavalo':'Reboque'}</span></div>
+    <div class="vcard-body"><div class="vcard-model">${esc(v.marca||'—')} ${esc(v.modelo||'')}</div>
+      <div class="vcard-sub">${esc(v.anoModelo||'')}${v.renavam?' · Renavam '+esc(v.renavam):''}</div></div>
+    <div class="vcard-foot">${footHtml||''}</div>
+  </div>`;
+}
+function vcardsSecoes(rota, footFn){
+  const cav=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado');
+  const reb=DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado');
+  return `<div class="sectitulo">${svg('truck')} Cavalos</div>
+    <div class="grid vgrid">${cav.map(v=>vcardMini(v,rota,footFn(v))).join('')||emptyState('Nenhum cavalo.')}</div>
+    <div class="sectitulo" style="margin-top:22px">${svg('battery')} Carretas</div>
+    <div class="grid vgrid">${reb.map(v=>vcardMini(v,rota,footFn(v))).join('')||emptyState('Nenhuma carreta.')}</div>`;
+}
+/* Cabeçalho padrão da tela de detalhe de um veículo (placa + especificações) */
+function detalheVeiculoHead(v, acaoHtml){
+  const cavalo=v.tipo==='Cavalo';
+  return `<button class="btn ghost sm no-print" onclick="history.back()" style="margin-bottom:14px">← Voltar</button>
+  <div class="detail-head">
+    <div class="avatar veh">${svg('truck')}</div>
+    <div class="dh-main"><h2>${esc(v.placa)}</h2>
+      <div class="meta"><span>${esc(v.marca||'—')} ${esc(v.modelo||'')}</span>
+        <span class="tag ${cavalo?'cavalo':'rebo'}">${esc(v.tipo)}</span>
+        <span>${cavalo?'KM '+num(v.kmAtual):'Horas '+num(v.horaAtual)}</span></div></div>
+    <div class="dh-actions no-print">${acaoHtml||''}</div>
+  </div>`;
 }
 
 function viewVeiculo(id){
@@ -1062,10 +1098,8 @@ function viewManutencao(){
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comGasto=veics.map(v=>({v,g:_somaServ(filtr.filter(x=>x.veiculoId===v.id))})).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
   const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#0ea5a4':'#2563eb'}));
-  const cavalos=veics.filter(v=>v.tipo==='Cavalo'&&filtr.some(x=>x.veiculoId===v.id));
-  const carretas=veics.filter(v=>isReb(v)&&filtr.some(x=>x.veiculoId===v.id));
-  const cardsDe=(lst)=>lst.map(v=>manutCardVeiculo(v,filtr.filter(x=>x.veiculoId===v.id))).join('');
   const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="manutFiltro='${k}';router()">${l}</button>`;
+  const foot=(v)=>{ const s=filtr.filter(x=>x.veiculoId===v.id); return `<span class="st neutro">${s.length} serviço(s)</span><span class="st ${_somaServ(s)>0?'warn':'neutro'}">${money(_somaServ(s))}</span>`; };
   return `
   <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
@@ -1085,32 +1119,37 @@ function viewManutencao(){
       </div></div>
   </div>
   <div class="toolbar"><div class="seg no-print">${fb('todas','Todas')}${fb('corretiva','Corretiva')}${fb('preventiva','Preventiva')}</div>
-    <div class="spacer"></div><div class="muted">${filtr.length} serviço(s) · <b>${money(_somaServ(filtr))}</b></div></div>
-  <div class="sectitulo">${svg('truck')} Cavalos</div>
-  <div class="grid" style="gap:18px">${cavalos.length?cardsDe(cavalos):emptyState('Nenhum serviço de cavalos neste filtro.')}</div>
-  <div class="sectitulo" style="margin-top:22px">${svg('battery')} Carretas</div>
-  <div class="grid" style="gap:18px">${carretas.length?cardsDe(carretas):emptyState('Nenhum serviço de carretas neste filtro.')}</div>`;
+    <div class="spacer"></div><div class="muted no-print">Clique em uma placa para ver a planilha de manutenção</div></div>
+  ${vcardsSecoes('manutencao', foot)}`;
 }
-function manutCardVeiculo(v, servs){
+/* Detalhe: planilha de manutenção de UM veículo (aberta ao clicar na placa) */
+function viewManutencaoVeiculo(id){
+  const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
+  const cavalo=v.tipo==='Cavalo'; const un=cavalo?'km':'h';
+  const servs=DB.servicos.filter(x=>x.veiculoId===v.id).sort((a,b)=>(a.data||'').localeCompare(b.data||'')); /* antigos → novos */
   const soma=_somaServ(servs);
-  const corr=servs.filter(x=>(x.tipo||'Corretiva')==='Corretiva').length;
-  const prev=servs.filter(x=>x.tipo==='Preventiva').length;
-  const rows=servs.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(x=>`
+  const corr=_somaServ(servs.filter(x=>(x.tipo||'Corretiva')==='Corretiva'));
+  const prev=_somaServ(servs.filter(x=>x.tipo==='Preventiva'));
+  const rows=servs.map(x=>`
     <tr class="clickable" onclick="modalServico('${x.id}')">
       <td class="mono">${fmtD(x.data)}</td>
-      <td>${manutTipoTag(x.tipo)}</td>
+      <td class="mono muted">${x.km!=null&&x.km!==''?num(x.km)+' '+un:'—'}</td>
       <td><b>${esc(x.descricao||'—')}</b>${x.obs?`<div class="muted" style="font-size:11px">${esc(x.obs)}</div>`:''}</td>
+      <td>${manutTipoTag(x.tipo)}</td>
       <td>${esc(x.oficina||'—')}</td>
-      <td class="mono muted">${x.km!=null&&x.km!==''?num(x.km)+' km':'—'}</td>
       <td class="mono"><b>${money(x.valor)}</b></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalServico('${x.id}')">${svg('edit')}</button></td>
     </tr>`).join('');
-  return `<div class="card"><div class="card-h">${plate(v.placa,v.tipo)}<h3 style="font-size:14px">${esc(v.marca)} ${esc(v.modelo)}</h3>
-    <span class="sub">${servs.length} serviço(s) · ${corr} corretiva / ${prev} preventiva</span>
-    <div class="r no-print" style="margin-left:auto;display:flex;align-items:center;gap:12px"><b style="font-size:15px">${money(soma)}</b><button class="btn sm" title="Novo serviço deste veículo" onclick="modalServico(null,'${v.id}')">${svg('plus')}</button></div></div>
+  return `${detalheVeiculoHead(v, `<button class="btn primary" onclick="modalServico(null,'${v.id}')">${svg('plus')} Novo serviço</button>`)}
+  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin:4px 0 16px">
+    ${kpi('money','i-blue',money(soma),'Gasto total',servs.length+' serviços')}
+    ${kpi('wrench','i-amber',money(corr),'Corretiva','')}
+    ${kpi('shield','i-green',money(prev),'Preventiva','')}
+  </div>
+  <div class="card"><div class="card-h">${svg('wrench')}<h3 style="font-size:14px">Serviços de ${esc(v.placa)} (mais antigos primeiro)</h3></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Data</th><th>Tipo</th><th>Serviço</th><th>Oficina</th><th>KM/Horas</th><th>Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows}</tbody></table></div></div></div>`;
+      <thead><tr><th>Data</th><th>${cavalo?'KM':'Horas'}</th><th>Serviço</th><th>Tipo</th><th>Oficina</th><th>Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum serviço registrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalServico(id, vId){
   const x=id?DB.servicos.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),veiculoId:vId||(DB.veiculos[0]||{}).id,descricao:'',oficina:'',km:'',valor:'',tipo:'Corretiva',obs:''};
@@ -1135,42 +1174,42 @@ function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.se
 /*  16. BATERIAS                                                       */
 /* ================================================================== */
 let batTipo='cavalo', batOrdem='placa';
+function _plk(s){ return String(s||'').replace(/\W/g,'').toUpperCase(); }
+function batItem(b){ const g=b.garantiaAte?situacao(b.garantiaAte):null;
+  return `<div class="bat-item">
+    <div class="bat-main"><b>${esc(b.marca||'—')}</b><div class="muted" style="font-size:12px">${esc(b.local||'')}</div></div>
+    <div class="bat-meta"><span class="mono">${fmtD(b.data)}</span><span class="mono">${money(b.valor)}</span>
+      ${b.garantiaAte?`<span class="st ${g.cls}">garantia ${fmtD(b.garantiaAte)}</span>`:`<span class="muted">${esc(b.garantiaMeses||'')} meses</span>`}
+      ${b.telefone?`<span class="muted mono" style="font-size:11.5px">${esc(b.telefone)}</span>`:''}</div>
+    <button class="btn ghost sm no-print" onclick="modalBateria('${b.id}')">${svg('edit')}</button></div>`; }
+function batGrupoBloco(pl, bs){ const v=veiculoByPlaca(pl); const ord=bs.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  return `<div class="bat-group"><div class="bat-group-h">${plate(pl,(v||{}).tipo)}<span class="muted" style="font-size:12px">${bs.length} bateria(s)</span></div>${ord.map(batItem).join('')}</div>`; }
 function viewBaterias(){
   const total=DB.baterias.reduce((s,b)=>s+(Number(b.valor)||0),0);
   const emGarantia=DB.baterias.filter(b=>b.garantiaAte&&diasAte(b.garantiaAte)>=0).length;
-  const tipoDe=(b)=>{ const v=veiculoByPlaca(b.placa); return v&&isReb(v)?'carreta':'cavalo'; };
-  const fb=(k,l)=>`<button class="${batTipo===k?'active':''}" onclick="batTipo='${k}';router()">${l}</button>`;
-  let lista=DB.baterias.filter(b=>batTipo==='todas'?true:tipoDe(b)===batTipo);
-  const sorters={placa:(a,b)=>(a.placa||'').localeCompare(b.placa||''), data:(a,b)=>(b.data||'').localeCompare(a.data||''),
-    garantia:(a,b)=>(a.garantiaAte||'9999').localeCompare(b.garantiaAte||'9999'), valor:(a,b)=>(Number(b.valor)||0)-(Number(a.valor)||0)};
-  lista.sort(sorters[batOrdem]||sorters.placa);
-  // agrupa por placa
-  const grupos={}; lista.forEach(b=>{ (grupos[b.placa]=grupos[b.placa]||[]).push(b); });
-  const placasOrd=Object.keys(grupos).sort();
-  const blocos=placasOrd.map(pl=>{ const bs=grupos[pl].slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')); const v=veiculoByPlaca(pl);
-    return `<div class="bat-group"><div class="bat-group-h">${plate(pl,(v||{}).tipo)}<span class="muted" style="font-size:12px">${bs.length} bateria(s)</span></div>
-      ${bs.map(b=>{ const g=b.garantiaAte?situacao(b.garantiaAte):null;
-        return `<div class="bat-item">
-          <div class="bat-main"><b>${esc(b.marca||'—')}</b><div class="muted" style="font-size:12px">${esc(b.local||'')}</div></div>
-          <div class="bat-meta"><span class="mono">${fmtD(b.data)}</span><span class="mono">${money(b.valor)}</span>
-            ${b.garantiaAte?`<span class="st ${g.cls}">garantia ${fmtD(b.garantiaAte)}</span>`:`<span class="muted">${esc(b.garantiaMeses||'')} meses</span>`}
-            ${b.telefone?`<span class="muted mono" style="font-size:11.5px">${esc(b.telefone)}</span>`:''}</div>
-          <button class="btn ghost sm no-print" onclick="modalBateria('${b.id}')">${svg('edit')}</button></div>`; }).join('')}
-    </div>`;
-  }).join('');
-  return `<div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+  const foot=(v)=>{ const bs=DB.baterias.filter(b=>_plk(b.placa)===_plk(v.placa)); if(!bs.length) return '<span class="st neutro">sem bateria</span>';
+    const ult=bs.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; const g=ult.garantiaAte?situacao(ult.garantiaAte):null;
+    return `<span class="st neutro">${bs.length} bateria(s)</span>${g?`<span class="st ${g.cls}">${fmtD(ult.garantiaAte)}</span>`:''}`; };
+  const ativos=new Set(DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>_plk(v.placa)));
+  const orf={}; DB.baterias.forEach(b=>{ if(!ativos.has(_plk(b.placa))) (orf[b.placa]=orf[b.placa]||[]).push(b); });
+  const orfBlocos=Object.keys(orf).sort().map(pl=>batGrupoBloco(pl,orf[pl])).join('');
+  return `<div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
       ${kpi('battery','i-blue',DB.baterias.length,'Baterias registradas','')}
       ${kpi('shield','i-green',emGarantia,'Dentro da garantia','')}
       ${kpi('export','i-amber',money(total),'Investimento total','')}</div>
-    <div class="toolbar"><div class="seg">${fb('cavalo','Cavalos')}${fb('carreta','Carretas')}${fb('todas','Todas')}</div>
-      <select class="selectlite" onchange="batOrdem=this.value;router()">
-        <option value="placa" ${batOrdem==='placa'?'selected':''}>Ordenar por placa</option>
-        <option value="data" ${batOrdem==='data'?'selected':''}>Mais recentes</option>
-        <option value="garantia" ${batOrdem==='garantia'?'selected':''}>Garantia (vence antes)</option>
-        <option value="valor" ${batOrdem==='valor'?'selected':''}>Maior valor</option></select>
+    <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver as baterias daquele veículo. A garantia aparece <b>só aqui</b> — não gera alerta no painel.</div>
       <div class="spacer"></div><button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
-    <div class="muted no-print" style="font-size:12px;margin-bottom:12px">A garantia aparece <b>somente aqui</b> — não gera alerta no painel.</div>
-    <div class="grid" style="gap:14px">${blocos||emptyState('Nenhuma bateria neste grupo.')}</div>`;
+    ${vcardsSecoes('baterias', foot)}
+    ${orfBlocos?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Outras placas (fora da frota atual)</div><div class="grid" style="gap:14px">${orfBlocos}</div>`:''}`;
+}
+/* Detalhe: baterias de UM veículo (aberto ao clicar na placa) */
+function viewBateriasVeiculo(id){
+  const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
+  const bs=DB.baterias.filter(b=>_plk(b.placa)===_plk(v.placa)).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const total=bs.reduce((s,b)=>s+(Number(b.valor)||0),0);
+  return `${detalheVeiculoHead(v, `<button class="btn primary" onclick="modalBateria(null,'${esc(v.placa)}')">${svg('plus')} Nova bateria</button>`)}
+  <div class="card"><div class="card-h">${svg('battery')}<h3 style="font-size:14px">Baterias de ${esc(v.placa)} — ${bs.length} · ${money(total)}</h3></div>
+    <div class="card-b">${bs.length? bs.map(batItem).join('') : emptyState('Nenhuma bateria para este veículo.')}</div></div>`;
 }
 
 /* ================================================================== */
@@ -1524,12 +1563,13 @@ async function anexarVenc(input){
   toast('Arquivo anexado'+(_online()?' e sincronizado.':'.'));
 }
 
-function modalBateria(id){
-  const b=id?DB.baterias.find(x=>x.id===id):{data:'',placa:(DB.veiculos[0]||{}).placa||'',marca:'',local:'',valor:'',garantiaMeses:12,garantiaAte:'',telefone:''};
+function modalBateria(id, placa){
+  const b=id?DB.baterias.find(x=>x.id===id):{data:'',placa:placa||(DB.veiculos[0]||{}).placa||'',marca:'',local:'',valor:'',garantiaMeses:12,garantiaAte:'',telefone:''};
+  const placas=DB.veiculos.map(v=>v.placa); if(b.placa && placas.indexOf(b.placa)<0) placas.push(b.placa);  // inclui placa fora da frota
   openModal(`<div class="m-h">${svg('battery')}<h3>${id?'Editar bateria':'Nova bateria'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">${fld('Data da compra','f_data',b.data,'date')}
-        <div class="field"><label>Placa</label><select id="f_placa">${DB.veiculos.map(v=>`<option ${b.placa===v.placa?'selected':''}>${esc(v.placa)}</option>`).join('')}</select></div></div>
+        <div class="field"><label>Placa</label><select id="f_placa">${placas.map(pl=>`<option ${b.placa===pl?'selected':''}>${esc(pl)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Marca / capacidade','f_marca',b.marca)}${fldR$('Valor (R$)','f_valor',b.valor)}</div>
       ${fld('Local de compra','f_local',b.local)}
       <div class="field-row">${fld('Garantia (meses)','f_gm',b.garantiaMeses,'number')}${fld('Garantia até','f_ga',b.garantiaAte,'date')}</div>
@@ -1730,33 +1770,39 @@ function pneuTotal(list){ return (list||DB.pneus).reduce((s,p)=>s+pneuQtd(p),0);
 function viewPneus(){
   const total=pneuTotal();
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
-  const comPneus=veics.filter(v=>DB.pneus.some(p=>p.veiculoId===v.id));
-  const blocos=comPneus.map(v=>{ const cavalo=v.tipo==='Cavalo';
-    const ps=DB.pneus.filter(p=>p.veiculoId===v.id).sort((a,b)=>(a.posicao||'').localeCompare(b.posicao||''));
-    return `<div class="card"><div class="card-h">${plate(v.placa,v.tipo)}<h3 style="font-size:14px">${esc(v.marca)} ${esc(v.modelo)}</h3>
-      <span class="sub">${pneuTotal(ps)} pneu(s) · ${cavalo?'atual '+num(v.kmAtual)+' km':'atual '+num(v.horaAtual)+' h'}</span>
-      <div class="r no-print"><a class="btn sm" href="#km">${svg('gauge')} KM/Horas</a><button class="btn sm" onclick="modalPneu(null,'${v.id}')">${svg('plus')}</button></div></div>
-      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado (atualiza c/ o KM)</th><th>Status</th><th class="no-print"></th></tr></thead>
-        <tbody>${ps.map(p=>{ const km=pneuKmRodado(p);
-          return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
-          <td><b>${esc(p.posicao||'—')}</b></td>
-          <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
-          <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
-          <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
-          <td><span class="tag">${esc(p.status||'—')}</span>${(/usado|recap/i.test(p.status||'')&&p.borracha!=null&&p.borracha!=='')?`<br><span class="borracha-badge" title="Borracha restante">${p.borracha}% borracha</span>`:''}</td>
-          <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPneu('${p.id}')">${svg('edit')}</button></td></tr>`;
-        }).join('')}</tbody></table></div></div></div>`;
-  }).join('');
+  const comPneus=veics.filter(v=>DB.pneus.some(p=>p.veiculoId===v.id)).length;
+  const foot=(v)=>{ const ps=DB.pneus.filter(p=>p.veiculoId===v.id); const t=pneuTotal(ps);
+    return t? `<span class="st ok">${t} pneu(s)</span>` : `<span class="st neutro">sem pneus</span>`; };
   return `
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
     ${kpi('tire','i-blue',total,'Pneus no total','soma das quantidades')}
-    ${kpi('truck','i-amber', comPneus.length, 'Veículos com pneus','')}
+    ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
     ${kpi('gauge','i-green', DB.pneus.length, 'Registros de pneus','')}
   </div>
-  <div class="toolbar"><div class="muted">O <b>Rodado</b> é calculado automaticamente (KM atual do veículo − KM da instalação) e acompanha a atualização feita na aba KM/Horas.</div>
+  <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div>
     <div class="spacer"></div><button class="btn primary" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
-  <div class="grid" style="gap:18px">${blocos||emptyState('Nenhum pneu cadastrado. Clique em "Novo pneu".')}</div>`;
+  ${vcardsSecoes('pneus', foot)}`;
+}
+/* Detalhe: pneus de UM veículo (aberto ao clicar na placa) */
+function viewPneusVeiculo(id){
+  const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
+  const cavalo=v.tipo==='Cavalo';
+  const ps=DB.pneus.filter(p=>p.veiculoId===v.id).sort((a,b)=>(a.posicao||'').localeCompare(b.posicao||''));
+  const rows=ps.map(p=>{ const km=pneuKmRodado(p);
+    return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
+      <td><b>${esc(p.posicao||'—')}</b></td>
+      <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
+      <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
+      <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
+      <td><span class="tag">${esc(p.status||'—')}</span>${(/usado|recap/i.test(p.status||'')&&p.borracha!=null&&p.borracha!=='')?`<br><span class="borracha-badge">${p.borracha}% borracha</span>`:''}</td>
+      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPneu('${p.id}')">${svg('edit')}</button></td></tr>`;
+  }).join('');
+  return `${detalheVeiculoHead(v, `<a class="btn" href="#km">${svg('gauge')} KM/Horas</a><button class="btn primary" onclick="modalPneu(null,'${v.id}')">${svg('plus')} Novo pneu</button>`)}
+  <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Pneus de ${esc(v.placa)} — ${pneuTotal(ps)} no total</h3></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado</th><th>Status</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum pneu cadastrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>
+  <div class="muted no-print" style="font-size:12px;margin-top:10px">O <b>Rodado</b> é calculado automaticamente (KM atual − KM da instalação) e acompanha a aba KM/Horas.</div>`;
 }
 function modalPneu(id, vId){
   const p=id?DB.pneus.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,qtd:1,posicao:'',marca:'',medida:'',dot:'',dataInstalacao:'',kmInstalacao:'',status:'Novo',borracha:'',obs:''};
