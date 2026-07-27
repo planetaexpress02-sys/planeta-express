@@ -21,7 +21,24 @@ function ensureCollections(){
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarManutencaoPlanilhas();
+  importarCtesSeed();
   corrigirValoresAntigos();
+}
+/* Importa (uma vez) os CT-e vindos dos XML. Não duplica (id = cte_<chave>). */
+function importarCtesSeed(){
+  if(typeof CTES_SEED==='undefined' || !Array.isArray(CTES_SEED)) return;
+  if(!Array.isArray(DB.ctes)) DB.ctes=[];
+  const ids=new Set(DB.ctes.map(c=>c.id));
+  CTES_SEED.forEach(r=>{ if(!ids.has(r.id)){ DB.ctes.push(cteDerivaPlaca(Object.assign({},r))); } });
+}
+/* Descobre a placa do CT-e a partir do texto (PLACA: XXX) ou do Renavam citado na observação */
+function cteDerivaPlaca(c){
+  if(c.placa) return c;
+  let m=(c.obs||'').match(/placa[:\s]+([A-Za-z]{3}[-\s]?\d[A-Za-z0-9]\d{2})/i);
+  if(m){ const v=veiculoByPlaca(m[1]); c.placa = v? v.placa : m[1].toUpperCase().replace(/\s/g,'-'); return c; }
+  const rm=(c.obs||'').match(/renavam\s*0*(\d{6,})/i);
+  if(rm){ const alvo=rm[1].replace(/^0+/,''); const v=(DB.veiculos||[]).find(x=>String(x.renavam||'').replace(/^0+/,'')===alvo); if(v) c.placa=v.placa; }
+  return c;
 }
 /* Importa (uma vez) as manutenções extraídas das planilhas de Relatório de Manutenção.
    Não duplica: cada registro tem id fixo (mi_...). Roda em qualquer aparelho e sincroniza. */
@@ -2446,15 +2463,18 @@ function viewCtes(){
   if(cteMes!=='todos') lista=lista.filter(c=>(c.data||'').slice(0,7)===cteMes);
   const rows=lista.map(c=>{ const v=veiculoByPlaca(c.placa);
     return `<tr class="clickable" onclick="modalCte('${c.id}')">
-      <td class="mono">${fmtD(c.data)}</td><td class="mono"><b>${esc(c.numero||'—')}</b></td>
-      <td>${v?plate(v.placa,v.tipo):esc(c.placa||'—')}</td><td>${esc(c.cliente||'—')}</td>
+      <td class="mono">${fmtD(c.data)}</td><td class="mono"><b>${esc(c.numero||'—')}</b>${c.serie?`<div class="muted" style="font-size:10.5px">série ${esc(c.serie)}</div>`:''}</td>
+      <td>${v?plate(v.placa,v.tipo):esc(c.placa||'—')}</td>
+      <td>${esc(c.cliente||'—')}${c.destinatario?`<div class="muted" style="font-size:11px">→ ${esc(c.destinatario)}</div>`:''}</td>
+      <td class="muted" style="font-size:12px">${(c.origem||c.destino)?esc((c.origem||'?')+' → '+(c.destino||'?')):'—'}</td>
       <td class="mono">${money(c.valor)}</td>
       <td><span class="st ${cteStCls(c.status)}">${esc(c.status||'—')}</span></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalCte('${c.id}')">${svg('edit')}</button></td></tr>`;
   }).join('');
   return `
-  <div class="banner">${svg('ctedoc')}<div><b>CT-e — Conhecimentos de Transporte</b><span>Controle dos CT-e emitidos, lançados, trocados e pagos. Filtre por situação e por mês.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalCte()">${svg('plus')} Novo CT-e</button></div>
+  <div class="banner">${svg('ctedoc')}<div><b>CT-e — Conhecimentos de Transporte</b><span>Controle dos CT-e emitidos, lançados, trocados e pagos. Importe os XML direto aqui. Filtre por situação e por mês.</span></div>
+    <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar XML<input type="file" accept=".xml,text/xml" multiple onchange="importarCteArquivos(event)" style="display:none"></label>
+    <button class="btn primary no-print" onclick="modalCte()">${svg('plus')} Novo CT-e</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('ctedoc','i-blue', total, 'CT-e registrados','')}
     ${kpi('money','i-green', money(valorTot), 'Valor total (válidos)','')}
@@ -2466,8 +2486,8 @@ function viewCtes(){
       ${meses.map(m=>`<option value="${m}" ${cteMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
     <div class="spacer"></div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Data</th><th>Nº CT-e</th><th>Placa</th><th>Cliente</th><th>Valor</th><th>Situação</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum CT-e neste filtro. Clique em "Novo CT-e".')}</td></tr>`}</tbody></table></div></div></div>`;
+    <thead><tr><th>Data</th><th>Nº CT-e</th><th>Placa</th><th>Cliente / Destinatário</th><th>Rota</th><th>Valor</th><th>Situação</th><th class="no-print"></th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum CT-e neste filtro. Importe os XML ou clique em "Novo CT-e".')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalCte(id){
   const c=id?DB.ctes.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),numero:'',placa:(DB.veiculos.find(v=>v.tipo==='Cavalo')||{}).placa||'',cliente:'',valor:'',status:'Emitido',obs:''};
@@ -2478,14 +2498,53 @@ function modalCte(id){
         <div class="field"><label>Placa</label><select id="f_placa"><option value="">—</option>${DB.veiculos.map(v=>`<option ${c.placa===v.placa?'selected':''}>${esc(v.placa)}</option>`).join('')}</select></div>
         ${sel('Situação','f_status',c.status,CTE_STATUS)}</div>
       <div class="field-row">${fld('Cliente / Tomador','f_cli',c.cliente)}${fldR$('Valor (R$)','f_val',c.valor)}</div>
+      <div class="field-row">${fld('Origem','f_orig',c.origem||'')}${fld('Destino','f_dest',c.destino||'')}</div>
+      ${fld('Destinatário (recebedor)','f_dtn',c.destinatario||'')}
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(c.obs)}"></div>
+      ${c.chave?`<div class="hint" style="word-break:break-all">Chave: <span class="mono">${esc(c.chave)}</span>${c.produto?`<br>Produto: ${esc(c.produto)}`:''}${c.cfop?` · CFOP ${esc(c.cfop)}`:''}${c.vCarga?` · Carga R$ ${esc(c.vCarga)}`:''}</div>`:''}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirCte('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarCte('${id||''}')">Salvar</button></div>`);
 }
-function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:val('f_placa'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),status:val('f_status'),obs:val('f_obs')};
+function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:val('f_placa'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),status:val('f_status'),
+    origem:val('f_orig'),destino:val('f_dest'),destinatario:val('f_dtn'),obs:val('f_obs')};
   if(id)Object.assign(DB.ctes.find(x=>x.id===id),d); else{ d.id=uid('ct'); DB.ctes.push(d); } saveDB(); closeModal(); toast('CT-e salvo.'); router(); }
 function excluirCte(id){ if(!confirm('Excluir este CT-e?'))return; DB.ctes=DB.ctes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+/* ---- Importar CT-e a partir dos arquivos XML (funciona no navegador, offline) ---- */
+function parseCteXml(txt, fname){
+  const doc=new DOMParser().parseFromString(txt,'text/xml');
+  if(doc.getElementsByTagName('parsererror').length) return null;
+  const first=(root,tag)=>{ const p=(root||doc).getElementsByTagName(tag)[0]; return p?p.textContent.trim():''; };
+  const ide=doc.getElementsByTagName('ide')[0];
+  const rem=doc.getElementsByTagName('rem')[0], dest=doc.getElementsByTagName('dest')[0];
+  const vp=doc.getElementsByTagName('vPrest')[0], carga=doc.getElementsByTagName('infCarga')[0];
+  if(!ide) return null;
+  let chave=(fname&&(fname.match(/(\d{44})/)||[])[1])||first(null,'chCTe'); if(!chave) return null;
+  const dh=first(ide,'dhEmi'); const data=(dh.match(/(\d{4}-\d{2}-\d{2})/)||[])[1]||'';
+  const vtp=parseFloat((first(vp,'vTPrest')||'0').replace(/[^\d.]/g,''))||0;
+  const c={ id:'cte_'+chave, chave:chave, data:data, numero:first(ide,'nCT'), serie:first(ide,'serie'),
+    cfop:first(ide,'CFOP'), tpCTe:first(ide,'tpCTe'),
+    cliente:rem?first(rem,'xNome'):'', destinatario:dest?first(dest,'xNome'):'',
+    origem:(first(ide,'xMunIni')+'/'+first(ide,'UFIni')).replace(/^\/$/,''),
+    destino:(first(ide,'xMunFim')+'/'+first(ide,'UFFim')).replace(/^\/$/,''),
+    valor:vtp, vCarga:carga?first(carga,'vCarga'):'', produto:carga?first(carga,'proPred'):'',
+    placa:'', status:'Emitido', pago:'', obs:first(doc,'xObs') };
+  return cteDerivaPlaca(c);
+}
+function importarCteArquivos(ev){
+  const files=[].slice.call(ev.target.files||[]); ev.target.value='';
+  if(!files.length) return;
+  let add=0, dup=0, err=0, pend=files.length;
+  files.forEach(f=>{ const r=new FileReader();
+    r.onload=()=>{ try{ const c=parseCteXml(r.result, f.name);
+        if(!c){ err++; } else if(DB.ctes.some(x=>x.id===c.id)){ dup++; } else { DB.ctes.push(c); add++; }
+      }catch(e){ err++; }
+      if(--pend===0){ saveDB(); router();
+        toast(add+' CT-e importado(s)'+(dup?' · '+dup+' já existiam':'')+(err?' · '+err+' com erro':'')+'.', err&&!add?'err':undefined); }
+    };
+    r.readAsText(f,'UTF-8');
+  });
+}
 
 function tick(){ const d=new Date(); const el=document.getElementById('clock'); if(el) el.innerHTML=`<b>${DIAS[d.getDay()]}</b>, ${String(d.getDate()).padStart(2,'0')} de ${MESES_L[d.getMonth()]} de ${d.getFullYear()}`; }
 /* Tirar relatório: monta um cabeçalho e abre a impressão (permite salvar em PDF) */
