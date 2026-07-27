@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=50">
-  <link rel="stylesheet" href="assets/estilo2.css?v=50">
+  <link rel="stylesheet" href="assets/estilo.css?v=51">
+  <link rel="stylesheet" href="assets/estilo2.css?v=51">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -32,6 +32,9 @@
     </div>
   </div>
 
+  <!-- Cabeçalho que aparece só na impressão / PDF do relatório -->
+  <div id="printHead" class="print-only"></div>
+
   <div class="app">
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -40,7 +43,7 @@
         <div class="btxt"><b>PLANETA</b><span>Express</span></div>
       </div>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v5.0</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v5.1</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -58,6 +61,10 @@
           <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2"/></svg>
           <input id="gsearch" placeholder="Buscar placa, motorista, CPF…" autocomplete="off">
         </div>
+        <button class="btn sm relbtn no-print" onclick="imprimirRelatorio()" title="Tirar relatório desta tela (imprimir ou salvar em PDF)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>
+          <span>Relatório</span>
+        </button>
         <div class="userbadge no-print" id="userbadge"></div>
         <div class="clock no-print" id="clock"></div>
       </header>
@@ -71,15 +78,15 @@
 
   <!-- Biblioteca da nuvem (só é usada no modo online; offline funciona sem ela) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="assets/config-online.js?v=50"></script>
-  <script src="assets/nuvem.js?v=50"></script>
+  <script src="assets/config-online.js?v=51"></script>
+  <script src="assets/nuvem.js?v=51"></script>
 
-  <script src="assets/viagens.js?v=50"></script>
-  <script src="assets/dados.js?v=50"></script>
-  <script src="assets/alarmes.js?v=50"></script>
-  <script src="assets/arquivos.js?v=50"></script>
-  <script src="assets/app.js?v=50"></script>
-  <script src="assets/assistente.js?v=50"></script>
+  <script src="assets/viagens.js?v=51"></script>
+  <script src="assets/dados.js?v=51"></script>
+  <script src="assets/alarmes.js?v=51"></script>
+  <script src="assets/arquivos.js?v=51"></script>
+  <script src="assets/app.js?v=51"></script>
+  <script src="assets/assistente.js?v=51"></script>
   <script>
     /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
     if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){

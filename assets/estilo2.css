@@ -454,3 +454,21 @@ body{background:radial-gradient(1100px 600px at 100% -5%,#e8eefc 0%,transparent 
   .ia-fab span{display:none}
   .ia-fab{padding:15px;right:16px;bottom:16px}
 }
+
+/* ---------- Botão Relatório (topbar) + cabeçalho de impressão / PDF ---------- */
+.relbtn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+@media(max-width:860px){ .relbtn span{display:none} }
+#printHead{padding:0 0 10px;margin-bottom:14px;border-bottom:2px solid #0b1424}
+#printHead .ph-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+#printHead .ph-co b{font-size:17px;letter-spacing:.4px;display:block;color:#0b1424}
+#printHead .ph-co span{font-size:11px;color:#555}
+#printHead .ph-dt{font-size:11px;color:#555;white-space:nowrap}
+#printHead .ph-title{font-size:14px;font-weight:700;margin-top:8px;color:#111}
+@media print{
+  .ia-fab,.ia-panel,.relbtn,.back-btn,.menu-toggle,.scrim,.overlay,.toasts{display:none!important}
+  .content{padding:0!important}
+  .card{break-inside:avoid;page-break-inside:avoid}
+  table.tbl{font-size:11px}
+  .sectitulo{margin-top:14px}
+  a[href]:after{content:""}
+}

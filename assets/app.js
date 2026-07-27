@@ -1175,15 +1175,27 @@ function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.se
 /* ================================================================== */
 let batTipo='cavalo', batOrdem='placa';
 function _plk(s){ return String(s||'').replace(/\W/g,'').toUpperCase(); }
-function batItem(b){ const g=b.garantiaAte?situacao(b.garantiaAte):null;
-  return `<div class="bat-item">
-    <div class="bat-main"><b>${esc(b.marca||'—')}</b><div class="muted" style="font-size:12px">${esc(b.local||'')}</div></div>
-    <div class="bat-meta"><span class="mono">${fmtD(b.data)}</span><span class="mono">${money(b.valor)}</span>
-      ${b.garantiaAte?`<span class="st ${g.cls}">garantia ${fmtD(b.garantiaAte)}</span>`:`<span class="muted">${esc(b.garantiaMeses||'')} meses</span>`}
-      ${b.telefone?`<span class="muted mono" style="font-size:11.5px">${esc(b.telefone)}</span>`:''}</div>
-    <button class="btn ghost sm no-print" onclick="modalBateria('${b.id}')">${svg('edit')}</button></div>`; }
-function batGrupoBloco(pl, bs){ const v=veiculoByPlaca(pl); const ord=bs.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
-  return `<div class="bat-group"><div class="bat-group-h">${plate(pl,(v||{}).tipo)}<span class="muted" style="font-size:12px">${bs.length} bateria(s)</span></div>${ord.map(batItem).join('')}</div>`; }
+/* Tabela de baterias — colunas: Data / Marca / Local da compra / Valor / Trocado na garantia / Garantia (meses) / Telefone / Obs */
+function batTabela(bs){
+  const rows=bs.map(b=>{ const g=b.garantiaAte?situacao(b.garantiaAte):null;
+    return `<tr class="clickable" onclick="modalBateria('${b.id}')">
+      <td class="mono">${fmtD(b.data)}</td>
+      <td><b>${esc(b.marca||'—')}</b></td>
+      <td>${esc(b.local||'—')}</td>
+      <td class="mono">${money(b.valor)}</td>
+      <td class="mono">${b.trocaGarantia?fmtD(b.trocaGarantia):'—'}</td>
+      <td>${b.garantiaMeses?esc(b.garantiaMeses)+' meses':'—'}${b.garantiaAte?`<div class="muted" style="font-size:10.5px">até ${fmtD(b.garantiaAte)} ${g?`<span class="st ${g.cls}" style="font-size:9px;padding:0 5px">${g.label}</span>`:''}</div>`:''}</td>
+      <td class="mono muted">${esc(b.telefone||'—')}</td>
+      <td class="muted" style="font-size:12px">${esc(b.obs||'—')}</td>
+      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalBateria('${b.id}')">${svg('edit')}</button></td>
+    </tr>`; }).join('');
+  return `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Data</th><th>Marca</th><th>Local da compra</th><th>Valor</th><th>Trocado na garantia</th><th>Garantia</th><th>Telefone</th><th>Obs</th><th class="no-print"></th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="9">${emptyState('Nenhuma bateria.')}</td></tr>`}</tbody></table></div>`;
+}
+function batGrupoBloco(pl, bs){ const v=veiculoByPlaca(pl); const ord=bs.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  return `<div class="card"><div class="card-h">${plate(pl,(v||{}).tipo)}<span class="sub">${bs.length} bateria(s)</span></div>
+    <div class="card-b p0">${batTabela(ord)}</div></div>`; }
 function viewBaterias(){
   const total=DB.baterias.reduce((s,b)=>s+(Number(b.valor)||0),0);
   const emGarantia=DB.baterias.filter(b=>b.garantiaAte&&diasAte(b.garantiaAte)>=0).length;
@@ -1205,11 +1217,11 @@ function viewBaterias(){
 /* Detalhe: baterias de UM veículo (aberto ao clicar na placa) */
 function viewBateriasVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
-  const bs=DB.baterias.filter(b=>_plk(b.placa)===_plk(v.placa)).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const bs=DB.baterias.filter(b=>_plk(b.placa)===_plk(v.placa)).sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const total=bs.reduce((s,b)=>s+(Number(b.valor)||0),0);
   return `${detalheVeiculoHead(v, `<button class="btn primary" onclick="modalBateria(null,'${esc(v.placa)}')">${svg('plus')} Nova bateria</button>`)}
   <div class="card"><div class="card-h">${svg('battery')}<h3 style="font-size:14px">Baterias de ${esc(v.placa)} — ${bs.length} · ${money(total)}</h3></div>
-    <div class="card-b">${bs.length? bs.map(batItem).join('') : emptyState('Nenhuma bateria para este veículo.')}</div></div>`;
+    <div class="card-b p0">${batTabela(bs)}</div></div>`;
 }
 
 /* ================================================================== */
@@ -1564,7 +1576,7 @@ async function anexarVenc(input){
 }
 
 function modalBateria(id, placa){
-  const b=id?DB.baterias.find(x=>x.id===id):{data:'',placa:placa||(DB.veiculos[0]||{}).placa||'',marca:'',local:'',valor:'',garantiaMeses:12,garantiaAte:'',telefone:''};
+  const b=id?DB.baterias.find(x=>x.id===id):{data:'',placa:placa||(DB.veiculos[0]||{}).placa||'',marca:'',local:'',valor:'',garantiaMeses:12,garantiaAte:'',trocaGarantia:'',telefone:'',obs:''};
   const placas=DB.veiculos.map(v=>v.placa); if(b.placa && placas.indexOf(b.placa)<0) placas.push(b.placa);  // inclui placa fora da frota
   openModal(`<div class="m-h">${svg('battery')}<h3>${id?'Editar bateria':'Nova bateria'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
@@ -1573,13 +1585,14 @@ function modalBateria(id, placa){
       <div class="field-row">${fld('Marca / capacidade','f_marca',b.marca)}${fldR$('Valor (R$)','f_valor',b.valor)}</div>
       ${fld('Local de compra','f_local',b.local)}
       <div class="field-row">${fld('Garantia (meses)','f_gm',b.garantiaMeses,'number')}${fld('Garantia até','f_ga',b.garantiaAte,'date')}</div>
-      ${fldMask('Telefone do fornecedor','f_tel',b.telefone,'fone','(  ) automático')}
+      <div class="field-row">${fld('Trocado na garantia (data)','f_tg',b.trocaGarantia,'date','Preencha só se a bateria foi trocada dentro da garantia')}${fldMask('Telefone do fornecedor','f_tel',b.telefone,'fone','(  ) automático')}</div>
+      <div class="field"><label>Observação</label><input id="f_obs" value="${esc(b.obs||'')}"></div>
 </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirBateria('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="salvarBateria('${id||''}')">Salvar</button></div>`);
 }
-function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),telefone:maskFone(val('f_tel'))};
+function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),garantiaMeses:parseInt(val('f_gm'))||12,garantiaAte:val('f_ga'),trocaGarantia:val('f_tg'),telefone:maskFone(val('f_tel')),obs:val('f_obs')};
   if(id)Object.assign(DB.baterias.find(x=>x.id===id),d); else{ d.id=uid('b'); DB.baterias.push(d); } saveDB(); closeModal(); toast('Bateria salva.'); router(); }
 function excluirBateria(id){ if(!confirm('Excluir esta bateria?'))return; DB.baterias=DB.baterias.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
@@ -2475,6 +2488,21 @@ function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:va
 function excluirCte(id){ if(!confirm('Excluir este CT-e?'))return; DB.ctes=DB.ctes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 function tick(){ const d=new Date(); const el=document.getElementById('clock'); if(el) el.innerHTML=`<b>${DIAS[d.getDay()]}</b>, ${String(d.getDate()).padStart(2,'0')} de ${MESES_L[d.getMonth()]} de ${d.getFullYear()}`; }
+/* Tirar relatório: monta um cabeçalho e abre a impressão (permite salvar em PDF) */
+function imprimirRelatorio(){
+  const h=(location.hash||'#inicio').slice(1).split('/'); const meta=(typeof ROTAS!=='undefined'&&ROTAS[h[0]])||{};
+  let tit=meta.t||'Relatório';
+  if(h[1]){ const v=veiculo(h[1]); const m=motorista(h[1]); if(v) tit+=' — '+v.placa; else if(m) tit+=' — '+m.nome; }
+  const ph=document.getElementById('printHead');
+  if(ph){ const d=new Date();
+    ph.innerHTML=`<div class="ph-row">
+        <div class="ph-co"><b>PLANETA EXPRESS TRANSPORTES</b><span>${esc(DB.empresa.razao||DB.empresa.nome||'')} · CNPJ ${esc(DB.empresa.cnpj||'')}</span></div>
+        <div class="ph-dt">Emitido em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="ph-title">${esc(tit)}</div>`;
+  }
+  closeSidebar(); window.print();
+}
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('scrim').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar')?.classList.remove('open'); document.getElementById('scrim')?.classList.remove('show'); }
 function hideSplash(){ const s=document.getElementById('splash'); if(!s)return; s.classList.add('gone'); setTimeout(()=>s.remove(),700); }
