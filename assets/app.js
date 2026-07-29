@@ -1414,7 +1414,7 @@ function _pexDecodeTok(tok, uni, twoByte){
 }
 function _pexExtractText(c, uni){
   let out=''; let m; const twoByte = uni._2b;
-  /* Percorre strings mostradas E operadores de posição (Td/TD/T*/Tm) para separar palavras/linhas */
+  /* Percorre strings mostradas e operadores de posicao (Td, TD, T-star, Tm) para separar palavras */
   const re=/(\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]*>)\s*(?:Tj|')|(\[(?:[^\][]|\\.)*\])\s*TJ|(Td|TD|T\*|Tm)/g;
   while((m=re.exec(c))){
     if(m[1]){ out+=_pexDecodeTok(m[1],uni,twoByte); }
