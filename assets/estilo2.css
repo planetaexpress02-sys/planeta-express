@@ -109,6 +109,7 @@
 .kmcard-item{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:11px 0 6px;font-size:12.5px;font-weight:600}
 .kmcard-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kmcard-item .st{flex-shrink:0}
+.kmcard-h .plate{font-size:12px;padding:3px 8px;letter-spacing:.5px}
 
 /* ---------- Matriz de exames ---------- */
 table.matrix td{border-right:1px solid var(--line-2)}

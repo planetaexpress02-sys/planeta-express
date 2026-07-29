@@ -1384,8 +1384,8 @@ async function processUpload(files, entidade, refId, categoria){
   await reloadFiles(); saveDB(); toast(files.length+' arquivo(s) enviado(s)'+(_online()?' e sincronizado(s).':'.')); router();
 }
 /* ================================================================== */
-/*  LEITOR DE PDF (melhor esforço) — extrai texto de NF em PDF          */
-/*  Usa DecompressionStream p/ descompactar os streams FlateDecode.     */
+/*  LEITOR DE PDF — extrai texto de NF/DANFE (inclui fontes CID)        */
+/*  Descompacta FlateDecode, lê o mapa ToUnicode e strings hex <..>.    */
 /* ================================================================== */
 async function _pexInflate(bytes){
   for(const fmt of ['deflate','deflate-raw']){
@@ -1393,50 +1393,93 @@ async function _pexInflate(bytes){
   }
   return null;
 }
-function _pexStr(s){ return String(s).replace(/\\(\d{1,3})/g,(_,o)=>String.fromCharCode(parseInt(o,8))).replace(/\\([()\\])/g,'$1').replace(/\\[nrt]/g,' '); }
-function _pexOps(content){ let t=''; let m;
-  const reTj=/\(((?:\\.|[^\\()])*)\)\s*Tj/g;
-  const reTJ=/\[((?:[^\][]|\\.)*)\]\s*TJ/g;
-  while((m=reTj.exec(content))) t+=_pexStr(m[1])+' ';
-  while((m=reTJ.exec(content))){ const reS=/\(((?:\\.|[^\\()])*)\)/g; let mm; while((mm=reS.exec(m[1]))) t+=_pexStr(mm[1]); t+=' '; }
-  return t;
+function _pexStr(s){ return String(s).replace(/\\(\d{1,3})/g,(_,o)=>String.fromCharCode(parseInt(o,8))).replace(/\\([()\\])/g,'$1').replace(/\\[nrtbf]/g,' '); }
+function _pexHexToStr(h){ let s=''; for(let i=0;i+4<=h.length;i+=4){ s+=String.fromCharCode(parseInt(h.substr(i,4),16)); } return s; }
+/* Lê os mapas ToUnicode (código do glifo -> caractere real) */
+function _pexParseCMap(c, uni){ let m;
+  const reC=/beginbfchar([\s\S]*?)endbfchar/g;
+  while((m=reC.exec(c))){ let mm; const reP=/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g; while((mm=reP.exec(m[1]))){ uni[parseInt(mm[1],16)]=_pexHexToStr(mm[2]); } }
+  const reR=/beginbfrange([\s\S]*?)endbfrange/g;
+  while((m=reR.exec(c))){ let mm; const reP=/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+    while((mm=reP.exec(m[1]))){ const a=parseInt(mm[1],16),b=parseInt(mm[2],16),d=parseInt(mm[3],16);
+      for(let cc=a; cc<=b && (cc-a)<3000; cc++) uni[cc]=String.fromCharCode(d+(cc-a)); } }
+}
+function _pexDecodeTok(tok, uni, twoByte){
+  let codes=[];
+  if(tok[0]==='('){ const s=_pexStr(tok.slice(1,-1)); for(let i=0;i<s.length;i++) codes.push(s.charCodeAt(i)); }
+  else { const h=tok.replace(/[^0-9A-Fa-f]/g,''); const step=twoByte?4:2; for(let i=0;i+step<=h.length;i+=step) codes.push(parseInt(h.substr(i,step),16)); }
+  let out=''; const has=uni._n>0;
+  codes.forEach(code=>{ out += (has && uni[code]!=null)? uni[code] : String.fromCharCode(code); });
+  return out;
+}
+function _pexExtractText(c, uni){
+  let out=''; let m; const twoByte = uni._2b;
+  /* Percorre strings mostradas E operadores de posição (Td/TD/T*/Tm) para separar palavras/linhas */
+  const re=/(\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]*>)\s*(?:Tj|')|(\[(?:[^\][]|\\.)*\])\s*TJ|(Td|TD|T\*|Tm)/g;
+  while((m=re.exec(c))){
+    if(m[1]){ out+=_pexDecodeTok(m[1],uni,twoByte); }
+    else if(m[2]){ let mm; const reIn=/\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]*>|(-?\d+\.?\d*)/g;
+      while((mm=reIn.exec(m[2]))){ const t=mm[0]; if(t[0]==='('||t[0]==='<') out+=_pexDecodeTok(t,uni,twoByte); else if(parseFloat(t)<=-80) out+=' '; } }
+    else if(m[3]){ out+=' '; }
+  }
+  return out;
 }
 async function pexLerPdfTexto(file){
   try{
     const buf=new Uint8Array(await file.arrayBuffer());
-    let s=''; for(let i=0;i<buf.length;i++) s+=String.fromCharCode(buf[i]);
-    let out=''; const re=/stream\r?\n/g; let m;
-    while((m=re.exec(s))){
-      const start=m.index+m[0].length; const end=s.indexOf('endstream', start); if(end<0) continue;
-      const dictStart=s.lastIndexOf('<<', m.index); const dict=dictStart>=0?s.slice(dictStart, m.index):'';
-      if(/DCTDecode|JPXDecode|CCITTFax|\/Image/.test(dict)){ re.lastIndex=end; continue; }
-      let content=s.slice(start, end);
+    let raw=''; for(let i=0;i<buf.length;i++) raw+=String.fromCharCode(buf[i]);
+    const streams=[]; const reObj=/(\d+)\s+\d+\s+obj\b/g; let mo;
+    while((mo=reObj.exec(raw))){
+      const sIdx=raw.indexOf('stream', reObj.lastIndex); const eObj=raw.indexOf('endobj', reObj.lastIndex);
+      if(sIdx<0 || (eObj>=0 && sIdx>eObj)) continue;
+      const dict=raw.slice(mo.index, sIdx);
+      let st=sIdx+6; if(raw[st]==='\r')st++; if(raw[st]==='\n')st++;
+      const e=raw.indexOf('endstream', st); if(e<0) continue;
+      let content=raw.slice(st, e);
+      if(/DCTDecode|JPXDecode|CCITTFax/.test(dict)) continue;
       if(/FlateDecode/.test(dict)){
-        const bytes=new Uint8Array(content.length); for(let i=0;i<content.length;i++) bytes[i]=content.charCodeAt(i)&0xff;
-        const inf=await _pexInflate(bytes); if(!inf){ re.lastIndex=end; continue; }
+        const b=new Uint8Array(content.length); for(let i=0;i<content.length;i++) b[i]=content.charCodeAt(i)&0xff;
+        const inf=await _pexInflate(b); if(!inf) continue;
         content=''; for(let i=0;i<inf.length;i++) content+=String.fromCharCode(inf[i]);
       }
-      out += _pexOps(content); re.lastIndex=end;
+      streams.push(content);
     }
-    return out.replace(/\s+/g,' ').trim();
+    const uni={}; streams.forEach(c=>{ if(/beginbf(char|range)/.test(c)) _pexParseCMap(c,uni); });
+    let n=0,two=false; for(const k in uni){ n++; if(+k>255) two=true; } uni._n=n; uni._2b=two;
+    let out=''; streams.forEach(c=>{ if(/(Tj|TJ)/.test(c) && !/beginbf(char|range)/.test(c)) out += _pexExtractText(c,uni)+'\n'; });
+    return out.replace(/\s+/g,String.fromCharCode(32)).trim();
   }catch(e){ return ''; }
 }
 function _brNum(s){ if(s==null)return null; s=String(s).replace(/[^\d.,]/g,''); if(!s)return null;
-  if(/,\d{1,2}$/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else if(/\.\d{3}(,|$)/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else { s=s.replace(',','.'); }
+  if(/,\d{1,3}$/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else if(/\.\d{3}(\.|$)/.test(s)){ s=s.replace(/\./g,''); } else { s=s.replace(',','.'); }
   const n=parseFloat(s); return isNaN(n)?null:n; }
-function _pexData(txt){ const m=String(txt).match(/(\d{2})[\/.\-](\d{2})[\/.\-](\d{2,4})/); if(!m) return '';
+function _pexData(txt, re){ const m=String(txt).match(re||/(\d{2})[\/.\-](\d{2})[\/.\-](\d{2,4})/); if(!m) return '';
   let y=m[3]; if(y.length===2) y='20'+y; return y+'-'+m[2]+'-'+m[1]; }
-/* Extrai dados prováveis de uma NF de abastecimento (melhor esforço) */
-function extrairAbastecimento(txt){
-  const T=' '+String(txt).toUpperCase()+' ';
+/* Decodifica a chave de 44 dígitos da NFe (do nome do arquivo): ano-mês, CNPJ */
+function _pexChaveInfo(nome){ const m=String(nome||'').match(/(\d{44})/); if(!m) return {};
+  const k=m[1]; return { chave:k, anoMes:'20'+k.slice(2,4)+'-'+k.slice(4,6), cnpjEmit:k.slice(6,20) }; }
+/* Extrai dados de uma NF de abastecimento (adapta-se a vários formatos) */
+function extrairAbastecimento(txt, nomeArquivo){
+  const raw=String(txt); const T=' '+raw.toUpperCase().replace(/\s+/g,' ')+' ';
   const pick=(re)=>{ const m=T.match(re); return m?_brNum(m[1]):null; };
-  const litros = pick(/([\d.,]+)\s*(?:LTS?\b|LITROS?\b|\bL\b)/) || pick(/(?:QTDE?|QUANT[^\d]{0,8})[:\s]*([\d.,]+)/);
-  const valor  = pick(/(?:VALOR\s*(?:TOTAL|A\s*PAGAR)|TOTAL\s*(?:R\$|A\s*PAGAR|GERAL|DA\s*NOTA)|VL\.?\s*TOTAL|TOTAL)\s*[:R$\s]*([\d.,]+)/) || pick(/R\$\s*([\d.,]+)/);
-  const km     = pick(/(?:KM|HOD[ÔO]METRO|OD[ÔO]METRO|KMS)\s*[:\s]*([\d.,]+)/);
-  const placa  = (T.match(/\b([A-Z]{3}[-\s]?\d[A-Z0-9]\d{2})\b/)||[])[1] || '';
-  const data   = _pexData(txt);
-  const posto  = (String(txt).match(/(POSTO[^\n,;]{0,40}|AUTO\s*POSTO[^\n,;]{0,40})/i)||[])[1]||'';
-  return { litros, valor, km, placa:(placa||'').toUpperCase().replace(/\s/g,'-'), data, posto:posto.trim() };
+  const chave=_pexChaveInfo(nomeArquivo);
+  /* LITROS: perto de combustível ou marcado como quantidade/UN/LT */
+  let litros = pick(/(?:DIESEL|ARLA|GASOLINA|ETANOL|ALCOOL|\bS-?10\b|\bS-?500\b|COMBUST[IÍ]VEL)[^\d]{0,60}?([\d]{1,4}[.,]\d{2,3})\s*(?:UN|LT|L\b|LITRO)?/)
+             || pick(/(?:QTDE?\.?|QUANT[.\s]*(?:COM|COMERCIAL)?|VOL\.?|LITROS?)[^\d]{0,12}([\d]{1,4}[.,]\d{2,3})/)
+             || pick(/([\d]{1,4}[.,]\d{2,3})\s*(?:UN|LT|LTS|LITROS?)\b/);
+  /* VALOR TOTAL da nota */
+  let valor  = pick(/VALOR\s*TOTAL\s*DA\s*NOTA[^\d]{0,10}([\d.]{1,12},\d{2})/)
+             || pick(/(?:V(?:ALOR|L)\.?\s*TOTAL|TOTAL\s*(?:DA\s*NOTA|GERAL|A\s*PAGAR|R\$))[^\d]{0,10}([\d.]{1,12},\d{2})/)
+             || pick(/VLR?\.?\s*L[IÍ]QUIDO[^\d]{0,10}([\d.]{1,12},\d{2})/);
+  /* KM / hodômetro (costuma vir nos dados adicionais) */
+  let km     = pick(/(?:KM|HOD[OÔ]METRO|OD[OÔ]METRO|KILOMETRAGEM|HORIMETRO|HOR[IÍ]METRO)[^\d]{0,10}([\d.]{2,10})/);
+  /* PLACA */
+  let placa  = (T.match(/PLACA[^A-Z0-9]{0,6}([A-Z]{3}[- ]?\d[A-Z0-9]\d{2})/)||[])[1]
+             || (T.match(/\b([A-Z]{3}[- ]?\d[A-Z0-9]\d{2})\b/)||[])[1] || '';
+  /* DATA de emissão (senão, deixa vazio p/ hoje) */
+  let data   = _pexData(raw, /(?:EMISS[ÃA]O|DT\.?\s*EMISS|DATA)[^\d]{0,12}(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})/i) || _pexData(raw);
+  const posto = (raw.match(/((?:AUTO\s*)?POSTO[^\n,;|]{2,44})/i)||[])[1] || '';
+  return { litros, valor, km:(km!=null?Math.round(km):null), placa:(placa||'').toUpperCase().replace(/\s/g,'-'), data, posto:posto.trim(), chave:chave.chave||'' };
 }
 function guessCat(name){ const n=name.toLowerCase();
   if(/crlv|licenc/.test(n)) return 'CRLV';
@@ -1909,9 +1952,9 @@ function viewPneus(){
     return t? `<span class="st ok">${t} pneu(s)</span>` : `<span class="st neutro">sem pneus</span>`; };
   return `
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-    ${kpi('tire','i-blue',total,'Pneus no total','soma das quantidades')}
+    ${kpi('tire','i-blue',total,'Pneus no total','instalados na frota')}
     ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
-    ${kpi('gauge','i-green', DB.pneus.length, 'Registros de pneus','')}
+    ${kpi('tire','i-green', pneuTotal(DB.estoquePneus), 'Pneus em estoque','na reserva')}
   </div>
   <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div>
     <div class="spacer"></div><button class="btn primary" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
@@ -1926,30 +1969,30 @@ function estoquePneusSecao(){
   const rows=ep.map(x=>`<tr class="clickable" onclick="modalEstoquePneu('${x.id}')">
     <td class="mono">${x.qtd||1}</td><td><b>${esc(x.marca||'—')}</b></td><td class="mono">${esc(x.medida||'—')}</td>
     <td class="mono muted">${esc(x.dot||'—')}</td><td class="mono">${fmtD(x.data)}</td><td>${esc(x.local||'—')}</td>
-    <td class="mono">${money(x.valor)}</td><td class="muted" style="font-size:12px">${esc(x.obs||'—')}</td>
+    <td>${esc(x.localEstoque||'—')}</td><td class="mono">${money(x.valor)}</td><td class="muted" style="font-size:12px">${esc(x.obs||'—')}</td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalEstoquePneu('${x.id}')">${svg('edit')}</button></td></tr>`).join('');
   return `<div class="sectitulo" style="margin-top:24px">${svg('tire')} Pneus em estoque</div>
     <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Em estoque — ${qt} pneu(s) · ${money(tot)}</h3>
       <button class="btn sm no-print" style="margin-left:auto" onclick="modalEstoquePneu()">${svg('plus')} Novo pneu em estoque</button></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Qtd</th><th>Marca</th><th>Medida</th><th>DOT</th><th>Data</th><th>Local da compra</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
-        <tbody>${rows||`<tr><td colspan="9">${emptyState('Nenhum pneu em estoque. Clique em "Novo pneu em estoque".')}</td></tr>`}</tbody></table></div></div></div>`;
+        <thead><tr><th>Qtd</th><th>Marca</th><th>Medida</th><th>DOT</th><th>Data</th><th>Local da compra</th><th>Local (onde está)</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="10">${emptyState('Nenhum pneu em estoque. Clique em "Novo pneu em estoque".')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalEstoquePneu(id){
-  const x=id?DB.estoquePneus.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),marca:'',medida:'',local:'',valor:'',qtd:1,dot:'',obs:''};
+  const x=id?DB.estoquePneus.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),marca:'',medida:'',local:'',localEstoque:'',valor:'',qtd:1,dot:'',obs:''};
   openModal(`<div class="m-h">${svg('tire')}<h3>${id?'Editar pneu em estoque':'Novo pneu em estoque'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">${fld('Data da compra','f_data',x.data,'date')}${fld('Quantidade','f_qtd',x.qtd||1,'number')}</div>
       <div class="field-row">${fld('Marca','f_marca',x.marca)}${fld('Medida','f_medida',x.medida,'text','Ex.: 295/80 R22.5')}</div>
       <div class="field-row">${fld('DOT (semana/ano)','f_dot',x.dot)}${fldR$('Valor (R$)','f_valor',x.valor)}</div>
-      ${fld('Local da compra','f_local',x.local)}
+      <div class="field-row">${fld('Local da compra','f_local',x.local,'text','Onde foi comprado')}${fld('Local (onde está)','f_locest',x.localEstoque,'text','Onde o pneu está guardado')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs||'')}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirEstoquePneu('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarEstoquePneu('${id||''}')">Salvar</button></div>`);
 }
 function salvarEstoquePneu(id){ let q=parseInt(val('f_qtd'))||1; if(q<1)q=1;
-  const d={data:val('f_data'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),local:val('f_local'),valor:parseBRL(val('f_valor')),qtd:q,obs:val('f_obs')};
+  const d={data:val('f_data'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),local:val('f_local'),localEstoque:val('f_locest'),valor:parseBRL(val('f_valor')),qtd:q,obs:val('f_obs')};
   if(id)Object.assign(DB.estoquePneus.find(y=>y.id===id),d); else{ d.id=uid('ep'); DB.estoquePneus.push(d); } saveDB(); closeModal(); toast('Pneu em estoque salvo.'); router(); }
 function excluirEstoquePneu(id){ if(!confirm('Excluir este pneu em estoque?'))return; DB.estoquePneus=DB.estoquePneus.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 /* Detalhe: pneus de UM veículo (aberto ao clicar na placa) */
@@ -2430,7 +2473,7 @@ function modalAbastec(id, pre){
   const a=id?DB.abastecimentos.find(x=>x.id===id):Object.assign({data:new Date().toISOString().slice(0,10),veiculoId:(DB.veiculos[0]||{}).id,litros:'',valor:'',km:'',horas:'',posto:'',obs:''}, pre||{});
   openModal(`<div class="m-h">${svg('fuel')}<h3>${id?'Editar abastecimento':'Novo abastecimento'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      ${a._nfNome?`<div class="hint" style="background:#e7f6ec;color:#166534;padding:8px 12px;border-radius:8px;margin-bottom:12px">📎 Li a nota <b>${esc(a._nfNome)}</b> e preenchi o que encontrei. Confira e ajuste antes de salvar.</div>`:''}
+      ${a._nfNome?(a._nfAchou? `<div class="hint" style="background:#e7f6ec;color:#166534;padding:8px 12px;border-radius:8px;margin-bottom:12px">📎 Li a nota <b>${esc(a._nfNome)}</b> e preenchi ${a._nfAchou} campo(s). Confira e ajuste antes de salvar.</div>` : `<div class="hint" style="background:#fff5e6;color:#b45309;padding:8px 12px;border-radius:8px;margin-bottom:12px">📎 Anexei <b>${esc(a._nfNome)}</b>, mas esse PDF não permitiu leitura automática (deve ser digitalizado/imagem). Preencha os campos abaixo — a nota fica anexada.</div>`):''}
       <div class="field-row">${fld('Data','f_data',a.data,'date')}
         <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${a.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.tipo)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Litros','f_lit',a.litros,'number')}${fldR$('Valor (R$)','f_val',a.valor)}</div>
@@ -2453,9 +2496,10 @@ let _nfPendente=null;
 async function abastecNfUpload(ev){
   const f=(ev.target.files||[])[0]; ev.target.value=''; if(!f) return;
   toast('Lendo a nota fiscal…');
-  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'');
+  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'', f.name);
+  const achou=(dd.litros!=null)+(dd.valor!=null)+(dd.km!=null)+(dd.placa?1:0);
   const v=dd.placa?veiculoByPlaca(dd.placa):null;
-  const pre={ _nfNome:f.name, data:dd.data||new Date().toISOString().slice(0,10),
+  const pre={ _nfNome:f.name, _nfAchou:achou, data:dd.data||new Date().toISOString().slice(0,10),
     litros:(dd.litros!=null?dd.litros:''), valor:(dd.valor!=null?dd.valor:''), posto:dd.posto||'' };
   if(v){ pre.veiculoId=v.id; if(isReb(v)) pre.horas=(dd.km!=null?dd.km:''); else pre.km=(dd.km!=null?dd.km:''); }
   else if(dd.km!=null){ pre.km=dd.km; }
