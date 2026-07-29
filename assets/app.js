@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -1229,8 +1229,42 @@ function viewBaterias(){
     <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver as baterias daquele veículo. A garantia aparece <b>só aqui</b> — não gera alerta no painel.</div>
       <div class="spacer"></div><button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
     ${vcardsSecoes('baterias', foot)}
-    ${orfBlocos?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Outras placas (fora da frota atual)</div><div class="grid" style="gap:14px">${orfBlocos}</div>`:''}`;
+    ${orfBlocos?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Outras placas (fora da frota atual)</div><div class="grid" style="gap:14px">${orfBlocos}</div>`:''}
+    ${estoqueBateriasSecao()}`;
 }
+/* --- Baterias reservas (estoque, não instaladas em veículo) --- */
+function estoqueBateriasSecao(){
+  const eb=DB.estoqueBaterias.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const qt=eb.reduce((s,x)=>s+(parseInt(x.qtd)||1),0);
+  const tot=eb.reduce((s,x)=>s+(Number(x.valor)||0)*(parseInt(x.qtd)||1),0);
+  const rows=eb.map(x=>`<tr class="clickable" onclick="modalEstoqueBateria('${x.id}')">
+    <td class="mono">${fmtD(x.data)}</td><td><b>${esc(x.marca||'—')}</b></td><td>${esc(x.local||'—')}</td>
+    <td class="mono">${x.qtd||1}</td><td class="mono">${money(x.valor)}</td>
+    <td class="muted" style="font-size:12px">${esc(x.obs||'—')}</td>
+    <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalEstoqueBateria('${x.id}')">${svg('edit')}</button></td></tr>`).join('');
+  return `<div class="sectitulo" style="margin-top:24px">${svg('battery')} Baterias reservas (estoque)</div>
+    <div class="card"><div class="card-h">${svg('battery')}<h3 style="font-size:14px">Em estoque — ${qt} bateria(s) · ${money(tot)}</h3>
+      <button class="btn sm no-print" style="margin-left:auto" onclick="modalEstoqueBateria()">${svg('plus')} Nova reserva</button></div>
+      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Data</th><th>Marca</th><th>Local da compra</th><th>Qtd</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhuma bateria reserva. Clique em "Nova reserva".')}</td></tr>`}</tbody></table></div></div></div>`;
+}
+function modalEstoqueBateria(id){
+  const x=id?DB.estoqueBaterias.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),marca:'',local:'',valor:'',qtd:1,obs:''};
+  openModal(`<div class="m-h">${svg('battery')}<h3>${id?'Editar bateria reserva':'Nova bateria reserva'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('Data da compra','f_data',x.data,'date')}${fld('Quantidade','f_qtd',x.qtd||1,'number')}</div>
+      <div class="field-row">${fld('Marca / capacidade','f_marca',x.marca)}${fldR$('Valor (R$)','f_valor',x.valor)}</div>
+      ${fld('Local da compra','f_local',x.local)}
+      <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs||'')}"></div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirEstoqueBateria('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarEstoqueBateria('${id||''}')">Salvar</button></div>`);
+}
+function salvarEstoqueBateria(id){ let q=parseInt(val('f_qtd'))||1; if(q<1)q=1;
+  const d={data:val('f_data'),marca:val('f_marca'),local:val('f_local'),valor:parseBRL(val('f_valor')),qtd:q,obs:val('f_obs')};
+  if(id)Object.assign(DB.estoqueBaterias.find(y=>y.id===id),d); else{ d.id=uid('eb'); DB.estoqueBaterias.push(d); } saveDB(); closeModal(); toast('Bateria reserva salva.'); router(); }
+function excluirEstoqueBateria(id){ if(!confirm('Excluir esta bateria reserva?'))return; DB.estoqueBaterias=DB.estoqueBaterias.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 /* Detalhe: baterias de UM veículo (aberto ao clicar na placa) */
 function viewBateriasVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
@@ -1348,6 +1382,61 @@ async function processUpload(files, entidade, refId, categoria){
   if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
   for(const file of files){ await subirUm(file, entidade, refId, categoria); }
   await reloadFiles(); saveDB(); toast(files.length+' arquivo(s) enviado(s)'+(_online()?' e sincronizado(s).':'.')); router();
+}
+/* ================================================================== */
+/*  LEITOR DE PDF (melhor esforço) — extrai texto de NF em PDF          */
+/*  Usa DecompressionStream p/ descompactar os streams FlateDecode.     */
+/* ================================================================== */
+async function _pexInflate(bytes){
+  for(const fmt of ['deflate','deflate-raw']){
+    try{ const ab=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream(fmt))).arrayBuffer(); return new Uint8Array(ab); }catch(e){}
+  }
+  return null;
+}
+function _pexStr(s){ return String(s).replace(/\\(\d{1,3})/g,(_,o)=>String.fromCharCode(parseInt(o,8))).replace(/\\([()\\])/g,'$1').replace(/\\[nrt]/g,' '); }
+function _pexOps(content){ let t=''; let m;
+  const reTj=/\(((?:\\.|[^\\()])*)\)\s*Tj/g;
+  const reTJ=/\[((?:[^\][]|\\.)*)\]\s*TJ/g;
+  while((m=reTj.exec(content))) t+=_pexStr(m[1])+' ';
+  while((m=reTJ.exec(content))){ const reS=/\(((?:\\.|[^\\()])*)\)/g; let mm; while((mm=reS.exec(m[1]))) t+=_pexStr(mm[1]); t+=' '; }
+  return t;
+}
+async function pexLerPdfTexto(file){
+  try{
+    const buf=new Uint8Array(await file.arrayBuffer());
+    let s=''; for(let i=0;i<buf.length;i++) s+=String.fromCharCode(buf[i]);
+    let out=''; const re=/stream\r?\n/g; let m;
+    while((m=re.exec(s))){
+      const start=m.index+m[0].length; const end=s.indexOf('endstream', start); if(end<0) continue;
+      const dictStart=s.lastIndexOf('<<', m.index); const dict=dictStart>=0?s.slice(dictStart, m.index):'';
+      if(/DCTDecode|JPXDecode|CCITTFax|\/Image/.test(dict)){ re.lastIndex=end; continue; }
+      let content=s.slice(start, end);
+      if(/FlateDecode/.test(dict)){
+        const bytes=new Uint8Array(content.length); for(let i=0;i<content.length;i++) bytes[i]=content.charCodeAt(i)&0xff;
+        const inf=await _pexInflate(bytes); if(!inf){ re.lastIndex=end; continue; }
+        content=''; for(let i=0;i<inf.length;i++) content+=String.fromCharCode(inf[i]);
+      }
+      out += _pexOps(content); re.lastIndex=end;
+    }
+    return out.replace(/\s+/g,' ').trim();
+  }catch(e){ return ''; }
+}
+function _brNum(s){ if(s==null)return null; s=String(s).replace(/[^\d.,]/g,''); if(!s)return null;
+  if(/,\d{1,2}$/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else if(/\.\d{3}(,|$)/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else { s=s.replace(',','.'); }
+  const n=parseFloat(s); return isNaN(n)?null:n; }
+function _pexData(txt){ const m=String(txt).match(/(\d{2})[\/.\-](\d{2})[\/.\-](\d{2,4})/); if(!m) return '';
+  let y=m[3]; if(y.length===2) y='20'+y; return y+'-'+m[2]+'-'+m[1]; }
+/* Extrai dados prováveis de uma NF de abastecimento (melhor esforço) */
+function extrairAbastecimento(txt){
+  const T=' '+String(txt).toUpperCase()+' ';
+  const pick=(re)=>{ const m=T.match(re); return m?_brNum(m[1]):null; };
+  const litros = pick(/([\d.,]+)\s*(?:LTS?\b|LITROS?\b|\bL\b)/) || pick(/(?:QTDE?|QUANT[^\d]{0,8})[:\s]*([\d.,]+)/);
+  const valor  = pick(/(?:VALOR\s*(?:TOTAL|A\s*PAGAR)|TOTAL\s*(?:R\$|A\s*PAGAR|GERAL|DA\s*NOTA)|VL\.?\s*TOTAL|TOTAL)\s*[:R$\s]*([\d.,]+)/) || pick(/R\$\s*([\d.,]+)/);
+  const km     = pick(/(?:KM|HOD[ÔO]METRO|OD[ÔO]METRO|KMS)\s*[:\s]*([\d.,]+)/);
+  const placa  = (T.match(/\b([A-Z]{3}[-\s]?\d[A-Z0-9]\d{2})\b/)||[])[1] || '';
+  const data   = _pexData(txt);
+  const posto  = (String(txt).match(/(POSTO[^\n,;]{0,40}|AUTO\s*POSTO[^\n,;]{0,40})/i)||[])[1]||'';
+  return { litros, valor, km, placa:(placa||'').toUpperCase().replace(/\s/g,'-'), data, posto:posto.trim() };
 }
 function guessCat(name){ const n=name.toLowerCase();
   if(/crlv|licenc/.test(n)) return 'CRLV';
@@ -1731,6 +1820,7 @@ function viewNotas(){
     <td><b>${fmtD(n.inicio)} — ${fmtD(n.fim)}</b>${n.obs?`<div class="muted" style="font-size:12px">${esc(n.obs)}</div>`:''}</td>
     <td class="mono">${money(n.alexandria)}</td><td class="mono">${money(n.notasGerais)}</td><td class="mono">${money(n.combustivel)}</td>
     <td class="mono"><b>${money(totalNota(n))}</b></td>
+    <td class="no-print" onclick="event.stopPropagation()">${badgeAnexo('nota',n.id,/nota|nf|fiscal|\.pdf/i,'Nota Fiscal')}</td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalNota('${n.id}')">${svg('edit')}</button></td></tr>`).join('');
   const AZ='#4a90d9', LA='#e0812f', CZ='#a6a6a6';
   const pizza = ultimo? [
@@ -1739,8 +1829,9 @@ function viewNotas(){
     {label:'Combustível', value:Number(ultimo.combustivel)||0, color:CZ}
   ]:[];
   return `
-  <div class="banner">${svg('money')}<div><b>Notas de Despesa</b><span>Despesas somadas por período (Alexandria + Notas em geral + Combustível). Digite os valores no padrão R$ (ex.: 50.490,84).</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalNota()">${svg('plus')} Novo período</button></div>
+  <div class="banner">${svg('money')}<div><b>Notas de Despesa</b><span>Envie a NF em PDF (fica anexada e eu sugiro o valor) ou digite os valores no padrão R$ (ex.: 50.490,84). Despesas somadas por período.</span></div>
+    <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar PDF<input type="file" accept="application/pdf,.pdf" onchange="notaNfUpload(event)" style="display:none"></label>
+    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('money','i-green', ultimo?money(totalNota(ultimo)):money(0), 'Último período', ultimo?fmtD(ultimo.inicio)+' a '+fmtD(ultimo.fim):'—')}
     ${kpi('doc','i-blue', ultimo?money(ultimo.alexandria):money(0), 'Alexandria (período)','')}
@@ -1751,9 +1842,9 @@ function viewNotas(){
     <div class="card"><div class="card-h">${svg('money')}<h3>Despesas por período</h3>
       <div class="r no-print"><button class="btn sm" onclick="window.print()">${svg('print')}</button><button class="btn primary sm" onclick="modalNota()">${svg('plus')} Novo</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Período</th><th>Alexandria</th><th>Notas em geral</th><th>Combustível</th><th>Total</th><th class="no-print"></th></tr></thead>
-        <tbody>${rows||`<tr><td colspan="6">${emptyState('Nenhum período lançado.')}</td></tr>`}
-        ${notas.length?`<tr style="background:#f7f9fc;font-weight:800"><td>TOTAL GERAL</td><td class="mono">${money(somaAlex)}</td><td class="mono">${money(notas.reduce((s,n)=>s+(Number(n.notasGerais)||0),0))}</td><td class="mono">${money(somaComb)}</td><td class="mono">${money(acumulado)}</td><td class="no-print"></td></tr>`:''}</tbody></table></div></div></div>
+        <thead><tr><th>Período</th><th>Alexandria</th><th>Notas em geral</th><th>Combustível</th><th>Total</th><th class="no-print">NF</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum período lançado.')}</td></tr>`}
+        ${notas.length?`<tr style="background:#f7f9fc;font-weight:800"><td>TOTAL GERAL</td><td class="mono">${money(somaAlex)}</td><td class="mono">${money(notas.reduce((s,n)=>s+(Number(n.notasGerais)||0),0))}</td><td class="mono">${money(somaComb)}</td><td class="mono">${money(acumulado)}</td><td class="no-print"></td><td class="no-print"></td></tr>`:''}</tbody></table></div></div></div>
     <div class="card"><div class="card-h">${svg('dash')}<h3>Composição do último período</h3></div>
       <div class="card-b">${ultimo?`<div class="donut-wrap">
         ${donut(pizza,{center:'R$',sub:'último'})}
@@ -1773,10 +1864,11 @@ function parseBRL(s){ if(s==null)return 0; s=String(s).replace(/[^\d.,\-]/g,'').
 function r2(v){ return parseBRL(v); }
 function fmtBRLin(v){ if(v==null||v===''){return '';} const n=Number(v); if(isNaN(n)){return '';} return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fldR$(label,id,v){ return `<div class="field"><label>${label}</label><input id="${id}" type="text" inputmode="decimal" placeholder="0,00" value="${esc(fmtBRLin(v))}"><div class="hint">Use vírgula para centavos. Ex.: 50490,84</div></div>`; }
-function modalNota(id){
-  const n=id?DB.notas.find(x=>x.id===id):{inicio:'',fim:'',alexandria:'',notasGerais:'',combustivel:'',obs:''};
+function modalNota(id, pre){
+  const n=id?DB.notas.find(x=>x.id===id):Object.assign({inicio:'',fim:'',alexandria:'',notasGerais:'',combustivel:'',obs:''}, pre||{});
   openModal(`<div class="m-h">${svg('money')}<h3>${id?'Editar período':'Novo período de notas'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
+      ${n._nfNome?`<div class="hint" style="background:#e7f6ec;color:#166534;padding:8px 12px;border-radius:8px;margin-bottom:12px">📎 Anexei a nota <b>${esc(n._nfNome)}</b> e sugeri o valor em "Notas em geral". Confira e classifique.</div>`:''}
       <div class="field-row">${fld('Início do período','f_ini',n.inicio,'date')}${fld('Fim do período','f_fim',n.fim,'date')}</div>
       <div class="field-row">${fldR$('Alexandria (R$)','f_alex',n.alexandria)}${fldR$('Notas em geral (R$)','f_ger',n.notasGerais)}</div>
       ${fldR$('Combustível (R$)','f_comb',n.combustivel)}
@@ -1786,10 +1878,22 @@ function modalNota(id){
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirNota('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarNota('${id||''}')">Salvar</button></div>`);
 }
-function salvarNota(id){ if(!val('f_fim')){toast('Informe o fim do período.','err');return;}
+async function salvarNota(id){ if(!val('f_fim')){toast('Informe o fim do período.','err');return;}
   const d={inicio:val('f_ini'),fim:val('f_fim'),alexandria:r2(val('f_alex'))||0,notasGerais:r2(val('f_ger'))||0,combustivel:r2(val('f_comb'))||0,obs:val('f_obs')};
-  if(id)Object.assign(DB.notas.find(x=>x.id===id),d); else{ d.id=uid('nf'); DB.notas.push(d); } saveDB(); closeModal(); toast('Período salvo.'); router(); }
+  let novoId=id;
+  if(id)Object.assign(DB.notas.find(x=>x.id===id),d); else{ d.id=uid('nf'); novoId=d.id; DB.notas.push(d); }
+  if(_notaNfPendente){ try{ await subirUm(_notaNfPendente,'nota',novoId,'Nota Fiscal'); await reloadFiles(); }catch(e){} _notaNfPendente=null; }
+  saveDB(); closeModal(); toast('Período salvo.'); router(); }
 function excluirNota(id){ if(!confirm('Excluir este período?'))return; DB.notas=DB.notas.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+/* Enviar PDF de nota fiscal: anexa ao período e sugere o valor total encontrado */
+let _notaNfPendente=null;
+async function notaNfUpload(ev){
+  const f=(ev.target.files||[])[0]; ev.target.value=''; if(!f) return;
+  toast('Lendo a nota fiscal…');
+  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'');
+  _notaNfPendente=f;
+  modalNota(null, { _nfNome:f.name, notasGerais:(dd.valor!=null?dd.valor:''), fim:dd.data||'' });
+}
 
 /* ---------- PNEUS ---------- */
 const PNEU_STATUS=['Novo','Usado','Recapado','Estepe','Descarte'];
@@ -1811,8 +1915,43 @@ function viewPneus(){
   </div>
   <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div>
     <div class="spacer"></div><button class="btn primary" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
-  ${vcardsSecoes('pneus', foot)}`;
+  ${vcardsSecoes('pneus', foot)}
+  ${estoquePneusSecao()}`;
 }
+/* --- Pneus em estoque (não instalados) --- */
+function estoquePneusSecao(){
+  const ep=DB.estoquePneus.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const qt=ep.reduce((s,x)=>s+(parseInt(x.qtd)||1),0);
+  const tot=ep.reduce((s,x)=>s+(Number(x.valor)||0)*(parseInt(x.qtd)||1),0);
+  const rows=ep.map(x=>`<tr class="clickable" onclick="modalEstoquePneu('${x.id}')">
+    <td class="mono">${x.qtd||1}</td><td><b>${esc(x.marca||'—')}</b></td><td class="mono">${esc(x.medida||'—')}</td>
+    <td class="mono muted">${esc(x.dot||'—')}</td><td class="mono">${fmtD(x.data)}</td><td>${esc(x.local||'—')}</td>
+    <td class="mono">${money(x.valor)}</td><td class="muted" style="font-size:12px">${esc(x.obs||'—')}</td>
+    <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalEstoquePneu('${x.id}')">${svg('edit')}</button></td></tr>`).join('');
+  return `<div class="sectitulo" style="margin-top:24px">${svg('tire')} Pneus em estoque</div>
+    <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Em estoque — ${qt} pneu(s) · ${money(tot)}</h3>
+      <button class="btn sm no-print" style="margin-left:auto" onclick="modalEstoquePneu()">${svg('plus')} Novo pneu em estoque</button></div>
+      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Qtd</th><th>Marca</th><th>Medida</th><th>DOT</th><th>Data</th><th>Local da compra</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="9">${emptyState('Nenhum pneu em estoque. Clique em "Novo pneu em estoque".')}</td></tr>`}</tbody></table></div></div></div>`;
+}
+function modalEstoquePneu(id){
+  const x=id?DB.estoquePneus.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),marca:'',medida:'',local:'',valor:'',qtd:1,dot:'',obs:''};
+  openModal(`<div class="m-h">${svg('tire')}<h3>${id?'Editar pneu em estoque':'Novo pneu em estoque'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('Data da compra','f_data',x.data,'date')}${fld('Quantidade','f_qtd',x.qtd||1,'number')}</div>
+      <div class="field-row">${fld('Marca','f_marca',x.marca)}${fld('Medida','f_medida',x.medida,'text','Ex.: 295/80 R22.5')}</div>
+      <div class="field-row">${fld('DOT (semana/ano)','f_dot',x.dot)}${fldR$('Valor (R$)','f_valor',x.valor)}</div>
+      ${fld('Local da compra','f_local',x.local)}
+      <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs||'')}"></div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirEstoquePneu('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarEstoquePneu('${id||''}')">Salvar</button></div>`);
+}
+function salvarEstoquePneu(id){ let q=parseInt(val('f_qtd'))||1; if(q<1)q=1;
+  const d={data:val('f_data'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),local:val('f_local'),valor:parseBRL(val('f_valor')),qtd:q,obs:val('f_obs')};
+  if(id)Object.assign(DB.estoquePneus.find(y=>y.id===id),d); else{ d.id=uid('ep'); DB.estoquePneus.push(d); } saveDB(); closeModal(); toast('Pneu em estoque salvo.'); router(); }
+function excluirEstoquePneu(id){ if(!confirm('Excluir este pneu em estoque?'))return; DB.estoquePneus=DB.estoquePneus.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 /* Detalhe: pneus de UM veículo (aberto ao clicar na placa) */
 function viewPneusVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
@@ -2262,11 +2401,13 @@ function viewAbastecimento(){
       <td class="mono">${num(a.litros)} L</td><td class="mono">${money(a.valor)}</td>
       <td class="mono muted">${a.km!=null&&a.km!==''?num(a.km)+' km':(a.horas!=null&&a.horas!==''?num(a.horas)+' h':'—')}</td>
       <td>${esc(a.posto||'—')}</td>
+      <td class="no-print">${badgeAnexo('abastecimento',a.id,/nota|nf|fiscal|\.pdf/i,'Nota Fiscal')}</td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalAbastec('${a.id}')">${svg('edit')}</button></td></tr>`;
   }).join('');
   return `
-  <div class="banner">${svg('fuel')}<div><b>Abastecimentos e médias</b><span>Lance cada abastecimento com litros e o KM (cavalos) ou as horas do Thermo King (carretas). O sistema calcula a média de consumo automaticamente.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button></div>
+  <div class="banner">${svg('fuel')}<div><b>Abastecimentos e médias</b><span>Envie a NF em PDF que eu tento preencher sozinho (litros, valor, KM/horas). Cavalos: KM. Carretas: horas do Thermo King. A média de consumo é calculada automaticamente.</span></div>
+    <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar NF (PDF)<input type="file" accept="application/pdf,.pdf" onchange="abastecNfUpload(event)" style="display:none"></label>
+    <button class="btn primary no-print" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('fuel','i-blue', num(totL)+' L', 'Litros lançados','')}
     ${kpi('money','i-amber', money(totR), 'Valor total','')}
@@ -2280,13 +2421,14 @@ function viewAbastecimento(){
   </div>`:''}
   <div class="card"><div class="card-h">${svg('fuel')}<h3>Lançamentos</h3></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Data</th><th>Veículo</th><th>Litros</th><th>Valor</th><th>KM / Horas</th><th>Posto</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum abastecimento. Lance ao menos 2 por veículo para calcular a média.')}</td></tr>`}</tbody></table></div></div></div>`;
+    <thead><tr><th>Data</th><th>Veículo</th><th>Litros</th><th>Valor</th><th>KM / Horas</th><th>Posto</th><th class="no-print">NF</th><th class="no-print"></th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum abastecimento. Envie a NF em PDF ou lance manualmente.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
-function modalAbastec(id){
-  const a=id?DB.abastecimentos.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),veiculoId:(DB.veiculos[0]||{}).id,litros:'',valor:'',km:'',horas:'',posto:'',obs:''};
+function modalAbastec(id, pre){
+  const a=id?DB.abastecimentos.find(x=>x.id===id):Object.assign({data:new Date().toISOString().slice(0,10),veiculoId:(DB.veiculos[0]||{}).id,litros:'',valor:'',km:'',horas:'',posto:'',obs:''}, pre||{});
   openModal(`<div class="m-h">${svg('fuel')}<h3>${id?'Editar abastecimento':'Novo abastecimento'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
+      ${a._nfNome?`<div class="hint" style="background:#e7f6ec;color:#166534;padding:8px 12px;border-radius:8px;margin-bottom:12px">📎 Li a nota <b>${esc(a._nfNome)}</b> e preenchi o que encontrei. Confira e ajuste antes de salvar.</div>`:''}
       <div class="field-row">${fld('Data','f_data',a.data,'date')}
         <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${a.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.tipo)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Litros','f_lit',a.litros,'number')}${fldR$('Valor (R$)','f_val',a.valor)}</div>
@@ -2297,10 +2439,26 @@ function modalAbastec(id){
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirAbastec('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarAbastec('${id||''}')">Salvar</button></div>`);
 }
-function salvarAbastec(id){ if(!val('f_lit')){toast('Informe os litros.','err');return;}
+async function salvarAbastec(id){ if(!val('f_lit')){toast('Informe os litros.','err');return;}
   const d={data:val('f_data'),veiculoId:val('f_veic'),litros:parseFloat(val('f_lit'))||0,valor:parseBRL(val('f_val')),km:numOrNull('f_km'),horas:numOrNull('f_h'),posto:val('f_posto')};
-  if(id)Object.assign(DB.abastecimentos.find(x=>x.id===id),d); else{ d.id=uid('ab'); DB.abastecimentos.push(d); } saveDB(); closeModal(); toast('Abastecimento salvo.'); router(); }
+  let novoId=id;
+  if(id)Object.assign(DB.abastecimentos.find(x=>x.id===id),d); else{ d.id=uid('ab'); novoId=d.id; DB.abastecimentos.push(d); }
+  if(_nfPendente){ try{ await subirUm(_nfPendente,'abastecimento',novoId,'Nota Fiscal'); await reloadFiles(); }catch(e){} _nfPendente=null; }
+  saveDB(); closeModal(); toast('Abastecimento salvo.'); router(); }
 function excluirAbastec(id){ if(!confirm('Excluir este abastecimento?'))return; DB.abastecimentos=DB.abastecimentos.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+/* Enviar NF (PDF) de abastecimento: lê o PDF, preenche o que achar e abre o formulário */
+let _nfPendente=null;
+async function abastecNfUpload(ev){
+  const f=(ev.target.files||[])[0]; ev.target.value=''; if(!f) return;
+  toast('Lendo a nota fiscal…');
+  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'');
+  const v=dd.placa?veiculoByPlaca(dd.placa):null;
+  const pre={ _nfNome:f.name, data:dd.data||new Date().toISOString().slice(0,10),
+    litros:(dd.litros!=null?dd.litros:''), valor:(dd.valor!=null?dd.valor:''), posto:dd.posto||'' };
+  if(v){ pre.veiculoId=v.id; if(isReb(v)) pre.horas=(dd.km!=null?dd.km:''); else pre.km=(dd.km!=null?dd.km:''); }
+  else if(dd.km!=null){ pre.km=dd.km; }
+  _nfPendente=f; modalAbastec(null, pre);
+}
 
 /* ---------- ALARME: detalhe (causa e solução) ---------- */
 function modalAlarme(code){

@@ -191,6 +191,10 @@ const SEED = {
   /* -------------------- PNEUS (controle) -------------------- */
   pneus: [],
 
+  /* -------------------- ESTOQUE / RESERVA (não instalados em veículo) -------------------- */
+  estoqueBaterias: [],   /* {id, data, marca, local, valor, qtd, obs} */
+  estoquePneus: [],      /* {id, data, marca, medida, local, valor, qtd, dot, obs} */
+
   /* -------------------- CONTROLE DE VIAGENS (BRF) — jan a jun/2026 -------------------- */
   viagens: (typeof VIAGENS_SEED!=='undefined'? VIAGENS_SEED : []),
 
