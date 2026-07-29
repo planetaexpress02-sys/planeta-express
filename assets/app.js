@@ -1964,13 +1964,14 @@ function viewPneusVeiculo(id){
       <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
       <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
       <td><span class="tag">${esc(p.status||'—')}</span>${(/usado|recap/i.test(p.status||'')&&p.borracha!=null&&p.borracha!=='')?`<br><span class="borracha-badge">${p.borracha}% borracha</span>`:''}</td>
+      <td class="muted" style="font-size:12px">${esc(p.obs||'—')}</td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPneu('${p.id}')">${svg('edit')}</button></td></tr>`;
   }).join('');
   return `${detalheVeiculoHead(v, `<a class="btn" href="#km">${svg('gauge')} KM/Horas</a><button class="btn primary" onclick="modalPneu(null,'${v.id}')">${svg('plus')} Novo pneu</button>`)}
   <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Pneus de ${esc(v.placa)} — ${pneuTotal(ps)} no total</h3></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado</th><th>Status</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum pneu cadastrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>
+      <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado</th><th>Status</th><th>Obs</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="9">${emptyState('Nenhum pneu cadastrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>
   <div class="muted no-print" style="font-size:12px;margin-top:10px">O <b>Rodado</b> é calculado automaticamente (KM atual − KM da instalação) e acompanha a aba KM/Horas.</div>`;
 }
 function modalPneu(id, vId){
@@ -2171,6 +2172,7 @@ function viewInicio(){
     <div class="ini-hero-txt">
       <h1>Planeta Express Transportes</h1>
       <p>CNPJ ${esc(DB.empresa.cnpj)}</p>
+      <span class="ini-hero-tag">Transporte rodoviário de cargas frigorificadas</span>
     </div>
   </div>
 

@@ -533,26 +533,12 @@ function iaMontarFab(){
       <button class="ia-x" onclick="iaToggle()" title="Fechar">×</button>
     </div>
     <div class="ia-body" id="iaBody"></div>
-    <div class="ia-quick" id="iaQuick"></div>
     <div class="ia-input">
       <input id="iaInput" placeholder="Digite um comando ou pergunta…" autocomplete="off" onkeydown="if(event.key==='Enter')iaEnviar()">
       <button class="ia-send" onclick="iaEnviar()" title="Enviar">${svg('send')}</button>
     </div>`;
   document.body.appendChild(panel);
-  iaQuickChips();
 }
-function iaQuickChips(){ const q=document.getElementById('iaQuick'); if(!q) return;
-  const cav=(DB.veiculos.find(v=>v.tipo==='Cavalo')||{}).placa||'IRU-4G62';
-  IA.chips=[
-    ['🛞 Trocar pneus', `trocado 4 pneus tração ${cav} dia ${_iaHojeBR()} com 1520000 km`],
-    ['📏 Atualizar KM', `km do ${cav} 1520000`],
-    ['🛢️ Troca de óleo', `troca de óleo ${cav} hoje com 1520000 km`],
-    ['❓ Consultar', `resumo do ${cav}`],
-    ['ℹ️ Ajuda', 'ajuda'],
-  ];
-  q.innerHTML=IA.chips.map((c,i)=>`<button class="ia-chip" onclick="iaChip(${i})">${c[0]}</button>`).join('');
-}
-function iaChip(i){ const c=IA.chips[i]; if(!c) return; const el=document.getElementById('iaInput'); if(el){ el.value=c[1]; iaEnviar(); } }
 function iaToggle(){ const p=document.getElementById('iaPanel'), f=document.getElementById('iaFab'); if(!p) return;
   IA.open=!IA.open; p.classList.toggle('open',IA.open); if(f) f.classList.toggle('hide',IA.open);
   if(IA.open){ if(!IA.msgs.length) iaBot(iaSaudacao()); setTimeout(()=>{ const i=document.getElementById('iaInput'); if(i) i.focus(); },220); }
