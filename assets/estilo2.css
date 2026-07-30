@@ -81,6 +81,7 @@
 .banner>svg{width:30px;height:30px;color:#7fb0ff;flex-shrink:0}
 .banner b{display:block;font-size:15px;color:#fff}
 .banner span{font-size:12.5px;color:#a9b6d4}
+tr.imp-off{opacity:.45}
 .sectitulo{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.6px;margin:6px 0 14px}
 .sectitulo svg{width:17px;height:17px;color:var(--accent)}
 

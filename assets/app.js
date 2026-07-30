@@ -998,6 +998,7 @@ function viewVencimentos(){
       ${tipos.map(t=>`<option value="${esc(t)}" ${vencTipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
     <div class="spacer"></div>
     <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+    <button class="btn no-print" onclick="modalImportar()" title="Importe uma planilha (Excel ou CSV) e o sistema puxa as validades sozinho">${svg('upload')} Importar planilha</button>
     <button class="btn primary" onclick="modalVencimento()">${svg('plus')} Novo</button>
   </div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap">
@@ -1722,6 +1723,135 @@ async function anexarVenc(input){
   const h=document.getElementById('f_anexo'); if(h) h.value=meta.id;
   const n=document.getElementById('f_anexo_nome'); if(n) n.innerHTML='📎 '+esc(meta.name)+' — anexado ✓';
   toast('Arquivo anexado'+(_online()?' e sincronizado.':'.'));
+}
+
+/* ================================================================== */
+/*  IMPORTAR PLANILHA — puxa validades de um Excel/CSV automaticamente */
+/* ================================================================== */
+window._impRows = [];
+/* normaliza uma data para ISO (AAAA-MM-DD); aceita ISO, dd/mm/aaaa, dd-mm-aa, dd.mm.aaaa */
+function _impISO(s){
+  s=String(s==null?'':s).trim(); if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if(m){ let d=+m[1], mo=+m[2], y=m[3]; if(y.length===2) y='20'+y; y=+y;
+    if(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=1900&&y<=2100)
+      return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+  return '';
+}
+/* resolve o registro (motorista/veículo) a partir do texto lido */
+function _impRef(vinculo, chave){
+  if(vinculo==='empresa') return 'empresa';
+  if(vinculo==='veiculo'){ const v=(typeof _iaVeiculo==='function'?_iaVeiculo(chave):null)||veiculoByPlaca(chave); return v?v.id:''; }
+  const m=(typeof _iaMotorista==='function')?_iaMotorista(chave):DB.motoristas.find(x=>_impNorm(x.nome)===_impNorm(chave));
+  return m?m.id:'';
+}
+function _impNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').trim(); }
+/* já existe um vencimento igual? (mesmo tipo, vínculo, registro e validade) */
+function _impDupe(r){ return DB.vencimentos.some(v=>v.entidade===r.vinculo && String(v.refId)===String(r.refId) && v.tipo===r.tipo && v.validade===r.validade); }
+/* recalcula a situação de uma linha lida */
+function _impStatus(r){
+  if(!r.validade) return 'invalida';
+  if(!r.refId) return 'falta';
+  if(_impDupe(r)) return 'dupe';
+  return DB.vencimentos.some(v=>v.entidade===r.vinculo && String(v.refId)===String(r.refId) && v.tipo===r.tipo) ? 'atualiza' : 'novo';
+}
+
+function modalImportar(){
+  const suporta = !window.PEXImport || PEXImport.suportaXLSX();
+  openModal(`<div class="m-h">${svg('upload')}<h3>Importar planilha</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="banner" style="margin:0 0 14px">${svg('bell')}<div><b>Traga as validades de uma planilha</b><span>Escolha um arquivo do Excel (.xlsx) ou CSV. O sistema lê as colunas de <b>Data</b>, <b>nome/placa</b> e <b>Validade</b> e monta os vencimentos sozinho. Depois é só conferir e confirmar.</span></div></div>
+      ${suporta?'':`<div class="hint" style="color:var(--danger)">Este navegador não abre .xlsx direto — use o Chrome ou o Edge, ou salve a planilha como CSV.</div>`}
+      <div class="field">
+        <label>Arquivo (Excel ou CSV)</label>
+        <label class="btn">${svg('upload')} Escolher planilha…<input type="file" accept=".xlsx,.csv,.txt" onchange="importarLerArquivo(this)" style="display:none"></label>
+        <span id="impNome" class="muted" style="font-size:12.5px;margin-left:8px">Nenhum arquivo escolhido</span>
+      </div>
+      <div id="impPreview"></div>
+    </div>
+    <div class="m-f">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="impBtn" style="display:none" onclick="importarConfirmar()">Importar selecionados</button>
+    </div>`, true);
+  window._impRows=[];
+}
+
+async function importarLerArquivo(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const nomeEl=document.getElementById('impNome'); if(nomeEl) nomeEl.textContent=file.name;
+  const prev=document.getElementById('impPreview');
+  prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
+  try{
+    const {sheets}=await PEXImport.lerArquivo(file);
+    let itens=[];
+    sheets.forEach(sh=>{ PEXImport.detectarVencimentos(sh.grid).forEach(it=>itens.push(it)); });
+    _impRows = itens.map(it=>{
+      const r={ tipo:it.tipo, vinculo:it.vinculo, chave:it.chave||'', emissao:_impISO(it.emissao), validade:_impISO(it.validade), origemValid:it.validade };
+      r.refId=_impRef(r.vinculo, r.chave);
+      r.status=_impStatus(r);
+      r.incluir=(r.status==='novo'||r.status==='atualiza');
+      return r;
+    });
+    importarRender();
+  }catch(e){
+    prev.innerHTML=`<div class="hint" style="color:var(--danger)">Não consegui ler: ${esc(e.message||e)}</div>`;
+    const b=document.getElementById('impBtn'); if(b) b.style.display='none';
+  }
+}
+
+function importarRender(){
+  const prev=document.getElementById('impPreview'), btn=document.getElementById('impBtn');
+  if(!_impRows.length){
+    prev.innerHTML=`<div class="hint">Não encontrei uma tabela de validades nesta planilha. O ideal é ter colunas com títulos <b>Data</b>, <b>Colaborador</b> ou <b>Placa</b>, e <b>Validade</b>, com um título de tipo acima (ex.: "Toxicológico", "CRLV"). Você também pode cadastrar manualmente pelo botão <b>Novo</b>.</div>`;
+    if(btn) btn.style.display='none'; return;
+  }
+  const badge={novo:'<span class="st ok">Novo</span>',atualiza:'<span class="st warn">Atualiza</span>',
+    dupe:'<span class="st neutro">Já existe</span>',falta:'<span class="st crit">Sem vínculo</span>',invalida:'<span class="st crit">Sem data válida</span>'};
+  const alvoSel=(r,i)=>{
+    if(r.vinculo==='empresa') return `<span class="muted">${esc(DB.empresa.nome)}</span>`;
+    const lista = r.vinculo==='veiculo'
+      ? DB.veiculos.map(v=>`<option value="${v.id}" ${r.refId===v.id?'selected':''}>${esc(v.placa)}</option>`).join('')
+      : DB.motoristas.map(m=>`<option value="${m.id}" ${r.refId===m.id?'selected':''}>${esc(m.nome)}</option>`).join('');
+    return `<select class="selectlite" onchange="importarSetRef(${i},this.value)"><option value="">— escolher (${esc(r.chave||'?')}) —</option>${lista}</select>`;
+  };
+  const linhas=_impRows.map((r,i)=>`<tr class="${r.incluir?'':'imp-off'}">
+    <td class="no-print" style="text-align:center"><input type="checkbox" ${r.incluir?'checked':''} ${(r.status==='invalida')?'disabled':''} onchange="importarToggle(${i},this.checked)"></td>
+    <td><b>${esc(r.tipo)}</b></td>
+    <td>${alvoSel(r,i)}<div class="muted" style="font-size:11px">${r.vinculo==='veiculo'?'Veículo':(r.vinculo==='motorista'?'Motorista':'Empresa')}</div></td>
+    <td class="mono">${r.validade?fmtD(r.validade):`<span class="muted">${esc(r.origemValid||'—')}</span>`}</td>
+    <td>${r.validade?stBadge(r.validade):''} ${badge[r.status]||''}</td>
+  </tr>`).join('');
+  const nSel=_impRows.filter(r=>r.incluir).length;
+  const cont={};_impRows.forEach(r=>cont[r.status]=(cont[r.status]||0)+1);
+  const resumo=[cont.novo?cont.novo+' novo(s)':'',cont.atualiza?cont.atualiza+' p/ atualizar':'',cont.dupe?cont.dupe+' já existe(m)':'',cont.falta?cont.falta+' sem vínculo':'',cont.invalida?cont.invalida+' sem data':''].filter(Boolean).join(' · ');
+  prev.innerHTML=`<div class="muted" style="margin:6px 0 8px;font-size:12.5px">Encontrei <b>${_impRows.length}</b> registro(s). ${resumo?'('+resumo+')':''}</div>
+    <div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table class="tbl">
+      <thead><tr><th class="no-print" style="width:34px"></th><th>Tipo</th><th>Vinculado a</th><th>Validade</th><th>Situação</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>`;
+  if(btn){ btn.style.display=''; btn.textContent=nSel?('Importar '+nSel+' selecionado(s)'):'Nada selecionado'; btn.disabled=!nSel; }
+}
+function importarSetRef(i,v){ const r=_impRows[i]; if(!r) return; r.refId=v; r.status=_impStatus(r); if(r.status==='invalida') r.incluir=false; else if(r.refId&&(r.status==='novo'||r.status==='atualiza')) r.incluir=true; importarRender(); }
+function importarToggle(i,on){ if(_impRows[i]) _impRows[i].incluir=!!on; const nSel=_impRows.filter(r=>r.incluir).length; const b=document.getElementById('impBtn'); if(b){ b.textContent=nSel?('Importar '+nSel+' selecionado(s)'):'Nada selecionado'; b.disabled=!nSel; } }
+
+function importarConfirmar(){
+  let novos=0, atualizados=0, pulados=0;
+  _impRows.forEach(r=>{
+    if(!r.incluir) return;
+    if(!r.validade || (r.vinculo!=='empresa' && !r.refId)){ pulados++; return; }
+    const existente=DB.vencimentos.find(v=>v.entidade===r.vinculo && String(v.refId)===String(r.refId) && v.tipo===r.tipo);
+    if(existente){
+      if(existente.validade===r.validade){ pulados++; return; } // idêntico, ignora
+      existente.validade=r.validade; if(r.emissao) existente.emissao=r.emissao;
+      existente.obs=(existente.obs?existente.obs+' · ':'')+'atualizado por planilha'; atualizados++;
+    } else {
+      DB.vencimentos.push({ id:uid('vc'), tipo:r.tipo, entidade:r.vinculo, refId:r.refId, emissao:r.emissao||'', validade:r.validade, numero:'', orgao:'', obs:'importado de planilha', anexoId:'' });
+      novos++;
+    }
+  });
+  saveDB(); closeModal();
+  toast('Importado: '+novos+' novo(s), '+atualizados+' atualizado(s)'+(pulados?', '+pulados+' ignorado(s)':'')+'.');
+  vencFiltro='todos'; vencTipo='todos'; if(location.hash.slice(1).split('/')[0]!=='vencimentos') location.hash='vencimentos'; router();
 }
 
 function modalBateria(id, placa){
