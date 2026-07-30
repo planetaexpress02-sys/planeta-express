@@ -1951,16 +1951,19 @@ function viewPneus(){
   const foot=(v)=>{ const ps=DB.pneus.filter(p=>p.veiculoId===v.id); const t=pneuTotal(ps);
     return t? `<span class="st ok">${t} pneu(s)</span>` : `<span class="st neutro">sem pneus</span>`; };
   return `
+  <div class="banner">${svg('tire')}<div><b>Pneus</b><span>Controle de pneus por veículo e o estoque de reserva. Clique numa placa para ver e cadastrar. Ao instalar um pneu, você pode dar baixa automática no estoque.</span></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
     ${kpi('tire','i-blue',total,'Pneus no total','instalados na frota')}
     ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
-    ${kpi('tire','i-green', pneuTotal(DB.estoquePneus), 'Pneus em estoque','na reserva')}
+    <a class="kpi link" onclick="pneuIrEstoque()"><div class="k-top"><div class="k-ico i-green">${svg('tire')}</div><span class="k-go">→</span></div>
+      <div class="k-val">${pneuTotal(DB.estoquePneus)}</div><div class="k-label">Pneus em estoque</div><div class="k-sub">clique para abrir</div></a>
   </div>
-  <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div>
-    <div class="spacer"></div><button class="btn primary" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
+  <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div><div class="spacer"></div></div>
   ${vcardsSecoes('pneus', foot)}
   ${estoquePneusSecao()}`;
 }
+function pneuIrEstoque(){ const el=document.getElementById('sec-estoque-pneus'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
 /* --- Pneus em estoque (não instalados) --- */
 function estoquePneusSecao(){
   const ep=DB.estoquePneus.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
@@ -1971,7 +1974,7 @@ function estoquePneusSecao(){
     <td class="mono muted">${esc(x.dot||'—')}</td><td class="mono">${fmtD(x.data)}</td><td>${esc(x.local||'—')}</td>
     <td>${esc(x.localEstoque||'—')}</td><td class="mono">${money(x.valor)}</td><td class="muted" style="font-size:12px">${esc(x.obs||'—')}</td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalEstoquePneu('${x.id}')">${svg('edit')}</button></td></tr>`).join('');
-  return `<div class="sectitulo" style="margin-top:24px">${svg('tire')} Pneus em estoque</div>
+  return `<div class="sectitulo" id="sec-estoque-pneus" style="margin-top:24px;scroll-margin-top:70px">${svg('tire')} Pneus em estoque</div>
     <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Em estoque — ${qt} pneu(s) · ${money(tot)}</h3>
       <button class="btn sm no-print" style="margin-left:auto" onclick="modalEstoquePneu()">${svg('plus')} Novo pneu em estoque</button></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
@@ -2022,8 +2025,11 @@ function modalPneu(id, vId){
   openModal(`<div class="m-h">${svg('tire')}<h3>${id?'Editar pneu':'Novo pneu'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${p.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join('')}</select></div>
-      <div class="field-row">${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 pneus iguais nessa posição')}${fld('Posição','f_pos',p.posicao,'text','Ex.: Dianteira, Traseira, Estepe')}</div>
+      <datalist id="dl_pos"><option>Dianteira</option><option>Tração</option><option>Traseira</option><option>Estepe 1</option><option>Estepe 2</option><option>Estepe</option></datalist>
+      <div class="field-row">${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 (dá para cadastrar 2 estepes de uma vez)')}
+        <div class="field"><label>Posição</label><input id="f_pos" list="dl_pos" value="${esc(p.posicao||'')}"><div class="hint">Ex.: Dianteira, Tração, Traseira, Estepe 1, Estepe 2</div></div></div>
       <div class="field-row">${fld('Marca','f_marca',p.marca)}${fld('Medida','f_medida',p.medida,'text','Ex.: 295/80 R22.5')}</div>
+      ${!id && DB.estoquePneus.some(e=>(parseInt(e.qtd)||0)>0) ? `<div class="field"><label>Tirar do estoque (opcional)</label><select id="f_estq"><option value="">— não usar estoque —</option>${DB.estoquePneus.filter(e=>(parseInt(e.qtd)||0)>0).map(e=>`<option value="${e.id}">${esc(e.marca||'Pneu')} ${esc(e.medida||'')} — ${e.qtd} em estoque${e.localEstoque?' ('+esc(e.localEstoque)+')':''}</option>`).join('')}</select><div class="hint">Se escolher, dá baixa automática no estoque ao salvar.</div></div>`:''}
       <div class="field-row">
         <div class="field"><label>Status</label><select id="f_status" onchange="pneuToggleBorracha(this.value)">${PNEU_STATUS.map(o=>`<option ${o===p.status?'selected':''}>${esc(o)}</option>`).join('')}</select></div>
         ${fld('DOT (semana/ano)','f_dot',p.dot)}</div>
@@ -2042,8 +2048,11 @@ function salvarPneu(id){
   const st=val('f_status');
   const d={veiculoId:val('f_veic'),qtd:q,posicao:val('f_pos'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),
     status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),obs:val('f_obs')};
-  if(id)Object.assign(DB.pneus.find(x=>x.id===id),d); else{ d.id=uid('pn'); DB.pneus.push(d); }
-  saveDB(); closeModal(); toast('Pneu salvo.'); router(); }
+  let baixa='';
+  if(id)Object.assign(DB.pneus.find(x=>x.id===id),d); else{ d.id=uid('pn'); DB.pneus.push(d);
+    const eid=val('f_estq'); if(eid){ const e=DB.estoquePneus.find(x=>x.id===eid); if(e){ e.qtd=(parseInt(e.qtd)||0)-q;
+      baixa=' Baixa de '+q+' no estoque'+(e.marca?' ('+e.marca+')':'')+'.'; if(e.qtd<=0) DB.estoquePneus=DB.estoquePneus.filter(x=>x.id!==eid); } } }
+  saveDB(); closeModal(); toast('Pneu salvo.'+baixa); router(); }
 function excluirPneu(id){ if(!confirm('Excluir este pneu?'))return; DB.pneus=DB.pneus.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ---------- CHECK-LIST ---------- */
@@ -2387,28 +2396,37 @@ function salvarViagem(id){ const d={data:val('f_data'),placa:val('f_placa'),moto
 function excluirViagem(id){ if(!confirm('Excluir esta viagem?'))return; DB.viagens=DB.viagens.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
 /* ---------- DESCARGAS ---------- */
+let descMes='todos';
 function viewDescargas(){
   const h=hoje(); const total=DB.descargas.reduce((s,d)=>s+(Number(d.valor)||0),0);
-  const mes=DB.descargas.filter(d=>{ const dt=parseD(d.data); return dt&&dt.getMonth()===h.getMonth()&&dt.getFullYear()===h.getFullYear(); });
-  const totalMes=mes.reduce((s,d)=>s+(Number(d.valor)||0),0);
-  const rows=DB.descargas.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(d=>{ const v=veiculoByPlaca(d.placa);
+  const meses=[...new Set(DB.descargas.map(d=>(d.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  let lista=DB.descargas.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  if(descMes!=='todos') lista=lista.filter(d=>(d.data||'').slice(0,7)===descMes);
+  const totalFiltro=lista.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const mesAtual=DB.descargas.filter(d=>{ const dt=parseD(d.data); return dt&&dt.getMonth()===h.getMonth()&&dt.getFullYear()===h.getFullYear(); });
+  const totalMes=mesAtual.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const rows=lista.map(d=>{ const v=veiculoByPlaca(d.placa);
     return `<tr class="clickable" onclick="modalDescarga('${d.id}')"><td class="mono">${fmtD(d.data)}</td><td>${v?plate(v.placa,v.tipo):esc(d.placa)}</td>
       <td class="mono">${esc(d.transporte||'—')}</td><td class="mono muted">${esc(d.senha||'—')}</td><td class="mono"><b>${money(d.valor)}</b></td>
       <td>${esc(d.local||'—')}</td><td class="muted">${esc(d.pago||'—')}</td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalDescarga('${d.id}')">${svg('edit')}</button></td></tr>`;
   }).join('');
   return `
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+  <div class="banner">${svg('box')}<div><b>Descargas</b><span>Senhas e valores de descarga (pagos via Bradesco). Use o filtro para ver por mês.</span></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
     ${kpi('box','i-blue',DB.descargas.length,'Descargas registradas','')}
-    ${kpi('money','i-green',money(totalMes),'Valor no mês',mes.length+' descarga(s)')}
+    ${kpi('money','i-green',money(totalMes),'Valor no mês (atual)',mesAtual.length+' descarga(s)')}
     ${kpi('export','i-amber',money(total),'Valor acumulado','')}
   </div>
-  <div class="toolbar"><div class="muted">Senhas e valores de descarga (pagos via Bradesco).</div><div class="spacer"></div>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
-    <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div>
+  <div class="toolbar"><div class="seg no-print"><button class="${descMes==='todos'?'active':''}" onclick="descMes='todos';router()">Todos</button></div>
+    <select class="selectlite no-print" onchange="descMes=this.value;router()"><option value="todos">Todos os meses</option>
+      ${meses.map(m=>`<option value="${m}" ${descMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
+    <div class="spacer"></div><div class="muted">${lista.length} descarga(s) · <b>${money(totalFiltro)}</b></div>
+    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Data</th><th>Placa</th><th>Transporte</th><th>Senha</th><th>Valor</th><th>Local</th><th>Pago</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhuma descarga.')}</td></tr>`}</tbody></table></div></div></div>`;
+    <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhuma descarga neste período.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalDescarga(id){
   const d=id?DB.descargas.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),placa:(DB.veiculos[0]||{}).placa||'',transporte:'',senha:'',valor:'',pago:'Bradesco',local:''};
