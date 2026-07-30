@@ -366,7 +366,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 function router(){
-  const h = (location.hash||'#inicio').slice(1);
+  const h = (location.hash||'#dashboard').slice(1);
   const [rota, arg] = h.split('/');
   renderSidebar(rota);
   const meta = ROTAS[rota] || ROTAS.inicio;
@@ -400,7 +400,7 @@ function router(){
   else if(rota==='etica') el.innerHTML=viewEtica();
   else if(rota==='inicio') el.innerHTML=viewInicio();
   else if(rota==='config') el.innerHTML=viewConfig();
-  else if(rota==='dashboard') el.innerHTML=viewDashboard();
+  else if(rota==='dashboard') el.innerHTML=viewPainelPro();
   else el.innerHTML=viewInicio();
 
   document.getElementById('pageTitle').innerHTML = esc(titulo)+'<small>'+esc(sub)+'</small>';
@@ -451,6 +451,197 @@ function avatarFoto(m, size){ size=size||56;
 /* ================================================================== */
 /*  9. DASHBOARD                                                       */
 /* ================================================================== */
+/* ================================================================== */
+/*  PAINEL DE COMANDO 2.0 — tela de abertura dark premium (dados reais) */
+/* ================================================================== */
+function _pcNum(x){ if(x==null||x==='')return 0; if(typeof x==='number')return x;
+  return (typeof parseBRL==='function'?parseBRL(x):parseFloat(String(x).replace(/[^\d.-]/g,'')))||0; }
+function _pcIco(n){ const I={
+  dash:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  live:'<circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="2.5"/>',
+  route:'<path d="M4 17h16M6 17V7l4-3 4 3v10M14 10h4v7"/>',
+  truck:'<path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
+  doc:'<path d="M4 4h9l3 3h4v13H4z"/><path d="M8 13h8M8 16h5"/>',
+  money:'<path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/>',
+  report:'<path d="M9 3h6v4H9zM6 7h12v14H6z"/><path d="M9 12h6M9 16h4"/>',
+  brain:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.9 7.9 0 0 0-1.7-1L14.9 3H9.1l-.4 2.6a7.9 7.9 0 0 0-1.7 1l-2.4-1-2 3.4L2.6 11a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.9 7.9 0 0 0 1.7 1l.4 2.6h5.8l.4-2.6a7.9 7.9 0 0 0 1.7-1l2.4 1 2-3.4z"/>',
+  shield:'<path d="M12 3 3 7v6c0 5 4 8 9 10 5-2 9-5 9-10V7z"/>',
+  cal:'<path d="M8 3v4M16 3v4M4 8h16v12H4z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  gauge:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/>' };
+  return '<svg viewBox="0 0 24 24">'+(I[n]||'')+'</svg>'; }
+
+function viewPainelPro(){
+  const veic=DB.veiculos.filter(v=>v.status!=='Arquivado');
+  const cav=veic.filter(v=>v.tipo==='Cavalo').length, reb=veic.filter(v=>isReb(v)).length;
+  const motAtivos=DB.motoristas.filter(m=>m.status==='Ativo').length;
+  const vs=todosVencimentos().map(v=>({v,s:situacao(v.validade)}));
+  const venc=vs.filter(x=>x.s.ord===0).length, crit=vs.filter(x=>x.s.ord===1).length,
+        aten=vs.filter(x=>x.s.ord===2).length, emdia=vs.filter(x=>x.s.ord===3).length;
+  const prox=vs.filter(x=>x.s.dias!==null).sort((a,b)=>(a.s.ord-b.s.ord)||(a.s.dias-b.s.dias)).slice(0,5);
+  const viagens=DB.viagens.length, concl=DB.viagens.filter(v=>v.status==='Concluída').length,
+        pend=DB.viagens.filter(v=>v.status==='Pendente').length;
+  const pctConcl=viagens?Math.round(concl/viagens*100):0;
+  const now=hoje(); const ml=[];
+  for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); ml.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lb:MESES[d.getMonth()]}); }
+  const vmes=ml.map(m=>({lb:m.lb,val:DB.viagens.filter(v=>(v.data||'').slice(0,7)===m.ym).length}));
+  const maxv=Math.max(1,...vmes.map(x=>x.val));
+  const cteVals=DB.ctes.map(c=>_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest)).filter(n=>n>0);
+  const cteSum=cteVals.reduce((a,b)=>a+b,0), cteN=cteVals.length, ticket=cteN?cteSum/cteN:0;
+  let manutSum=0,corr=0,prev=0; DB.servicos.forEach(s=>{ const v=_pcNum(s.valor); manutSum+=v; if((s.tipo||'Corretiva')==='Preventiva')prev+=v; else corr+=v; });
+  const corrPct=manutSum?Math.round(corr/manutSum*100):0;
+  const nome=(typeof nomeUsuario==='function'&&nomeUsuario())||'Uilian';
+  const H=new Date().getHours(), G=H<12?'Bom dia':(H<18?'Boa tarde':'Boa noite');
+  const dd=new Date(), diaS=DIAS[dd.getDay()], dstamp=diaS+', '+dd.getDate()+' de '+MESES_L[dd.getMonth()]+' de '+dd.getFullYear();
+
+  // chart
+  const cw=560,ch=150,pad=34,top=20,bot=126,n=vmes.length,span=(cw-pad*2)/(n-1);
+  const pts=vmes.map((m,i)=>[Math.round(pad+i*span),Math.round(top+(1-m.val/maxv)*(bot-top))]);
+  const poly=pts.map(p=>p.join(',')).join(' ');
+  const area='M'+pts[0][0]+','+pts[0][1]+' '+pts.slice(1).map(p=>'L'+p[0]+','+p[1]).join(' ')+' L'+pts[n-1][0]+','+bot+' L'+pts[0][0]+','+bot+' Z';
+  const xlab=vmes.map((m,i)=>`<text class="pc-cx" x="${pts[i][0]}" y="${ch+18}" text-anchor="middle">${m.lb}</text>`).join('');
+  const dots=pts.map(p=>`<circle class="pc-cd" cx="${p[0]}" cy="${p[1]}" r="3.4"/>`).join('');
+
+  const badgeCls=(o)=>o<=1?'c':(o===2?'w':'n'), badgeTxt=(o)=>o===0?'Crítico':(o===1?'Crítico':(o===2?'Atenção':'Normal'));
+  const proxRows=prox.length?prox.map(x=>{ const v=x.v;
+    const alvo=v.entidade==='veiculo'?('#frota/'+v.refId):(v.entidade==='motorista'?('#motoristas/'+v.refId):'#vencimentos');
+    const ico=v.entidade==='veiculo'?'truck':'cal';
+    return `<div class="pc-vrow" onclick="location.hash='${alvo}'"><div class="vi">${_pcIco(ico)}</div>
+      <div class="vm"><b>${esc(v.tipo)} — ${esc(nomeEntidade(v))}</b><span>${esc(x.s.label)}</span></div>
+      <span class="pc-badge ${badgeCls(x.s.ord)}">${badgeTxt(x.s.ord)}</span></div>`;
+  }).join(''):'<div class="pc-vrow"><div class="vm"><b>Tudo em dia</b><span>Nenhum vencimento próximo</span></div></div>';
+
+  const navItem=(hash,ico,label,on,bdg)=>`<a href="#${hash}" class="${on?'on':''}">${_pcIco(ico)}<span>${label}</span>${bdg||''}</a>`;
+
+  return `<div class="pc-app">
+    <aside class="pc-side">
+      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express · Enterprise</div></div></div>
+      <nav class="pc-nav">
+        <div class="g">Comando</div>
+        ${navItem('dashboard','dash','Painel de Comando',true)}
+        ${navItem('viagens','route','Operações')}
+        ${navItem('frota','truck','Frota')}
+        <div class="g">Cadastros</div>
+        ${navItem('motoristas','user','Motoristas')}
+        ${navItem('vencimentos','bell','Vencimentos',false, (venc+crit)?`<span class="bdg pc-bdg-num">${venc+crit}</span>`:'')}
+        ${navItem('documentos','doc','Documentos')}
+        <div class="g">Gestão</div>
+        ${navItem('financeiro','money','Financeiro')}
+        ${navItem('ctes','report','CT-e')}
+        ${navItem('config','gear','Configurações')}
+      </nav>
+      <div class="pc-promo"><b>Planeta Express Transportes</b><span>Transporte frigorificado · Londrina/PR</span></div>
+    </aside>
+
+    <div class="pc-main">
+      <header class="pc-head">
+        <div class="ttl"><b>Painel de Comando</b><span>Visão inteligente da sua operação</span></div>
+        <div class="pc-search">${_pcIco('search')}<input placeholder="Buscar placa, motorista, CT-e…" onkeydown="if(event.key==='Enter')buscaGlobal(this.value)"><span class="kbd">⌘K</span></div>
+        <div class="pc-user"><div class="av">${esc((nome[0]||'U').toUpperCase())}${esc((nome.split(' ')[1]||' ')[0]||'').toUpperCase()}</div><div><b>${esc(nome)}</b><span>Admin</span></div></div>
+      </header>
+
+      <div class="pc-content">
+        <div class="pc-brief">
+          <div class="orb">${_pcIco('brain')}</div>
+          <div class="bx"><b>${G}, <em>${esc(nome)}</em>.</b>
+            <p>Operação com <strong>${viagens} viagens</strong> no período (${pctConcl}% concluídas). ${(venc)?`<strong>${venc} documento(s) vencido(s)</strong> exigem ação.`:'Documentação em dia.'} ${corrPct>=60?`Manutenção corretiva pesa <strong>${corrPct}%</strong> — vale priorizar preventiva.`:''}</p></div>
+          <div class="date">${esc(dstamp)}</div>
+        </div>
+
+        <div class="pc-kpis">
+          <div class="pc-kpi"><div class="top"><span class="lab">Frota ativa</span><span class="ic pc-ic-blue">${_pcIco('truck')}</span></div>
+            <div class="val tnum">${cav+reb}</div><div class="sub">${cav} cavalos · ${reb} carretas</div></div>
+          <div class="pc-kpi"><div class="top"><span class="lab">Motoristas</span><span class="ic pc-ic-green">${_pcIco('user')}</span></div>
+            <div class="val tnum">${motAtivos} <small>ativos</small></div><div class="sub">${DB.motoristas.length} cadastrados</div></div>
+          <div class="pc-kpi"><div class="top"><span class="lab">Vencimentos críticos</span><span class="ic pc-ic-crit">${_pcIco('shield')}</span></div>
+            <div class="val tnum">${venc+crit}</div><div class="sub">${venc} vencidos · ${crit} vencendo</div></div>
+          <div class="pc-kpi"><div class="top"><span class="lab">Em atenção</span><span class="ic pc-ic-warn">${_pcIco('bell')}</span></div>
+            <div class="val tnum">${aten}</div><div class="sub">${emdia} documentos em dia</div></div>
+        </div>
+
+        <div class="pc-row3">
+          <div class="pc-card pc-perf">
+            <div class="ch"><h3>Performance da operação</h3><div class="r"><span class="pc-pill">Últimos 6 meses</span></div></div>
+            <div class="cb">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+                <div><div class="big tnum">${viagens} <small>viagens</small></div><div class="cap">Concluídas e em andamento</div></div>
+                <span class="pc-delta">▲ ${concl} concluídas</span>
+              </div>
+              <svg viewBox="0 0 560 180" preserveAspectRatio="none" style="width:100%;height:150px;margin-top:8px">
+                <defs><linearGradient id="pcar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(76,141,255,.28)"/><stop offset="1" stop-color="rgba(76,141,255,0)"/></linearGradient></defs>
+                <path d="${area}" fill="url(#pcar)"/>
+                <polyline class="pc-cl" points="${poly}"/>${dots}${xlab}
+              </svg>
+            </div>
+          </div>
+
+          <div class="pc-card">
+            <div class="ch"><h3>Atividade</h3></div>
+            <div class="cb"><div class="pc-drow">
+              <div class="pc-donut" style="background:conic-gradient(var(--acc) 0 ${pctConcl}%,rgba(140,172,212,.14) ${pctConcl}% 100%)"><div class="mid"><b class="tnum">${pctConcl}%</b><span>concluídas</span></div></div>
+              <div class="pc-leg">
+                <div class="li"><span class="d" style="background:var(--acc)"></span>Concluídas<b class="tnum">${concl}</b></div>
+                <div class="li"><span class="d" style="background:var(--warn)"></span>Pendentes<b class="tnum">${pend}</b></div>
+                <div class="li"><span class="d" style="background:var(--pos)"></span>CT-e emitidos<b class="tnum">${cteN}</b></div>
+              </div>
+            </div></div>
+          </div>
+
+          <div class="pc-card">
+            <div class="ch"><h3>Próximos vencimentos</h3><div class="r"><a class="pc-link" href="#vencimentos">Ver todos</a></div></div>
+            <div class="cb">${proxRows}</div>
+          </div>
+        </div>
+
+        <div class="pc-row2">
+          <div class="pc-card">
+            <div class="ch"><h3>Visão geral da frota</h3><div class="r"><a class="pc-link" href="#frota">Abrir frota</a></div></div>
+            <div class="cb"><div class="pc-fleet">
+              <div class="pc-donut" style="background:conic-gradient(var(--acc) 0 ${cav+reb?Math.round(cav/(cav+reb)*100):0}%,#8fbaff ${cav+reb?Math.round(cav/(cav+reb)*100):0}% 100%)"><div class="mid"><b class="tnum">${cav+reb}</b><span>veículos</span></div></div>
+              <div class="pc-fstats">
+                <div><div class="k">Cavalos</div><div class="v tnum">${cav}</div></div>
+                <div><div class="k">Carretas</div><div class="v tnum">${reb}</div></div>
+                <div><div class="k">Viagens 6m</div><div class="v tnum">${vmes.reduce((s,m)=>s+m.val,0)}</div></div>
+                <div><div class="k">Serviços</div><div class="v tnum">${DB.servicos.length}</div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <div class="pc-card">
+            <div class="ch"><h3>Monitoramento</h3><div class="r"><span class="bdg pc-bdg-live" style="font-family:var(--mono);font-size:9.5px;padding:2px 8px;border-radius:20px">AO VIVO</span></div></div>
+            <div class="pc-mp">
+              <svg viewBox="0 0 620 224" preserveAspectRatio="xMidYMid slice">
+                <g class="pc-mg"><line x1="0" y1="56" x2="620" y2="56"/><line x1="0" y1="112" x2="620" y2="112"/><line x1="0" y1="168" x2="620" y2="168"/><line x1="155" y1="0" x2="155" y2="224"/><line x1="310" y1="0" x2="310" y2="224"/><line x1="465" y1="0" x2="465" y2="224"/></g>
+                <path class="pc-mr" d="M250,148 Q360,88 470,68"/><path class="pc-mr" d="M250,148 Q180,108 130,64"/><path class="pc-mr" d="M250,148 Q380,148 500,118"/>
+                <circle class="pc-mn" cx="250" cy="148" r="4"/><circle class="pc-mn" cx="470" cy="68" r="3.5"/><circle class="pc-mn" cx="130" cy="64" r="3.5"/><circle class="pc-mn" cx="500" cy="118" r="3.5"/><circle class="pc-mn w" cx="330" cy="178" r="3.5"/>
+              </svg>
+              <div class="pc-tip" style="left:14px;top:14px"><b>Base · Londrina/PR</b><span>${cav+reb} veículos monitorados</span></div>
+              <div class="pc-tip" style="right:14px;top:50px"><b>Rotas ativas</b><span>Integração de rastreio preparada</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-fin">
+          <div class="pc-fcard"><div class="k">Faturamento CT-e</div><div class="v tnum">${money(cteSum)}</div><div class="m"><span class="up">${cteN} CT-e</span> emitidos</div></div>
+          <div class="pc-fcard"><div class="k">Ticket médio</div><div class="v tnum">${money(ticket)}</div><div class="m">por conhecimento</div></div>
+          <div class="pc-fcard"><div class="k">Manutenção</div><div class="v tnum">${money(manutSum)}</div><div class="m">corretiva ${corrPct}% · preventiva ${100-corrPct}%</div></div>
+          <div class="pc-fcard"><div class="k">Contas a pagar/receber</div><div class="v" style="font-size:16px;color:var(--soft)">A configurar</div><div class="m">liga com o Financeiro</div></div>
+        </div>
+
+        <div class="pc-foot">
+          <div class="f"><span class="dotp"></span><span class="k">Sistema</span><b>Operacional</b></div>
+          <div class="f"><span class="k">Dados</span><b>${viagens} viagens · ${vs.length} vencimentos · ${cteN} CT-e</b></div>
+          <div class="sp"></div>
+          <div class="f"><span class="k">Versão</span><b>2.0 · Centro de Comando</b></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
   const venc = vs.filter(x=>x.s.ord===0), crit = vs.filter(x=>x.s.ord===1), aten = vs.filter(x=>x.s.ord===2), emdia=vs.filter(x=>x.s.ord===3);
