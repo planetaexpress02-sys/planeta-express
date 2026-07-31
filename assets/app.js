@@ -360,6 +360,10 @@ const ROTAS = {
   notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
   automacao:{t:'Automação', s:'Caixa de entrada inteligente', ico:'upload'},
+  clientes:{t:'Clientes', s:'Consolidado por CT-e', ico:'briefcase'},
+  pedagios:{t:'Pedágios', s:'Relatórios das operadoras', ico:'route'},
+  analytics:{t:'Analytics', s:'Indicadores da operação', ico:'dash'},
+  relatorios:{t:'Relatórios', s:'Impressão e exportação', ico:'doc'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
@@ -402,7 +406,11 @@ function router(){
   else if(rota==='etica') el.innerHTML=viewEtica();
   else if(rota==='inicio') el.innerHTML=viewInicio();
   else if(rota==='config') el.innerHTML=viewConfig();
-  else if(rota==='dashboard') el.innerHTML=viewPainelPro();
+  else if(rota==='dashboard') el.innerHTML=viewComando();
+  else if(rota==='clientes') el.innerHTML=viewClientes();
+  else if(rota==='pedagios') el.innerHTML=viewPedagios();
+  else if(rota==='analytics') el.innerHTML=viewAnalytics();
+  else if(rota==='relatorios') el.innerHTML=viewRelatorios();
   else el.innerHTML=viewInicio();
 
   document.getElementById('pageTitle').innerHTML = esc(titulo)+'<small>'+esc(sub)+'</small>';
@@ -422,15 +430,13 @@ function renderSidebar(rota){
   const item=(k,badge)=>{ const m=ROTAS[k];
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
     return `<a href="#${k}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
+  const pendA=(DB.automacaoPend&&DB.automacaoPend.length)?{n:DB.automacaoPend.length, cls:'warn'}:null;
   document.getElementById('nav').innerHTML =
-    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
-    item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
-    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
-    `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
-    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+ item('automacao', (DB.automacaoPend&&DB.automacaoPend.length)?{n:DB.automacaoPend.length, cls:'warn'}:null)+
-    `<div class="group">Financeiro</div>`+ item('financeiro')+
-    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
-    `<div class="group">Sistema</div>`+ item('config');
+    item('dashboard')+ item('viagens')+ item('motoristas')+ item('frota')+ item('clientes')+
+    item('financeiro')+ item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
+    item('relatorios')+ item('documentos')+ item('automacao', pendA)+ item('abastecimento')+
+    item('pedagios')+ item('analytics')+ item('config')+
+    `<div class="group">Mais</div>`+ item('exames')+ item('direcao')+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('tacografos')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('socios')+ item('etica')+ item('inicio');
 }
 
 /* ================================================================== */
@@ -649,6 +655,186 @@ function _pcIco(n){ const I={
   search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   gauge:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/>' };
   return '<svg viewBox="0 0 24 24">'+(I[n]||'')+'</svg>'; }
+
+/* ================================================================== */
+/*  COMANDO 2.1 — abertura MAP-FIRST (mapa como elemento principal)     */
+/* ================================================================== */
+const PC_FLEET={
+  'IRU-4G62':{modelo:'Volvo FH · Cavalo',mot:'Marcelo Ronsoni',cli:'Muffato',ori:'Londrina/PR',dest:'Maringá/PR',carga:'Congelados',st:'Em rota',stc:'go'},
+  'QIO-9J07':{modelo:'Mercedes Actros · Cavalo',mot:'Jonathan',cli:'TSP',ori:'Londrina/PR',dest:'Apucarana/PR',carga:'Resfriados',st:'Em rota',stc:'go'},
+  'BDP-1B55':{modelo:'Scania R450 · Cavalo',mot:'Reinaldo',cli:'Atacadão',ori:'Londrina/PR',dest:'Cambé/PR',carga:'Congelados BRF',st:'Em rota',stc:'go'},
+  'IPD-9036':{modelo:'Cavalo mecânico',mot:'Jonathan',cli:'—',ori:'Londrina/PR',dest:'—',carga:'Sem carga',st:'No pátio',stc:'park'},
+  'AMB-2928':{modelo:'Carreta frigorífica',mot:'—',cli:'—',ori:'Londrina/PR',dest:'—',carga:'—',st:'Manutenção',stc:'fix'}
+};
+function pcFecharVeic(){ const p=document.getElementById('pcVeicPanel'); if(p) p.classList.remove('show'); }
+function pcAbrirVeic(placa){ const f=PC_FLEET[placa]; const p=document.getElementById('pcVeicPanel'); if(!f||!p) return;
+  const ini=(f.mot&&f.mot!=='—')?f.mot.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase():'—';
+  p.innerHTML=`<div class="pv-top"><button class="pv-x" onclick="pcFecharVeic()">×</button>
+      <div class="pv-plate">${esc(placa)}</div><div class="pv-model">${esc(f.modelo)}</div>
+      <div class="pv-st ${f.stc}"><i></i>${esc(f.st)}</div></div>
+    <div class="pv-body">
+      <div class="pv-drv"><div class="av">${esc(ini)}</div><div><b>${esc(f.mot)}</b><span>Motorista</span></div></div>
+      <div class="pv-route"><div><div class="k">Origem</div><div class="c">${esc(f.ori)}</div></div>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <div style="text-align:right"><div class="k">Destino</div><div class="c">${esc(f.dest)}</div></div></div>
+      <div class="pv-grid">
+        <div><div class="k">Cliente</div><div class="v">${esc(f.cli)}</div></div>
+        <div><div class="k">Carga</div><div class="v">${esc(f.carga)}</div></div>
+        <div><div class="k">Velocidade</div><div class="v w">aguardando rastreador</div></div>
+        <div><div class="k">ETA</div><div class="v w">com integração GPS</div></div>
+      </div>
+      <a class="pv-cta" href="#viagens" onclick="pcFecharVeic()">Ver viagem completa →</a>
+    </div>`;
+  p.classList.add('show');
+}
+function viewComando(){
+  const veic=DB.veiculos.filter(v=>v.status!=='Arquivado');
+  const cav=veic.filter(v=>v.tipo==='Cavalo').length, reb=veic.filter(v=>isReb(v)).length;
+  const ords=todosVencimentos().map(v=>situacao(v.validade).ord);
+  const venc=ords.filter(o=>o===0).length, crit=ords.filter(o=>o===1).length;
+  const viagens=DB.viagens.length;
+  const cteSum=DB.ctes.reduce((s,c)=>s+_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest),0);
+  const nome=(typeof nomeUsuario==='function'&&nomeUsuario())||'Uilian';
+  const H=new Date().getHours(), G=H<12?'Bom dia':(H<18?'Boa tarde':'Boa noite');
+  const dd=new Date(), dstamp=DIAS[dd.getDay()]+' · '+String(dd.getDate()).padStart(2,'0')+' '+MESES[dd.getMonth()]+' '+dd.getFullYear();
+  const ic=(n)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">'+({
+    map:'<path d="M9 4 3 6v15l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v15M15 6v15"/>',
+    route:'<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h4"/>',
+    users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><path d="M16 6a3 3 0 0 1 0 6"/>',
+    truck:'<path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+    clients:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/>',
+    wallet:'<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M16 13h.01M3 7l12-3v3"/>',
+    report:'<path d="M8 3h6l4 4v14H6V5a2 2 0 0 1 2-2z"/><path d="M9 13h6M9 16h4"/>',
+    doc:'<path d="M8 3h6l4 4v14H6V5a2 2 0 0 1 2-2z"/><path d="M14 3v4h4"/>',
+    fuel:'<path d="M6 3h7v18H5V5a2 2 0 0 1 1-2z"/><path d="M13 9h3l2 2v6a2 2 0 0 1-4 0v-3h-1"/>',
+    toll:'<rect x="3" y="4" width="4" height="17"/><path d="M7 7l13 3v3L7 13"/>',
+    chart:'<path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="10" width="3" height="7"/>',
+    brain:'<path d="M12 5a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 4 2 3 3 0 0 0 4-2 3 3 0 0 0-1-5 3 3 0 0 0-3-3z"/><path d="M12 5v13"/>',
+    gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'
+  }[n]||'')+'</svg>';
+  const nav=(hash,icn,label,on,cls)=>`<a href="#${hash}" class="${on?'on':''} ${cls||''}">${ic(icn)}<span>${label}</span></a>`;
+
+  // MAPA — cidades da região de Londrina
+  const cities=[['Paiçandu',110,300],['Maringá',205,322],['Apucarana',470,402],['Arapongas',560,360],['Rolândia',690,330],['Cambé',820,314],['Londrina',920,300],['Ibiporã',1050,286]];
+  const corridor=cities.map(c=>c[1]+','+c[2]).join(' ');
+  const cityG=cities.map(c=>{ const hub=c[0]==='Londrina';
+    return `<g class="pc-city${hub?' hub':''}"><circle class="cd" cx="${c[1]}" cy="${c[2]}" r="${hub?5:3.2}"/><text class="cl" x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`; }).join('');
+  const routes=[['rcA','M920,300 Q690,362 470,402','QIO-9J07',26],['rcB','M920,300 Q560,342 205,322','IRU-4G62',32],['rcC','M920,300 Q872,306 820,314','BDP-1B55',16]];
+  const routeP=routes.map(r=>`<path id="${r[0]}" class="pc-route" d="${r[1]}"/>`).join('');
+  const vehG=routes.map(r=>`<g class="pc-veh" onclick="pcAbrirVeic('${r[2]}')"><circle class="vh" r="6"/><circle class="vc" r="4"/><animateMotion dur="${r[3]}s" repeatCount="indefinite"><mpath href="#${r[0]}"/></animateMotion></g>`).join('');
+  const parkG=`<g class="pc-veh park" onclick="pcAbrirVeic('IPD-9036')" transform="translate(936,300)"><circle class="vh" r="6"/><circle class="vc" r="4"/></g>
+    <g class="pc-veh fix" onclick="pcAbrirVeic('AMB-2928')" transform="translate(905,314)"><circle class="vh" r="6"/><circle class="vc" r="4"/></g>`;
+
+  return `<div class="pc-app pc-cmd">
+    <aside class="pc-side">
+      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express</div></div></div>
+      <nav class="pc-nav pc-flat">
+        ${nav('dashboard','map','Monitoramento',true)}
+        ${nav('viagens','route','Viagens')}
+        ${nav('motoristas','users','Motoristas')}
+        ${nav('frota','truck','Frota')}
+        ${nav('clientes','clients','Clientes')}
+        ${nav('financeiro','wallet','Financeiro',false,'gold')}
+        ${nav('relatorios','report','Relatórios')}
+        ${nav('documentos','doc','Documentos')}
+        ${nav('abastecimento','fuel','Abastecimentos')}
+        ${nav('pedagios','toll','Pedágios')}
+        ${nav('analytics','chart','Analytics')}
+        <a onclick="iaToggle()">${ic('brain')}<span>IA</span></a>
+        ${nav('config','gear','Configurações')}
+      </nav>
+    </aside>
+
+    <div class="pc-main">
+      <header class="pc-head">
+        <div class="pc-hbrand">PLANETA <b>EXPRESS</b></div>
+        <div class="pc-search">${ic('search')}<input placeholder="Buscar placa, motorista, CT-e…" onkeydown="if(event.key==='Enter')buscaGlobal(this.value)"></div>
+        <div class="pc-user"><div class="av">${esc((nome[0]||'U').toUpperCase())}${esc((nome.split(' ')[1]||' ')[0]||'').toUpperCase()}</div><div><b>${esc(nome)}</b><span>Admin</span></div></div>
+      </header>
+
+      <div class="pc-stage">
+        <svg class="pc-map" viewBox="0 0 1160 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs><radialGradient id="pcvig" cx="55%" cy="45%" r="75%"><stop offset="0" stop-color="transparent"/><stop offset="1" stop-color="rgba(5,10,16,.55)"/></radialGradient></defs>
+          <g class="pc-mgrid">${[130,240,350,460].map(y=>`<line x1="0" y1="${y}" x2="1160" y2="${y}"/>`).join('')}${[190,380,570,760,950].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="560"/>`).join('')}</g>
+          <polyline class="pc-corridor" points="${corridor}"/>
+          ${routeP}${cityG}${vehG}${parkG}
+          <rect x="0" y="0" width="1160" height="560" fill="url(#pcvig)" pointer-events="none"/>
+        </svg>
+
+        <div class="pc-greet"><b>${G}, ${esc(nome)}</b><span>${esc(dstamp)}</span></div>
+
+        <div class="pc-dock2">
+          <div class="pc-copilot">
+            <div class="h"><span class="orb">${ic('brain')}</span><div><b>PLANETA AI</b><span class="on">em serviço</span></div></div>
+            <p>${G}, <b>${esc(nome)}</b>. <b>${viagens}</b> viagens no período e faturamento de <b class="gold">${moneyK(cteSum)}</b>. ${(venc)?`Há <b>${venc} documento(s) vencido(s)</b> — deseja abrir?`:'Nenhuma inconsistência encontrada.'}</p>
+            <a class="pc-aicta" href="#vencimentos">Abrir alertas →</a>
+          </div>
+        </div>
+
+        <div class="pc-kstrip">
+          <a class="pc-kt" href="#frota"><span class="kv tnum">${cav+reb}</span><span class="kl">Frota</span></a>
+          <a class="pc-kt" href="#viagens"><span class="kv tnum">${viagens}</span><span class="kl">Viagens</span></a>
+          <a class="pc-kt gold" href="#financeiro"><span class="kv tnum">${moneyK(cteSum)}</span><span class="kl">Faturamento</span></a>
+          <a class="pc-kt alert" href="#vencimentos"><span class="kv tnum">${venc+crit}</span><span class="kl">Alertas</span></a>
+        </div>
+
+        <aside id="pcVeicPanel" class="pc-vpanel2"></aside>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- telas novas do menu plano (dados reais onde possível) ---- */
+function viewClientes(){
+  const map={}; DB.ctes.forEach(c=>{ const k=(c.cliente||'—').trim()||'—'; const m=map[k]||(map[k]={n:0,total:0,ult:''}); m.n++; m.total+=_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest); if((c.data||'')>m.ult)m.ult=c.data; });
+  const rows=Object.keys(map).map(k=>({nome:k,...map[k]})).sort((a,b)=>b.total-a.total);
+  const tot=rows.reduce((s,r)=>s+r.total,0);
+  return `<div class="banner">${svg('briefcase')}<div><b>Clientes</b><span>Consolidado a partir dos CT-e emitidos. ${rows.length} cliente(s) · ${money(tot)} em fretes.</span></div></div>
+  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Cliente</th><th>CT-e</th><th>Faturamento</th><th>Último frete</th></tr></thead>
+    <tbody>${rows.length?rows.map(r=>`<tr class="clickable" onclick="location.hash='ctes'"><td><b>${esc(r.nome)}</b></td><td class="mono">${r.n}</td><td class="mono" style="color:var(--gold-2,#e5c07b);font-weight:700">${money(r.total)}</td><td class="mono muted">${fmtD(r.ult)}</td></tr>`).join(''):`<tr><td colspan="4">${emptyState('Nenhum CT-e importado ainda. Use a Automação para importar os XML.')}</td></tr>`}</tbody>
+  </table></div></div></div>`;
+}
+function viewPedagios(){
+  const docs=(DB.automacaoLog||[]).filter(l=>/ped[aá]gio/i.test(l.tipo||''));
+  return `<div class="banner">${svg('route')}<div><b>Pedágios</b><span>Importe os relatórios das operadoras (Sem Parar, ConectCar, Taggy) pela Automação — o sistema lê PDF, Excel e CSV e arquiva.</span></div></div>
+  <div class="toolbar"><div class="spacer"></div><a class="btn primary" href="#automacao">${svg('upload')} Importar na Automação</a></div>
+  <div class="card"><div class="card-h">${svg('doc')}<h3>Relatórios processados</h3></div><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Quando</th><th>Arquivo</th><th>Resultado</th></tr></thead>
+    <tbody>${docs.length?docs.slice(0,40).map(l=>`<tr><td class="mono muted">${_autoDataHora(l.data)}</td><td>${esc(l.arquivo||'')}</td><td class="muted">${esc(l.resultado||'')}</td></tr>`).join(''):`<tr><td colspan="3">${emptyState('Nenhum relatório de pedágio processado ainda.')}</td></tr>`}</tbody>
+  </table></div></div></div>`;
+}
+function viewAnalytics(){
+  const now=hoje(), ml=[]; for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); ml.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lb:MESES[d.getMonth()]}); }
+  const vmes=ml.map(m=>({label:m.lb,value:DB.viagens.filter(v=>(v.data||'').slice(0,7)===m.ym).length}));
+  let corr=0,prev=0; DB.servicos.forEach(s=>{ const v=_pcNum(s.valor); if((s.tipo||'Corretiva')==='Preventiva')prev+=v; else corr+=v; });
+  const cteSum=DB.ctes.reduce((s,c)=>s+_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest),0);
+  return `<div class="banner">${svg('dash')}<div><b>Analytics</b><span>Indicadores da operação — clique para abrir os módulos.</span></div></div>
+  <div class="grid kpis">
+    ${kpi('route','i-blue', DB.viagens.length, 'Viagens (6 meses)', 'Abrir viagens', '#viagens')}
+    ${kpi('money','i-amber', money(cteSum), 'Faturamento CT-e', 'Abrir financeiro', '#financeiro')}
+    ${kpi('wrench','i-orange', money(corr+prev), 'Custo de manutenção', 'Abrir relatório', '#manutencao')}
+    ${kpi('truck','i-blue', DB.veiculos.filter(v=>v.status!=='Arquivado').length, 'Veículos ativos', 'Abrir frota', '#frota')}
+  </div>
+  <div class="grid two-col">
+    <div class="card"><div class="card-h">${svg('route')}<h3>Viagens por mês</h3></div><div class="card-b">${barChart(vmes)}</div></div>
+    <div class="card"><div class="card-h">${svg('wrench')}<h3>Manutenção</h3></div><div class="card-b"><div class="donut-wrap">
+      ${donut([{label:'Corretiva',value:Math.round(corr),color:'#ff9d5c'},{label:'Preventiva',value:Math.round(prev),color:'#4c8dff'}],{center:money(corr+prev),sub:''})}
+      <div class="legend"><div class="li"><span class="dot" style="background:#ff9d5c"></span>Corretiva<b>${money(corr)}</b></div><div class="li"><span class="dot" style="background:#4c8dff"></span>Preventiva<b>${money(prev)}</b></div></div>
+    </div></div></div>
+  </div>`;
+}
+function viewRelatorios(){
+  const mods=[['dashboard','Monitoramento','map'],['viagens','Viagens','route'],['frota','Frota','truck'],['motoristas','Motoristas','user'],['vencimentos','Vencimentos','bell'],['financeiro','Financeiro','money'],['ctes','CT-e','ctedoc'],['abastecimento','Abastecimentos','fuel'],['manutencao','Manutenção','wrench'],['clientes','Clientes','briefcase']];
+  return `<div class="banner">${svg('doc')}<div><b>Relatórios</b><span>Abra qualquer módulo e use o botão <b>Relatório</b> no topo para imprimir ou salvar em PDF. Exportações por tela.</span></div></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+    ${mods.map(m=>`<a class="card" href="#${m[0]}" style="padding:18px 20px;display:flex;align-items:center;gap:14px;text-decoration:none">
+      <span class="k-ico i-blue" style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center">${svg(m[2])}</span>
+      <div><b style="font-size:14.5px">${m[1]}</b><div class="muted" style="font-size:12px">Abrir e imprimir / PDF</div></div></a>`).join('')}
+  </div>`;
+}
 
 function viewPainelPro(){
   const veic=DB.veiculos.filter(v=>v.status!=='Arquivado');
