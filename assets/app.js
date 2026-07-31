@@ -406,7 +406,7 @@ function router(){
   else if(rota==='etica') el.innerHTML=viewEtica();
   else if(rota==='inicio') el.innerHTML=viewInicio();
   else if(rota==='config') el.innerHTML=viewConfig();
-  else if(rota==='dashboard') el.innerHTML=viewComando();
+  else if(rota==='dashboard') el.innerHTML=viewPainelPro();
   else if(rota==='clientes') el.innerHTML=viewClientes();
   else if(rota==='pedagios') el.innerHTML=viewPedagios();
   else if(rota==='analytics') el.innerHTML=viewAnalytics();
@@ -497,24 +497,35 @@ async function _autoUmArquivo(f){
     });
     return {tipo:'Planilha',resultado:ap+' validade(s) atualizada(s)'+(pe?' · '+pe+' sem vínculo':''),status:ap?'ok':'pend',aplicado:ap,pendencia:pe?1:0};
   }
-  /* ---- PDF: abastecimento / pedágio / documento ---- */
+  /* ---- PDF: texto → interpreta; sem texto (digitalizado) → OCR → interpreta ---- */
   if(ext==='pdf'){
-    const txt=await pexLerPdfTexto(f); const T=(txt||'').toUpperCase();
+    let txt=await pexLerPdfTexto(f); let ocr=false;
+    if(!txt||txt.length<40){ const cv=await pexRenderPdfImg(f); if(cv){ const o=await pexOCR(cv); if(o&&o.length>(txt||'').length){ txt=o; ocr=true; } } }
+    const T=(txt||'').toUpperCase(); const ocrTag=ocr?' (via OCR)':'';
     const dd=extrairAbastecimento(txt||'', nome);
     const isAbastec=/DIESEL|ARLA|GASOLINA|ETANOL|POSTO|COMBUST/i.test(T) || dd.litros!=null;
     const isPedagio=/SEM\s*PARAR|CONECTCAR|CONECT\s*CAR|TAGGY|VELOE|MOVE\s*MAIS|PED[AÁ]GIO/i.test(T);
     const an=await _autoArquiva(f, isAbastec?'Abastecimento':(isPedagio?'Pedágio':guessCat(nome)));
     if(isAbastec){ _autoPend('abastec','Abastecimento'+(dd.posto?' · '+dd.posto:'')+(dd.placa?' · '+dd.placa:'')+(dd.valor!=null?' · R$ '+dd.valor:''), dd, nome, an);
-      return {tipo:'Abastecimento',resultado:'Li '+(dd.litros!=null?dd.litros+' L ':'')+(dd.valor!=null?'· R$ '+dd.valor+' ':'')+'— revisar e confirmar',status:'pend',pendencia:1}; }
+      return {tipo:'Abastecimento',resultado:'Li '+(dd.litros!=null?dd.litros+' L ':'')+(dd.valor!=null?'· R$ '+dd.valor+' ':'')+ocrTag+' — revisar e confirmar',status:'pend',pendencia:1}; }
     if(isPedagio){ _autoPend('doc','Relatório de pedágio — conferir',{},nome,an);
       return {tipo:'Pedágio',resultado:'Relatório arquivado, aguardando conferência',status:'pend',pendencia:1}; }
     _autoPend('doc','Documento — '+guessCat(nome),{},nome,an);
     return {tipo:guessCat(nome),resultado:'Documento lido e arquivado',status:'pend',pendencia:1};
   }
-  /* ---- Imagem ---- */
+  /* ---- Imagem: OCR direto ---- */
   if(/^(png|jpe?g|webp|gif|bmp|heic)$/.test(ext)){
-    const an=await _autoArquiva(f,'Imagem'); _autoPend('img','Imagem recebida — precisa de conferência manual',{},nome,an);
-    return {tipo:'Imagem',resultado:'Arquivada (imagem não tem leitura automática)',status:'pend',pendencia:1};
+    const otxt=await pexOCR(f); const an=await _autoArquiva(f,'Imagem');
+    if(otxt && otxt.replace(/\s/g,'').length>15){
+      const dd=extrairAbastecimento(otxt, nome);
+      const isAb=/DIESEL|ARLA|GASOLINA|POSTO|COMBUST/i.test(otxt) || dd.litros!=null;
+      if(isAb){ _autoPend('abastec','Abastecimento (foto)'+(dd.posto?' · '+dd.posto:'')+(dd.valor!=null?' · R$ '+dd.valor:''), dd, nome, an);
+        return {tipo:'Abastecimento',resultado:'Foto lida por OCR — revisar',status:'pend',pendencia:1}; }
+      _autoPend('doc','Imagem lida por OCR — conferir',{},nome,an);
+      return {tipo:'Imagem',resultado:'Texto extraído por OCR — revisar',status:'pend',pendencia:1};
+    }
+    _autoPend('img','Imagem recebida — conferência manual',{},nome,an);
+    return {tipo:'Imagem',resultado:(typeof Tesseract==='undefined'?'Arquivada (OCR indisponível offline)':'Arquivada (não consegui ler o texto)'),status:'pend',pendencia:1};
   }
   const an=await _autoArquiva(f,'Documento'); _autoPend('doc','Arquivo recebido — conferir',{},nome,an);
   return {tipo:'Arquivo',resultado:'Arquivado',status:'pend',pendencia:1};
@@ -653,7 +664,13 @@ function _pcIco(n){ const I={
   shield:'<path d="M12 3 3 7v6c0 5 4 8 9 10 5-2 9-5 9-10V7z"/>',
   cal:'<path d="M8 3v4M16 3v4M4 8h16v12H4z"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
-  gauge:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/>' };
+  gauge:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/>',
+  map:'<path d="M9 4 3 6v15l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v15M15 6v15"/>',
+  clients:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/>',
+  wallet:'<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M16 13h.01M3 7l12-3v3"/>',
+  toll:'<rect x="3" y="4" width="4" height="17"/><path d="M7 7l13 3v3L7 13"/>',
+  chart:'<path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="10" width="3" height="7"/>',
+  fuel:'<path d="M6 3h7v18H5V5a2 2 0 0 1 1-2z"/><path d="M13 9h3l2 2v6a2 2 0 0 1-4 0v-3h-1"/>' };
   return '<svg viewBox="0 0 24 24">'+(I[n]||'')+'</svg>'; }
 
 /* ================================================================== */
@@ -876,23 +893,25 @@ function viewPainelPro(){
       <span class="pc-badge ${badgeCls(x.s.ord)}">${badgeTxt(x.s.ord)}</span></div>`;
   }).join(''):'<div class="pc-vrow"><div class="vm"><b>Tudo em dia</b><span>Nenhum vencimento próximo</span></div></div>';
 
-  const navItem=(hash,ico,label,on,bdg)=>`<a href="#${hash}" class="${on?'on':''}">${_pcIco(ico)}<span>${label}</span>${bdg||''}</a>`;
+  const navItem=(hash,ico,label,on,bdg,cls)=>`<a href="#${hash}" class="${on?'on':''} ${cls||''}">${_pcIco(ico)}<span>${label}</span>${bdg||''}</a>`;
 
   return `<div class="pc-app">
     <aside class="pc-side">
-      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express · Enterprise</div></div></div>
-      <nav class="pc-nav">
-        <div class="g">Comando</div>
-        ${navItem('dashboard','dash','Painel de Comando',true)}
-        ${navItem('viagens','route','Operações')}
-        ${navItem('frota','truck','Frota')}
-        <div class="g">Cadastros</div>
+      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express</div></div></div>
+      <nav class="pc-nav pc-flat">
+        ${navItem('dashboard','map','Monitoramento',true)}
+        ${navItem('viagens','route','Viagens')}
         ${navItem('motoristas','user','Motoristas')}
+        ${navItem('frota','truck','Frota')}
+        ${navItem('clientes','clients','Clientes')}
+        ${navItem('financeiro','wallet','Financeiro',false,'','gold')}
         ${navItem('vencimentos','bell','Vencimentos',false, (venc+crit)?`<span class="bdg pc-bdg-num">${venc+crit}</span>`:'')}
+        ${navItem('relatorios','report','Relatórios')}
         ${navItem('documentos','doc','Documentos')}
-        <div class="g">Gestão</div>
-        ${navItem('financeiro','money','Financeiro')}
-        ${navItem('ctes','report','CT-e')}
+        ${navItem('abastecimento','fuel','Abastecimentos')}
+        ${navItem('pedagios','toll','Pedágios')}
+        ${navItem('analytics','chart','Analytics')}
+        <a onclick="iaToggle()">${_pcIco('brain')}<span>IA</span></a>
         ${navItem('config','gear','Configurações')}
       </nav>
       <div class="pc-promo"><b>Planeta Express Transportes</b><span>Transporte frigorificado · Londrina/PR</span></div>
@@ -977,11 +996,22 @@ function viewPainelPro(){
             <div class="pc-mp">
               <svg viewBox="0 0 620 224" preserveAspectRatio="xMidYMid slice">
                 <g class="pc-mg"><line x1="0" y1="56" x2="620" y2="56"/><line x1="0" y1="112" x2="620" y2="112"/><line x1="0" y1="168" x2="620" y2="168"/><line x1="155" y1="0" x2="155" y2="224"/><line x1="310" y1="0" x2="310" y2="224"/><line x1="465" y1="0" x2="465" y2="224"/></g>
-                <path class="pc-mr" d="M250,148 Q360,88 470,68"/><path class="pc-mr" d="M250,148 Q180,108 130,64"/><path class="pc-mr" d="M250,148 Q380,148 500,118"/>
-                <circle class="pc-mn" cx="250" cy="148" r="4"/><circle class="pc-mn" cx="470" cy="68" r="3.5"/><circle class="pc-mn" cx="130" cy="64" r="3.5"/><circle class="pc-mn" cx="500" cy="118" r="3.5"/><circle class="pc-mn w" cx="330" cy="178" r="3.5"/>
+                <path id="mrm" class="pc-mr" d="M520,104 Q340,124 155,140"/>
+                <path id="mrp" class="pc-mr" d="M520,104 Q300,134 85,152"/>
+                <path id="mrc" class="pc-mr" d="M520,104 Q482,108 445,114"/>
+                <circle class="pc-mn" cx="155" cy="140" r="3.2"/>
+                <circle class="pc-mn" cx="85" cy="152" r="3.2"/>
+                <circle class="pc-mn" cx="445" cy="114" r="3.2"/>
+                <circle class="pc-mn" cx="520" cy="104" r="5.5" style="fill:var(--acc);filter:drop-shadow(0 0 7px var(--acc))"/>
+                <g text-anchor="middle" style="font-family:var(--mono);font-size:9px;letter-spacing:.6px;fill:#9fb1c6">
+                  <text x="155" y="130">MARINGÁ</text><text x="85" y="142">PAIÇANDU</text><text x="445" y="104">CAMBÉ</text>
+                  <text x="520" y="90" style="fill:var(--acc2);font-size:10.5px;letter-spacing:1.5px">BASE</text>
+                </g>
+                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="22s" repeatCount="indefinite"><mpath href="#mrm"/></animateMotion></g>
+                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="28s" repeatCount="indefinite"><mpath href="#mrp"/></animateMotion></g>
+                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="15s" repeatCount="indefinite"><mpath href="#mrc"/></animateMotion></g>
               </svg>
-              <div class="pc-tip" style="left:14px;top:14px"><b>Base · Londrina/PR</b><span>${cav+reb} veículos monitorados</span></div>
-              <div class="pc-tip" style="right:14px;top:50px"><b>Rotas ativas</b><span>Integração de rastreio preparada</span></div>
+              <div class="pc-tip" style="left:14px;top:14px"><b>Londrina · BASE</b><span>${cav+reb} veículos monitorados</span></div>
             </div>
           </div>
         </div>
@@ -2003,6 +2033,26 @@ async function pexLerPdfTexto(file){
     let out=''; streams.forEach(c=>{ if(/(Tj|TJ)/.test(c) && !/beginbf(char|range)/.test(c)) out += _pexExtractText(c,uni)+'\n'; });
     return out.replace(/\s+/g,String.fromCharCode(32)).trim();
   }catch(e){ return ''; }
+}
+/* Renderiza a 1ª página de um PDF em imagem (canvas) — só quando pdf.js está carregado (online) */
+async function pexRenderPdfImg(file){
+  if(typeof pdfjsLib==='undefined') return null;
+  try{
+    if(pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc)
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const page=await pdf.getPage(1);
+    const vp=page.getViewport({scale:2});
+    const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
+    await page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise;
+    return c;
+  }catch(e){ return null; }
+}
+/* OCR (Tesseract) — extrai texto de imagem/canvas. Vazio se offline/indisponível. */
+async function pexOCR(imgOrCanvas){
+  if(typeof Tesseract==='undefined') return '';
+  try{ const r=await Tesseract.recognize(imgOrCanvas,'por'); return (r&&r.data&&r.data.text)||''; }catch(e){ return ''; }
 }
 function _brNum(s){ if(s==null)return null; s=String(s).replace(/[^\d.,]/g,''); if(!s)return null;
   if(/,\d{1,3}$/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else if(/\.\d{3}(\.|$)/.test(s)){ s=s.replace(/\./g,''); } else { s=s.replace(',','.'); }
@@ -3197,7 +3247,9 @@ let _nfPendente=null;
 async function abastecNfUpload(ev){
   const f=(ev.target.files||[])[0]; ev.target.value=''; if(!f) return;
   toast('Lendo a nota fiscal…');
-  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'', f.name);
+  let txt=await pexLerPdfTexto(f);
+  if(!txt||txt.length<40){ toast('PDF digitalizado — tentando OCR…'); const cv=await pexRenderPdfImg(f); if(cv){ const o=await pexOCR(cv); if(o) txt=o; } }
+  const dd=extrairAbastecimento(txt||'', f.name);
   const achou=(dd.litros!=null)+(dd.valor!=null)+(dd.km!=null)+(dd.placa?1:0);
   const v=dd.placa?veiculoByPlaca(dd.placa):null;
   const pre={ _nfNome:f.name, _nfAchou:achou, data:dd.data||new Date().toISOString().slice(0,10),
