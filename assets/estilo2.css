@@ -765,3 +765,46 @@ select option,.field select option{background:#0f1a2c;color:var(--text)}
 .ia-chip{background:#0f1a2c;border-color:var(--line);color:var(--text-soft)}
 .ia-input input{background:#0f1a2c;color:var(--text);border-color:var(--line)}
 .ia-undo{background:#0f1a2c;border-color:rgba(242,104,107,.32)}
+
+/* ==========================================================================
+   REFINOS v6.1 — brilho neon, profundidade e coerência (dark)
+   ========================================================================== */
+/* profundidade nos cards + ícones de cabeçalho com neon */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.022),transparent 42%),var(--card);transition:border-color .16s,box-shadow .16s}
+.card .card-h>svg{color:var(--accent-2);filter:drop-shadow(0 0 5px rgba(76,141,255,.45))}
+.sectitulo svg{filter:drop-shadow(0 0 4px rgba(76,141,255,.4))}
+
+/* botões e links de ação com glow */
+.btn.primary{box-shadow:0 4px 18px rgba(76,141,255,.32)}
+.btn.primary:hover{box-shadow:0 7px 26px rgba(76,141,255,.46)}
+.pill-link:hover,.link:hover{text-shadow:0 0 8px rgba(76,141,255,.5)}
+
+/* navegação ativa com brilho */
+.nav a.active{box-shadow:inset 0 0 0 1px rgba(76,141,255,.14)}
+.nav a.active::before{box-shadow:0 0 12px var(--accent)}
+
+/* foco dos campos com anel neon */
+.field input:focus,.field select:focus,.field textarea:focus,.search input:focus,.selectlite:focus,.alarme-input:focus,.kmcard-input input:focus{
+  box-shadow:0 0 0 3px var(--accent-soft),0 0 20px rgba(76,141,255,.14)}
+
+/* ícones de KPI com leve halo da própria cor + placas com brilho de tela */
+.kpi .k-ico{box-shadow:0 0 18px -4px currentColor}
+.plate{box-shadow:0 2px 6px rgba(0,0,0,.4),0 0 0 1px rgba(140,172,212,.12)}
+
+/* SPLASH — de dourado para azul neon (coerência da nova identidade) */
+#splash{background:radial-gradient(1200px 700px at 50% 30%,#0c1a2b 0%,#080f18 45%,#05070b 100%)}
+.sp-orb1{background:radial-gradient(circle,#2f6bf0,transparent 70%)}
+.sp-orb2{background:radial-gradient(circle,#1b3f70,transparent 70%)}
+.sp-grid{background-image:linear-gradient(rgba(76,141,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(76,141,255,.10) 1px,transparent 1px)}
+.sp-logo{box-shadow:0 40px 90px rgba(76,141,255,.30),0 0 0 1px rgba(120,167,255,.35),0 0 0 6px rgba(76,141,255,.06),inset 0 1px 0 rgba(255,255,255,.7)}
+.sp-logo .sp-shine{background:linear-gradient(90deg,transparent,rgba(180,210,255,.85),transparent)}
+.sp-title{background:linear-gradient(180deg,#eaf3ff 0%,#a9cbff 45%,#4c8dff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(76,141,255,.28))}
+.sp-title b{color:#7aa7ff;-webkit-text-fill-color:#7aa7ff}
+.sp-line{background:linear-gradient(90deg,transparent,#4c8dff,transparent)}
+.sp-tag{color:#7e93b8}
+.sp-loader{background:rgba(76,141,255,.14)}
+.sp-loader span{background:linear-gradient(90deg,#a9cbff,#4c8dff);box-shadow:0 0 14px rgba(76,141,255,.8)}
+
+/* LOGIN — acento azul (era dourado) */
+.login-box{border-color:rgba(76,141,255,.22);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(76,141,255,.08)}
+.login-box .field input:focus{border-color:#4c8dff;box-shadow:0 0 0 3px rgba(76,141,255,.18)}
