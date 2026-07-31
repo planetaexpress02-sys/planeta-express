@@ -808,3 +808,9 @@ select option,.field select option{background:#0f1a2c;color:var(--text)}
 /* LOGIN — acento azul (era dourado) */
 .login-box{border-color:rgba(76,141,255,.22);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(76,141,255,.08)}
 .login-box .field input:focus{border-color:#4c8dff;box-shadow:0 0 0 3px rgba(76,141,255,.18)}
+
+/* Centro de Automação — zona de arrastar */
+.autodrop{border:2px dashed var(--line-2);border-radius:16px;padding:36px 24px;text-align:center;cursor:pointer;transition:.16s;
+  background:linear-gradient(180deg,rgba(76,141,255,.05),transparent 70%)}
+.autodrop:hover,.autodrop.drag{border-color:var(--accent);background:rgba(76,141,255,.09);box-shadow:0 0 30px rgba(76,141,255,.12) inset}
+.autodrop>svg{width:42px;height:42px;color:var(--accent-2);filter:drop-shadow(0 0 10px rgba(76,141,255,.55))}

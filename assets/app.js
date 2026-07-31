@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','automacaoLog','automacaoPend','automacaoRegras'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -359,6 +359,7 @@ const ROTAS = {
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
   notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
+  automacao:{t:'Automação', s:'Caixa de entrada inteligente', ico:'upload'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
@@ -395,6 +396,7 @@ function router(){
   else if(rota==='alarmes') el.innerHTML=viewAlarmes();
   else if(rota==='notas') el.innerHTML=viewNotas();
   else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
+  else if(rota==='automacao') el.innerHTML=viewAutomacao();
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -425,7 +427,7 @@ function renderSidebar(rota){
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
-    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+
+    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+ item('automacao', (DB.automacaoPend&&DB.automacaoPend.length)?{n:DB.automacaoPend.length, cls:'warn'}:null)+
     `<div class="group">Financeiro</div>`+ item('financeiro')+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
@@ -451,6 +453,180 @@ function avatarFoto(m, size){ size=size||56;
 /* ================================================================== */
 /*  9. DASHBOARD                                                       */
 /* ================================================================== */
+/* ================================================================== */
+/*  CENTRO DE AUTOMAÇÃO — caixa de entrada inteligente (offline/grátis) */
+/*  Você solta documentos; o sistema lê, arquiva, aplica o seguro e     */
+/*  cria pendências para o resto. Reaproveita os motores existentes.    */
+/* ================================================================== */
+function _autoDataHora(iso){ try{ return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
+async function _autoArquiva(f, cat){ try{ if(!IDB && !_online()) return ''; const m=await subirUm(f,'empresa','empresa',cat||'Documento'); await reloadFiles(); return (m&&m.id)||''; }catch(e){ return ''; } }
+function _autoPend(tipo, resumo, dados, arquivo, anexoId){ DB.automacaoPend.unshift({id:uid('pd'),data:new Date().toISOString(),tipo:tipo,resumo:resumo,dados:dados||{},arquivo:arquivo||'',anexoId:anexoId||''}); }
+
+async function _autoUmArquivo(f){
+  const nome=f.name||'arquivo', ext=(nome.split('.').pop()||'').toLowerCase();
+  /* ---- XML: CT-e (aplica) ou NF-e (arquiva + pendência) ---- */
+  if(ext==='xml'){
+    const txt=await f.text();
+    const c=parseCteXml(txt, nome);
+    if(c){
+      if(DB.ctes.some(x=>x.id===c.id)) return {tipo:'CT-e',resultado:'CT-e Nº '+esc(c.numero)+' já estava no sistema',status:'dup'};
+      DB.ctes.push(c); return {tipo:'CT-e',resultado:'CT-e Nº '+esc(c.numero)+' → '+esc(c.destino||c.cliente||'')+' importado',status:'ok',aplicado:1};
+    }
+    const an=await _autoArquiva(f,'Nota Fiscal'); _autoPend('doc','Nota fiscal (XML) recebida — conferir',{},nome,an);
+    return {tipo:'NF-e',resultado:'XML arquivado, aguardando conferência',status:'pend',pendencia:1};
+  }
+  /* ---- Planilha: validades/vencimentos (aplica o que tem vínculo) ---- */
+  if(ext==='xlsx'||ext==='csv'||ext==='txt'){
+    if(!window.PEXImport) return {tipo:'Planilha',resultado:'Leitor de planilha indisponível neste navegador',status:'err'};
+    const {sheets}=await PEXImport.lerArquivo(f); let itens=[];
+    sheets.forEach(sh=>PEXImport.detectarVencimentos(sh.grid).forEach(it=>itens.push(it)));
+    if(!itens.length) return {tipo:'Planilha',resultado:'Nenhuma tabela de validade reconhecida',status:'pend'};
+    let ap=0, pe=0;
+    itens.forEach(it=>{ const validade=_impISO(it.validade); const refId=_impRef(it.vinculo,it.chave);
+      if(validade && (it.vinculo==='empresa'||refId)){
+        const ex=DB.vencimentos.find(v=>v.entidade===it.vinculo && String(v.refId)===String(refId) && v.tipo===it.tipo);
+        if(ex){ if(ex.validade!==validade){ ex.validade=validade; if(_impISO(it.emissao)) ex.emissao=_impISO(it.emissao); ap++; } }
+        else { DB.vencimentos.push({id:uid('vc'),tipo:it.tipo,entidade:it.vinculo,refId:refId,emissao:_impISO(it.emissao),validade:validade,numero:'',orgao:'',obs:'automação',anexoId:''}); ap++; }
+      } else { _autoPend('venc','Vencimento '+it.tipo+' de "'+(it.chave||'?')+'" — não achei o cadastro',{},nome,''); pe++; }
+    });
+    return {tipo:'Planilha',resultado:ap+' validade(s) atualizada(s)'+(pe?' · '+pe+' sem vínculo':''),status:ap?'ok':'pend',aplicado:ap,pendencia:pe?1:0};
+  }
+  /* ---- PDF: abastecimento / pedágio / documento ---- */
+  if(ext==='pdf'){
+    const txt=await pexLerPdfTexto(f); const T=(txt||'').toUpperCase();
+    const dd=extrairAbastecimento(txt||'', nome);
+    const isAbastec=/DIESEL|ARLA|GASOLINA|ETANOL|POSTO|COMBUST/i.test(T) || dd.litros!=null;
+    const isPedagio=/SEM\s*PARAR|CONECTCAR|CONECT\s*CAR|TAGGY|VELOE|MOVE\s*MAIS|PED[AÁ]GIO/i.test(T);
+    const an=await _autoArquiva(f, isAbastec?'Abastecimento':(isPedagio?'Pedágio':guessCat(nome)));
+    if(isAbastec){ _autoPend('abastec','Abastecimento'+(dd.posto?' · '+dd.posto:'')+(dd.placa?' · '+dd.placa:'')+(dd.valor!=null?' · R$ '+dd.valor:''), dd, nome, an);
+      return {tipo:'Abastecimento',resultado:'Li '+(dd.litros!=null?dd.litros+' L ':'')+(dd.valor!=null?'· R$ '+dd.valor+' ':'')+'— revisar e confirmar',status:'pend',pendencia:1}; }
+    if(isPedagio){ _autoPend('doc','Relatório de pedágio — conferir',{},nome,an);
+      return {tipo:'Pedágio',resultado:'Relatório arquivado, aguardando conferência',status:'pend',pendencia:1}; }
+    _autoPend('doc','Documento — '+guessCat(nome),{},nome,an);
+    return {tipo:guessCat(nome),resultado:'Documento lido e arquivado',status:'pend',pendencia:1};
+  }
+  /* ---- Imagem ---- */
+  if(/^(png|jpe?g|webp|gif|bmp|heic)$/.test(ext)){
+    const an=await _autoArquiva(f,'Imagem'); _autoPend('img','Imagem recebida — precisa de conferência manual',{},nome,an);
+    return {tipo:'Imagem',resultado:'Arquivada (imagem não tem leitura automática)',status:'pend',pendencia:1};
+  }
+  const an=await _autoArquiva(f,'Documento'); _autoPend('doc','Arquivo recebido — conferir',{},nome,an);
+  return {tipo:'Arquivo',resultado:'Arquivado',status:'pend',pendencia:1};
+}
+
+async function automacaoProcessar(files){
+  files=[].slice.call(files||[]); if(!files.length) return;
+  toast(files.length+' arquivo(s) — o sistema está lendo…');
+  let aplicados=0, pend=0;
+  for(const f of files){
+    try{ const r=await _autoUmArquivo(f); aplicados+=(r.aplicado||0); pend+=(r.pendencia||0);
+      DB.automacaoLog.unshift({id:uid('lg'),data:new Date().toISOString(),arquivo:f.name,tipo:r.tipo||'—',resultado:r.resultado||'',status:r.status||'ok'});
+    }catch(e){ DB.automacaoLog.unshift({id:uid('lg'),data:new Date().toISOString(),arquivo:f.name,tipo:'—',resultado:'Não consegui ler: '+(e.message||e),status:'err'}); }
+  }
+  if(DB.automacaoLog.length>300) DB.automacaoLog=DB.automacaoLog.slice(0,300);
+  saveDB(); if((location.hash||'').indexOf('automacao')<0) location.hash='automacao'; router();
+  toast('Pronto: '+aplicados+' aplicado(s) automaticamente'+(pend?', '+pend+' para revisar':'')+'.');
+}
+function automacaoDrop(ev){ ev.preventDefault(); const dz=document.getElementById('autoDrop'); if(dz)dz.classList.remove('drag'); automacaoProcessar((ev.dataTransfer||{}).files); }
+function automacaoPick(input){ const fs=input.files; automacaoProcessar(fs); input.value=''; }
+function automacaoRevisar(id){
+  const p=DB.automacaoPend.find(x=>x.id===id); if(!p) return;
+  if(p.tipo==='abastec'){ const dd=p.dados||{}; const v=dd.placa?veiculoByPlaca(dd.placa):null;
+    const pre={data:dd.data||new Date().toISOString().slice(0,10),litros:(dd.litros!=null?dd.litros:''),valor:(dd.valor!=null?dd.valor:''),posto:dd.posto||''};
+    if(v){ pre.veiculoId=v.id; if(isReb(v)) pre.horas=(dd.km!=null?dd.km:''); else pre.km=(dd.km!=null?dd.km:''); }
+    modalAbastec(null, pre); return; }
+  if(p.tipo==='venc'){ location.hash='vencimentos'; return; }
+  if(p.anexoId){ verArquivo(p.anexoId); return; }
+  location.hash='documentos';
+}
+function automacaoConcluir(id){ DB.automacaoPend=DB.automacaoPend.filter(x=>x.id!==id); saveDB(); toast('Pendência concluída.'); router(); }
+function automacaoLimparLog(){ if(!confirm('Limpar o histórico de automação?'))return; DB.automacaoLog=[]; saveDB(); toast('Histórico limpo.'); router(); }
+function modalRegra(id){
+  const r=id?DB.automacaoRegras.find(x=>x.id===id):{nome:'',tipo:'Posto',email:'',categoria:''};
+  openModal(`<div class="m-h">${svg('upload')}<h3>${id?'Editar remetente':'Novo remetente / regra'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <p class="muted" style="margin-bottom:12px;line-height:1.5">Cadastre de quem vêm os documentos (posto, operadora de pedágio, cliente). Isso ajuda o sistema a reconhecer e organizar — e prepara o envio automático por e-mail no futuro.</p>
+      ${fld('Nome (ex.: Posto Trevo, Sem Parar)','r_nome',r.nome)}
+      <div class="field-row">
+        <div class="field"><label>Tipo</label><select id="r_tipo">${['Posto','Pedágio','Cliente','Fornecedor','Outro'].map(t=>`<option ${r.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        ${fld('Categoria do documento','r_cat',r.categoria)}
+      </div>
+      ${fld('E-mail de origem (opcional)','r_email',r.email)}
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirRegra('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarRegra('${id||''}')">Salvar</button></div>`);
+}
+function salvarRegra(id){ const d={nome:val('r_nome'),tipo:val('r_tipo'),email:val('r_email'),categoria:val('r_cat')};
+  if(!d.nome){ toast('Informe o nome.','err'); return; }
+  if(id)Object.assign(DB.automacaoRegras.find(x=>x.id===id),d); else{ d.id=uid('rg'); DB.automacaoRegras.push(d); }
+  saveDB(); closeModal(); toast('Remetente salvo.'); router(); }
+function excluirRegra(id){ DB.automacaoRegras=DB.automacaoRegras.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Removido.'); router(); }
+
+function viewAutomacao(){
+  const log=DB.automacaoLog||[], pend=DB.automacaoPend||[], regras=DB.automacaoRegras||[];
+  const aplicados=log.filter(l=>l.status==='ok').length;
+  const stTag=(s)=>({ok:'st ok',dup:'st neutro',pend:'st warn',err:'st vencido'}[s]||'st neutro');
+  const stTxt=(s)=>({ok:'Aplicado',dup:'Já existia',pend:'Revisar',err:'Erro'}[s]||s);
+  const pIco=(t)=>({abastec:'fuel',venc:'bell',doc:'doc',img:'doc',nfe:'doc'}[t]||'doc');
+  return `
+  <div class="banner">${svg('upload')}<div><b>Caixa de entrada inteligente</b><span>Solte aqui qualquer documento — XML de CT-e, planilha de validades, PDF de abastecimento/pedágio, notas, fotos. O sistema lê, arquiva, aplica o que for seguro sozinho e separa o resto para você revisar. Nada é digitado à toa.</span></div></div>
+
+  <div id="autoDrop" class="autodrop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="automacaoDrop(event)" onclick="document.getElementById('autoFile').click()">
+    ${svg('upload')}
+    <div style="font-size:16px;font-weight:700;margin-top:10px">Arraste os documentos para cá</div>
+    <div class="muted" style="font-size:12.5px;margin-top:4px">ou clique para escolher · aceita vários de uma vez (PDF, XML, Excel, CSV, imagens)</div>
+    <input type="file" id="autoFile" multiple accept=".pdf,.xml,.xlsx,.csv,.txt,image/*" style="display:none" onchange="automacaoPick(this)">
+  </div>
+
+  <div class="grid kpis" style="margin-top:18px">
+    ${kpi('check','i-green', aplicados, 'Aplicados automaticamente', 'Sem digitação', undefined)}
+    ${kpi('bell', pend.length?'i-amber':'i-blue', pend.length, 'Aguardando revisão', pend.length?'Requer sua conferência':'Tudo em dia', undefined)}
+    ${kpi('doc','i-blue', log.length, 'Documentos processados', 'Histórico completo', undefined)}
+    ${kpi('user','i-blue', regras.length, 'Remetentes cadastrados', 'Postos, pedágios, clientes', undefined)}
+  </div>
+
+  <div class="grid two-col" style="margin-top:4px">
+    <div class="card">
+      <div class="card-h">${svg('bell')}<h3>Pendências — revisar</h3>
+        <div class="r"><span class="muted" style="font-size:12px">${pend.length} item(ns)</span></div></div>
+      <div class="card-b p0"><div class="tbl-wrap">
+        <table class="tbl"><thead><tr><th>Documento</th><th>Recebido</th><th class="no-print" style="text-align:right"></th></tr></thead>
+        <tbody>${pend.length? pend.map(p=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:10px"><span class="st neutro" style="padding:6px">${svg(pIco(p.tipo))}</span><div><b>${esc(p.resumo)}</b><div class="muted" style="font-size:11.5px">${esc(p.arquivo||'')}</div></div></div></td>
+          <td class="mono muted" style="white-space:nowrap">${_autoDataHora(p.data)}</td>
+          <td class="no-print" style="text-align:right;white-space:nowrap">
+            <button class="btn sm primary" onclick="automacaoRevisar('${p.id}')">Revisar</button>
+            <button class="btn sm" onclick="automacaoConcluir('${p.id}')" title="Marcar como resolvido">✓</button></td>
+        </tr>`).join('') : `<tr><td colspan="3">${emptyState('Sem pendências. Tudo que chegou foi organizado.')}</td></tr>`}</tbody></table>
+      </div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">${svg('user')}<h3>Remetentes & regras</h3>
+        <div class="r"><button class="btn sm primary" onclick="modalRegra()">${svg('plus')} Novo</button></div></div>
+      <div class="card-b p0"><div class="tbl-wrap">
+        <table class="tbl"><thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th class="no-print"></th></tr></thead>
+        <tbody>${regras.length? regras.map(r=>`<tr class="clickable" onclick="modalRegra('${r.id}')">
+          <td><b>${esc(r.nome)}</b>${r.email?`<div class="muted" style="font-size:11.5px">${esc(r.email)}</div>`:''}</td>
+          <td><span class="tag">${esc(r.tipo)}</span></td><td class="muted">${esc(r.categoria||'—')}</td>
+          <td class="no-print" style="text-align:right">${svg('edit')}</td></tr>`).join('') : `<tr><td colspan="4">${emptyState('Cadastre os postos, operadoras de pedágio e clientes de onde vêm os documentos.')}</td></tr>`}</tbody></table>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="card-h">${svg('doc')}<h3>Histórico de automação</h3>
+      <div class="r">${log.length?`<button class="btn sm" onclick="automacaoLimparLog()">${svg('trash')} Limpar</button>`:''}</div></div>
+    <div class="card-b p0"><div class="tbl-wrap">
+      <table class="tbl"><thead><tr><th>Quando</th><th>Arquivo</th><th>Tipo</th><th>Resultado</th><th>Situação</th></tr></thead>
+      <tbody>${log.length? log.slice(0,40).map(l=>`<tr>
+        <td class="mono muted" style="white-space:nowrap">${_autoDataHora(l.data)}</td>
+        <td>${esc(l.arquivo||'')}</td><td>${esc(l.tipo||'')}</td><td class="muted">${esc(l.resultado||'')}</td>
+        <td><span class="${stTag(l.status)}">${stTxt(l.status)}</span></td></tr>`).join('') : `<tr><td colspan="5">${emptyState('Nada processado ainda. Solte um documento na caixa acima.')}</td></tr>`}</tbody></table>
+    </div></div>
+  </div>`;
+}
+
 /* ================================================================== */
 /*  PAINEL DE COMANDO 2.0 — tela de abertura dark premium (dados reais) */
 /* ================================================================== */
