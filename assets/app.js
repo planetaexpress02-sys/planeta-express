@@ -2429,36 +2429,6 @@ function viewInicio(){
   const fat=nfOrd[0]?totalNota(nfOrd[0]):0;
   const atalho=(ico,t,sub,hash)=>`<a class="ini-atalho" href="#${hash}">${svg(ico)}<div><b>${t}</b><span>${sub}</span></div><i>→</i></a>`;
   return `
-  <div class="card pex-mapcard" style="margin-bottom:20px">
-    <div class="card-h">${svg('truck')}<h3>Monitoramento da região</h3>
-      <div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-    <div class="card-b p0"><div class="pex-map pex-map-hero" id="pexDashMap">
-      <svg viewBox="0 0 1000 340" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(31,95,220,.25)"/><stop offset="1" stop-color="rgba(31,95,220,0)"/></radialGradient>
-          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f5fdc"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
-        </defs>
-        <g class="pex-mgrid">${[85,170,255].map(y=>`<line x1="0" y1="${y}" x2="1000" y2="${y}"/>`).join('')}${[200,400,600,800].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="340"/>`).join('')}</g>
-        <polyline class="pex-corridor" points="150,190 250,205 720,175 835,185"/>
-        <path id="pxr1" class="pex-route" d="M835,185 Q520,215 250,205"/>
-        <path id="pxr2" class="pex-route" d="M835,185 Q500,225 150,190"/>
-        <path id="pxr3" class="pex-route" d="M835,185 Q780,178 720,175"/>
-        <circle cx="835" cy="185" r="46" fill="url(#pexHubg)"/>
-        ${[['PAIÇANDU',150,190],['MARINGÁ',250,205],['CAMBÉ',720,175]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.4"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
-        <g class="pex-city hub">
-          <circle class="pex-hubring" cx="835" cy="185" r="9"/><circle class="pex-hubring r2" cx="835" cy="185" r="9"/>
-          <circle cx="835" cy="185" r="6"/>
-          <text x="835" y="168" text-anchor="middle">LONDRINA</text>
-          <g class="pex-base"><rect x="808" y="196" width="54" height="18" rx="9"/><text x="835" y="209" text-anchor="middle">BASE</text></g>
-        </g>
-        <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-        <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Paiçandu" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
-        <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
-      </svg>
-      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
-    </div></div>
-  </div>
-
   <div class="ini-hero">
     <div class="ini-hero-bg"></div>
     <div class="ini-logo"><img src="assets/logo.png" alt="Planeta Express"></div>
@@ -2469,32 +2439,38 @@ function viewInicio(){
     </div>
   </div>
 
-  <div class="grid kpis" style="margin-top:20px;grid-template-columns:repeat(2,1fr)">
-    ${kpi('truck','i-blue', cavalos+reb, 'Veículos ativos', cavalos+' cavalos · '+reb+' reboques', '#frota')}
-    ${kpi('user','i-green', mot, 'Motoristas ativos', DB.motoristas.length+' cadastrados', '#motoristas')}
-  </div>
-
-  <div class="grid two-col" style="margin-top:4px">
-    <div class="card">
-      <div class="card-h">${svg('home')}<h3>Acesso rápido</h3></div>
-      <div class="card-b"><div class="ini-atalhos">
-        ${atalho('dash','Painel de Controle','Indicadores e alertas','dashboard')}
-        ${atalho('bell','Vencimentos','Documentos e validades','vencimentos')}
-        ${atalho('route','Controle de Viagens','Registrar saída de motorista','viagens')}
-        ${atalho('gauge','KM / Horas','Atualizar e ver trocas','km')}
-        ${atalho('check','Check-list','Inspeção da frota','checklist')}
-        ${atalho('doc','Documentos','Abrir e baixar arquivos','documentos')}
+  <div class="grid ini-mon" style="margin-top:20px">
+    <div class="card pex-mapcard">
+      <div class="card-h">${svg('truck')}<h3>Monitoramento</h3><div class="r no-print"><span class="pex-live">● AO VIVO</span></div></div>
+      <div class="card-b p0"><div class="pex-map pex-map-hero" id="pexDashMap">
+        <svg viewBox="0 0 900 400" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(31,95,220,.25)"/><stop offset="1" stop-color="rgba(31,95,220,0)"/></radialGradient>
+            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f5fdc"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+          </defs>
+          <g class="pex-mgrid">${[100,200,300].map(y=>`<line x1="0" y1="${y}" x2="900" y2="${y}"/>`).join('')}${[180,360,540,720].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="400"/>`).join('')}</g>
+          <polyline class="pex-corridor" points="170,255 270,285 620,215 720,240"/>
+          <path id="pxr1" class="pex-route" d="M720,240 Q470,300 270,285"/>
+          <path id="pxr2" class="pex-route" d="M720,240 Q450,312 170,255"/>
+          <path id="pxr3" class="pex-route" d="M720,240 Q675,225 620,215"/>
+          <circle cx="720" cy="240" r="46" fill="url(#pexHubg)"/>
+          ${[['PAIÇANDU',170,255],['MARINGÁ',270,285],['CAMBÉ',620,215]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.4"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
+          <g class="pex-city hub">
+            <circle class="pex-hubring" cx="720" cy="240" r="9"/><circle class="pex-hubring r2" cx="720" cy="240" r="9"/>
+            <circle cx="720" cy="240" r="6"/>
+            <text x="720" y="222" text-anchor="middle">LONDRINA</text>
+            <g class="pex-base"><rect x="693" y="252" width="54" height="18" rx="9"/><text x="720" y="265" text-anchor="middle">BASE</text></g>
+          </g>
+          <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+          <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Paiçandu" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
+          <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+        </svg>
+        <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
       </div></div>
     </div>
-    <div class="card ini-etica">
-      <div class="card-h">${svg('shield')}<h3>Código de Ética e Conduta</h3></div>
-      <div class="card-b">
-        <p class="muted" style="line-height:1.6">A Planeta Express sempre visou a ética e a responsabilidade. Nossos valores: competência, profissionalismo, união, rentabilidade e confiabilidade.</p>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <a class="btn primary" href="#etica">${svg('eye')} Ler o código completo</a>
-          <button class="btn" onclick="baixarReal('../Documentos Internos/Código de Ética e Contuta.docx','Codigo de Etica.docx')">${svg('download')} Baixar (Word)</button>
-        </div>
-      </div>
+    <div class="ini-kpis">
+      ${kpi('truck','i-blue', cavalos+reb, 'Veículos ativos', cavalos+' cavalos · '+reb+' reboques', '#frota')}
+      ${kpi('user','i-green', mot, 'Motoristas ativos', DB.motoristas.length+' cadastrados', '#motoristas')}
     </div>
   </div>`;
 }

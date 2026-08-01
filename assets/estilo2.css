@@ -643,3 +643,10 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .pex-map-hero .pex-city text{font-size:10.5px;font-weight:600;fill:#42556f}
 @media(max-width:640px){.pex-map-hero{height:250px}}
 @media(prefers-reduced-motion:reduce){.pex-city.hub circle.pex-hubring{animation:none;opacity:.3}}
+
+/* Início: Monitoramento (esquerda, meia tela) + KPIs (direita) */
+.ini-mon{grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+.ini-kpis{display:flex;flex-direction:column;gap:20px;min-width:0}
+.ini-kpis .kpi{flex:1;display:flex;flex-direction:column;justify-content:center}
+@media(max-width:900px){.ini-mon{grid-template-columns:1fr}.ini-kpis{flex-direction:row}.ini-kpis .kpi{flex:1}}
+@media(max-width:560px){.ini-kpis{flex-direction:column}}
