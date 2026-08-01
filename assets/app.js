@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','automacaoLog','automacaoPend','automacaoRegras'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -359,11 +359,6 @@ const ROTAS = {
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
   notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
-  automacao:{t:'Automação', s:'Caixa de entrada inteligente', ico:'upload'},
-  clientes:{t:'Clientes', s:'Consolidado por CT-e', ico:'briefcase'},
-  pedagios:{t:'Pedágios', s:'Relatórios das operadoras', ico:'route'},
-  analytics:{t:'Analytics', s:'Indicadores da operação', ico:'dash'},
-  relatorios:{t:'Relatórios', s:'Impressão e exportação', ico:'doc'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
@@ -371,7 +366,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 function router(){
-  const h = (location.hash||'#dashboard').slice(1);
+  const h = (location.hash||'#inicio').slice(1);
   const [rota, arg] = h.split('/');
   renderSidebar(rota);
   const meta = ROTAS[rota] || ROTAS.inicio;
@@ -400,17 +395,12 @@ function router(){
   else if(rota==='alarmes') el.innerHTML=viewAlarmes();
   else if(rota==='notas') el.innerHTML=viewNotas();
   else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
-  else if(rota==='automacao') el.innerHTML=viewAutomacao();
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
   else if(rota==='inicio') el.innerHTML=viewInicio();
   else if(rota==='config') el.innerHTML=viewConfig();
-  else if(rota==='dashboard') el.innerHTML=viewPainelPro();
-  else if(rota==='clientes') el.innerHTML=viewClientes();
-  else if(rota==='pedagios') el.innerHTML=viewPedagios();
-  else if(rota==='analytics') el.innerHTML=viewAnalytics();
-  else if(rota==='relatorios') el.innerHTML=viewRelatorios();
+  else if(rota==='dashboard') el.innerHTML=viewDashboard();
   else el.innerHTML=viewInicio();
 
   document.getElementById('pageTitle').innerHTML = esc(titulo)+'<small>'+esc(sub)+'</small>';
@@ -430,13 +420,15 @@ function renderSidebar(rota){
   const item=(k,badge)=>{ const m=ROTAS[k];
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
     return `<a href="#${k}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
-  const pendA=(DB.automacaoPend&&DB.automacaoPend.length)?{n:DB.automacaoPend.length, cls:'warn'}:null;
   document.getElementById('nav').innerHTML =
-    item('dashboard')+ item('viagens')+ item('motoristas')+ item('frota')+ item('clientes')+
-    item('financeiro')+ item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
-    item('relatorios')+ item('documentos')+ item('automacao', pendA)+ item('abastecimento')+
-    item('pedagios')+ item('analytics')+ item('config')+
-    `<div class="group">Mais</div>`+ item('exames')+ item('direcao')+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('tacografos')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('socios')+ item('etica')+ item('inicio');
+    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
+    item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
+    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
+    `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
+    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+
+    `<div class="group">Financeiro</div>`+ item('financeiro')+
+    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
+    `<div class="group">Sistema</div>`+ item('config');
 }
 
 /* ================================================================== */
@@ -459,581 +451,6 @@ function avatarFoto(m, size){ size=size||56;
 /* ================================================================== */
 /*  9. DASHBOARD                                                       */
 /* ================================================================== */
-/* ================================================================== */
-/*  CENTRO DE AUTOMAÇÃO — caixa de entrada inteligente (offline/grátis) */
-/*  Você solta documentos; o sistema lê, arquiva, aplica o seguro e     */
-/*  cria pendências para o resto. Reaproveita os motores existentes.    */
-/* ================================================================== */
-function _autoDataHora(iso){ try{ return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
-async function _autoArquiva(f, cat){ try{ if(!IDB && !_online()) return ''; const m=await subirUm(f,'empresa','empresa',cat||'Documento'); await reloadFiles(); return (m&&m.id)||''; }catch(e){ return ''; } }
-function _autoPend(tipo, resumo, dados, arquivo, anexoId){ DB.automacaoPend.unshift({id:uid('pd'),data:new Date().toISOString(),tipo:tipo,resumo:resumo,dados:dados||{},arquivo:arquivo||'',anexoId:anexoId||''}); }
-
-async function _autoUmArquivo(f){
-  const nome=f.name||'arquivo', ext=(nome.split('.').pop()||'').toLowerCase();
-  /* ---- XML: CT-e (aplica) ou NF-e (arquiva + pendência) ---- */
-  if(ext==='xml'){
-    const txt=await f.text();
-    const c=parseCteXml(txt, nome);
-    if(c){
-      if(DB.ctes.some(x=>x.id===c.id)) return {tipo:'CT-e',resultado:'CT-e Nº '+esc(c.numero)+' já estava no sistema',status:'dup'};
-      DB.ctes.push(c); return {tipo:'CT-e',resultado:'CT-e Nº '+esc(c.numero)+' → '+esc(c.destino||c.cliente||'')+' importado',status:'ok',aplicado:1};
-    }
-    const an=await _autoArquiva(f,'Nota Fiscal'); _autoPend('doc','Nota fiscal (XML) recebida — conferir',{},nome,an);
-    return {tipo:'NF-e',resultado:'XML arquivado, aguardando conferência',status:'pend',pendencia:1};
-  }
-  /* ---- Planilha: validades/vencimentos (aplica o que tem vínculo) ---- */
-  if(ext==='xlsx'||ext==='csv'||ext==='txt'){
-    if(!window.PEXImport) return {tipo:'Planilha',resultado:'Leitor de planilha indisponível neste navegador',status:'err'};
-    const {sheets}=await PEXImport.lerArquivo(f); let itens=[];
-    sheets.forEach(sh=>PEXImport.detectarVencimentos(sh.grid).forEach(it=>itens.push(it)));
-    if(!itens.length) return {tipo:'Planilha',resultado:'Nenhuma tabela de validade reconhecida',status:'pend'};
-    let ap=0, pe=0;
-    itens.forEach(it=>{ const validade=_impISO(it.validade); const refId=_impRef(it.vinculo,it.chave);
-      if(validade && (it.vinculo==='empresa'||refId)){
-        const ex=DB.vencimentos.find(v=>v.entidade===it.vinculo && String(v.refId)===String(refId) && v.tipo===it.tipo);
-        if(ex){ if(ex.validade!==validade){ ex.validade=validade; if(_impISO(it.emissao)) ex.emissao=_impISO(it.emissao); ap++; } }
-        else { DB.vencimentos.push({id:uid('vc'),tipo:it.tipo,entidade:it.vinculo,refId:refId,emissao:_impISO(it.emissao),validade:validade,numero:'',orgao:'',obs:'automação',anexoId:''}); ap++; }
-      } else { _autoPend('venc','Vencimento '+it.tipo+' de "'+(it.chave||'?')+'" — não achei o cadastro',{},nome,''); pe++; }
-    });
-    return {tipo:'Planilha',resultado:ap+' validade(s) atualizada(s)'+(pe?' · '+pe+' sem vínculo':''),status:ap?'ok':'pend',aplicado:ap,pendencia:pe?1:0};
-  }
-  /* ---- PDF: texto → interpreta; sem texto (digitalizado) → OCR → interpreta ---- */
-  if(ext==='pdf'){
-    let txt=await pexLerPdfTexto(f); let ocr=false;
-    if(!txt||txt.length<40){ const cv=await pexRenderPdfImg(f); if(cv){ const o=await pexOCR(cv); if(o&&o.length>(txt||'').length){ txt=o; ocr=true; } } }
-    const T=(txt||'').toUpperCase(); const ocrTag=ocr?' (via OCR)':'';
-    const dd=extrairAbastecimento(txt||'', nome);
-    const isAbastec=/DIESEL|ARLA|GASOLINA|ETANOL|POSTO|COMBUST/i.test(T) || dd.litros!=null;
-    const isPedagio=/SEM\s*PARAR|CONECTCAR|CONECT\s*CAR|TAGGY|VELOE|MOVE\s*MAIS|PED[AÁ]GIO/i.test(T);
-    const an=await _autoArquiva(f, isAbastec?'Abastecimento':(isPedagio?'Pedágio':guessCat(nome)));
-    if(isAbastec){ _autoPend('abastec','Abastecimento'+(dd.posto?' · '+dd.posto:'')+(dd.placa?' · '+dd.placa:'')+(dd.valor!=null?' · R$ '+dd.valor:''), dd, nome, an);
-      return {tipo:'Abastecimento',resultado:'Li '+(dd.litros!=null?dd.litros+' L ':'')+(dd.valor!=null?'· R$ '+dd.valor+' ':'')+ocrTag+' — revisar e confirmar',status:'pend',pendencia:1}; }
-    if(isPedagio){ _autoPend('doc','Relatório de pedágio — conferir',{},nome,an);
-      return {tipo:'Pedágio',resultado:'Relatório arquivado, aguardando conferência',status:'pend',pendencia:1}; }
-    _autoPend('doc','Documento — '+guessCat(nome),{},nome,an);
-    return {tipo:guessCat(nome),resultado:'Documento lido e arquivado',status:'pend',pendencia:1};
-  }
-  /* ---- Imagem: OCR direto ---- */
-  if(/^(png|jpe?g|webp|gif|bmp|heic)$/.test(ext)){
-    const otxt=await pexOCR(f); const an=await _autoArquiva(f,'Imagem');
-    if(otxt && otxt.replace(/\s/g,'').length>15){
-      const dd=extrairAbastecimento(otxt, nome);
-      const isAb=/DIESEL|ARLA|GASOLINA|POSTO|COMBUST/i.test(otxt) || dd.litros!=null;
-      if(isAb){ _autoPend('abastec','Abastecimento (foto)'+(dd.posto?' · '+dd.posto:'')+(dd.valor!=null?' · R$ '+dd.valor:''), dd, nome, an);
-        return {tipo:'Abastecimento',resultado:'Foto lida por OCR — revisar',status:'pend',pendencia:1}; }
-      _autoPend('doc','Imagem lida por OCR — conferir',{},nome,an);
-      return {tipo:'Imagem',resultado:'Texto extraído por OCR — revisar',status:'pend',pendencia:1};
-    }
-    _autoPend('img','Imagem recebida — conferência manual',{},nome,an);
-    return {tipo:'Imagem',resultado:(typeof Tesseract==='undefined'?'Arquivada (OCR indisponível offline)':'Arquivada (não consegui ler o texto)'),status:'pend',pendencia:1};
-  }
-  const an=await _autoArquiva(f,'Documento'); _autoPend('doc','Arquivo recebido — conferir',{},nome,an);
-  return {tipo:'Arquivo',resultado:'Arquivado',status:'pend',pendencia:1};
-}
-
-async function automacaoProcessar(files){
-  files=[].slice.call(files||[]); if(!files.length) return;
-  toast(files.length+' arquivo(s) — o sistema está lendo…');
-  let aplicados=0, pend=0;
-  for(const f of files){
-    try{ const r=await _autoUmArquivo(f); aplicados+=(r.aplicado||0); pend+=(r.pendencia||0);
-      DB.automacaoLog.unshift({id:uid('lg'),data:new Date().toISOString(),arquivo:f.name,tipo:r.tipo||'—',resultado:r.resultado||'',status:r.status||'ok'});
-    }catch(e){ DB.automacaoLog.unshift({id:uid('lg'),data:new Date().toISOString(),arquivo:f.name,tipo:'—',resultado:'Não consegui ler: '+(e.message||e),status:'err'}); }
-  }
-  if(DB.automacaoLog.length>300) DB.automacaoLog=DB.automacaoLog.slice(0,300);
-  saveDB(); if((location.hash||'').indexOf('automacao')<0) location.hash='automacao'; router();
-  toast('Pronto: '+aplicados+' aplicado(s) automaticamente'+(pend?', '+pend+' para revisar':'')+'.');
-}
-function automacaoDrop(ev){ ev.preventDefault(); const dz=document.getElementById('autoDrop'); if(dz)dz.classList.remove('drag'); automacaoProcessar((ev.dataTransfer||{}).files); }
-function automacaoPick(input){ const fs=input.files; automacaoProcessar(fs); input.value=''; }
-function automacaoRevisar(id){
-  const p=DB.automacaoPend.find(x=>x.id===id); if(!p) return;
-  if(p.tipo==='abastec'){ const dd=p.dados||{}; const v=dd.placa?veiculoByPlaca(dd.placa):null;
-    const pre={data:dd.data||new Date().toISOString().slice(0,10),litros:(dd.litros!=null?dd.litros:''),valor:(dd.valor!=null?dd.valor:''),posto:dd.posto||''};
-    if(v){ pre.veiculoId=v.id; if(isReb(v)) pre.horas=(dd.km!=null?dd.km:''); else pre.km=(dd.km!=null?dd.km:''); }
-    modalAbastec(null, pre); return; }
-  if(p.tipo==='venc'){ location.hash='vencimentos'; return; }
-  if(p.anexoId){ verArquivo(p.anexoId); return; }
-  location.hash='documentos';
-}
-function automacaoConcluir(id){ DB.automacaoPend=DB.automacaoPend.filter(x=>x.id!==id); saveDB(); toast('Pendência concluída.'); router(); }
-function automacaoLimparLog(){ if(!confirm('Limpar o histórico de automação?'))return; DB.automacaoLog=[]; saveDB(); toast('Histórico limpo.'); router(); }
-function modalRegra(id){
-  const r=id?DB.automacaoRegras.find(x=>x.id===id):{nome:'',tipo:'Posto',email:'',categoria:''};
-  openModal(`<div class="m-h">${svg('upload')}<h3>${id?'Editar remetente':'Novo remetente / regra'}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <p class="muted" style="margin-bottom:12px;line-height:1.5">Cadastre de quem vêm os documentos (posto, operadora de pedágio, cliente). Isso ajuda o sistema a reconhecer e organizar — e prepara o envio automático por e-mail no futuro.</p>
-      ${fld('Nome (ex.: Posto Trevo, Sem Parar)','r_nome',r.nome)}
-      <div class="field-row">
-        <div class="field"><label>Tipo</label><select id="r_tipo">${['Posto','Pedágio','Cliente','Fornecedor','Outro'].map(t=>`<option ${r.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
-        ${fld('Categoria do documento','r_cat',r.categoria)}
-      </div>
-      ${fld('E-mail de origem (opcional)','r_email',r.email)}
-    </div>
-    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirRegra('${id}')">${svg('trash')} Excluir</button>`:''}
-      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarRegra('${id||''}')">Salvar</button></div>`);
-}
-function salvarRegra(id){ const d={nome:val('r_nome'),tipo:val('r_tipo'),email:val('r_email'),categoria:val('r_cat')};
-  if(!d.nome){ toast('Informe o nome.','err'); return; }
-  if(id)Object.assign(DB.automacaoRegras.find(x=>x.id===id),d); else{ d.id=uid('rg'); DB.automacaoRegras.push(d); }
-  saveDB(); closeModal(); toast('Remetente salvo.'); router(); }
-function excluirRegra(id){ DB.automacaoRegras=DB.automacaoRegras.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Removido.'); router(); }
-
-function viewAutomacao(){
-  const log=DB.automacaoLog||[], pend=DB.automacaoPend||[], regras=DB.automacaoRegras||[];
-  const aplicados=log.filter(l=>l.status==='ok').length;
-  const stTag=(s)=>({ok:'st ok',dup:'st neutro',pend:'st warn',err:'st vencido'}[s]||'st neutro');
-  const stTxt=(s)=>({ok:'Aplicado',dup:'Já existia',pend:'Revisar',err:'Erro'}[s]||s);
-  const pIco=(t)=>({abastec:'fuel',venc:'bell',doc:'doc',img:'doc',nfe:'doc'}[t]||'doc');
-  return `
-  <div class="banner">${svg('upload')}<div><b>Caixa de entrada inteligente</b><span>Solte aqui qualquer documento — XML de CT-e, planilha de validades, PDF de abastecimento/pedágio, notas, fotos. O sistema lê, arquiva, aplica o que for seguro sozinho e separa o resto para você revisar. Nada é digitado à toa.</span></div></div>
-
-  <div id="autoDrop" class="autodrop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="automacaoDrop(event)" onclick="document.getElementById('autoFile').click()">
-    ${svg('upload')}
-    <div style="font-size:16px;font-weight:700;margin-top:10px">Arraste os documentos para cá</div>
-    <div class="muted" style="font-size:12.5px;margin-top:4px">ou clique para escolher · aceita vários de uma vez (PDF, XML, Excel, CSV, imagens)</div>
-    <input type="file" id="autoFile" multiple accept=".pdf,.xml,.xlsx,.csv,.txt,image/*" style="display:none" onchange="automacaoPick(this)">
-  </div>
-
-  <div class="grid kpis" style="margin-top:18px">
-    ${kpi('check','i-green', aplicados, 'Aplicados automaticamente', 'Sem digitação', undefined)}
-    ${kpi('bell', pend.length?'i-amber':'i-blue', pend.length, 'Aguardando revisão', pend.length?'Requer sua conferência':'Tudo em dia', undefined)}
-    ${kpi('doc','i-blue', log.length, 'Documentos processados', 'Histórico completo', undefined)}
-    ${kpi('user','i-blue', regras.length, 'Remetentes cadastrados', 'Postos, pedágios, clientes', undefined)}
-  </div>
-
-  <div class="grid two-col" style="margin-top:4px">
-    <div class="card">
-      <div class="card-h">${svg('bell')}<h3>Pendências — revisar</h3>
-        <div class="r"><span class="muted" style="font-size:12px">${pend.length} item(ns)</span></div></div>
-      <div class="card-b p0"><div class="tbl-wrap">
-        <table class="tbl"><thead><tr><th>Documento</th><th>Recebido</th><th class="no-print" style="text-align:right"></th></tr></thead>
-        <tbody>${pend.length? pend.map(p=>`<tr>
-          <td><div style="display:flex;align-items:center;gap:10px"><span class="st neutro" style="padding:6px">${svg(pIco(p.tipo))}</span><div><b>${esc(p.resumo)}</b><div class="muted" style="font-size:11.5px">${esc(p.arquivo||'')}</div></div></div></td>
-          <td class="mono muted" style="white-space:nowrap">${_autoDataHora(p.data)}</td>
-          <td class="no-print" style="text-align:right;white-space:nowrap">
-            <button class="btn sm primary" onclick="automacaoRevisar('${p.id}')">Revisar</button>
-            <button class="btn sm" onclick="automacaoConcluir('${p.id}')" title="Marcar como resolvido">✓</button></td>
-        </tr>`).join('') : `<tr><td colspan="3">${emptyState('Sem pendências. Tudo que chegou foi organizado.')}</td></tr>`}</tbody></table>
-      </div></div>
-    </div>
-
-    <div class="card">
-      <div class="card-h">${svg('user')}<h3>Remetentes & regras</h3>
-        <div class="r"><button class="btn sm primary" onclick="modalRegra()">${svg('plus')} Novo</button></div></div>
-      <div class="card-b p0"><div class="tbl-wrap">
-        <table class="tbl"><thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th class="no-print"></th></tr></thead>
-        <tbody>${regras.length? regras.map(r=>`<tr class="clickable" onclick="modalRegra('${r.id}')">
-          <td><b>${esc(r.nome)}</b>${r.email?`<div class="muted" style="font-size:11.5px">${esc(r.email)}</div>`:''}</td>
-          <td><span class="tag">${esc(r.tipo)}</span></td><td class="muted">${esc(r.categoria||'—')}</td>
-          <td class="no-print" style="text-align:right">${svg('edit')}</td></tr>`).join('') : `<tr><td colspan="4">${emptyState('Cadastre os postos, operadoras de pedágio e clientes de onde vêm os documentos.')}</td></tr>`}</tbody></table>
-      </div></div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:18px">
-    <div class="card-h">${svg('doc')}<h3>Histórico de automação</h3>
-      <div class="r">${log.length?`<button class="btn sm" onclick="automacaoLimparLog()">${svg('trash')} Limpar</button>`:''}</div></div>
-    <div class="card-b p0"><div class="tbl-wrap">
-      <table class="tbl"><thead><tr><th>Quando</th><th>Arquivo</th><th>Tipo</th><th>Resultado</th><th>Situação</th></tr></thead>
-      <tbody>${log.length? log.slice(0,40).map(l=>`<tr>
-        <td class="mono muted" style="white-space:nowrap">${_autoDataHora(l.data)}</td>
-        <td>${esc(l.arquivo||'')}</td><td>${esc(l.tipo||'')}</td><td class="muted">${esc(l.resultado||'')}</td>
-        <td><span class="${stTag(l.status)}">${stTxt(l.status)}</span></td></tr>`).join('') : `<tr><td colspan="5">${emptyState('Nada processado ainda. Solte um documento na caixa acima.')}</td></tr>`}</tbody></table>
-    </div></div>
-  </div>`;
-}
-
-/* ================================================================== */
-/*  PAINEL DE COMANDO 2.0 — tela de abertura dark premium (dados reais) */
-/* ================================================================== */
-function _pcNum(x){ if(x==null||x==='')return 0; if(typeof x==='number')return x;
-  return (typeof parseBRL==='function'?parseBRL(x):parseFloat(String(x).replace(/[^\d.-]/g,'')))||0; }
-function _pcIco(n){ const I={
-  dash:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
-  live:'<circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="2.5"/>',
-  route:'<path d="M4 17h16M6 17V7l4-3 4 3v10M14 10h4v7"/>',
-  truck:'<path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
-  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
-  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>',
-  doc:'<path d="M4 4h9l3 3h4v13H4z"/><path d="M8 13h8M8 16h5"/>',
-  money:'<path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/>',
-  report:'<path d="M9 3h6v4H9zM6 7h12v14H6z"/><path d="M9 12h6M9 16h4"/>',
-  brain:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.9 7.9 0 0 0-1.7-1L14.9 3H9.1l-.4 2.6a7.9 7.9 0 0 0-1.7 1l-2.4-1-2 3.4L2.6 11a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.9 7.9 0 0 0 1.7 1l.4 2.6h5.8l.4-2.6a7.9 7.9 0 0 0 1.7-1l2.4 1 2-3.4z"/>',
-  shield:'<path d="M12 3 3 7v6c0 5 4 8 9 10 5-2 9-5 9-10V7z"/>',
-  cal:'<path d="M8 3v4M16 3v4M4 8h16v12H4z"/>',
-  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
-  gauge:'<circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/>',
-  map:'<path d="M9 4 3 6v15l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v15M15 6v15"/>',
-  clients:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/>',
-  wallet:'<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M16 13h.01M3 7l12-3v3"/>',
-  toll:'<rect x="3" y="4" width="4" height="17"/><path d="M7 7l13 3v3L7 13"/>',
-  chart:'<path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="10" width="3" height="7"/>',
-  fuel:'<path d="M6 3h7v18H5V5a2 2 0 0 1 1-2z"/><path d="M13 9h3l2 2v6a2 2 0 0 1-4 0v-3h-1"/>' };
-  return '<svg viewBox="0 0 24 24">'+(I[n]||'')+'</svg>'; }
-
-/* ================================================================== */
-/*  COMANDO 2.1 — abertura MAP-FIRST (mapa como elemento principal)     */
-/* ================================================================== */
-const PC_FLEET={
-  'IRU-4G62':{modelo:'Volvo FH · Cavalo',mot:'Marcelo Ronsoni',cli:'Muffato',ori:'Londrina/PR',dest:'Maringá/PR',carga:'Congelados',st:'Em rota',stc:'go'},
-  'QIO-9J07':{modelo:'Mercedes Actros · Cavalo',mot:'Jonathan',cli:'TSP',ori:'Londrina/PR',dest:'Apucarana/PR',carga:'Resfriados',st:'Em rota',stc:'go'},
-  'BDP-1B55':{modelo:'Scania R450 · Cavalo',mot:'Reinaldo',cli:'Atacadão',ori:'Londrina/PR',dest:'Cambé/PR',carga:'Congelados BRF',st:'Em rota',stc:'go'},
-  'IPD-9036':{modelo:'Cavalo mecânico',mot:'Jonathan',cli:'—',ori:'Londrina/PR',dest:'—',carga:'Sem carga',st:'No pátio',stc:'park'},
-  'AMB-2928':{modelo:'Carreta frigorífica',mot:'—',cli:'—',ori:'Londrina/PR',dest:'—',carga:'—',st:'Manutenção',stc:'fix'}
-};
-function pcFecharVeic(){ const p=document.getElementById('pcVeicPanel'); if(p) p.classList.remove('show'); }
-function pcAbrirVeic(placa){ const f=PC_FLEET[placa]; const p=document.getElementById('pcVeicPanel'); if(!f||!p) return;
-  const ini=(f.mot&&f.mot!=='—')?f.mot.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase():'—';
-  p.innerHTML=`<div class="pv-top"><button class="pv-x" onclick="pcFecharVeic()">×</button>
-      <div class="pv-plate">${esc(placa)}</div><div class="pv-model">${esc(f.modelo)}</div>
-      <div class="pv-st ${f.stc}"><i></i>${esc(f.st)}</div></div>
-    <div class="pv-body">
-      <div class="pv-drv"><div class="av">${esc(ini)}</div><div><b>${esc(f.mot)}</b><span>Motorista</span></div></div>
-      <div class="pv-route"><div><div class="k">Origem</div><div class="c">${esc(f.ori)}</div></div>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        <div style="text-align:right"><div class="k">Destino</div><div class="c">${esc(f.dest)}</div></div></div>
-      <div class="pv-grid">
-        <div><div class="k">Cliente</div><div class="v">${esc(f.cli)}</div></div>
-        <div><div class="k">Carga</div><div class="v">${esc(f.carga)}</div></div>
-        <div><div class="k">Velocidade</div><div class="v w">aguardando rastreador</div></div>
-        <div><div class="k">ETA</div><div class="v w">com integração GPS</div></div>
-      </div>
-      <a class="pv-cta" href="#viagens" onclick="pcFecharVeic()">Ver viagem completa →</a>
-    </div>`;
-  p.classList.add('show');
-}
-function viewComando(){
-  const veic=DB.veiculos.filter(v=>v.status!=='Arquivado');
-  const cav=veic.filter(v=>v.tipo==='Cavalo').length, reb=veic.filter(v=>isReb(v)).length;
-  const ords=todosVencimentos().map(v=>situacao(v.validade).ord);
-  const venc=ords.filter(o=>o===0).length, crit=ords.filter(o=>o===1).length;
-  const viagens=DB.viagens.length;
-  const cteSum=DB.ctes.reduce((s,c)=>s+_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest),0);
-  const nome=(typeof nomeUsuario==='function'&&nomeUsuario())||'Uilian';
-  const H=new Date().getHours(), G=H<12?'Bom dia':(H<18?'Boa tarde':'Boa noite');
-  const dd=new Date(), dstamp=DIAS[dd.getDay()]+' · '+String(dd.getDate()).padStart(2,'0')+' '+MESES[dd.getMonth()]+' '+dd.getFullYear();
-  const ic=(n)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">'+({
-    map:'<path d="M9 4 3 6v15l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v15M15 6v15"/>',
-    route:'<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h4"/>',
-    users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><path d="M16 6a3 3 0 0 1 0 6"/>',
-    truck:'<path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
-    clients:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/>',
-    wallet:'<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M16 13h.01M3 7l12-3v3"/>',
-    report:'<path d="M8 3h6l4 4v14H6V5a2 2 0 0 1 2-2z"/><path d="M9 13h6M9 16h4"/>',
-    doc:'<path d="M8 3h6l4 4v14H6V5a2 2 0 0 1 2-2z"/><path d="M14 3v4h4"/>',
-    fuel:'<path d="M6 3h7v18H5V5a2 2 0 0 1 1-2z"/><path d="M13 9h3l2 2v6a2 2 0 0 1-4 0v-3h-1"/>',
-    toll:'<rect x="3" y="4" width="4" height="17"/><path d="M7 7l13 3v3L7 13"/>',
-    chart:'<path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="10" width="3" height="7"/>',
-    brain:'<path d="M12 5a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 4 2 3 3 0 0 0 4-2 3 3 0 0 0-1-5 3 3 0 0 0-3-3z"/><path d="M12 5v13"/>',
-    gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
-    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'
-  }[n]||'')+'</svg>';
-  const nav=(hash,icn,label,on,cls)=>`<a href="#${hash}" class="${on?'on':''} ${cls||''}">${ic(icn)}<span>${label}</span></a>`;
-
-  // MAPA — cidades da região de Londrina
-  const cities=[['Paiçandu',110,300],['Maringá',205,322],['Apucarana',470,402],['Arapongas',560,360],['Rolândia',690,330],['Cambé',820,314],['Londrina',920,300],['Ibiporã',1050,286]];
-  const corridor=cities.map(c=>c[1]+','+c[2]).join(' ');
-  const cityG=cities.map(c=>{ const hub=c[0]==='Londrina';
-    return `<g class="pc-city${hub?' hub':''}"><circle class="cd" cx="${c[1]}" cy="${c[2]}" r="${hub?5:3.2}"/><text class="cl" x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`; }).join('');
-  const routes=[['rcA','M920,300 Q690,362 470,402','QIO-9J07',26],['rcB','M920,300 Q560,342 205,322','IRU-4G62',32],['rcC','M920,300 Q872,306 820,314','BDP-1B55',16]];
-  const routeP=routes.map(r=>`<path id="${r[0]}" class="pc-route" d="${r[1]}"/>`).join('');
-  const vehG=routes.map(r=>`<g class="pc-veh" onclick="pcAbrirVeic('${r[2]}')"><circle class="vh" r="6"/><circle class="vc" r="4"/><animateMotion dur="${r[3]}s" repeatCount="indefinite"><mpath href="#${r[0]}"/></animateMotion></g>`).join('');
-  const parkG=`<g class="pc-veh park" onclick="pcAbrirVeic('IPD-9036')" transform="translate(936,300)"><circle class="vh" r="6"/><circle class="vc" r="4"/></g>
-    <g class="pc-veh fix" onclick="pcAbrirVeic('AMB-2928')" transform="translate(905,314)"><circle class="vh" r="6"/><circle class="vc" r="4"/></g>`;
-
-  return `<div class="pc-app pc-cmd">
-    <aside class="pc-side">
-      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express</div></div></div>
-      <nav class="pc-nav pc-flat">
-        ${nav('dashboard','map','Monitoramento',true)}
-        ${nav('viagens','route','Viagens')}
-        ${nav('motoristas','users','Motoristas')}
-        ${nav('frota','truck','Frota')}
-        ${nav('clientes','clients','Clientes')}
-        ${nav('financeiro','wallet','Financeiro',false,'gold')}
-        ${nav('relatorios','report','Relatórios')}
-        ${nav('documentos','doc','Documentos')}
-        ${nav('abastecimento','fuel','Abastecimentos')}
-        ${nav('pedagios','toll','Pedágios')}
-        ${nav('analytics','chart','Analytics')}
-        <a onclick="iaToggle()">${ic('brain')}<span>IA</span></a>
-        ${nav('config','gear','Configurações')}
-      </nav>
-    </aside>
-
-    <div class="pc-main">
-      <header class="pc-head">
-        <div class="pc-hbrand">PLANETA <b>EXPRESS</b></div>
-        <div class="pc-search">${ic('search')}<input placeholder="Buscar placa, motorista, CT-e…" onkeydown="if(event.key==='Enter')buscaGlobal(this.value)"></div>
-        <div class="pc-user"><div class="av">${esc((nome[0]||'U').toUpperCase())}${esc((nome.split(' ')[1]||' ')[0]||'').toUpperCase()}</div><div><b>${esc(nome)}</b><span>Admin</span></div></div>
-      </header>
-
-      <div class="pc-stage">
-        <svg class="pc-map" viewBox="0 0 1160 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <defs><radialGradient id="pcvig" cx="55%" cy="45%" r="75%"><stop offset="0" stop-color="transparent"/><stop offset="1" stop-color="rgba(5,10,16,.55)"/></radialGradient></defs>
-          <g class="pc-mgrid">${[130,240,350,460].map(y=>`<line x1="0" y1="${y}" x2="1160" y2="${y}"/>`).join('')}${[190,380,570,760,950].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="560"/>`).join('')}</g>
-          <polyline class="pc-corridor" points="${corridor}"/>
-          ${routeP}${cityG}${vehG}${parkG}
-          <rect x="0" y="0" width="1160" height="560" fill="url(#pcvig)" pointer-events="none"/>
-        </svg>
-
-        <div class="pc-greet"><b>${G}, ${esc(nome)}</b><span>${esc(dstamp)}</span></div>
-
-        <div class="pc-dock2">
-          <div class="pc-copilot">
-            <div class="h"><span class="orb">${ic('brain')}</span><div><b>PLANETA AI</b><span class="on">em serviço</span></div></div>
-            <p>${G}, <b>${esc(nome)}</b>. <b>${viagens}</b> viagens no período e faturamento de <b class="gold">${moneyK(cteSum)}</b>. ${(venc)?`Há <b>${venc} documento(s) vencido(s)</b> — deseja abrir?`:'Nenhuma inconsistência encontrada.'}</p>
-            <a class="pc-aicta" href="#vencimentos">Abrir alertas →</a>
-          </div>
-        </div>
-
-        <div class="pc-kstrip">
-          <a class="pc-kt" href="#frota"><span class="kv tnum">${cav+reb}</span><span class="kl">Frota</span></a>
-          <a class="pc-kt" href="#viagens"><span class="kv tnum">${viagens}</span><span class="kl">Viagens</span></a>
-          <a class="pc-kt gold" href="#financeiro"><span class="kv tnum">${moneyK(cteSum)}</span><span class="kl">Faturamento</span></a>
-          <a class="pc-kt alert" href="#vencimentos"><span class="kv tnum">${venc+crit}</span><span class="kl">Alertas</span></a>
-        </div>
-
-        <aside id="pcVeicPanel" class="pc-vpanel2"></aside>
-      </div>
-    </div>
-  </div>`;
-}
-
-/* ---- telas novas do menu plano (dados reais onde possível) ---- */
-function viewClientes(){
-  const map={}; DB.ctes.forEach(c=>{ const k=(c.cliente||'—').trim()||'—'; const m=map[k]||(map[k]={n:0,total:0,ult:''}); m.n++; m.total+=_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest); if((c.data||'')>m.ult)m.ult=c.data; });
-  const rows=Object.keys(map).map(k=>({nome:k,...map[k]})).sort((a,b)=>b.total-a.total);
-  const tot=rows.reduce((s,r)=>s+r.total,0);
-  return `<div class="banner">${svg('briefcase')}<div><b>Clientes</b><span>Consolidado a partir dos CT-e emitidos. ${rows.length} cliente(s) · ${money(tot)} em fretes.</span></div></div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Cliente</th><th>CT-e</th><th>Faturamento</th><th>Último frete</th></tr></thead>
-    <tbody>${rows.length?rows.map(r=>`<tr class="clickable" onclick="location.hash='ctes'"><td><b>${esc(r.nome)}</b></td><td class="mono">${r.n}</td><td class="mono" style="color:var(--gold-2,#e5c07b);font-weight:700">${money(r.total)}</td><td class="mono muted">${fmtD(r.ult)}</td></tr>`).join(''):`<tr><td colspan="4">${emptyState('Nenhum CT-e importado ainda. Use a Automação para importar os XML.')}</td></tr>`}</tbody>
-  </table></div></div></div>`;
-}
-function viewPedagios(){
-  const docs=(DB.automacaoLog||[]).filter(l=>/ped[aá]gio/i.test(l.tipo||''));
-  return `<div class="banner">${svg('route')}<div><b>Pedágios</b><span>Importe os relatórios das operadoras (Sem Parar, ConectCar, Taggy) pela Automação — o sistema lê PDF, Excel e CSV e arquiva.</span></div></div>
-  <div class="toolbar"><div class="spacer"></div><a class="btn primary" href="#automacao">${svg('upload')} Importar na Automação</a></div>
-  <div class="card"><div class="card-h">${svg('doc')}<h3>Relatórios processados</h3></div><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Quando</th><th>Arquivo</th><th>Resultado</th></tr></thead>
-    <tbody>${docs.length?docs.slice(0,40).map(l=>`<tr><td class="mono muted">${_autoDataHora(l.data)}</td><td>${esc(l.arquivo||'')}</td><td class="muted">${esc(l.resultado||'')}</td></tr>`).join(''):`<tr><td colspan="3">${emptyState('Nenhum relatório de pedágio processado ainda.')}</td></tr>`}</tbody>
-  </table></div></div></div>`;
-}
-function viewAnalytics(){
-  const now=hoje(), ml=[]; for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); ml.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lb:MESES[d.getMonth()]}); }
-  const vmes=ml.map(m=>({label:m.lb,value:DB.viagens.filter(v=>(v.data||'').slice(0,7)===m.ym).length}));
-  let corr=0,prev=0; DB.servicos.forEach(s=>{ const v=_pcNum(s.valor); if((s.tipo||'Corretiva')==='Preventiva')prev+=v; else corr+=v; });
-  const cteSum=DB.ctes.reduce((s,c)=>s+_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest),0);
-  return `<div class="banner">${svg('dash')}<div><b>Analytics</b><span>Indicadores da operação — clique para abrir os módulos.</span></div></div>
-  <div class="grid kpis">
-    ${kpi('route','i-blue', DB.viagens.length, 'Viagens (6 meses)', 'Abrir viagens', '#viagens')}
-    ${kpi('money','i-amber', money(cteSum), 'Faturamento CT-e', 'Abrir financeiro', '#financeiro')}
-    ${kpi('wrench','i-orange', money(corr+prev), 'Custo de manutenção', 'Abrir relatório', '#manutencao')}
-    ${kpi('truck','i-blue', DB.veiculos.filter(v=>v.status!=='Arquivado').length, 'Veículos ativos', 'Abrir frota', '#frota')}
-  </div>
-  <div class="grid two-col">
-    <div class="card"><div class="card-h">${svg('route')}<h3>Viagens por mês</h3></div><div class="card-b">${barChart(vmes)}</div></div>
-    <div class="card"><div class="card-h">${svg('wrench')}<h3>Manutenção</h3></div><div class="card-b"><div class="donut-wrap">
-      ${donut([{label:'Corretiva',value:Math.round(corr),color:'#ff9d5c'},{label:'Preventiva',value:Math.round(prev),color:'#4c8dff'}],{center:money(corr+prev),sub:''})}
-      <div class="legend"><div class="li"><span class="dot" style="background:#ff9d5c"></span>Corretiva<b>${money(corr)}</b></div><div class="li"><span class="dot" style="background:#4c8dff"></span>Preventiva<b>${money(prev)}</b></div></div>
-    </div></div></div>
-  </div>`;
-}
-function viewRelatorios(){
-  const mods=[['dashboard','Monitoramento','map'],['viagens','Viagens','route'],['frota','Frota','truck'],['motoristas','Motoristas','user'],['vencimentos','Vencimentos','bell'],['financeiro','Financeiro','money'],['ctes','CT-e','ctedoc'],['abastecimento','Abastecimentos','fuel'],['manutencao','Manutenção','wrench'],['clientes','Clientes','briefcase']];
-  return `<div class="banner">${svg('doc')}<div><b>Relatórios</b><span>Abra qualquer módulo e use o botão <b>Relatório</b> no topo para imprimir ou salvar em PDF. Exportações por tela.</span></div></div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
-    ${mods.map(m=>`<a class="card" href="#${m[0]}" style="padding:18px 20px;display:flex;align-items:center;gap:14px;text-decoration:none">
-      <span class="k-ico i-blue" style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center">${svg(m[2])}</span>
-      <div><b style="font-size:14.5px">${m[1]}</b><div class="muted" style="font-size:12px">Abrir e imprimir / PDF</div></div></a>`).join('')}
-  </div>`;
-}
-
-function viewPainelPro(){
-  const veic=DB.veiculos.filter(v=>v.status!=='Arquivado');
-  const cav=veic.filter(v=>v.tipo==='Cavalo').length, reb=veic.filter(v=>isReb(v)).length;
-  const motAtivos=DB.motoristas.filter(m=>m.status==='Ativo').length;
-  const vs=todosVencimentos().map(v=>({v,s:situacao(v.validade)}));
-  const venc=vs.filter(x=>x.s.ord===0).length, crit=vs.filter(x=>x.s.ord===1).length,
-        aten=vs.filter(x=>x.s.ord===2).length, emdia=vs.filter(x=>x.s.ord===3).length;
-  const prox=vs.filter(x=>x.s.dias!==null).sort((a,b)=>(a.s.ord-b.s.ord)||(a.s.dias-b.s.dias)).slice(0,5);
-  const viagens=DB.viagens.length, concl=DB.viagens.filter(v=>v.status==='Concluída').length,
-        pend=DB.viagens.filter(v=>v.status==='Pendente').length;
-  const pctConcl=viagens?Math.round(concl/viagens*100):0;
-  const now=hoje(); const ml=[];
-  for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); ml.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),lb:MESES[d.getMonth()]}); }
-  const vmes=ml.map(m=>({lb:m.lb,val:DB.viagens.filter(v=>(v.data||'').slice(0,7)===m.ym).length}));
-  const maxv=Math.max(1,...vmes.map(x=>x.val));
-  const cteVals=DB.ctes.map(c=>_pcNum(c.valor!=null&&c.valor!==''?c.valor:c.vTPrest)).filter(n=>n>0);
-  const cteSum=cteVals.reduce((a,b)=>a+b,0), cteN=cteVals.length, ticket=cteN?cteSum/cteN:0;
-  let manutSum=0,corr=0,prev=0; DB.servicos.forEach(s=>{ const v=_pcNum(s.valor); manutSum+=v; if((s.tipo||'Corretiva')==='Preventiva')prev+=v; else corr+=v; });
-  const corrPct=manutSum?Math.round(corr/manutSum*100):0;
-  const nome=(typeof nomeUsuario==='function'&&nomeUsuario())||'Uilian';
-  const H=new Date().getHours(), G=H<12?'Bom dia':(H<18?'Boa tarde':'Boa noite');
-  const dd=new Date(), diaS=DIAS[dd.getDay()], dstamp=diaS+', '+dd.getDate()+' de '+MESES_L[dd.getMonth()]+' de '+dd.getFullYear();
-
-  // chart
-  const cw=560,ch=150,pad=34,top=20,bot=126,n=vmes.length,span=(cw-pad*2)/(n-1);
-  const pts=vmes.map((m,i)=>[Math.round(pad+i*span),Math.round(top+(1-m.val/maxv)*(bot-top))]);
-  const poly=pts.map(p=>p.join(',')).join(' ');
-  const area='M'+pts[0][0]+','+pts[0][1]+' '+pts.slice(1).map(p=>'L'+p[0]+','+p[1]).join(' ')+' L'+pts[n-1][0]+','+bot+' L'+pts[0][0]+','+bot+' Z';
-  const xlab=vmes.map((m,i)=>`<text class="pc-cx" x="${pts[i][0]}" y="${ch+18}" text-anchor="middle">${m.lb}</text>`).join('');
-  const dots=pts.map(p=>`<circle class="pc-cd" cx="${p[0]}" cy="${p[1]}" r="3.4"/>`).join('');
-
-  const badgeCls=(o)=>o<=1?'c':(o===2?'w':'n'), badgeTxt=(o)=>o===0?'Crítico':(o===1?'Crítico':(o===2?'Atenção':'Normal'));
-  const proxRows=prox.length?prox.map(x=>{ const v=x.v;
-    const alvo=v.entidade==='veiculo'?('#frota/'+v.refId):(v.entidade==='motorista'?('#motoristas/'+v.refId):'#vencimentos');
-    const ico=v.entidade==='veiculo'?'truck':'cal';
-    return `<div class="pc-vrow" onclick="location.hash='${alvo}'"><div class="vi">${_pcIco(ico)}</div>
-      <div class="vm"><b>${esc(v.tipo)} — ${esc(nomeEntidade(v))}</b><span>${esc(x.s.label)}</span></div>
-      <span class="pc-badge ${badgeCls(x.s.ord)}">${badgeTxt(x.s.ord)}</span></div>`;
-  }).join(''):'<div class="pc-vrow"><div class="vm"><b>Tudo em dia</b><span>Nenhum vencimento próximo</span></div></div>';
-
-  const navItem=(hash,ico,label,on,bdg,cls)=>`<a href="#${hash}" class="${on?'on':''} ${cls||''}">${_pcIco(ico)}<span>${label}</span>${bdg||''}</a>`;
-
-  return `<div class="pc-app">
-    <aside class="pc-side">
-      <div class="pc-brand"><div class="mk">PE</div><div><div class="n">PLANETA</div><div class="s">Express</div></div></div>
-      <nav class="pc-nav pc-flat">
-        ${navItem('dashboard','map','Monitoramento',true)}
-        ${navItem('viagens','route','Viagens')}
-        ${navItem('motoristas','user','Motoristas')}
-        ${navItem('frota','truck','Frota')}
-        ${navItem('clientes','clients','Clientes')}
-        ${navItem('financeiro','wallet','Financeiro',false,'','gold')}
-        ${navItem('vencimentos','bell','Vencimentos',false, (venc+crit)?`<span class="bdg pc-bdg-num">${venc+crit}</span>`:'')}
-        ${navItem('relatorios','report','Relatórios')}
-        ${navItem('documentos','doc','Documentos')}
-        ${navItem('abastecimento','fuel','Abastecimentos')}
-        ${navItem('pedagios','toll','Pedágios')}
-        ${navItem('analytics','chart','Analytics')}
-        <a onclick="iaToggle()">${_pcIco('brain')}<span>IA</span></a>
-        ${navItem('config','gear','Configurações')}
-      </nav>
-      <div class="pc-promo"><b>Planeta Express Transportes</b><span>Transporte frigorificado · Londrina/PR</span></div>
-    </aside>
-
-    <div class="pc-main">
-      <header class="pc-head">
-        <div class="ttl"><b>Painel de Comando</b><span>Visão inteligente da sua operação</span></div>
-        <div class="pc-search">${_pcIco('search')}<input placeholder="Buscar placa, motorista, CT-e…" onkeydown="if(event.key==='Enter')buscaGlobal(this.value)"><span class="kbd">⌘K</span></div>
-        <div class="pc-user"><div class="av">${esc((nome[0]||'U').toUpperCase())}${esc((nome.split(' ')[1]||' ')[0]||'').toUpperCase()}</div><div><b>${esc(nome)}</b><span>Admin</span></div></div>
-      </header>
-
-      <div class="pc-content">
-        <div class="pc-brief">
-          <div class="orb">${_pcIco('brain')}</div>
-          <div class="bx"><b>${G}, <em>${esc(nome)}</em>.</b>
-            <p>Operação com <strong>${viagens} viagens</strong> no período (${pctConcl}% concluídas). ${(venc)?`<strong>${venc} documento(s) vencido(s)</strong> exigem ação.`:'Documentação em dia.'} ${corrPct>=60?`Manutenção corretiva pesa <strong>${corrPct}%</strong> — vale priorizar preventiva.`:''}</p></div>
-          <div class="date">${esc(dstamp)}</div>
-        </div>
-
-        <div class="pc-kpis">
-          <div class="pc-kpi"><div class="top"><span class="lab">Frota ativa</span><span class="ic pc-ic-blue">${_pcIco('truck')}</span></div>
-            <div class="val tnum">${cav+reb}</div><div class="sub">${cav} cavalos · ${reb} carretas</div></div>
-          <div class="pc-kpi"><div class="top"><span class="lab">Motoristas</span><span class="ic pc-ic-green">${_pcIco('user')}</span></div>
-            <div class="val tnum">${motAtivos} <small>ativos</small></div><div class="sub">${DB.motoristas.length} cadastrados</div></div>
-          <div class="pc-kpi"><div class="top"><span class="lab">Vencimentos críticos</span><span class="ic pc-ic-crit">${_pcIco('shield')}</span></div>
-            <div class="val tnum">${venc+crit}</div><div class="sub">${venc} vencidos · ${crit} vencendo</div></div>
-          <div class="pc-kpi"><div class="top"><span class="lab">Em atenção</span><span class="ic pc-ic-warn">${_pcIco('bell')}</span></div>
-            <div class="val tnum">${aten}</div><div class="sub">${emdia} documentos em dia</div></div>
-        </div>
-
-        <div class="pc-row3">
-          <div class="pc-card pc-perf">
-            <div class="ch"><h3>Performance da operação</h3><div class="r"><span class="pc-pill">Últimos 6 meses</span></div></div>
-            <div class="cb">
-              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
-                <div><div class="big tnum">${viagens} <small>viagens</small></div><div class="cap">Concluídas e em andamento</div></div>
-                <span class="pc-delta">▲ ${concl} concluídas</span>
-              </div>
-              <svg viewBox="0 0 560 180" preserveAspectRatio="none" style="width:100%;height:150px;margin-top:8px">
-                <defs><linearGradient id="pcar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(76,141,255,.28)"/><stop offset="1" stop-color="rgba(76,141,255,0)"/></linearGradient></defs>
-                <path d="${area}" fill="url(#pcar)"/>
-                <polyline class="pc-cl" points="${poly}"/>${dots}${xlab}
-              </svg>
-            </div>
-          </div>
-
-          <div class="pc-card">
-            <div class="ch"><h3>Atividade</h3></div>
-            <div class="cb"><div class="pc-drow">
-              <div class="pc-donut" style="background:conic-gradient(var(--acc) 0 ${pctConcl}%,rgba(140,172,212,.14) ${pctConcl}% 100%)"><div class="mid"><b class="tnum">${pctConcl}%</b><span>concluídas</span></div></div>
-              <div class="pc-leg">
-                <div class="li"><span class="d" style="background:var(--acc)"></span>Concluídas<b class="tnum">${concl}</b></div>
-                <div class="li"><span class="d" style="background:var(--warn)"></span>Pendentes<b class="tnum">${pend}</b></div>
-                <div class="li"><span class="d" style="background:var(--pos)"></span>CT-e emitidos<b class="tnum">${cteN}</b></div>
-              </div>
-            </div></div>
-          </div>
-
-          <div class="pc-card">
-            <div class="ch"><h3>Próximos vencimentos</h3><div class="r"><a class="pc-link" href="#vencimentos">Ver todos</a></div></div>
-            <div class="cb">${proxRows}</div>
-          </div>
-        </div>
-
-        <div class="pc-row2">
-          <div class="pc-card">
-            <div class="ch"><h3>Visão geral da frota</h3><div class="r"><a class="pc-link" href="#frota">Abrir frota</a></div></div>
-            <div class="cb"><div class="pc-fleet">
-              <div class="pc-donut" style="background:conic-gradient(var(--acc) 0 ${cav+reb?Math.round(cav/(cav+reb)*100):0}%,#8fbaff ${cav+reb?Math.round(cav/(cav+reb)*100):0}% 100%)"><div class="mid"><b class="tnum">${cav+reb}</b><span>veículos</span></div></div>
-              <div class="pc-fstats">
-                <div><div class="k">Cavalos</div><div class="v tnum">${cav}</div></div>
-                <div><div class="k">Carretas</div><div class="v tnum">${reb}</div></div>
-                <div><div class="k">Viagens 6m</div><div class="v tnum">${vmes.reduce((s,m)=>s+m.val,0)}</div></div>
-                <div><div class="k">Serviços</div><div class="v tnum">${DB.servicos.length}</div></div>
-              </div>
-            </div></div>
-          </div>
-
-          <div class="pc-card">
-            <div class="ch"><h3>Monitoramento</h3><div class="r"><span class="bdg pc-bdg-live" style="font-family:var(--mono);font-size:9.5px;padding:2px 8px;border-radius:20px">AO VIVO</span></div></div>
-            <div class="pc-mp">
-              <svg viewBox="0 0 620 224" preserveAspectRatio="xMidYMid slice">
-                <g class="pc-mg"><line x1="0" y1="56" x2="620" y2="56"/><line x1="0" y1="112" x2="620" y2="112"/><line x1="0" y1="168" x2="620" y2="168"/><line x1="155" y1="0" x2="155" y2="224"/><line x1="310" y1="0" x2="310" y2="224"/><line x1="465" y1="0" x2="465" y2="224"/></g>
-                <path id="mrm" class="pc-mr" d="M520,104 Q340,124 155,140"/>
-                <path id="mrp" class="pc-mr" d="M520,104 Q300,134 85,152"/>
-                <path id="mrc" class="pc-mr" d="M520,104 Q482,108 445,114"/>
-                <circle class="pc-mn" cx="155" cy="140" r="3.2"/>
-                <circle class="pc-mn" cx="85" cy="152" r="3.2"/>
-                <circle class="pc-mn" cx="445" cy="114" r="3.2"/>
-                <circle class="pc-mn" cx="520" cy="104" r="5.5" style="fill:var(--acc);filter:drop-shadow(0 0 7px var(--acc))"/>
-                <g text-anchor="middle" style="font-family:var(--mono);font-size:9px;letter-spacing:.6px;fill:#9fb1c6">
-                  <text x="155" y="130">MARINGÁ</text><text x="85" y="142">PAIÇANDU</text><text x="445" y="104">CAMBÉ</text>
-                  <text x="520" y="90" style="fill:var(--acc2);font-size:10.5px;letter-spacing:1.5px">BASE</text>
-                </g>
-                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="22s" repeatCount="indefinite"><mpath href="#mrm"/></animateMotion></g>
-                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="28s" repeatCount="indefinite"><mpath href="#mrp"/></animateMotion></g>
-                <g><circle r="3.4" fill="#8fbaff"/><animateMotion dur="15s" repeatCount="indefinite"><mpath href="#mrc"/></animateMotion></g>
-              </svg>
-              <div class="pc-tip" style="left:14px;top:14px"><b>Londrina · BASE</b><span>${cav+reb} veículos monitorados</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="pc-fin">
-          <div class="pc-fcard"><div class="k">Faturamento CT-e</div><div class="v tnum">${money(cteSum)}</div><div class="m"><span class="up">${cteN} CT-e</span> emitidos</div></div>
-          <div class="pc-fcard"><div class="k">Ticket médio</div><div class="v tnum">${money(ticket)}</div><div class="m">por conhecimento</div></div>
-          <div class="pc-fcard"><div class="k">Manutenção</div><div class="v tnum">${money(manutSum)}</div><div class="m">corretiva ${corrPct}% · preventiva ${100-corrPct}%</div></div>
-          <div class="pc-fcard"><div class="k">Contas a pagar/receber</div><div class="v" style="font-size:16px;color:var(--soft)">A configurar</div><div class="m">liga com o Financeiro</div></div>
-        </div>
-
-        <div class="pc-foot">
-          <div class="f"><span class="dotp"></span><span class="k">Sistema</span><b>Operacional</b></div>
-          <div class="f"><span class="k">Dados</span><b>${viagens} viagens · ${vs.length} vencimentos · ${cteN} CT-e</b></div>
-          <div class="sp"></div>
-          <div class="f"><span class="k">Versão</span><b>2.0 · Centro de Comando</b></div>
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
   const venc = vs.filter(x=>x.s.ord===0), crit = vs.filter(x=>x.s.ord===1), aten = vs.filter(x=>x.s.ord===2), emdia=vs.filter(x=>x.s.ord===3);
@@ -2033,26 +1450,6 @@ async function pexLerPdfTexto(file){
     let out=''; streams.forEach(c=>{ if(/(Tj|TJ)/.test(c) && !/beginbf(char|range)/.test(c)) out += _pexExtractText(c,uni)+'\n'; });
     return out.replace(/\s+/g,String.fromCharCode(32)).trim();
   }catch(e){ return ''; }
-}
-/* Renderiza a 1ª página de um PDF em imagem (canvas) — só quando pdf.js está carregado (online) */
-async function pexRenderPdfImg(file){
-  if(typeof pdfjsLib==='undefined') return null;
-  try{
-    if(pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc)
-      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-    const buf=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-    const page=await pdf.getPage(1);
-    const vp=page.getViewport({scale:2});
-    const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
-    await page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise;
-    return c;
-  }catch(e){ return null; }
-}
-/* OCR (Tesseract) — extrai texto de imagem/canvas. Vazio se offline/indisponível. */
-async function pexOCR(imgOrCanvas){
-  if(typeof Tesseract==='undefined') return '';
-  try{ const r=await Tesseract.recognize(imgOrCanvas,'por'); return (r&&r.data&&r.data.text)||''; }catch(e){ return ''; }
 }
 function _brNum(s){ if(s==null)return null; s=String(s).replace(/[^\d.,]/g,''); if(!s)return null;
   if(/,\d{1,3}$/.test(s)){ s=s.replace(/\./g,'').replace(',','.'); } else if(/\.\d{3}(\.|$)/.test(s)){ s=s.replace(/\./g,''); } else { s=s.replace(',','.'); }
@@ -3247,9 +2644,7 @@ let _nfPendente=null;
 async function abastecNfUpload(ev){
   const f=(ev.target.files||[])[0]; ev.target.value=''; if(!f) return;
   toast('Lendo a nota fiscal…');
-  let txt=await pexLerPdfTexto(f);
-  if(!txt||txt.length<40){ toast('PDF digitalizado — tentando OCR…'); const cv=await pexRenderPdfImg(f); if(cv){ const o=await pexOCR(cv); if(o) txt=o; } }
-  const dd=extrairAbastecimento(txt||'', f.name);
+  const txt=await pexLerPdfTexto(f); const dd=extrairAbastecimento(txt||'', f.name);
   const achou=(dd.litros!=null)+(dd.valor!=null)+(dd.km!=null)+(dd.placa?1:0);
   const v=dd.placa?veiculoByPlaca(dd.placa):null;
   const pre={ _nfNome:f.name, _nfAchou:achou, data:dd.data||new Date().toISOString().slice(0,10),
