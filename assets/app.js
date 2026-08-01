@@ -448,8 +448,11 @@ function pexPaginate(tbl){
   pg.innerHTML=info+'<button class="pex-pgb" data-d="-1" '+(st.page<=1?'disabled':'')+'>‹</button><span class="pex-pgn">'+st.page+' / '+pages+'</span><button class="pex-pgb" data-d="1" '+(st.page>=pages?'disabled':'')+'>›</button>';
   [].forEach.call(pg.querySelectorAll('.pex-pgb'),function(b){ b.onclick=function(){ st.page+=(+b.getAttribute('data-d')); pexPaginate(tbl); }; });
 }
-function _pexKey(v){ var dm=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(dm) return {n:+(dm[3]+dm[2]+dm[1])};
-  var m=v.replace(/[^\d,.-]/g,''); if(m && /\d/.test(m)){ m=m.replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'); var n=parseFloat(m); if(!isNaN(n)) return {n:n}; }
+function _pexKey(v){ v=(v==null?'':v).trim();
+  var dm=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(dm) return {n:+(dm[3]+String(dm[2]).padStart(2,'0')+String(dm[1]).padStart(2,'0'))};
+  // numérico só se NÃO houver letras (ignora prefixo R$ e sufixo de unidade); assim placas viram texto
+  var b=v.replace(/^R\$\s*/i,'').replace(/\s*(km|kms|h|hrs?|kg|lts?|l|un|mm|%)\.?$/i,'').trim();
+  if(b && !/[a-zà-ÿ]/i.test(b) && /\d/.test(b)){ var n=parseFloat(b.replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.')); if(!isNaN(n)) return {n:n}; }
   return {s:v.toLowerCase()}; }
 function pexSort(tbl,ci,th){
   var dir=(th.__dir==='asc')?'desc':'asc';
