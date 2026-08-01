@@ -629,3 +629,17 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 @media print{ #view table.tbl tbody tr{display:table-row!important} .pex-tbar,.pex-skel-ov,#pexBar,.pex-tip{display:none!important} }
 @media(prefers-reduced-motion:reduce){ .pex-route,.pex-veh .vh,.pex-skel-ov{animation:none} }
 @media(max-width:640px){ .pex-map{height:230px} .pex-pg{width:100%;margin-left:0;justify-content:space-between} }
+
+/* --- mapa moderno na tela de Início (hero) --- */
+.pex-map-hero{height:340px}
+.pex-map-hero .pex-route{stroke:url(#pexRg);opacity:.85;stroke-width:2}
+.pex-city.hub circle.pex-hubring{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.5;animation:pexhub 3s ease-out infinite}
+.pex-city.hub circle.pex-hubring.r2{animation-delay:1.5s}
+@keyframes pexhub{0%{r:8;opacity:.55}80%{r:36;opacity:0}100%{opacity:0}}
+.pex-map-hero .pex-city.hub text{fill:var(--accent-2);font-size:12px;letter-spacing:1.5px;font-weight:800}
+.pex-base rect{fill:var(--accent);filter:drop-shadow(0 4px 10px rgba(31,95,220,.35))}
+.pex-base text{fill:#fff;font-family:"Consolas",monospace;font-size:10px;font-weight:700;letter-spacing:2px}
+.pex-map-hero .pex-city circle{fill:#2f6bf0;filter:drop-shadow(0 2px 5px rgba(31,95,220,.35))}
+.pex-map-hero .pex-city text{font-size:10.5px;font-weight:600;fill:#42556f}
+@media(max-width:640px){.pex-map-hero{height:250px}}
+@media(prefers-reduced-motion:reduce){.pex-city.hub circle.pex-hubring{animation:none;opacity:.3}}

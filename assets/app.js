@@ -415,7 +415,7 @@ function router(){
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
 function pexAfterRender(rota){
-  try{ pexTipInit(); pexEnhanceTables(); if(rota==='dashboard') pexDashMapReveal(); }catch(e){}
+  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); }catch(e){}
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -576,26 +576,6 @@ function viewDashboard(){
     ${kpi('gauge','i-amber', manutAlerta.length, 'Trocas a vencer', 'Óleo / filtros · KM/horas', '#km')}
     ${kpi('tire', pneusAlerta?'i-red':'i-blue', pneusAlerta, 'Pneus no limite', 'Sulco ≤ '+DB.config.sulcoMinimo+' mm', '#pneus')}
     ${kpi('check','i-blue', chkMes, 'Check-lists no mês', DB.checklists.length+' no total', '#checklist')}
-  </div>
-
-  <div class="card pex-mapcard" style="margin-top:20px">
-    <div class="card-h">${svg('truck')}<h3>Monitoramento da região</h3><span class="sub">Base: Londrina</span>
-      <div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-    <div class="card-b p0"><div class="pex-map" id="pexDashMap">
-      <svg viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid slice">
-        <g class="pex-mgrid">${[75,150,225].map(y=>`<line x1="0" y1="${y}" x2="1000" y2="${y}"/>`).join('')}${[200,400,600,800].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="300"/>`).join('')}</g>
-        <polyline class="pex-corridor" points="90,150 180,165 400,190 560,170 720,160 820,150 930,140"/>
-        <path id="pdr1" class="pex-route" d="M820,150 Q500,188 180,165"/>
-        <path id="pdr2" class="pex-route" d="M820,150 Q610,182 400,190"/>
-        <path id="pdr3" class="pex-route" d="M820,150 Q770,154 720,160"/>
-        ${[['Paiçandu',90,150],['Maringá',180,165],['Arapongas',400,190],['Rolândia',560,170],['Cambé',720,160],['Ibiporã',930,140]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.2"/><text x="${c[1]}" y="${c[2]-11}" text-anchor="middle">${c[0]}</text></g>`).join('')}
-        <g class="pex-city hub"><circle cx="820" cy="150" r="5.5"/><text x="820" y="135" text-anchor="middle">LONDRINA</text></g>
-        <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pdr1"/></animateMotion></g>
-        <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Arapongas" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="20s" repeatCount="indefinite"><mpath href="#pdr2"/></animateMotion></g>
-        <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="13s" repeatCount="indefinite"><mpath href="#pdr3"/></animateMotion></g>
-      </svg>
-      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
-    </div></div>
   </div>
 
   <div class="grid two-col">
@@ -2449,6 +2429,36 @@ function viewInicio(){
   const fat=nfOrd[0]?totalNota(nfOrd[0]):0;
   const atalho=(ico,t,sub,hash)=>`<a class="ini-atalho" href="#${hash}">${svg(ico)}<div><b>${t}</b><span>${sub}</span></div><i>→</i></a>`;
   return `
+  <div class="card pex-mapcard" style="margin-bottom:20px">
+    <div class="card-h">${svg('truck')}<h3>Monitoramento da região</h3>
+      <div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
+    <div class="card-b p0"><div class="pex-map pex-map-hero" id="pexDashMap">
+      <svg viewBox="0 0 1000 340" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(31,95,220,.25)"/><stop offset="1" stop-color="rgba(31,95,220,0)"/></radialGradient>
+          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f5fdc"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+        </defs>
+        <g class="pex-mgrid">${[85,170,255].map(y=>`<line x1="0" y1="${y}" x2="1000" y2="${y}"/>`).join('')}${[200,400,600,800].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="340"/>`).join('')}</g>
+        <polyline class="pex-corridor" points="150,190 250,205 720,175 835,185"/>
+        <path id="pxr1" class="pex-route" d="M835,185 Q520,215 250,205"/>
+        <path id="pxr2" class="pex-route" d="M835,185 Q500,225 150,190"/>
+        <path id="pxr3" class="pex-route" d="M835,185 Q780,178 720,175"/>
+        <circle cx="835" cy="185" r="46" fill="url(#pexHubg)"/>
+        ${[['PAIÇANDU',150,190],['MARINGÁ',250,205],['CAMBÉ',720,175]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.4"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
+        <g class="pex-city hub">
+          <circle class="pex-hubring" cx="835" cy="185" r="9"/><circle class="pex-hubring r2" cx="835" cy="185" r="9"/>
+          <circle cx="835" cy="185" r="6"/>
+          <text x="835" y="168" text-anchor="middle">LONDRINA</text>
+          <g class="pex-base"><rect x="808" y="196" width="54" height="18" rx="9"/><text x="835" y="209" text-anchor="middle">BASE</text></g>
+        </g>
+        <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+        <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Paiçandu" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
+        <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+      </svg>
+      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
+    </div></div>
+  </div>
+
   <div class="ini-hero">
     <div class="ini-hero-bg"></div>
     <div class="ini-logo"><img src="assets/logo.png" alt="Planeta Express"></div>
