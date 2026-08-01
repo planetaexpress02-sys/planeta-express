@@ -2468,7 +2468,7 @@ function viewInicio(){
   const fat=nfOrd[0]?totalNota(nfOrd[0]):0;
   const viagens=DB.viagens.length;
   const cteSum=(DB.ctes||[]).reduce((s,c)=>{ const v=(c.valor!=null&&c.valor!=='')?c.valor:(c.vTPrest||0);
-    const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'))||0; return s+n; },0);
+    const n=(typeof v==='number')?v:(parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'))||0); return s+n; },0);
   const cteK=Math.round(cteSum/1000);
   const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
