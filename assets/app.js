@@ -2514,8 +2514,6 @@ function viewInicio(){
   <div class="ini-kstrip">
     ${kt('truck','', cavalos+reb, '', '', 'Frota ativa', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
     ${kt('user','', mot, '', '', 'Motoristas', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
-    ${kt('route','', viagens, '', '', 'Viagens', 'viagens', '#5c99ff', '0,22 16,9 32,15 48,18 64,12 80,7')}
-    ${kt('money','gold', cteK, 'R$ ', 'k', 'Faturamento', 'financeiro', '#e0b354', '0,20 16,17 32,12 48,14 64,8 80,5')}
   </div>
   </div>`;
 }
