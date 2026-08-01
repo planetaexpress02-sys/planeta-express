@@ -415,7 +415,7 @@ function router(){
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
 function pexAfterRender(rota){
-  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if(rota==='inicio' && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
+  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -529,6 +529,10 @@ function avatarFoto(m, size){ size=size||56;
 /* ================================================================== */
 /*  9. DASHBOARD                                                       */
 /* ================================================================== */
+/* KPI de vidro com count-up + sparkline (compartilhado Início/Painel) */
+function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
+  return `<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+}
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
   const venc = vs.filter(x=>x.s.ord===0), crit = vs.filter(x=>x.s.ord===1), aten = vs.filter(x=>x.s.ord===2), emdia=vs.filter(x=>x.s.ord===3);
@@ -563,35 +567,24 @@ function viewDashboard(){
   const despMes=ult6.map(m=>({label:m.label, value:Math.round(DB.notas.filter(n=>(n.fim||'').slice(0,7)===m.ym).reduce((s,n)=>s+totalNota(n),0)), color:'url(#bg)', js:"location.hash='notas'"}));
   const vSitData=[{label:'Pendentes',value:DB.viagens.filter(v=>v.status==='Pendente').length,color:'#c99a2e'},{label:'Concluídas',value:DB.viagens.filter(v=>v.status==='Concluída').length,color:'#0f766e'},{label:'Canceladas',value:DB.viagens.filter(v=>v.status==='Cancelada').length,color:'#9f1239'}];
 
-  return `
-  <div class="grid kpis">
-    ${kpi('truck','i-blue', cavalos+reb, 'Veículos ativos', cavalos+' cavalos · '+reb+' reboques', '#frota')}
-    ${kpi('user','i-green', motAtivos, 'Motoristas ativos', DB.motoristas.length+' cadastrados', '#motoristas')}
-    ${kpi('bell','i-orange', crit.length, 'Vencimentos críticos', 'Próximos '+DB.config.alertaCritico+' dias', '#vencimentos/critico')}
-    ${kpi('shield','i-red', venc.length, 'Documentos vencidos', venc.length?'Requer ação imediata':'Tudo regularizado', '#vencimentos/vencido')}
+  return `<div class="ini-cmd ini-dash">
+  <div class="ini-top">
+    <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PAINEL DE CONTROLE</b><span>Visão geral da operação</span></div></div>
+    <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
   </div>
 
-  <div class="grid kpis" style="margin-top:-4px">
-    ${kpi('money','i-green', money(ultNotaTotal), 'Despesas (último período)', ultNota?fmtD(ultNota.inicio)+' a '+fmtD(ultNota.fim):'Sem lançamentos', '#notas')}
-    ${kpi('gauge','i-amber', manutAlerta.length, 'Trocas a vencer', 'Óleo / filtros · KM/horas', '#km')}
-    ${kpi('tire', pneusAlerta?'i-red':'i-blue', pneusAlerta, 'Pneus no limite', 'Sulco ≤ '+DB.config.sulcoMinimo+' mm', '#pneus')}
-    ${kpi('check','i-blue', chkMes, 'Check-lists no mês', DB.checklists.length+' no total', '#checklist')}
+  <div class="ini-kstrip4">
+    ${iniKpiTile('truck','', cavalos+reb, '', '', 'Veículos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+    ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
+    ${iniKpiTile('bell', crit.length?'crit':'', crit.length, '', '', 'Vencimentos críticos', 'vencimentos/critico', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
+    ${iniKpiTile('shield', venc.length?'crit':'', venc.length, '', '', 'Documentos vencidos', 'vencimentos/vencido', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
+    ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
+    ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
+    ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
+    ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
   </div>
 
-  <div class="grid two-col">
-    <div class="card">
-      <div class="card-h">${svg('bell')}<h3>Próximos vencimentos</h3><span class="sub">— 90 dias</span>
-        <div class="r"><a class="btn sm" href="#vencimentos">Ver todos</a></div></div>
-      <div class="card-b p0">
-        ${prox.length? prox.map(x=>{ const v=x.v;
-          const alvo=v.entidade==='veiculo'?('#frota/'+v.refId):(v.entidade==='motorista'?('#motoristas/'+v.refId):'#vencimentos');
-          return `<div class="alert-row" onclick="location.hash='${alvo}'">${alertIco(x.s.cls)}
-            <div class="a-main"><b>${esc(v.tipo)} — ${esc(nomeEntidade(v))}</b><span>${esc(v.obs||fmtDLong(v.validade))}</span></div>
-            <div class="a-when">${stBadge(v.validade)}<div class="s">${fmtD(v.validade)}</div></div></div>`;
-        }).join('') : emptyState('Nenhum vencimento nos próximos 90 dias.')}
-      </div>
-    </div>
-
+  <div class="grid">
     <div class="card">
       <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3></div>
       <div class="card-b">
@@ -695,6 +688,7 @@ function viewDashboard(){
         </div>
       </div></div>
     </div>
+  </div>
   </div>`;
 }
 
