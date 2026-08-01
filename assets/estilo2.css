@@ -862,3 +862,142 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 
 /* ---- Impressão: cabeçalho claro imprime bem; mantém tudo legível ---- */
 @media print{ #view[data-route="manutencao"] .banner{box-shadow:none} }
+
+/* ==========================================================================
+   TEMA CYBER — ABA INÍCIO + PAINEL DE CONTROLE (v6.16)
+   Evolução do "Centro de Comando" escuro para o estilo cyber neon azul do
+   briefing (imersivo/futurista): fundo profundo, cards com borda iluminada e
+   glow, ícones/gráficos com brilho, números com contagem, microanimações.
+   TUDO escopado em .ini-cmd (só Início e Painel de Controle). Sem tocar em
+   dados, rotas, lógica ou organização — só aparência/UX. O resto do sistema
+   (tema claro) fica intacto.
+   Paleta: neon #00E5FF · elétrico #0077FF · fundo #0A1A2F→#001117 ·
+   sucesso #00FF88 · atenção #FFB020 · crítico #FF3B30 · texto #E6EAF2.
+   ========================================================================== */
+.ini-cmd{
+  --cy-neon:#00e5ff; --cy-blue:#0077ff; --cy-txt:#e6eaf2; --cy-txt2:#8fb0cc;
+  --cy-line:rgba(0,229,255,.10); --cy-line-2:rgba(0,229,255,.28);
+  font-family:'Inter','Sora','Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;
+  color:var(--cy-txt);letter-spacing:-.1px;
+  background:
+    radial-gradient(1200px 720px at 16% 20%, rgba(0,119,255,.12), transparent 60%),
+    radial-gradient(900px 640px at 90% 6%, rgba(0,229,255,.09), transparent 58%),
+    radial-gradient(circle at 20% 30%, #0a1a2f 0%, #001117 82%);
+}
+/* fundo escuro do container tb (evita qualquer resquício claro nas bordas) */
+#view[data-route="inicio"],#view[data-route="dashboard"]{background:#001117}
+
+/* ---- Cabeçalho executivo ---- */
+.ini-cmd .ini-brand .mk{box-shadow:0 0 18px rgba(0,229,255,.25),0 6px 18px rgba(0,0,0,.5)}
+.ini-cmd .ini-brand .tx b{color:#eaf6ff;letter-spacing:2.6px}
+.ini-cmd .ini-brand .tx span{color:var(--cy-txt2)}
+.ini-cmd .ini-status .live{color:#8fbfe0}
+.ini-cmd .ini-status .live i{background:#00ff88;box-shadow:0 0 10px #00ff88}
+.ini-cmd .ini-status .clk{color:var(--cy-neon);text-shadow:0 0 12px rgba(0,229,255,.5)}
+
+/* ---- Cards: borda iluminada + glow + hover que intensifica ---- */
+.ini-cmd .card,.ini-cmd .ini-stage{
+  background:rgba(0,26,47,.6);
+  border:1px solid var(--cy-line);border-radius:16px;
+  box-shadow:0 0 20px rgba(0,229,255,.08),0 0 40px rgba(0,119,255,.04),0 18px 40px rgba(0,0,0,.36);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease;
+}
+.ini-cmd .card:hover{
+  border-color:var(--cy-line-2);
+  box-shadow:0 0 26px rgba(0,229,255,.18),0 0 60px rgba(0,119,255,.10),0 22px 52px rgba(0,0,0,.44);
+}
+.ini-cmd .card-h{border-bottom-color:var(--cy-line)}
+.ini-cmd .card .card-h h3{color:#eaf4ff;font-weight:600;letter-spacing:-.2px}
+.ini-cmd .card .card-h .sub{color:#7fa8c8}
+.ini-cmd .card .card-h>svg{color:var(--cy-neon);filter:drop-shadow(0 0 6px rgba(0,229,255,.55))}
+.ini-cmd .ini-stage-h{border-bottom-color:var(--cy-line)}
+.ini-cmd .ini-stage-h b{color:#eaf4ff}
+.ini-cmd .pex-live{color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.55)}
+
+/* ---- Botões (mantêm função; ganham vidro neon) ---- */
+.ini-cmd .btn.sm{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.28);color:#bfe9ff;border-radius:12px}
+.ini-cmd .btn.sm:hover{background:rgba(0,229,255,.18);border-color:var(--cy-neon);color:#fff;box-shadow:0 0 14px rgba(0,229,255,.42)}
+
+/* ---- KPIs em vidro neon (com contagem de números + sparkline) ---- */
+.ini-cmd .ini-kpi{
+  background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.12);border-radius:16px;
+  box-shadow:0 0 18px rgba(0,229,255,.06),0 14px 34px rgba(0,0,0,.34);
+  animation:cyIn .55s cubic-bezier(.16,1,.3,1) both;
+}
+.ini-cmd .ini-kpi::before{background:linear-gradient(180deg,#00e5ff,#0077ff);box-shadow:0 0 12px rgba(0,229,255,.7)}
+.ini-cmd .ini-kpi:hover{border-color:rgba(0,229,255,.42);box-shadow:0 0 26px rgba(0,229,255,.18),0 20px 46px rgba(0,0,0,.46);transform:translateY(-3px)}
+.ini-cmd .ini-kpi .ic{background:rgba(0,229,255,.12);color:var(--cy-neon)}
+.ini-cmd .ini-kpi .ic svg{filter:drop-shadow(0 0 5px rgba(0,229,255,.5))}
+.ini-cmd .ini-kpi .num{color:#eaf6ff;font-weight:700;letter-spacing:-.5px;text-shadow:0 0 16px rgba(0,229,255,.32)}
+.ini-cmd .ini-kpi .l{color:#7fa8c8;letter-spacing:1.4px}
+.ini-cmd .ini-kpi.crit::before{background:linear-gradient(180deg,#ff5a52,#ff3b30);box-shadow:0 0 12px rgba(255,59,48,.7)}
+.ini-cmd .ini-kpi.crit .ic{background:rgba(255,59,48,.15);color:#ff6b6b}
+.ini-cmd .ini-kpi.crit .ic svg{filter:drop-shadow(0 0 5px rgba(255,59,48,.5))}
+@keyframes cyIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
+/* entrada em cascata (stagger) */
+.ini-cmd .ini-kstrip .ini-kpi:nth-child(2),.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(2){animation-delay:.06s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(3){animation-delay:.12s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(4){animation-delay:.18s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(5){animation-delay:.24s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(6){animation-delay:.30s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(7){animation-delay:.36s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(8){animation-delay:.42s}
+
+/* ---- Sparkline que se desenha ao carregar (pathLength=1) + glow ---- */
+.ini-cmd .cy-spark-line{
+  filter:drop-shadow(0 0 3px rgba(0,229,255,.55));
+  stroke-dasharray:1;stroke-dashoffset:1;
+  animation:cySpark 1.15s cubic-bezier(.16,1,.3,1) .2s forwards;
+}
+@keyframes cySpark{to{stroke-dashoffset:0}}
+
+/* ---- Gráficos que "carregam sozinhos": donut aparece, barras crescem ---- */
+.ini-cmd .donut-wrap .donut{filter:drop-shadow(0 0 6px rgba(0,229,255,.22))}
+.ini-cmd .donut-c{fill:#eaf6ff}
+.ini-cmd .donut-s{fill:#7fa8c8}
+.ini-cmd .barchart g rect[rx="4"]{filter:drop-shadow(0 0 4px rgba(0,119,255,.5))}
+.ini-cmd .barchart .bar-val{fill:#bfe4ff}
+.ini-cmd .barchart .bar-lbl{fill:#7fa8c8}
+
+/* ---- Listas / linhas de alerta ---- */
+.ini-cmd .alert-row{border-bottom-color:var(--cy-line)}
+.ini-cmd .alert-row:hover{background:rgba(0,229,255,.06)}
+.ini-cmd .alert-row .a-main b{color:#eaf2f8}
+.ini-cmd .alert-row .a-main span{color:#8fa6ba}
+.ini-cmd .legend .li{color:#c4d9ec}
+.ini-cmd .legend .li b{color:#eaf6ff}
+.ini-cmd .legend .li.clk:hover{background:rgba(0,229,255,.08)}
+.ini-cmd .a-ico.i-red{background:rgba(255,59,48,.15);color:#ff6b6b}
+.ini-cmd .a-ico.i-orange{background:rgba(255,176,32,.15);color:#ffc061}
+.ini-cmd .a-ico.i-amber{background:rgba(255,176,32,.15);color:#ffc061}
+.ini-cmd .a-ico.i-green{background:rgba(0,255,136,.14);color:#00ff88}
+.ini-cmd .a-ico.i-blue{background:rgba(0,229,255,.14);color:#00e5ff}
+
+/* ---- Badges de status neon (AO VIVO, CRÍTICO, etc.) ---- */
+.ini-cmd .st.ok{background:rgba(0,255,136,.14);color:#25e88f}
+.ini-cmd .st.ok::before{background:#00ff88;box-shadow:0 0 6px #00ff88}
+.ini-cmd .st.crit,.ini-cmd .st.vencido{background:rgba(255,59,48,.15);color:#ff6b6b}
+.ini-cmd .st.crit::before,.ini-cmd .st.vencido::before{background:#ff3b30;box-shadow:0 0 6px #ff3b30}
+.ini-cmd .st.warn{background:rgba(255,176,32,.15);color:#ffc061}
+.ini-cmd .st.warn::before{background:#ffb020;box-shadow:0 0 6px #ffb020}
+.ini-cmd .st.neutro{background:rgba(140,180,210,.12);color:#9fc0da}
+.ini-cmd .st.neutro::before{background:#9fc0da}
+
+/* ---- Mapa de monitoramento: rotas e veículos em neon ---- */
+.ini-cmd .pex-map-hero .pex-route{filter:drop-shadow(0 0 8px rgba(0,229,255,.8))}
+.ini-cmd .ini-veh .dot{fill:#00e5ff;filter:drop-shadow(0 0 9px rgba(0,229,255,1))}
+.ini-cmd .ini-veh .ring{stroke:#00e5ff}
+.ini-cmd .ini-veh:hover .dot{fill:#7ff4ff;filter:drop-shadow(0 0 13px rgba(120,244,255,1))}
+
+/* ---- Painel lateral do veículo (neon) ---- */
+.ini-cmd .ini-vpanel{background:rgba(0,20,36,.92);border-left-color:rgba(0,229,255,.18)}
+.ini-cmd .ini-vpanel .vp-plate{color:#eaf6ff;text-shadow:0 0 10px rgba(0,229,255,.4)}
+.ini-cmd .ini-vpanel .vp-st{border-color:rgba(0,229,255,.35);color:#7fe0ff}
+.ini-cmd .ini-vpanel .vp-links a svg,.ini-cmd .ini-vpanel .vp-route svg{color:var(--cy-neon)}
+
+/* ---- Acessibilidade: respeita quem prefere menos movimento ---- */
+@media(prefers-reduced-motion:reduce){
+  .ini-cmd .ini-kpi{animation:none}
+  .ini-cmd .cy-spark-line{animation:none;stroke-dashoffset:0}
+}

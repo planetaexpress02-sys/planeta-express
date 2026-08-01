@@ -535,7 +535,7 @@ function avatarFoto(m, size){ size=size||56;
 /* ================================================================== */
 /* KPI de vidro com count-up + sparkline (compartilhado Início/Painel) */
 function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
-  return `<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+  return `<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
 }
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
@@ -2483,7 +2483,7 @@ function viewInicio(){
   const cteSum=(DB.ctes||[]).reduce((s,c)=>{ const v=(c.valor!=null&&c.valor!=='')?c.valor:(c.vTPrest||0);
     const n=(typeof v==='number')?v:(parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'))||0); return s+n; },0);
   const cteK=Math.round(cteSum/1000);
-  const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
   return `<div class="ini-cmd">
   <div class="ini-top">
@@ -2497,7 +2497,7 @@ function viewInicio(){
       <svg viewBox="0 0 1200 440" preserveAspectRatio="xMidYMid slice">
         <defs>
           <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.35)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
-          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#37e3d0"/></linearGradient>
+          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient>
           <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
         </defs>
         <g class="pex-mgrid">${[110,220,330].map(y=>`<line x1="0" y1="${y}" x2="1200" y2="${y}"/>`).join('')}${[240,480,720,960].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="440"/>`).join('')}</g>
