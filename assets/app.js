@@ -2743,7 +2743,7 @@ function viewFinConteudo(){
       <button class="btn" onclick="modalFinPin()">${svg('lock')} Alterar senha</button>
       <button class="btn" onclick="finUnlocked=false;router()">Bloquear</button></div></div>
 
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('money','i-green', money(fatMes), 'Faturamento no mês','')}
     ${kpi('export','i-blue', money(fatTot), 'Faturamento acumulado', DB.faturamento.length+' lançamento(s)')}
     ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
