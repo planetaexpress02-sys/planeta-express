@@ -283,6 +283,9 @@ const IC = {
   taco:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 12l4-3M5 12h2M17 12h2M12 5v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
   spark:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" fill="currentColor"/>',
   send:'<path d="M4 12l16-8-6 16-3-6-7-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  cal:'<rect x="3" y="4.5" width="18" height="16.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.7"/>',
+  trend:'<path d="M3 17l6-6 4 4 8-8M21 7v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>',
+  coins:'<ellipse cx="9" cy="6" rx="6" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 6v5c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 13.6v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-5c0-1.4-2.7-2.6-6-2.6" fill="none" stroke="currentColor" stroke-width="1.6"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
@@ -415,7 +418,8 @@ function router(){
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
 function pexAfterRender(rota){
-  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
+  try{ var _vw=document.getElementById('view'); if(_vw) _vw.setAttribute('data-route',rota);
+    pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -1183,29 +1187,41 @@ function viewManutencao(){
   const filtr = manutFiltro==='corretiva'? todos.filter(x=>ehTipo(x,'Corretiva'))
              : manutFiltro==='preventiva'? todos.filter(x=>ehTipo(x,'Preventiva')) : todos;
   const total=_somaServ(todos), corr=_somaServ(todos.filter(x=>ehTipo(x,'Corretiva'))), prev=_somaServ(todos.filter(x=>ehTipo(x,'Preventiva')));
+  const corrN=todos.filter(x=>ehTipo(x,'Corretiva')).length, prevN=todos.filter(x=>ehTipo(x,'Preventiva')).length;
   const h=hoje();
   const mesTot=_somaServ(todos.filter(x=>{ const d=parseD(x.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }));
+  const mesNome=h.toLocaleDateString('pt-BR',{month:'long'});
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comGasto=veics.map(v=>({v,g:_somaServ(filtr.filter(x=>x.veiculoId===v.id))})).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
-  const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#0ea5a4':'#2563eb'}));
+  const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#0f9e8f':'#1f5fdc',js:`location.hash='#manutencao/${x.v.id}'`}));
   const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="manutFiltro='${k}';router()">${l}</button>`;
-  const foot=(v)=>{ const s=filtr.filter(x=>x.veiculoId===v.id); return `<span class="st neutro">${s.length} serviço(s)</span><span class="st ${_somaServ(s)>0?'warn':'neutro'}">${money(_somaServ(s))}</span>`; };
+  const pctCorr= total? Math.round(corr/total*100):0;
+  const kpiF=(ico,cor,val,label,sub,filtro)=>`<a class="kpi link ${manutFiltro===filtro?'ativo':''}" style="cursor:pointer" onclick="manutFiltro='${filtro}';router()" data-tip="Filtrar por ${label}">
+    <div class="k-top"><div class="k-ico ${cor}">${svg(ico)}</div><span class="k-go">→</span></div>
+    <div class="k-val">${val}</div><div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`;
+  const foot=(v)=>{ const s=filtr.filter(x=>x.veiculoId===v.id); const g=_somaServ(s);
+    const c=s.filter(x=>ehTipo(x,'Corretiva')).length, p=s.length-c;
+    const mix=s.length?`<div class="mnt-mix" data-tip="${c} corretiva(s) · ${p} preventiva(s)"><i style="flex:${c||0.001}"></i><b style="flex:${p||0.001}"></b></div>`:'';
+    return `<div class="mnt-cardfoot"><div class="r"><span class="st neutro">${s.length} serviço(s)</span><span class="mnt-cost ${g>0?'has':''}">${money(g)}</span></div>${mix}</div>`; };
   return `
   <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
-    ${kpi('money','i-blue',money(total),'Gasto total',DB.servicos.length+' serviços')}
-    ${kpi('wrench','i-amber',money(corr),'Corretiva','')}
-    ${kpi('shield','i-green',money(prev),'Preventiva','')}
-    ${kpi('cal','i-red',money(mesTot),'Gasto no mês','')}
+    ${kpiF('coins','i-blue',money(total),'Gasto total',DB.servicos.length+' serviços','todas')}
+    ${kpiF('wrench','i-amber',money(corr),'Corretiva',corrN+' serviço(s)','corretiva')}
+    ${kpiF('shield','i-green',money(prev),'Preventiva',prevN+' serviço(s)','preventiva')}
+    ${kpi('cal','i-slate',money(mesTot),'Gasto no mês',mesNome)}
   </div>
-  <div class="grid" style="grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card"><div class="card-h">${svg('dash')}<h3 style="font-size:14px">Gasto por veículo</h3><span class="sub" style="margin-left:auto">azul = cavalos · verde = carretas</span></div>
+  <div class="grid mnt-graphs" style="grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><div class="card-h">${svg('trend')}<h3 style="font-size:14px">Gasto por veículo</h3><span class="sub" style="margin-left:auto">azul = cavalos · verde = carretas · clique numa barra</span></div>
       <div class="card-b">${comGasto.length?barChart(barras,{h:180,w:460}):emptyState('Sem gastos lançados.')}</div></div>
     <div class="card"><div class="card-h">${svg('shield')}<h3 style="font-size:14px">Corretiva × Preventiva</h3></div>
-      <div class="card-b" style="display:flex;flex-direction:column;align-items:center;gap:10px">
-        ${donut([{value:corr,color:'#f59e0b'},{value:prev,color:'#16a34a'}],{center:'',sub:'',size:150})}
-        <div style="font-size:12.5px;text-align:center;line-height:1.9"><span class="st warn">Corretiva</span> <b>${money(corr)}</b><br><span class="st ok">Preventiva</span> <b>${money(prev)}</b></div>
+      <div class="card-b mnt-donut">
+        ${donut([{value:corr,color:'#d98a15',label:'Corretiva'},{value:prev,color:'#12996b',label:'Preventiva'}],{center:pctCorr+'%',sub:'corretiva',size:150})}
+        <div class="mnt-legend">
+          <div class="lg"><span class="dot" style="background:#d98a15"></span>Corretiva<b>${money(corr)}</b></div>
+          <div class="lg"><span class="dot" style="background:#12996b"></span>Preventiva<b>${money(prev)}</b></div>
+        </div>
       </div></div>
   </div>
   <div class="toolbar"><div class="seg no-print">${fb('todas','Todas')}${fb('corretiva','Corretiva')}${fb('preventiva','Preventiva')}</div>
@@ -1227,19 +1243,22 @@ function viewManutencaoVeiculo(id){
       <td><b>${esc(x.descricao||'—')}</b>${x.obs?`<div class="muted" style="font-size:11px">${esc(x.obs)}</div>`:''}</td>
       <td>${manutTipoTag(x.tipo)}</td>
       <td>${esc(x.oficina||'—')}</td>
-      <td class="mono"><b>${money(x.valor)}</b></td>
+      <td class="mono ta-r"><b>${money(x.valor)}</b></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalServico('${x.id}')">${svg('edit')}</button></td>
     </tr>`).join('');
+  const pctCorr= soma? Math.round(corr/soma*100):0;
   return `${detalheVeiculoHead(v, `<button class="btn primary" onclick="modalServico(null,'${v.id}')">${svg('plus')} Novo serviço</button>`)}
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin:4px 0 16px">
-    ${kpi('money','i-blue',money(soma),'Gasto total',servs.length+' serviços')}
-    ${kpi('wrench','i-amber',money(corr),'Corretiva','')}
-    ${kpi('shield','i-green',money(prev),'Preventiva','')}
+    ${kpi('coins','i-blue',money(soma),'Gasto total',servs.length+' serviços')}
+    ${kpi('wrench','i-amber',money(corr),'Corretiva',pctCorr+'% do total')}
+    ${kpi('shield','i-green',money(prev),'Preventiva',(100-pctCorr)+'% do total')}
   </div>
-  <div class="card"><div class="card-h">${svg('wrench')}<h3 style="font-size:14px">Serviços de ${esc(v.placa)} (mais antigos primeiro)</h3></div>
-    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Data</th><th>${cavalo?'KM':'Horas'}</th><th>Serviço</th><th>Tipo</th><th>Oficina</th><th>Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum serviço registrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>`;
+  <div class="card mnt-detail"><div class="card-h">${svg('wrench')}<h3 style="font-size:14px">Serviços de ${esc(v.placa)} (mais antigos primeiro)</h3><span class="sub" style="margin-left:auto">${servs.length} lançamento(s)</span></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl mnt-table">
+      <thead><tr><th>Data</th><th>${cavalo?'KM':'Horas'}</th><th>Serviço</th><th>Tipo</th><th>Oficina</th><th class="ta-r">Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum serviço registrado para este veículo.')}</td></tr>`}</tbody>
+      ${servs.length?`<tfoot><tr class="mnt-total"><td colspan="5">Total geral — ${servs.length} serviço(s)</td><td class="mono ta-r"><b>${money(soma)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
+    </table></div></div></div>`;
 }
 function modalServico(id, vId){
   const x=id?DB.servicos.find(y=>y.id===id):{data:new Date().toISOString().slice(0,10),veiculoId:vId||(DB.veiculos[0]||{}).id,descricao:'',oficina:'',km:'',valor:'',tipo:'Corretiva',obs:''};

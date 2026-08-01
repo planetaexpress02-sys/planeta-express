@@ -787,3 +787,78 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .ini-cmd .barchart g rect[rx="4"]{transform-box:fill-box;transform-origin:50% 100%;animation:iniBarGrow .8s cubic-bezier(.16,1,.3,1) both}
 @keyframes iniBarGrow{from{transform:scaleY(0)}}
 @media(prefers-reduced-motion:reduce){.ini-cmd .barchart g rect[rx="4"]{animation:none}}
+
+/* ==========================================================================
+   RELATÓRIO DE MANUTENÇÃO — DESIGN PREMIUM (v6.15)
+   Evolução visual (NÃO refatoração): só aparência/UX da tela de Manutenção.
+   Tudo escopado em #view[data-route="manutencao"] — zero impacto nas outras
+   telas. Paleta corporativa do briefing: fundo #F4F6F8, cards #FFFFFF,
+   bordas #E5E7EB, texto grafite. Nada de dourado (gasto é custo, não receita).
+   ========================================================================== */
+#view[data-route="manutencao"]{
+  --card:#ffffff; --line:#e5e7eb; --line-2:#eef1f5;
+  --text:#1f2a37; --text-soft:#55627a; --text-mute:#8a97aa;
+  --accent:#1f5fdc; --accent-2:#1747b8; --accent-soft:#e9f0ff;
+  background:#f4f6f8;
+}
+
+/* ---- Cabeçalho (era um bloco escuro pesado → vira header claro premium) ---- */
+#view[data-route="manutencao"] .banner{
+  background:linear-gradient(180deg,#ffffff,#f7f9fc);color:var(--text);
+  border:1px solid var(--line);border-radius:16px;padding:20px 22px;position:relative;overflow:hidden;
+  box-shadow:0 1px 2px rgba(20,30,55,.04),0 10px 26px rgba(20,30,55,.05)}
+#view[data-route="manutencao"] .banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#2f6bf0,#1f5fdc)}
+#view[data-route="manutencao"] .banner>svg{width:46px;height:46px;padding:11px;box-sizing:border-box;color:var(--accent);background:var(--accent-soft);border-radius:13px}
+#view[data-route="manutencao"] .banner b{color:var(--text);font-size:16px;letter-spacing:-.2px}
+#view[data-route="manutencao"] .banner span{color:var(--text-soft)}
+
+/* ---- KPIs: grafite, ícone com anel suave, filtro ativo destacado ---- */
+#view[data-route="manutencao"] .kpi{padding:20px 22px;border-radius:16px}
+#view[data-route="manutencao"] .kpi .k-val{color:var(--text);font-size:26px}
+#view[data-route="manutencao"] .kpi .k-label{color:var(--text-soft)}
+#view[data-route="manutencao"] .kpi .k-ico{border-radius:13px}
+#view[data-route="manutencao"] .k-ico.i-slate{background:#eef1f6;color:#5b6a7f}
+#view[data-route="manutencao"] .kpi.link[data-tip]{cursor:pointer}
+#view[data-route="manutencao"] .kpi.ativo{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent),0 12px 28px rgba(31,95,220,.14)}
+#view[data-route="manutencao"] .kpi.ativo .k-go{color:var(--accent);transform:translateX(2px)}
+#view[data-route="manutencao"] .kpi.ativo .k-label{color:var(--accent-2);font-weight:600}
+
+/* ---- Cartões de gráfico + donut Corretiva×Preventiva ---- */
+#view[data-route="manutencao"] .mnt-graphs .card-h>svg{color:var(--accent)}
+#view[data-route="manutencao"] .mnt-donut{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:20px}
+#view[data-route="manutencao"] .mnt-donut .donut-c{fill:var(--text);font-weight:800;font-size:26px}
+#view[data-route="manutencao"] .mnt-donut .donut-s{fill:var(--text-mute);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase}
+#view[data-route="manutencao"] .mnt-legend{display:flex;flex-direction:column;gap:8px;width:100%}
+#view[data-route="manutencao"] .mnt-legend .lg{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-soft);padding:9px 13px;border:1px solid var(--line);border-radius:11px;background:#fbfcfe}
+#view[data-route="manutencao"] .mnt-legend .lg b{margin-left:auto;color:var(--text);font-variant-numeric:tabular-nums;font-size:13.5px}
+#view[data-route="manutencao"] .mnt-legend .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 3px rgba(0,0,0,.03)}
+
+/* ---- Rodapé dos cartões de veículo: custo + barra corretiva×preventiva ---- */
+#view[data-route="manutencao"] .mnt-cardfoot{width:100%;display:flex;flex-direction:column;gap:9px}
+#view[data-route="manutencao"] .mnt-cardfoot .r{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#view[data-route="manutencao"] .mnt-cost{font-weight:800;font-size:15px;color:var(--text-mute);font-variant-numeric:tabular-nums}
+#view[data-route="manutencao"] .mnt-cost.has{color:var(--text)}
+#view[data-route="manutencao"] .mnt-mix{display:flex;height:6px;border-radius:6px;overflow:hidden;background:#eef1f5}
+#view[data-route="manutencao"] .mnt-mix i{background:linear-gradient(90deg,#e8a13a,#d98a15)}
+#view[data-route="manutencao"] .mnt-mix b{background:linear-gradient(90deg,#18a878,#12996b)}
+
+/* ---- Tabela de detalhe: valores à direita + linha de total geral ---- */
+#view[data-route="manutencao"] .ta-r{text-align:right}
+#view[data-route="manutencao"] .mnt-detail .card-h .sub{color:var(--text-mute)}
+#view[data-route="manutencao"] .mnt-table tfoot .mnt-total td{background:#f7f9fc;border-top:2px solid var(--line);padding:14px 16px;font-size:13px;font-weight:600;color:var(--text-soft)}
+#view[data-route="manutencao"] .mnt-table tfoot .mnt-total td b{color:var(--text);font-size:14.5px;font-variant-numeric:tabular-nums}
+
+/* ---- Filtro segmentado ---- */
+#view[data-route="manutencao"] .seg{background:#eaeef4;border:1px solid var(--line)}
+#view[data-route="manutencao"] .seg button.active{background:#fff;color:var(--accent)}
+
+/* ---- Responsividade: KPIs colapsam de verdade no notebook/tablet/celular
+        (o grid tinha style inline repeat(4,1fr) que ignorava o CSS) ---- */
+@media(max-width:1080px){
+  #view[data-route="manutencao"] .kpis{grid-template-columns:repeat(2,1fr)!important}
+  #view[data-route="manutencao"] .mnt-graphs{grid-template-columns:1fr!important}
+}
+@media(max-width:560px){ #view[data-route="manutencao"] .kpis{grid-template-columns:1fr!important} }
+
+/* ---- Impressão: cabeçalho claro imprime bem; mantém tudo legível ---- */
+@media print{ #view[data-route="manutencao"] .banner{box-shadow:none} }
