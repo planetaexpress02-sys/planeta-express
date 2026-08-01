@@ -1193,7 +1193,7 @@ function viewManutencao(){
   const mesNome=h.toLocaleDateString('pt-BR',{month:'long'});
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comGasto=veics.map(v=>({v,g:_somaServ(filtr.filter(x=>x.veiculoId===v.id))})).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
-  const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#0f9e8f':'#1f5fdc',js:`location.hash='#manutencao/${x.v.id}'`}));
+  const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#1fd4c4':'#2f8fff',js:`location.hash='#manutencao/${x.v.id}'`}));
   const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="manutFiltro='${k}';router()">${l}</button>`;
   const pctCorr= total? Math.round(corr/total*100):0;
   const kpiF=(ico,cor,val,label,sub,filtro)=>`<a class="kpi link ${manutFiltro===filtro?'ativo':''}" style="cursor:pointer" onclick="manutFiltro='${filtro}';router()" data-tip="Filtrar por ${label}">
@@ -1217,10 +1217,10 @@ function viewManutencao(){
       <div class="card-b">${comGasto.length?barChart(barras,{h:180,w:460}):emptyState('Sem gastos lançados.')}</div></div>
     <div class="card"><div class="card-h">${svg('shield')}<h3 style="font-size:14px">Corretiva × Preventiva</h3></div>
       <div class="card-b mnt-donut">
-        ${donut([{value:corr,color:'#d98a15',label:'Corretiva'},{value:prev,color:'#12996b',label:'Preventiva'}],{center:pctCorr+'%',sub:'corretiva',size:150})}
+        ${donut([{value:corr,color:'#f5a623',label:'Corretiva'},{value:prev,color:'#16c98d',label:'Preventiva'}],{center:pctCorr+'%',sub:'corretiva',size:150})}
         <div class="mnt-legend">
-          <div class="lg"><span class="dot" style="background:#d98a15"></span>Corretiva<b>${money(corr)}</b></div>
-          <div class="lg"><span class="dot" style="background:#12996b"></span>Preventiva<b>${money(prev)}</b></div>
+          <div class="lg"><span class="dot" style="background:#f5a623"></span>Corretiva<b>${money(corr)}</b></div>
+          <div class="lg"><span class="dot" style="background:#16c98d"></span>Preventiva<b>${money(prev)}</b></div>
         </div>
       </div></div>
   </div>
