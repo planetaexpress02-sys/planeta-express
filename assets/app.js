@@ -304,8 +304,9 @@ function donut(data, opts){
   let off = 0;
   const arcs = total? data.filter(d=>d.value>0).map(d=>{
     const len = d.value/total*C;
-    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${th}"
-      stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
+    const _pct = total? Math.round(d.value/total*100):0;
+    const seg = `<circle class="donut-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${th}"
+      stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt" data-tip="${esc(d.label)}: ${d.value} (${_pct}%)"/>`;
     off += len; return seg;
   }).join('') : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e8edf3" stroke-width="${th}"/>`;
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="donut">
@@ -322,7 +323,8 @@ function barChart(data, opts){
     const bh = d.value/max*(h-34);
     const x = pad + i*gap + (gap-bw)/2, y = h-24-bh;
     const clk = d.js? ` class="bar-clk" onclick="${d.js}"` : (d.hash? ` class="bar-clk" onclick="location.hash='${d.hash}'"` : '');
-    return `<g${clk}>
+    const tip = ` data-tip="${esc(d.label)}: ${d.vtxt!=null?esc(d.vtxt):d.value}"`;
+    return `<g${clk}${tip}>
       ${d.hash?`<rect x="${pad+i*gap}" y="0" width="${gap}" height="${h}" fill="transparent"/>`:''}
       <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${d.color||'url(#bg)'}"/>
       ${d.value?`<text x="${x+bw/2}" y="${y-5}" text-anchor="middle" class="bar-val">${d.vtxt!=null?esc(d.vtxt):d.value}</text>`:''}
@@ -405,7 +407,80 @@ function router(){
 
   document.getElementById('pageTitle').innerHTML = esc(titulo)+'<small>'+esc(sub)+'</small>';
   window.scrollTo(0,0); closeSidebar(); if(typeof updateUserBadge==='function') updateUserBadge();
+  if(typeof pexAfterRender==='function') pexAfterRender(rota);
 }
+
+/* ================================================================== */
+/*  APRIMORAMENTOS DE UX (v6.6) — tabelas, tooltips, mapa, loading      */
+/*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
+/* ================================================================== */
+function pexAfterRender(rota){
+  try{ pexTipInit(); pexEnhanceTables(); if(rota==='dashboard') pexDashMapReveal(); }catch(e){}
+}
+/* ---- tabelas premium: busca + ordenação + paginação ---- */
+function pexEnhanceTables(){
+  document.querySelectorAll('#view table.tbl').forEach(function(tbl){
+    var tbody=tbl.tBodies[0]; if(!tbody) return;
+    var rows=[].slice.call(tbody.rows).filter(function(r){ return !r.querySelector('.empty') && r.cells.length>1; });
+    if(rows.length<6) return;                      // só vale a pena em tabelas maiores
+    var wrap=tbl.closest('.tbl-wrap')||tbl.parentNode;
+    var bar=document.createElement('div'); bar.className='pex-tbar no-print';
+    bar.innerHTML='<div class="pex-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Pesquisar…"></div><div class="pex-pg"></div>';
+    wrap.parentNode.insertBefore(bar, wrap);
+    var st={page:1,per:12,q:''}; tbl.__st=st; tbl.__rows=rows; tbl.__bar=bar;
+    if(tbl.tHead && tbl.tHead.rows[0]){ [].forEach.call(tbl.tHead.rows[0].cells,function(th,ci){
+      if(!th.textContent.trim()||th.classList.contains('no-print')) return;
+      th.classList.add('pex-sortable'); th.addEventListener('click',function(){ pexSort(tbl,ci,th); });
+    }); }
+    bar.querySelector('input').addEventListener('input',function(){ st.q=this.value.toLowerCase(); st.page=1; pexPaginate(tbl); });
+    pexPaginate(tbl);
+  });
+}
+function pexPaginate(tbl){
+  var st=tbl.__st, rows=tbl.__rows;
+  var filtered=rows.filter(function(r){ return !st.q || r.textContent.toLowerCase().indexOf(st.q)>=0; });
+  var pages=Math.max(1,Math.ceil(filtered.length/st.per)); if(st.page>pages) st.page=pages;
+  rows.forEach(function(r){ r.style.display='none'; });
+  filtered.forEach(function(r,i){ if(i>=(st.page-1)*st.per && i<st.page*st.per) r.style.display=''; });
+  var pg=tbl.__bar.querySelector('.pex-pg');
+  var info='<span class="pex-count">'+filtered.length+' registro(s)</span>';
+  if(filtered.length<=st.per){ pg.innerHTML=info; return; }
+  pg.innerHTML=info+'<button class="pex-pgb" data-d="-1" '+(st.page<=1?'disabled':'')+'>‹</button><span class="pex-pgn">'+st.page+' / '+pages+'</span><button class="pex-pgb" data-d="1" '+(st.page>=pages?'disabled':'')+'>›</button>';
+  [].forEach.call(pg.querySelectorAll('.pex-pgb'),function(b){ b.onclick=function(){ st.page+=(+b.getAttribute('data-d')); pexPaginate(tbl); }; });
+}
+function _pexKey(v){ var dm=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(dm) return {n:+(dm[3]+dm[2]+dm[1])};
+  var m=v.replace(/[^\d,.-]/g,''); if(m && /\d/.test(m)){ m=m.replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'); var n=parseFloat(m); if(!isNaN(n)) return {n:n}; }
+  return {s:v.toLowerCase()}; }
+function pexSort(tbl,ci,th){
+  var dir=(th.__dir==='asc')?'desc':'asc';
+  [].forEach.call(tbl.tHead.rows[0].cells,function(c){ c.__dir=null; c.classList.remove('pex-asc','pex-desc'); });
+  th.__dir=dir; th.classList.add(dir==='asc'?'pex-asc':'pex-desc');
+  var rows=tbl.__rows, sign=dir==='asc'?1:-1;
+  rows.sort(function(a,b){ var ka=_pexKey((a.cells[ci]||{}).textContent||''), kb=_pexKey((b.cells[ci]||{}).textContent||'');
+    if(ka.n!=null && kb.n!=null) return (ka.n-kb.n)*sign;
+    if(ka.n!=null) return -1; if(kb.n!=null) return 1;
+    return (ka.s||'').localeCompare(kb.s||'','pt')*sign; });
+  var tbody=tbl.tBodies[0]; rows.forEach(function(r){ tbody.appendChild(r); });
+  tbl.__st.page=1; pexPaginate(tbl);
+}
+/* ---- tooltip elegante (para gráficos, mapa e qualquer [data-tip]) ---- */
+function pexTipInit(){
+  if(window.__pexTip) return; window.__pexTip=true;
+  var tip=document.createElement('div'); tip.id='pexTip'; tip.className='pex-tip'; document.body.appendChild(tip);
+  var cur=null;
+  document.addEventListener('mouseover',function(e){ var t=e.target.closest?e.target.closest('[data-tip]'):null;
+    if(t){ cur=t; tip.textContent=t.getAttribute('data-tip'); tip.classList.add('show'); } });
+  document.addEventListener('mousemove',function(e){ if(tip.classList.contains('show')){
+    var x=e.clientX+14, y=e.clientY+16; if(x>innerWidth-180)x=e.clientX-tip.offsetWidth-14; tip.style.left=x+'px'; tip.style.top=y+'px'; } });
+  document.addEventListener('mouseout',function(e){ if(cur && (!e.relatedTarget || !cur.contains(e.relatedTarget))){ cur=null; tip.classList.remove('show'); } });
+}
+/* ---- barra de carregamento global (topo) + estado loading de botão ---- */
+function pexBar(on){ var b=document.getElementById('pexBar'); if(!b){ b=document.createElement('div'); b.id='pexBar'; document.body.appendChild(b); } b.className=on?'run':''; }
+function pexBtnLoad(btn,on){ if(!btn)return; if(on){ btn.classList.add('loading'); btn.disabled=true; } else { btn.classList.remove('loading'); btn.disabled=false; } }
+/* ---- revela o mapa do dashboard após um skeleton (widget "ao vivo") ---- */
+function pexDashMapReveal(){ var s=document.getElementById('pexMapSkel'); if(!s) return;
+  setTimeout(function(){ s.classList.add('gone'); setTimeout(function(){ if(s.parentNode) s.remove(); },450); }, 700); }
+
 
 /* ================================================================== */
 /*  7. SIDEBAR                                                         */
@@ -498,6 +573,26 @@ function viewDashboard(){
     ${kpi('gauge','i-amber', manutAlerta.length, 'Trocas a vencer', 'Óleo / filtros · KM/horas', '#km')}
     ${kpi('tire', pneusAlerta?'i-red':'i-blue', pneusAlerta, 'Pneus no limite', 'Sulco ≤ '+DB.config.sulcoMinimo+' mm', '#pneus')}
     ${kpi('check','i-blue', chkMes, 'Check-lists no mês', DB.checklists.length+' no total', '#checklist')}
+  </div>
+
+  <div class="card pex-mapcard" style="margin-top:20px">
+    <div class="card-h">${svg('truck')}<h3>Monitoramento da região</h3><span class="sub">Base: Londrina</span>
+      <div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
+    <div class="card-b p0"><div class="pex-map" id="pexDashMap">
+      <svg viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid slice">
+        <g class="pex-mgrid">${[75,150,225].map(y=>`<line x1="0" y1="${y}" x2="1000" y2="${y}"/>`).join('')}${[200,400,600,800].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="300"/>`).join('')}</g>
+        <polyline class="pex-corridor" points="90,150 180,165 400,190 560,170 720,160 820,150 930,140"/>
+        <path id="pdr1" class="pex-route" d="M820,150 Q500,188 180,165"/>
+        <path id="pdr2" class="pex-route" d="M820,150 Q610,182 400,190"/>
+        <path id="pdr3" class="pex-route" d="M820,150 Q770,154 720,160"/>
+        ${[['Paiçandu',90,150],['Maringá',180,165],['Arapongas',400,190],['Rolândia',560,170],['Cambé',720,160],['Ibiporã',930,140]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.2"/><text x="${c[1]}" y="${c[2]-11}" text-anchor="middle">${c[0]}</text></g>`).join('')}
+        <g class="pex-city hub"><circle cx="820" cy="150" r="5.5"/><text x="820" y="135" text-anchor="middle">LONDRINA</text></g>
+        <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pdr1"/></animateMotion></g>
+        <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Arapongas" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="20s" repeatCount="indefinite"><mpath href="#pdr2"/></animateMotion></g>
+        <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="13s" repeatCount="indefinite"><mpath href="#pdr3"/></animateMotion></g>
+      </svg>
+      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
+    </div></div>
   </div>
 
   <div class="grid two-col">
@@ -1381,8 +1476,11 @@ async function subirUm(file, entidade, refId, categoria){
 async function processUpload(files, entidade, refId, categoria){
   if(!files||!files.length) return;
   if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
-  for(const file of files){ await subirUm(file, entidade, refId, categoria); }
-  await reloadFiles(); saveDB(); toast(files.length+' arquivo(s) enviado(s)'+(_online()?' e sincronizado(s).':'.')); router();
+  if(typeof pexBar==='function') pexBar(true);
+  try{
+    for(const file of files){ await subirUm(file, entidade, refId, categoria); }
+    await reloadFiles(); saveDB(); toast(files.length+' arquivo(s) enviado(s)'+(_online()?' e sincronizado(s).':'.')); router();
+  } finally { if(typeof pexBar==='function') pexBar(false); }
 }
 /* ================================================================== */
 /*  LEITOR DE PDF — extrai texto de NF/DANFE (inclui fontes CID)        */
