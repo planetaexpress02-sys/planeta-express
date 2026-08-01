@@ -415,7 +415,7 @@ function router(){
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
 function pexAfterRender(rota){
-  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); }catch(e){}
+  try{ pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if(rota==='inicio' && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -2417,6 +2417,45 @@ function _arquivoLocalIndisponivel(path){
 function abrirReal(path){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=path; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }
 function baixarReal(path,nome){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=path; a.download=nome||''; document.body.appendChild(a); a.click(); a.remove(); }
 
+/* ---------- HOME · Centro de Comando: frota, painel lateral, count-up ---------- */
+const INI_FLEET={
+  'IRU-4G62':{modelo:'Volvo FH · Cavalo',mot:'Marcelo Ronsoni',cli:'Muffato',ori:'Londrina/PR',dest:'Maringá/PR',st:'Em rota',vel:'82 km/h',upd:'há 4 min'},
+  'IPD-9036':{modelo:'Scania · Cavalo',mot:'Odécio',cli:'BRF S.A.',ori:'Londrina/PR',dest:'Maringá/PR',st:'Em rota',vel:'76 km/h',upd:'há 9 min'},
+  'BDP-1B55':{modelo:'Scania R450 · Cavalo',mot:'Reinaldo',cli:'Atacadão',ori:'Londrina/PR',dest:'Cambé/PR',st:'Em rota',vel:'54 km/h',upd:'há 2 min'},
+  'NTY-8B66':{modelo:'Mercedes · Cavalo',mot:'Jonathan',cli:'TSP',ori:'Londrina/PR',dest:'Cambé/PR',st:'Em rota',vel:'61 km/h',upd:'há 6 min'},
+  'QIO-9J07':{modelo:'Volvo · Cavalo',mot:'Reinaldo',cli:'Muffato',ori:'Londrina/PR',dest:'Paiçandu/PR',st:'Em rota',vel:'88 km/h',upd:'há 1 min'}
+};
+function iniFecharVeic(){ const p=document.getElementById('iniVeicPanel'); if(p) p.classList.remove('show'); }
+function iniAbrirVeic(placa){ const f=INI_FLEET[placa]; const p=document.getElementById('iniVeicPanel'); if(!f||!p) return;
+  const ini=f.mot.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  p.innerHTML=`<button class="x" onclick="iniFecharVeic()">×</button>
+    <div class="vp-plate">${esc(placa)}</div><div class="vp-model">${esc(f.modelo)}</div>
+    <div class="vp-st"><i></i>${esc(f.st)}</div>
+    <div class="vp-drv"><div class="av">${esc(ini)}</div><div><b>${esc(f.mot)}</b><span>${esc(f.cli)}</span></div></div>
+    <div class="vp-route"><div><small>Origem</small><b>${esc(f.ori)}</b></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="r"><small>Destino</small><b>${esc(f.dest)}</b></div></div>
+    <div class="vp-grid"><div><small>Velocidade</small><b>${esc(f.vel)}</b></div><div><small>Última atualização</small><b>${esc(f.upd)}</b></div></div>
+    <div class="vp-links">
+      <a href="#documentos" onclick="iniFecharVeic()">${svg('doc')} Documentos relacionados</a>
+      <a href="#abastecimento" onclick="iniFecharVeic()">${svg('fuel')} Abastecimentos</a>
+      <a href="#viagens" onclick="iniFecharVeic()">${svg('route')} Pedágios / viagem</a>
+    </div>`;
+  p.classList.add('show');
+}
+function iniCountUp(){
+  const els=document.querySelectorAll('.ini-cmd .num[data-count]');
+  const ic=document.getElementById('iniClock'); if(ic){ const d=new Date(); ic.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  els.forEach(function(el){ const target=+el.getAttribute('data-count')||0, pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
+    if(reduce){ el.textContent=pre+target.toLocaleString('pt-BR')+suf; return; }
+    let start=null; const dur=900;
+    function step(ts){ if(!start)start=ts; const p=Math.min(1,(ts-start)/dur); const val=Math.round(target*(1-Math.pow(1-p,3)));
+      el.textContent=pre+val.toLocaleString('pt-BR')+suf; if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  });
+}
+
 /* ---------- PÁGINA INICIAL ---------- */
 function viewInicio(){
   const cavalos=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').length;
@@ -2427,59 +2466,57 @@ function viewInicio(){
   const emViagem=DB.viagens.filter(v=>v.status==='Pendente').length;
   const nfOrd=DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
   const fat=nfOrd[0]?totalNota(nfOrd[0]):0;
-  const atalho=(ico,t,sub,hash)=>`<a class="ini-atalho" href="#${hash}">${svg(ico)}<div><b>${t}</b><span>${sub}</span></div><i>→</i></a>`;
-  return `
-  <div class="ini-hero">
-    <div class="ini-hero-bg"></div>
-    <div class="ini-logo"><img src="assets/logo.png" alt="Planeta Express"></div>
-    <div class="ini-hero-txt">
-      <h1>Planeta Express Transportes</h1>
-      <p>CNPJ ${esc(DB.empresa.cnpj)}</p>
+  const viagens=DB.viagens.length;
+  const cteSum=(DB.ctes||[]).reduce((s,c)=>{ const v=(c.valor!=null&&c.valor!=='')?c.valor:(c.vTPrest||0);
+    const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'))||0; return s+n; },0);
+  const cteK=Math.round(cteSum/1000);
+  const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
+  return `<div class="ini-cmd">
+  <div class="ini-top">
+    <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>
+    <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
+  </div>
+
+  <div class="ini-stage card">
+    <div class="ini-stage-h"><b>Monitoramento</b><div class="r"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
+    <div class="pex-map pex-map-hero ini-map" id="pexDashMap">
+      <svg viewBox="0 0 1200 440" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.35)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
+          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#37e3d0"/></linearGradient>
+          <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
+        </defs>
+        <g class="pex-mgrid">${[110,220,330].map(y=>`<line x1="0" y1="${y}" x2="1200" y2="${y}"/>`).join('')}${[240,480,720,960].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="440"/>`).join('')}</g>
+        <polyline class="pex-corridor" points="240,285 380,315 900,235 1040,265"/>
+        <path id="pxr1" class="pex-route" d="M1040,265 Q650,335 380,315"/>
+        <path id="pxr2" class="pex-route" d="M1040,265 Q620,350 240,285"/>
+        <path id="pxr3" class="pex-route" d="M1040,265 Q975,248 900,235"/>
+        <circle cx="1040" cy="265" r="64" fill="url(#pexHubg)"/>
+        ${[['PAIÇANDU',240,285],['MARINGÁ',380,315],['CAMBÉ',900,235]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.6"/><text x="${c[1]}" y="${c[2]-13}" text-anchor="middle">${c[0]}</text></g>`).join('')}
+        <g class="pex-city hub">
+          <circle class="pex-hubring" cx="1040" cy="265" r="9"/><circle class="pex-hubring r2" cx="1040" cy="265" r="9"/>
+          <circle cx="1040" cy="265" r="7"/>
+          <text x="1040" y="243" text-anchor="middle">LONDRINA</text>
+          <g class="pex-base"><rect x="1013" y="277" width="54" height="18" rx="9"/><text x="1040" y="290" text-anchor="middle">BASE</text></g>
+        </g>
+        <g class="ini-veh" onclick="iniAbrirVeic('IRU-4G62')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+        <g class="ini-veh" onclick="iniAbrirVeic('IPD-9036')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="30s" begin="-15s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+        <g class="ini-veh" onclick="iniAbrirVeic('BDP-1B55')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="17s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+        <g class="ini-veh" onclick="iniAbrirVeic('NTY-8B66')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="17s" begin="-8.5s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+        <g class="ini-veh" onclick="iniAbrirVeic('QIO-9J07')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="34s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
+      </svg>
+      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
+      <aside class="ini-vpanel" id="iniVeicPanel"></aside>
     </div>
   </div>
 
-  <div class="grid ini-mon" style="margin-top:20px">
-    <div class="card pex-mapcard">
-      <div class="card-h">${svg('truck')}<h3>Monitoramento</h3><div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-      <div class="card-b p0"><div class="pex-map pex-map-hero" id="pexDashMap">
-        <svg viewBox="0 0 900 400" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.35)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
-            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#37e3d0"/></linearGradient>
-            <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
-            <g id="pxtruck">
-              <rect x="-2" y="-5" width="13" height="8" rx="1.6" fill="#eef4fb"/>
-              <rect x="-9" y="-4" width="7" height="7" rx="1.6" fill="#9fc3ff"/>
-              <circle cx="-6" cy="4" r="2" fill="#33465f"/><circle cx="1" cy="4" r="2" fill="#33465f"/><circle cx="8" cy="4" r="2" fill="#33465f"/>
-              <circle cx="-10.5" cy="1" r="1.2" fill="#9ff2ff"/>
-            </g>
-          </defs>
-          <g class="pex-mgrid">${[100,200,300].map(y=>`<line x1="0" y1="${y}" x2="900" y2="${y}"/>`).join('')}${[180,360,540,720].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="400"/>`).join('')}</g>
-          <polyline class="pex-corridor" points="170,255 270,285 620,215 720,240"/>
-          <path id="pxr1" class="pex-route" d="M720,240 Q470,300 270,285"/>
-          <path id="pxr2" class="pex-route" d="M720,240 Q450,312 170,255"/>
-          <path id="pxr3" class="pex-route" d="M720,240 Q675,225 620,215"/>
-          <circle cx="720" cy="240" r="52" fill="url(#pexHubg)"/>
-          ${[['PAIÇANDU',170,255],['MARINGÁ',270,285],['CAMBÉ',620,215]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.6"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
-          <g class="pex-city hub">
-            <circle class="pex-hubring" cx="720" cy="240" r="9"/><circle class="pex-hubring r2" cx="720" cy="240" r="9"/>
-            <circle cx="720" cy="240" r="6.5"/>
-            <text x="720" y="221" text-anchor="middle">LONDRINA</text>
-            <g class="pex-base"><rect x="693" y="252" width="54" height="18" rx="9"/><text x="720" y="265" text-anchor="middle">BASE</text></g>
-          </g>
-          <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-          <g class="pex-veh" data-tip="IPD-9036 · Odécio → Maringá" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="26s" begin="-13s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-          <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="15s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
-          <g class="pex-veh" data-tip="NTY-8B66 · Jonathan → Cambé" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="15s" begin="-7.5s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
-          <g class="pex-veh" data-tip="QIO-9J07 · Reinaldo → Paiçandu" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
-        </svg>
-        <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
-      </div></div>
-    </div>
-    <div class="ini-kpis">
-      ${kpi('truck','i-blue', cavalos+reb, 'Veículos ativos', cavalos+' cavalos · '+reb+' reboques', '#frota')}
-      ${kpi('user','i-green', mot, 'Motoristas ativos', DB.motoristas.length+' cadastrados', '#motoristas')}
-    </div>
+  <div class="ini-kstrip">
+    ${kt('truck','', cavalos+reb, '', '', 'Frota ativa', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+    ${kt('user','', mot, '', '', 'Motoristas', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
+    ${kt('route','', viagens, '', '', 'Viagens', 'viagens', '#5c99ff', '0,22 16,9 32,15 48,18 64,12 80,7')}
+    ${kt('money','gold', cteK, 'R$ ', 'k', 'Faturamento', 'financeiro', '#e0b354', '0,20 16,17 32,12 48,14 64,8 80,5')}
+  </div>
   </div>`;
 }
 
