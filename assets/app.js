@@ -2435,35 +2435,43 @@ function viewInicio(){
     <div class="ini-hero-txt">
       <h1>Planeta Express Transportes</h1>
       <p>CNPJ ${esc(DB.empresa.cnpj)}</p>
-      <span class="ini-hero-tag">Transporte rodoviário de cargas frigorificadas</span>
     </div>
   </div>
 
   <div class="grid ini-mon" style="margin-top:20px">
     <div class="card pex-mapcard">
-      <div class="card-h">${svg('truck')}<h3>Monitoramento</h3><div class="r no-print"><span class="pex-live">● AO VIVO</span></div></div>
+      <div class="card-h">${svg('truck')}<h3>Monitoramento</h3><div class="r no-print"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
       <div class="card-b p0"><div class="pex-map pex-map-hero" id="pexDashMap">
         <svg viewBox="0 0 900 400" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(31,95,220,.25)"/><stop offset="1" stop-color="rgba(31,95,220,0)"/></radialGradient>
-            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1f5fdc"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.35)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
+            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c8dff"/><stop offset="1" stop-color="#37e3d0"/></linearGradient>
+            <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
+            <g id="pxtruck">
+              <rect x="-2" y="-5" width="13" height="8" rx="1.6" fill="#eef4fb"/>
+              <rect x="-9" y="-4" width="7" height="7" rx="1.6" fill="#9fc3ff"/>
+              <circle cx="-6" cy="4" r="2" fill="#33465f"/><circle cx="1" cy="4" r="2" fill="#33465f"/><circle cx="8" cy="4" r="2" fill="#33465f"/>
+              <circle cx="-10.5" cy="1" r="1.2" fill="#9ff2ff"/>
+            </g>
           </defs>
           <g class="pex-mgrid">${[100,200,300].map(y=>`<line x1="0" y1="${y}" x2="900" y2="${y}"/>`).join('')}${[180,360,540,720].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="400"/>`).join('')}</g>
           <polyline class="pex-corridor" points="170,255 270,285 620,215 720,240"/>
           <path id="pxr1" class="pex-route" d="M720,240 Q470,300 270,285"/>
           <path id="pxr2" class="pex-route" d="M720,240 Q450,312 170,255"/>
           <path id="pxr3" class="pex-route" d="M720,240 Q675,225 620,215"/>
-          <circle cx="720" cy="240" r="46" fill="url(#pexHubg)"/>
-          ${[['PAIÇANDU',170,255],['MARINGÁ',270,285],['CAMBÉ',620,215]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.4"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
+          <circle cx="720" cy="240" r="52" fill="url(#pexHubg)"/>
+          ${[['PAIÇANDU',170,255],['MARINGÁ',270,285],['CAMBÉ',620,215]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.6"/><text x="${c[1]}" y="${c[2]-12}" text-anchor="middle">${c[0]}</text></g>`).join('')}
           <g class="pex-city hub">
             <circle class="pex-hubring" cx="720" cy="240" r="9"/><circle class="pex-hubring r2" cx="720" cy="240" r="9"/>
-            <circle cx="720" cy="240" r="6"/>
-            <text x="720" y="222" text-anchor="middle">LONDRINA</text>
+            <circle cx="720" cy="240" r="6.5"/>
+            <text x="720" y="221" text-anchor="middle">LONDRINA</text>
             <g class="pex-base"><rect x="693" y="252" width="54" height="18" rx="9"/><text x="720" y="265" text-anchor="middle">BASE</text></g>
           </g>
-          <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-          <g class="pex-veh" data-tip="QIO-9J07 · Jonathan → Paiçandu" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
-          <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><circle class="vh" r="7"/><circle class="vc" r="4"/><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+          <g class="pex-veh" data-tip="IRU-4G62 · Marcelo → Maringá" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+          <g class="pex-veh" data-tip="IPD-9036 · Odécio → Maringá" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="26s" begin="-13s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
+          <g class="pex-veh" data-tip="BDP-1B55 · Reinaldo → Cambé" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="15s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+          <g class="pex-veh" data-tip="NTY-8B66 · Jonathan → Cambé" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="15s" begin="-7.5s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
+          <g class="pex-veh" data-tip="QIO-9J07 · Reinaldo → Paiçandu" onclick="location.hash='viagens'"><use class="pex-truck" href="#pxtruck"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
         </svg>
         <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
       </div></div>

@@ -650,3 +650,24 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .ini-kpis .kpi{flex:1;display:flex;flex-direction:column;justify-content:center}
 @media(max-width:900px){.ini-mon{grid-template-columns:1fr}.ini-kpis{flex-direction:row}.ini-kpis .kpi{flex:1}}
 @media(max-width:560px){.ini-kpis{flex-direction:column}}
+
+/* ===== Monitoramento PREMIUM (mapa escuro control-room dentro da Início) ===== */
+.pex-map-hero{height:360px;background:
+  radial-gradient(640px 360px at 76% 24%,rgba(76,141,255,.22),transparent 60%),
+  radial-gradient(520px 320px at 12% 84%,rgba(55,227,208,.13),transparent 62%),
+  linear-gradient(160deg,#102a46,#0a1626)}
+.pex-map-hero::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 100px rgba(4,10,20,.62);border-radius:inherit}
+.pex-map-hero .pex-mgrid line{stroke:rgba(120,180,255,.07)}
+.pex-map-hero .pex-corridor{stroke:rgba(120,180,255,.2);stroke-width:1.6}
+.pex-map-hero .pex-route{stroke:url(#pexRg);stroke-width:2.6;opacity:.95;filter:drop-shadow(0 0 6px rgba(76,141,255,.7));animation:pexflow 4s linear infinite}
+.pex-map-hero .pex-city circle{fill:#5cc8ff;filter:drop-shadow(0 0 7px rgba(92,200,255,.85))}
+.pex-map-hero .pex-city text{fill:#c4d4e6;font-size:11px;font-weight:600;letter-spacing:.6px}
+.pex-map-hero .pex-city.hub circle{fill:#eaf5ff;filter:drop-shadow(0 0 12px rgba(140,200,255,.95))}
+.pex-map-hero .pex-city.hub text{fill:#eaf5ff;font-size:13px;font-weight:800;letter-spacing:1.6px}
+.pex-map-hero .pex-city.hub circle.pex-hubring{fill:none;stroke:#5cc8ff;stroke-width:1.6;opacity:.6;filter:drop-shadow(0 0 4px rgba(92,200,255,.6));animation:pexhub 3s ease-out infinite}
+.pex-map-hero .pex-base rect{fill:url(#pexGold);filter:drop-shadow(0 3px 10px rgba(214,170,70,.45))}
+.pex-map-hero .pex-base text{fill:#2e2408;font-family:"Consolas",monospace;font-size:10px;font-weight:800;letter-spacing:2px}
+.pex-truck{filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));transition:transform .15s}
+.pex-veh{cursor:pointer}
+.pex-veh:hover .pex-truck{transform:scale(1.18)}
+.pex-map-hero .pex-skel-ov{background:linear-gradient(90deg,#0f2742,#173a5e,#0f2742);background-size:400% 100%;color:#8fabc8}
