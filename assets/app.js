@@ -671,32 +671,25 @@ function viewDashboard(){
     ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
   </div>
 
-  <div class="grid">
+  <div class="grid two-col">
     <div class="card">
       <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3></div>
       <div class="card-b">
         <div class="donut-wrap">
           ${donut([
-            {label:'Vencidos',value:venc.length,color:'#dc2626'},
-            {label:'Críticos',value:crit.length,color:'#ea580c'},
-            {label:'Atenção',value:aten.length,color:'#d99200'},
             {label:'Em dia',value:emdia.length,color:'#16a34a'},
+            {label:'Atenção',value:aten.length,color:'#d99200'},
+            {label:'Críticos',value:crit.length,color:'#ea580c'},
+            {label:'Vencidos',value:venc.length,color:'#dc2626'},
           ],{center:vs.length,sub:'total'})}
           <div class="legend">
-            <div class="li clk" onclick="location.hash='vencimentos/vencido'"><span class="dot" style="background:#dc2626"></span>Vencidos<b>${venc.length}</b></div>
-            <div class="li clk" onclick="location.hash='vencimentos/critico'"><span class="dot" style="background:#ea580c"></span>Críticos<b>${crit.length}</b></div>
-            <div class="li clk" onclick="location.hash='vencimentos/atencao'"><span class="dot" style="background:#d99200"></span>Atenção<b>${aten.length}</b></div>
             <div class="li clk" onclick="location.hash='vencimentos/emdia'"><span class="dot" style="background:#16a34a"></span>Em dia<b>${emdia.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/atencao'"><span class="dot" style="background:#d99200"></span>Atenção<b>${aten.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/critico'"><span class="dot" style="background:#ea580c"></span>Críticos<b>${crit.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/vencido'"><span class="dot" style="background:#dc2626"></span>Vencidos<b>${venc.length}</b></div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div class="grid two-col" style="margin-top:18px">
-    <div class="card">
-      <div class="card-h">${svg('bell')}<h3>Vencimentos por mês</h3><span class="sub">próximos 6 meses</span></div>
-      <div class="card-b">${barChart(meses)}</div>
     </div>
     <div class="card">
       <div class="card-h">${svg('wrench')}<h3>Trocas a vencer (KM / Horas)</h3>
@@ -751,19 +744,7 @@ function viewDashboard(){
     </div>
   </div>
 
-  <div class="grid two-col" style="margin-top:18px">
-    <div class="card">
-      <div class="card-h">${svg('dash')}<h3>Mapa de atividade</h3><span class="sub">viagens · últimos 12 meses</span></div>
-      <div class="card-b">${heatmap(heat)}</div>
-    </div>
-    <div class="card">
-      <div class="card-h">${svg('bell')}<h3>Linha do tempo — vencimentos</h3>
-        <div class="r"><a class="btn sm" href="#vencimentos">Ver todos</a></div></div>
-      <div class="card-b p0" style="padding:8px 14px 12px">${timeline(tlVenc)}</div>
-    </div>
-  </div>
-
-  <div class="grid two-col" style="margin-top:18px">
+  <div class="grid" style="margin-top:18px">
     <div class="card">
       <div class="card-h">${svg('route')}<h3>Situação das viagens</h3></div>
       <div class="card-b"><div class="donut-wrap">
@@ -772,18 +753,6 @@ function viewDashboard(){
           <div class="li clk" onclick="viagemFiltro='emviagem';location.hash='viagens'"><span class="dot" style="background:#c99a2e"></span>Pendentes<b>${vSitData[0].value}</b></div>
           <div class="li clk" onclick="location.hash='viagens'"><span class="dot" style="background:#0f766e"></span>Concluídas<b>${vSitData[1].value}</b></div>
           <div class="li"><span class="dot" style="background:#9f1239"></span>Canceladas<b>${vSitData[2].value}</b></div>
-        </div>
-      </div></div>
-    </div>
-    <div class="card">
-      <div class="card-h">${svg('doc')}<h3>Documentos por situação</h3></div>
-      <div class="card-b"><div class="donut-wrap">
-        ${donut([{label:'Vencidos',value:venc.length,color:'#9f1239'},{label:'Críticos',value:crit.length,color:'#c2410c'},{label:'Atenção',value:aten.length,color:'#c99a2e'},{label:'Em dia',value:emdia.length,color:'#0f766e'}],{center:vs.length,sub:'total'})}
-        <div class="legend">
-          <div class="li clk" onclick="location.hash='vencimentos/vencido'"><span class="dot" style="background:#9f1239"></span>Vencidos<b>${venc.length}</b></div>
-          <div class="li clk" onclick="location.hash='vencimentos/critico'"><span class="dot" style="background:#c2410c"></span>Críticos<b>${crit.length}</b></div>
-          <div class="li clk" onclick="location.hash='vencimentos/atencao'"><span class="dot" style="background:#c99a2e"></span>Atenção<b>${aten.length}</b></div>
-          <div class="li clk" onclick="location.hash='vencimentos/emdia'"><span class="dot" style="background:#0f766e"></span>Em dia<b>${emdia.length}</b></div>
         </div>
       </div></div>
     </div>
