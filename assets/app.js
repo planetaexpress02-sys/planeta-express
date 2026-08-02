@@ -731,32 +731,6 @@ function viewDashboard(){
     </div>
   </div>
 
-  <div class="grid two-col" style="margin-top:18px">
-    <div class="card">
-      <div class="card-h">${svg('route')}<h3>Viagens por mês</h3><span class="sub">últimos 6 meses${vgPct!=null?` · <b style="color:${vgPct>=0?'#25e88f':'#ff6b6b'}">${vgPct>=0?'▲':'▼'} ${Math.abs(vgPct)}%</b> vs. período anterior`:''}</span>
-        <div class="r"><a class="btn sm" href="#viagens">Ver viagens</a></div></div>
-      <div class="card-b">${lineChart(viagensMes,{compare:viagensCmp})}</div>
-    </div>
-    <div class="card">
-      <div class="card-h">${svg('money')}<h3>Despesas por mês</h3><span class="sub">área · linha tracejada = período anterior</span>
-        <div class="r"><a class="btn sm" href="#notas">Ver despesas</a></div></div>
-      <div class="card-b">${DB.notas.length? lineChart(despMes,{compare:despCmp}) : emptyState('Lance despesas para ver o gráfico.')}</div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:18px">
-    <div class="card">
-      <div class="card-h">${svg('route')}<h3>Situação das viagens</h3></div>
-      <div class="card-b"><div class="donut-wrap">
-        ${donut(vSitData,{center:DB.viagens.length,sub:'viagens'})}
-        <div class="legend">
-          <div class="li clk" onclick="viagemFiltro='emviagem';location.hash='viagens'"><span class="dot" style="background:#c99a2e"></span>Pendentes<b>${vSitData[0].value}</b></div>
-          <div class="li clk" onclick="location.hash='viagens'"><span class="dot" style="background:#0f766e"></span>Concluídas<b>${vSitData[1].value}</b></div>
-          <div class="li"><span class="dot" style="background:#9f1239"></span>Canceladas<b>${vSitData[2].value}</b></div>
-        </div>
-      </div></div>
-    </div>
-  </div>
   </div>`;
 }
 
