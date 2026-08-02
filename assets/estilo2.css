@@ -1028,6 +1028,110 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){ .nav a .badge{animation:none} .nav a.active::before{animation:none;height:62%} }
 
 /* ==========================================================================
+   COCKPIT SUPERIOR (v6.19) — barra superior operacional
+   Busca global + comandos (Ctrl K/N), central de notificações, clima,
+   relógio em tempo real, status. Barra clara refinada com acentos neon;
+   paleta e notificações em vidro escuro cyber (toque tecnológico).
+   Só UI/UX — não altera rotas nem dados.
+   ========================================================================== */
+.topbar{gap:14px}
+/* barra de busca-comando (abre a paleta) */
+.cock-search{display:flex;align-items:center;gap:10px;flex:1;max-width:520px;margin:0 8px;height:40px;padding:0 13px;
+  border:1px solid var(--line);background:#f5f8fc;border-radius:12px;cursor:text;transition:border-color .16s,background .16s,box-shadow .16s;font-family:inherit}
+.cock-search:hover{border-color:#c7d4e8;background:#fff;box-shadow:0 2px 10px rgba(20,30,55,.05)}
+.cock-search>svg{width:16px;height:16px;color:var(--text-mute);flex:0 0 auto}
+.cock-search span{flex:1;text-align:left;font-size:13.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cock-kbd{font-family:"Consolas",monospace;font-size:10.5px;font-weight:700;letter-spacing:.5px;padding:3px 8px;border-radius:6px;
+  border:1px solid rgba(120,150,190,.3);color:#7a8aa3;background:rgba(120,150,190,.08);flex:0 0 auto}
+/* cluster de ferramentas */
+.cock-cluster{display:flex;align-items:center;gap:9px;flex:0 0 auto;margin-left:auto}
+.cock-ico{position:relative;width:38px;height:38px;border-radius:11px;border:1px solid transparent;background:transparent;color:var(--text-soft);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s,color .16s,border-color .16s,transform .12s}
+.cock-ico svg{width:19px;height:19px}
+.cock-ico:hover{background:var(--accent-soft);color:var(--accent);border-color:rgba(31,95,220,.14)}
+.cock-ico:active{transform:scale(.94)}
+.cock-badge{position:absolute;top:2px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:20px;background:linear-gradient(180deg,#ff5a52,#dc2626);color:#fff;
+  font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff}
+.cock-badge.crit{animation:cockBadge 2.4s ease-out infinite}
+@keyframes cockBadge{0%{box-shadow:0 0 0 2px #fff,0 0 0 0 rgba(220,38,38,.5)}70%{box-shadow:0 0 0 2px #fff,0 0 0 7px rgba(220,38,38,0)}100%{box-shadow:0 0 0 2px #fff,0 0 0 0 rgba(220,38,38,0)}}
+/* clima */
+.cock-weather{display:none;align-items:center;gap:8px;padding:5px 12px;border-radius:11px;background:#f2f6fb;border:1px solid var(--line)}
+.cock-weather .wx-ic{font-size:17px;line-height:1}
+.cock-weather .wx-tx{display:flex;flex-direction:column;line-height:1.1}
+.cock-weather .wx-tx b{font-size:13.5px;color:var(--text);font-weight:700}
+.cock-weather .wx-tx small{font-size:9.5px;color:var(--text-mute);letter-spacing:.3px}
+/* relógio */
+.cock-clock{text-align:right;line-height:1.16;font-family:"Consolas",monospace;min-width:74px}
+.cock-clock b{display:block;font-size:14.5px;font-weight:700;color:var(--text);letter-spacing:.5px}
+.cock-clock span{font-size:10px;color:var(--text-mute);text-transform:capitalize}
+/* status */
+.cock-status{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:600;cursor:default;border:1px solid var(--line)}
+.cock-status i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.cock-status.on{color:#12996b;background:rgba(0,200,120,.07);border-color:rgba(0,200,120,.22)}
+.cock-status.on i{background:#12c98d;box-shadow:0 0 8px rgba(18,201,141,.7);animation:cockDot 2s infinite}
+.cock-status.off{color:#8a97aa;background:#f1f4f8}
+.cock-status.off i{background:#9fb0c4}
+@keyframes cockDot{50%{opacity:.4}}
+
+/* ---- Paleta de comandos (overlay escuro cyber) ---- */
+.cmdk{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-start;justify-content:center}
+.cmdk.show{display:flex}
+.cmdk-back{position:absolute;inset:0;background:rgba(4,10,20,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.cmdk-box{position:relative;z-index:1;width:min(680px,92vw);margin-top:11vh;background:rgba(9,20,35,.94);
+  border:1px solid rgba(0,229,255,.2);border-radius:16px;box-shadow:0 0 44px rgba(0,229,255,.12),0 30px 80px rgba(0,0,0,.62);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);overflow:hidden;transform:translateY(-12px) scale(.98);opacity:0}
+.cmdk.show .cmdk-box{animation:cmdkIn .24s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes cmdkIn{to{transform:none;opacity:1}}
+.cmdk-in{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,229,255,.1)}
+.cmdk-in svg{width:20px;height:20px;color:#00e5ff;flex:0 0 auto;filter:drop-shadow(0 0 5px rgba(0,229,255,.5))}
+.cmdk-in input{flex:1;background:transparent;border:none;outline:none;color:#eaf4ff;font-size:16px;font-family:inherit}
+.cmdk-in input::placeholder{color:#6d8399}
+.cmdk kbd{font-family:"Consolas",monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid rgba(0,229,255,.22);color:#8fb6d8;background:rgba(0,229,255,.06)}
+.cmdk-list{max-height:54vh;overflow-y:auto;padding:8px}
+.cmdk-cat{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:#6d8399;padding:10px 12px 6px;font-weight:600}
+.cmdk-row{display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:10px;cursor:pointer;color:#cfe0ef;text-decoration:none}
+.cmdk-ico{width:34px;height:34px;border-radius:9px;background:rgba(0,229,255,.1);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.cmdk-ico svg{width:18px;height:18px;color:#7fc5ff}
+.cmdk-t{flex:1;min-width:0;font-size:14px;font-weight:500;display:flex;flex-direction:column}
+.cmdk-t small{color:#7fa0bd;font-weight:400;font-size:11.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmdk-tag{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#6d8399;border:1px solid rgba(120,160,210,.2);padding:3px 8px;border-radius:20px;flex:0 0 auto}
+.cmdk-tag.act{color:#00e5ff;border-color:rgba(0,229,255,.3)}
+.cmdk-row.sel,.cmdk-row:hover{background:rgba(0,229,255,.1)}
+.cmdk-row.sel .cmdk-ico{background:rgba(0,229,255,.22)}
+.cmdk-empty{padding:28px;text-align:center;color:#7fa0bd;font-size:13px}
+.cmdk-foot{display:flex;justify-content:space-between;gap:12px;padding:11px 16px;border-top:1px solid rgba(0,229,255,.1);color:#6d8399;font-size:11px;flex-wrap:wrap}
+.cmdk-foot kbd{margin:0 1px}
+
+/* ---- Central de notificações (dropdown escuro cyber) ---- */
+.cock-notif{position:fixed;top:58px;right:18px;z-index:1150;width:min(370px,92vw);
+  background:rgba(9,20,35,.95);border:1px solid rgba(0,229,255,.2);border-radius:14px;
+  box-shadow:0 0 34px rgba(0,229,255,.1),0 24px 60px rgba(0,0,0,.55);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  transform:translateY(-8px);opacity:0;pointer-events:none;transition:transform .2s,opacity .2s;overflow:hidden}
+.cock-notif.show{transform:none;opacity:1;pointer-events:auto}
+.cn-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(0,229,255,.1);color:#eaf4ff;font-weight:600;font-size:14px}
+.cn-h svg{width:18px;height:18px;color:#00e5ff}
+.cn-body{max-height:min(62vh,520px);overflow-y:auto;padding:6px}
+.cn-cat{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;padding:11px 12px 5px;display:flex;justify-content:space-between;font-weight:700}
+.cn-cat.crit{color:#ff6b6b}.cn-cat.warn{color:#ffc061}.cn-cat.info{color:#7fc5ff}
+.cn-cat span{opacity:.65}
+.cn-row{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;cursor:pointer;color:#cfe0ef}
+.cn-row:hover{background:rgba(0,229,255,.07)}
+.cn-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.cn-dot.crit{background:#ff3b30;box-shadow:0 0 6px #ff3b30}.cn-dot.warn{background:#ffb020;box-shadow:0 0 6px #ffb020}.cn-dot.info{background:#00e5ff;box-shadow:0 0 6px #00e5ff}
+.cn-main{flex:1;min-width:0}
+.cn-main b{display:block;font-size:13px;font-weight:600;color:#eaf4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cn-main span{font-size:11.5px;color:#7fa0bd}
+.cn-when{font-size:10.5px;color:#6d8399;font-family:"Consolas",monospace;flex:0 0 auto}
+.cn-empty{padding:28px;text-align:center;color:#7fa0bd;font-size:13px}
+
+/* ---- responsividade do cockpit ---- */
+@media(max-width:1240px){ .cock-weather{display:none!important} }
+@media(max-width:1080px){ .cock-clock span{display:none} .cock-status span{display:none} .cock-status{padding:9px} }
+@media(max-width:900px){ .cock-search span,.cock-kbd{display:none} .cock-search{flex:0 0 42px;max-width:42px;width:42px;padding:0;justify-content:center;margin-left:auto} .cock-clock,.cock-status{display:none} .relbtn span{display:none} }
+@media(max-width:560px){ .relbtn{display:none} .cock-cluster{gap:4px} }
+@media(prefers-reduced-motion:reduce){ .cock-badge.crit,.cock-status.on i,.cmdk.show .cmdk-box{animation:none} }
+
+/* ==========================================================================
    TEMA CYBER — ABA INÍCIO + PAINEL DE CONTROLE (v6.16)
    Evolução do "Centro de Comando" escuro para o estilo cyber neon azul do
    briefing (imersivo/futurista): fundo profundo, cards com borda iluminada e

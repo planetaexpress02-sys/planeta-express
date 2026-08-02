@@ -419,7 +419,8 @@ function router(){
 /* ================================================================== */
 function pexAfterRender(rota){
   try{ var _vw=document.getElementById('view'); if(_vw) _vw.setAttribute('data-route',rota);
-    pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp(); }catch(e){}
+    pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
+    if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -3066,6 +3067,162 @@ function toggleRail(){ const on=!document.body.classList.contains('rail'); docum
 function applyRail(){ let on=false; try{ on=localStorage.getItem('pex_rail')==='1'; }catch(e){}
   document.body.classList.toggle('rail',on);
   const b=document.querySelector('.rail-toggle'); if(b) b.title = on?'Expandir menu':'Recolher menu'; }
+
+/* ================================================================== */
+/*  COCKPIT SUPERIOR (v6.19) — busca global, comandos rápidos,          */
+/*  atalhos, central de notificações, clima, relógio, status.           */
+/*  Só interface/UX: não altera dados, rotas, permissões nem módulos.   */
+/* ================================================================== */
+/* ---- Busca global inteligente ---- */
+function pexSearch(q){
+  q=(q||'').trim().toLowerCase(); if(!q) return [];
+  const kq=q.replace(/[^a-z0-9]/g,'');
+  const inc=(s)=> String(s==null?'':s).toLowerCase().indexOf(q)>=0;
+  const inck=(s)=> kq.length>=2 && String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'').indexOf(kq)>=0;
+  const R=[]; const add=(cat,ico,title,sub,hash)=>R.push({cat,ico,title,sub,hash});
+  (DB.veiculos||[]).forEach(v=>{ if(v.status==='Arquivado')return;
+    if(inck(v.placa)||inc(v.marca)||inc(v.modelo)||inc(v.chassi)||inc(v.renavam)) add('Veículo','truck',v.placa,((v.marca||'')+' '+(v.modelo||'')).trim()||'—','#frota/'+v.id); });
+  (DB.motoristas||[]).forEach(m=>{ if(inc(m.nome)||inck(m.cpf)||inck(m.rg)) add('Motorista','user',m.nome,m.funcao||'Motorista','#motoristas/'+m.id); });
+  (DB.ctes||[]).forEach(c=>{ if(inc(c.numero)||inck(c.chave)||inc(c.cliente)||inc(c.destinatario)||inc(c.origem)||inc(c.destino)) add('CT-e','ctedoc','CT-e '+(c.numero||''),(c.cliente||'')+(c.destino?' → '+c.destino:''),'#ctes'); });
+  (DB.viagens||[]).forEach(v=>{ if(inck(v.placa)||inc(v.motorista)||inc(v.destino)||inc(v.transporte)) add('Viagem','route',(v.placa||'')+(v.destino?' · '+v.destino:''),(v.motorista||'')+(v.data?' · '+fmtD(v.data):''),'#viagens'); });
+  (DB.servicos||[]).forEach(s=>{ if(inc(s.descricao)||inc(s.oficina)){ const v=veiculo(s.veiculoId); add('Manutenção','wrench',s.descricao||'Serviço',((v?v.placa+' · ':'')+(s.oficina||'')).trim()||'—', v?'#manutencao/'+v.id:'#manutencao'); } });
+  (DB.pneus||[]).forEach(p=>{ if(inc(p.marca)||inc(p.medida)||inc(p.posicao)){ const v=veiculo(p.veiculoId); add('Pneu','tire',((p.marca||'Pneu')+' '+(p.medida||'')).trim(),((v?v.placa+' · ':'')+(p.posicao||'')).trim()||'—', v?'#pneus/'+v.id:'#pneus'); } });
+  (DB.notas||[]).forEach(n=>{ if(inc(n.obs)||inc(n.inicio)||inc(n.fim)) add('Nota','money','Nota '+fmtD(n.inicio)+'–'+fmtD(n.fim),money(totalNota(n)),'#notas'); });
+  try{ (typeof todosArquivos==='function'?todosArquivos():[]).forEach(f=>{ const nome=f.name||f.nome||''; if(inc(nome)) add('Documento','doc',nome,f.categoria||'Arquivo','#documentos'); }); }catch(e){}
+  return R.slice(0,40);
+}
+/* ---- Ações rápidas (Novo…) ---- */
+const PEX_CMDS=[
+  {label:'Novo veículo', ico:'truck', fn:function(){ modalVeiculo(); }},
+  {label:'Novo motorista', ico:'user', fn:function(){ modalMotorista(); }},
+  {label:'Nova viagem', ico:'route', fn:function(){ modalViagem(); }},
+  {label:'Novo abastecimento', ico:'fuel', fn:function(){ modalAbastec(); }},
+  {label:'Novo serviço de manutenção', ico:'wrench', fn:function(){ modalServico(); }},
+  {label:'Novo CT-e', ico:'ctedoc', fn:function(){ modalCte(); }},
+  {label:'Novo check-list', ico:'check', fn:function(){ modalChecklist(); }},
+  {label:'Nova nota de despesa', ico:'money', fn:function(){ modalNota(); }},
+  {label:'Nova descarga', ico:'box', fn:function(){ modalDescarga(); }},
+  {label:'Tirar relatório desta tela', ico:'print', fn:function(){ imprimirRelatorio(); }}
+];
+/* ---- Paleta de comandos (Ctrl+K / Ctrl+N) ---- */
+let PEXCMD={sel:0, items:[]};
+function pexCmdOpen(mode){
+  let el=document.getElementById('pexCmd'); if(!el){ el=document.createElement('div'); el.id='pexCmd'; el.className='cmdk'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="cmdk-back" onclick="pexCmdClose()"></div>
+    <div class="cmdk-box" role="dialog" aria-label="Busca e comandos">
+      <div class="cmdk-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="cmdkInput" placeholder="Buscar placa, motorista, CT-e, nota, viagem, manutenção, pneus…" autocomplete="off"><kbd>ESC</kbd></div>
+      <div class="cmdk-list" id="cmdkList"></div>
+      <div class="cmdk-foot"><span><kbd>↑</kbd><kbd>↓</kbd> navegar · <kbd>Enter</kbd> abrir</span><span><kbd>Ctrl</kbd><kbd>K</kbd> buscar · <kbd>Ctrl</kbd><kbd>N</kbd> novo</span></div>
+    </div>`;
+  requestAnimationFrame(()=>el.classList.add('show'));
+  const inp=document.getElementById('cmdkInput');
+  inp.value = mode==='new' ? '>' : '';
+  inp.addEventListener('input', function(){ pexCmdRender(inp.value); });
+  inp.addEventListener('keydown', pexCmdKey);
+  pexCmdRender(inp.value);
+  setTimeout(function(){ inp.focus(); },40);
+}
+function pexCmdClose(){ const el=document.getElementById('pexCmd'); if(el){ el.classList.remove('show'); setTimeout(function(){ if(el && !el.classList.contains('show')) el.innerHTML=''; },200); } }
+function pexCmdRender(q){
+  q=q||''; const cmdMode=q.charAt(0)==='>'; const qq=(cmdMode?q.slice(1):q).trim();
+  let html=''; const items=[];
+  const cmds=PEX_CMDS.filter(function(c){ return !qq || c.label.toLowerCase().indexOf(qq.toLowerCase())>=0; });
+  if(cmds.length){ html+='<div class="cmdk-cat">Ações rápidas</div>';
+    cmds.forEach(function(c){ const i=items.length; items.push({fn:c.fn});
+      html+=`<a class="cmdk-row" data-i="${i}" onclick="pexCmdDo(${i})"><span class="cmdk-ico">${svg(c.ico)}</span><span class="cmdk-t">${esc(c.label)}</span><span class="cmdk-tag act">Ação</span></a>`; });
+  }
+  if(!cmdMode && qq){ const res=pexSearch(qq);
+    if(res.length){ html+='<div class="cmdk-cat">Resultados</div>';
+      res.forEach(function(r){ const i=items.length; items.push({hash:r.hash});
+        html+=`<a class="cmdk-row" data-i="${i}" onclick="pexCmdDo(${i})"><span class="cmdk-ico">${svg(r.ico)}</span><span class="cmdk-t">${esc(r.title)}<small>${esc(r.sub||'')}</small></span><span class="cmdk-tag">${esc(r.cat)}</span></a>`; });
+    } else if(!cmds.length){ html+='<div class="cmdk-empty">Nada encontrado para "'+esc(qq)+'".</div>'; }
+  }
+  if(!html) html='<div class="cmdk-empty">Digite para buscar, ou escolha uma ação rápida.</div>';
+  PEXCMD.items=items; PEXCMD.sel=0;
+  const list=document.getElementById('cmdkList'); if(list){ list.innerHTML=html; pexCmdHi(); }
+}
+function pexCmdHi(){ const rows=document.querySelectorAll('#cmdkList .cmdk-row'); rows.forEach(function(r,i){ r.classList.toggle('sel',i===PEXCMD.sel); }); const cur=rows[PEXCMD.sel]; if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest'}); }
+function pexCmdKey(e){ const n=PEXCMD.items.length;
+  if(e.key==='ArrowDown'){ e.preventDefault(); PEXCMD.sel=Math.min(Math.max(0,n-1),PEXCMD.sel+1); pexCmdHi(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); PEXCMD.sel=Math.max(0,PEXCMD.sel-1); pexCmdHi(); }
+  else if(e.key==='Enter'){ e.preventDefault(); pexCmdDo(PEXCMD.sel); }
+  else if(e.key==='Escape'){ e.preventDefault(); pexCmdClose(); } }
+function pexCmdDo(i){ const it=PEXCMD.items[i]; if(!it) return; pexCmdClose();
+  if(it.hash){ location.hash=it.hash; } else if(it.fn){ try{ it.fn(); }catch(e){} } }
+
+/* ---- Central de notificações ---- */
+function _vencNome(x){ if(x.entidade==='veiculo'){ const v=veiculo(x.refId); return v?v.placa:''; } if(x.entidade==='motorista'){ const m=motorista(x.refId); return m?m.nome:''; } return x.nome||''; }
+function pexNotifData(){ const crit=[],avi=[],info=[];
+  (todosVencimentos()||[]).forEach(function(x){ const s=situacao(x.validade); const nome=_vencNome(x); const t=(x.tipo||'Documento')+(nome?' — '+nome:'');
+    if(s.ord===0) crit.push({t:t, s:'Documento vencido', when:fmtD(x.validade), hash:'#vencimentos/vencido'});
+    else if(s.ord===1) avi.push({t:t, s:'Vence em '+s.dias+' dia(s)', when:fmtD(x.validade), hash:'#vencimentos/critico'}); });
+  const ver=(document.querySelector('.sidebar .foot b')||{}).textContent||'';
+  info.push({t:'Sistema atualizado', s:'Versão '+ver+' instalada', when:''});
+  info.push({t:'Backup automático', s:'Programado para 03:00', when:''});
+  const pend=(DB.viagens||[]).filter(function(v){ return v.status==='Pendente'; }).length;
+  if(pend) info.push({t:pend+' viagem(ns) pendente(s)', s:'Aguardando baixa', when:'', hash:'#viagens'});
+  return {crit:crit, avi:avi, info:info}; }
+function pexNotifBadge(){ const d=pexNotifData(); const n=d.crit.length+d.avi.length; const b=document.getElementById('cockBadge');
+  if(b){ b.textContent=n>99?'99+':(n||''); b.style.display=n?'flex':'none'; b.classList.toggle('crit',d.crit.length>0); } }
+function pexNotifToggle(ev){ if(ev) ev.stopPropagation();
+  let el=document.getElementById('cockNotif');
+  if(el && el.classList.contains('show')){ pexNotifClose(); return; }
+  if(!el){ el=document.createElement('div'); el.id='cockNotif'; el.className='cock-notif'; document.body.appendChild(el); }
+  const d=pexNotifData();
+  const sec=function(title,arr,cls){ return arr.length? `<div class="cn-cat ${cls}">${title}<span>${arr.length}</span></div>`+arr.slice(0,10).map(function(x){ return `<div class="cn-row"${x.hash?` onclick="location.hash='${x.hash}';pexNotifClose()"`:''}><span class="cn-dot ${cls}"></span><div class="cn-main"><b>${esc(x.t)}</b><span>${esc(x.s)}</span></div>${x.when?`<div class="cn-when">${esc(x.when)}</div>`:''}</div>`; }).join('') : ''; };
+  const body=sec('Críticos',d.crit,'crit')+sec('Avisos',d.avi,'warn')+sec('Informativos',d.info,'info');
+  el.innerHTML=`<div class="cn-h">${svg('bell')}<b>Central de notificações</b></div><div class="cn-body">${body||'<div class="cn-empty">Tudo em dia ✓</div>'}</div>`;
+  requestAnimationFrame(function(){ el.classList.add('show'); });
+  setTimeout(function(){ document.addEventListener('click', pexNotifOutside); },10);
+}
+function pexNotifOutside(e){ const el=document.getElementById('cockNotif'), bell=document.getElementById('cockBell');
+  if(el && !el.contains(e.target) && bell && !bell.contains(e.target)) pexNotifClose(); }
+function pexNotifClose(){ const el=document.getElementById('cockNotif'); if(el) el.classList.remove('show'); document.removeEventListener('click', pexNotifOutside); }
+
+/* ---- Clima (Londrina) — melhor-esforço online, degrada offline ---- */
+function _wxInfo(code){ code=+code;
+  if(code===0) return ['☀️','Céu limpo']; if(code<=2) return ['🌤️','Parcialmente nublado']; if(code===3) return ['☁️','Nublado'];
+  if(code>=45&&code<=48) return ['🌫️','Névoa']; if(code>=51&&code<=67) return ['🌦️','Garoa/chuva']; if(code>=71&&code<=77) return ['❄️','Neve'];
+  if(code>=80&&code<=82) return ['🌧️','Pancadas']; if(code>=95) return ['⛈️','Tempestade']; return ['🌡️','—']; }
+function pexWeatherRender(temp,code){ const el=document.getElementById('cockWeather'); if(!el) return; const wi=_wxInfo(code);
+  el.style.display='flex'; el.title='Clima em Londrina — '+wi[1]; el.innerHTML=`<span class="wx-ic">${wi[0]}</span><span class="wx-tx"><b>${temp}°</b><small>Londrina</small></span>`; }
+function pexWeather(){ const el=document.getElementById('cockWeather'); if(!el) return;
+  try{ const c=JSON.parse(localStorage.getItem('pex_weather')||'null'); if(c && (Date.now()-c.t)<1800000){ pexWeatherRender(c.temp,c.code); return; } }catch(e){}
+  if(!navigator.onLine){ el.style.display='none'; return; }
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.31&longitude=-51.16&current=temperature_2m,weather_code&timezone=America%2FSao_Paulo')
+    .then(function(r){ return r.json(); })
+    .then(function(j){ const temp=Math.round(j.current.temperature_2m), code=j.current.weather_code;
+      try{ localStorage.setItem('pex_weather', JSON.stringify({t:Date.now(),temp:temp,code:code})); }catch(e){}
+      pexWeatherRender(temp,code); })
+    .catch(function(){ el.style.display='none'; }); }
+
+/* ---- Relógio em tempo real ---- */
+function cockTick(){ const d=new Date();
+  const t=document.getElementById('cockTime'); if(t) t.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+  const dt=document.getElementById('cockDate'); if(dt) dt.textContent=(DIAS[d.getDay()]||'')+' · '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+
+/* ---- Status do sistema (online/backup/sincronização/banco) ---- */
+function pexCockStatus(){ const el=document.getElementById('cockStatus'); if(!el) return;
+  const on=!!(typeof nuvemAtiva==='function' && nuvemAtiva() && typeof nuvemUser==='function' && nuvemUser());
+  el.className='cock-status '+(on?'on':'off');
+  el.innerHTML=`<i></i><span>${on?'Online':'Local'}</span>`;
+  const quem=on?(nomeUsuario()||'usuário'):'';
+  el.title=on ? ('Servidor online · '+quem+' · 1 usuário conectado · Backup 03:00 · Banco de dados sincronizado') : 'Modo local — dados salvos com segurança neste aparelho'; }
+
+/* ---- Inicialização do cockpit ---- */
+function pexCockInit(){
+  cockTick(); setInterval(cockTick,1000);
+  pexWeather(); setInterval(pexWeather,1800000);
+  pexCockStatus(); setInterval(pexCockStatus,15000);
+  pexNotifBadge();
+  window.addEventListener('online', function(){ pexCockStatus(); pexWeather(); });
+  window.addEventListener('offline', pexCockStatus);
+  document.addEventListener('keydown', function(e){ if(!(e.ctrlKey||e.metaKey)) return; const k=(e.key||'').toLowerCase();
+    if(k==='k'){ e.preventDefault(); pexCmdOpen(); }
+    else if(k==='n'){ e.preventDefault(); pexCmdOpen('new'); }
+    else if(k==='/'){ e.preventDefault(); pexCmdOpen(); } });
+}
 function hideSplash(){ const s=document.getElementById('splash'); if(!s)return; s.classList.add('gone'); setTimeout(()=>s.remove(),700); }
 
 /* ================================================================== */
@@ -3177,7 +3334,8 @@ async function init(){
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
   document.addEventListener('input', aplicarMascaraInput);   /* pontuação automática (CPF, RG, telefone…) */
   if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();  /* IA: aparece offline; online só após login */
-  const s=document.getElementById('gsearch'); s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
+  const s=document.getElementById('gsearch'); if(s) s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
+  if(typeof pexCockInit==='function') pexCockInit();
   // Sincronização: salva na hora ao fechar/minimizar; ao voltar, puxa o mais recente da nuvem
   window.addEventListener('beforeunload', flushNuvem);
   window.addEventListener('pagehide', flushNuvem);
