@@ -418,7 +418,10 @@ function router(){
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
 function pexAfterRender(rota){
-  try{ var _vw=document.getElementById('view'); if(_vw) _vw.setAttribute('data-route',rota);
+  try{ var _vw=document.getElementById('view'); if(_vw){ _vw.setAttribute('data-route',rota);
+      /* tema CYBER global: liga em todas as telas, EXCETO Viagens/Descargas (ficam claras)
+         e Início/Painel/Manutenção (já têm bloco cyber próprio scoped) */
+      var _noCy={viagens:1,descargas:1,inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
     pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }

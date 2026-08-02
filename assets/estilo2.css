@@ -1132,6 +1132,181 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){ .cock-badge.crit,.cock-status.on i,.cmdk.show .cmdk-box{animation:none} }
 
 /* ==========================================================================
+   TEMA CYBER GLOBAL (v6.20) — o restante do sistema em neon
+   A classe .cyber é ligada no #view (pexAfterRender) para TODAS as telas,
+   EXCETO Viagens e Descargas (ficam claras) e Início/Painel/Manutenção (têm
+   bloco cyber próprio). Cobre cada superfície clara "chumbada". Só aparência —
+   não altera dados, rotas, permissões nem módulos.
+   ========================================================================== */
+#view.cyber{
+  --card:rgba(0,26,47,.6); --line:rgba(0,229,255,.10); --line-2:rgba(0,229,255,.06);
+  --text:#e6eaf2; --text-soft:#9fbdd8; --text-mute:#7fa0bd;
+  --accent:#00e5ff; --accent-2:#00c8e6; --accent-soft:rgba(0,229,255,.12);
+  --ok:#25e88f; --ok-bg:rgba(0,255,136,.14); --warn:#ffc061; --warn-bg:rgba(255,176,32,.15);
+  --crit:#ffb27a; --crit-bg:rgba(255,157,92,.15); --danger:#ff6b6b; --danger-bg:rgba(255,59,48,.15);
+  color:#e6eaf2;letter-spacing:-.1px;
+  font-family:'Inter','Sora','Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;
+  background:
+    radial-gradient(1200px 720px at 16% 18%, rgba(0,119,255,.11), transparent 60%),
+    radial-gradient(900px 640px at 90% 4%, rgba(0,229,255,.08), transparent 58%),
+    radial-gradient(circle at 20% 30%, #0a1a2f 0%, #001117 82%);
+}
+/* brilho de topo neon (era sheen branco no claro) */
+#view.cyber .card::before,#view.cyber .kpi::before{background:linear-gradient(180deg,rgba(0,229,255,.05),transparent 42%)}
+
+/* banner */
+#view.cyber .banner{background:rgba(0,26,47,.6);color:#e6eaf2;border:1px solid rgba(0,229,255,.12);border-radius:16px;position:relative;overflow:hidden;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 0 20px rgba(0,229,255,.08),0 0 40px rgba(0,119,255,.04),0 18px 40px rgba(0,0,0,.36)}
+#view.cyber .banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#00e5ff,#0077ff);box-shadow:0 0 12px rgba(0,229,255,.6)}
+#view.cyber .banner>svg{color:#00e5ff;filter:drop-shadow(0 0 6px rgba(0,229,255,.5))}
+#view.cyber .banner b{color:#eaf4ff}
+#view.cyber .banner span{color:#9fbdd8}
+
+/* cards */
+#view.cyber .card{background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.10);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 0 20px rgba(0,229,255,.08),0 0 40px rgba(0,119,255,.04),0 18px 40px rgba(0,0,0,.34)}
+#view.cyber .card:hover{border-color:rgba(0,229,255,.28);box-shadow:0 0 26px rgba(0,229,255,.14),0 0 60px rgba(0,119,255,.09),0 22px 52px rgba(0,0,0,.42)}
+#view.cyber .card .card-h{border-bottom-color:rgba(0,229,255,.1)}
+#view.cyber .card .card-h h3{color:#eaf4ff}
+#view.cyber .card .card-h .sub{color:#7fa0bd}
+#view.cyber .card .card-h>svg{color:#00e5ff;filter:drop-shadow(0 0 6px rgba(0,229,255,.5))}
+#view.cyber .sectitulo{color:#9fbdd8}
+#view.cyber .sectitulo svg{color:#00e5ff;filter:drop-shadow(0 0 5px rgba(0,229,255,.5))}
+
+/* KPIs */
+#view.cyber .kpi{background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 0 18px rgba(0,229,255,.06),0 14px 34px rgba(0,0,0,.3)}
+#view.cyber .kpi .k-val{color:#eaf6ff;text-shadow:0 0 16px rgba(0,229,255,.3)}
+#view.cyber .kpi .k-label{color:#9fbdd8}
+#view.cyber .kpi .k-sub{color:#7fa0bd}
+#view.cyber .kpi .k-go{color:#7fa0bd}
+#view.cyber .kpi .k-ico svg{filter:drop-shadow(0 0 5px currentColor)}
+#view.cyber .kpi.link:hover{border-color:rgba(0,229,255,.4);box-shadow:0 0 26px rgba(0,229,255,.16),0 20px 46px rgba(0,0,0,.44)}
+#view.cyber .i-blue{background:rgba(0,229,255,.14);color:#00e5ff}
+#view.cyber .i-green{background:rgba(0,255,136,.14);color:#25e88f}
+#view.cyber .i-amber{background:rgba(255,176,32,.15);color:#ffc061}
+#view.cyber .i-red{background:rgba(255,59,48,.15);color:#ff6b6b}
+#view.cyber .i-orange{background:rgba(255,157,92,.15);color:#ffb27a}
+/* dourado do Financeiro permanece (premium) — .fin-gold já tratado */
+
+/* tabelas */
+#view.cyber .tbl-wrap{border:1px solid rgba(0,229,255,.1);border-radius:12px}
+#view.cyber table.tbl th{background:rgba(0,18,32,.72);color:#7fa0bd;border-bottom-color:rgba(0,229,255,.14)}
+#view.cyber table.tbl td{color:#cfe0ef;border-bottom-color:rgba(0,229,255,.07)}
+#view.cyber table.tbl tbody tr:hover{background:rgba(0,229,255,.06)}
+#view.cyber .grouprow td{background:rgba(0,18,32,.72)!important;color:#9fbdd8}
+#view.cyber .bat-group-h{background:rgba(0,18,32,.72);border-bottom-color:rgba(0,229,255,.08)}
+
+/* badges / tags / plate */
+#view.cyber .st.ok{background:rgba(0,255,136,.14);color:#25e88f}
+#view.cyber .st.ok::before{background:#00ff88;box-shadow:0 0 6px #00ff88}
+#view.cyber .st.warn{background:rgba(255,176,32,.15);color:#ffc061}
+#view.cyber .st.warn::before{background:#ffb020;box-shadow:0 0 6px #ffb020}
+#view.cyber .st.crit,#view.cyber .st.vencido{background:rgba(255,59,48,.15);color:#ff6b6b}
+#view.cyber .st.crit::before,#view.cyber .st.vencido::before{background:#ff3b30;box-shadow:0 0 6px #ff3b30}
+#view.cyber .st.neutro{background:rgba(140,180,210,.12);color:#9fc0da}
+#view.cyber .st.neutro::before{background:#9fc0da}
+#view.cyber .tag{background:rgba(140,180,210,.12);color:#9fc0da}
+#view.cyber .tag.cavalo{background:rgba(0,229,255,.16);color:#7fe0ff}
+#view.cyber .tag.rebo{background:rgba(140,180,210,.12);color:#9fc0da}
+#view.cyber .qtd-badge{background:rgba(0,229,255,.14);color:#7fe0ff}
+#view.cyber .borracha-badge{background:rgba(255,176,32,.14);color:#ffc061}
+#view.cyber .plate{box-shadow:0 0 0 1px rgba(0,229,255,.2),0 2px 6px rgba(0,0,0,.45)}
+
+/* cartões de veículo + detalhe */
+#view.cyber .vcard{background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.12);box-shadow:0 0 16px rgba(0,229,255,.05),0 14px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#view.cyber .vcard:hover{border-color:rgba(0,229,255,.4);box-shadow:0 0 24px rgba(0,229,255,.16),0 20px 44px rgba(0,0,0,.42)}
+#view.cyber .vcard-model{color:#eaf4ff}
+#view.cyber .vcard-sub{color:#7fa0bd}
+#view.cyber .detail-head .dh-main h2{color:#eaf6ff}
+#view.cyber .detail-head .meta{color:#9fbdd8}
+#view.cyber .detail-head .avatar.veh,#view.cyber .avatar{background:rgba(0,229,255,.12);color:#00e5ff;box-shadow:0 0 16px rgba(0,229,255,.2)}
+#view.cyber .avatar.photo{background:rgba(0,26,47,.7)}
+#view.cyber .info-grid{background:rgba(0,229,255,.05);border-color:rgba(0,229,255,.1)}
+#view.cyber .info-grid .it{background:rgba(0,26,47,.6)}
+#view.cyber .socio-role,#view.cyber .hint{color:#9fbdd8}
+
+/* botões (dentro do conteúdo) */
+#view.cyber .btn{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);color:#bfe9ff}
+#view.cyber .btn:hover{border-color:#00e5ff;color:#fff;box-shadow:0 0 12px rgba(0,229,255,.3)}
+#view.cyber .btn.ghost{background:transparent;border-color:transparent}
+#view.cyber .btn.ghost:hover{background:rgba(0,229,255,.08)}
+#view.cyber .btn.primary{background:linear-gradient(180deg,#12b9ff,#0077ff);border-color:#0077ff;color:#fff;box-shadow:0 0 16px rgba(0,229,255,.4)}
+#view.cyber .btn.primary:hover{background:linear-gradient(180deg,#28c3ff,#0a84ff);box-shadow:0 0 24px rgba(0,229,255,.6)}
+#view.cyber .btn.danger{background:rgba(255,59,48,.06);border-color:rgba(255,59,48,.35);color:#ff6b6b}
+#view.cyber .btn.danger:hover{background:rgba(255,59,48,.14)}
+
+/* formulários (inline no conteúdo) */
+#view.cyber .field label{color:#9fbdd8}
+#view.cyber .field input,#view.cyber .field select,#view.cyber .field textarea,#view.cyber .selectlite,#view.cyber .search input,#view.cyber .alarme-input,#view.cyber .kmcard-input input{
+  background:rgba(0,18,32,.62);color:#e6eaf2;border-color:rgba(0,229,255,.18)}
+#view.cyber .field input:focus,#view.cyber .field select:focus,#view.cyber .field textarea:focus,#view.cyber .search input:focus,#view.cyber .alarme-input:focus,#view.cyber .selectlite:focus{
+  border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,.14)}
+#view.cyber select option{background:#0a1622;color:#e6eaf2}
+#view.cyber .seg{background:rgba(0,20,36,.6);border:1px solid rgba(0,229,255,.15)}
+#view.cyber .seg button{color:#9fbdd8}
+#view.cyber .seg button.active{background:rgba(0,229,255,.14);color:#eaf6ff;box-shadow:0 0 12px rgba(0,229,255,.2)}
+#view.cyber .muted,#view.cyber .toolbar .muted{color:#7fa0bd}
+
+/* gráficos */
+#view.cyber .donut circle:not(.donut-seg){stroke:rgba(120,180,255,.12)}
+#view.cyber .donut-c{fill:#eaf6ff}
+#view.cyber .donut-s{fill:#7fa0bd}
+#view.cyber .barchart .bar-val{fill:#bfe4ff}
+#view.cyber .barchart .bar-lbl{fill:#7fa0bd}
+#view.cyber .legend .li{color:#c4d9ec}
+#view.cyber .legend .li b{color:#eaf6ff}
+#view.cyber .legend .li.clk:hover{background:rgba(0,229,255,.08)}
+#view.cyber .alert-row{border-bottom-color:rgba(0,229,255,.08)}
+#view.cyber .alert-row:hover{background:rgba(0,229,255,.06)}
+#view.cyber .alert-row .a-main b{color:#eaf2f8}
+#view.cyber .alert-row .a-main span{color:#8fa6ba}
+#view.cyber .a-ico.i-red{background:rgba(255,59,48,.15);color:#ff6b6b}
+#view.cyber .a-ico.i-orange{background:rgba(255,157,92,.15);color:#ffb27a}
+#view.cyber .a-ico.i-amber{background:rgba(255,176,32,.15);color:#ffc061}
+#view.cyber .a-ico.i-green{background:rgba(0,255,136,.14);color:#25e88f}
+#view.cyber .a-ico.i-blue{background:rgba(0,229,255,.14);color:#00e5ff}
+
+/* KM/Horas, alarmes, arquivos, check-list */
+#view.cyber .kmcard{background:rgba(0,26,47,.6);border-color:rgba(0,229,255,.12)}
+#view.cyber .alarmcard{background:rgba(0,26,47,.6);border-color:rgba(0,229,255,.12)}
+#view.cyber .alarmcard:hover{border-color:rgba(0,229,255,.35)}
+#view.cyber .alarm-code{color:#00e5ff}
+#view.cyber .alarm-desc{color:#9fbdd8}
+#view.cyber .alarme-block{background:rgba(0,18,32,.6);border-color:rgba(0,229,255,.12)}
+#view.cyber .alarme-block.sol{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.22)}
+#view.cyber .filecard{background:rgba(0,18,32,.6);border-color:rgba(0,229,255,.12)}
+#view.cyber .filecard:hover{background:rgba(0,229,255,.06);border-color:rgba(0,229,255,.3)}
+#view.cyber .chk-list{border-color:rgba(0,229,255,.12)}
+#view.cyber .chk-row{border-bottom-color:rgba(0,229,255,.07)}
+#view.cyber .chk-row:nth-child(even){background:rgba(0,229,255,.03)}
+#view.cyber .chk-opt{background:rgba(0,18,32,.6);color:#9fbdd8;border-color:rgba(0,229,255,.15)}
+#view.cyber .truckmap{background:linear-gradient(180deg,#08121f,#050a12);border-color:rgba(0,229,255,.12)}
+
+/* Código de Ética */
+#view.cyber .etica-doc{background:rgba(0,26,47,.6);border-color:rgba(0,229,255,.12)}
+#view.cyber .etica-head{background:linear-gradient(120deg,rgba(0,229,255,.08),rgba(0,26,47,.6));border-bottom-color:rgba(0,229,255,.2)}
+#view.cyber .etica-body,#view.cyber .etica-body p{color:#9fbdd8}
+#view.cyber .etica-list li{border-bottom-color:rgba(0,229,255,.07)}
+
+/* busca/paginação injetadas (pexEnhanceTables) */
+#view.cyber .pex-search input{background:rgba(0,18,32,.6);border-color:rgba(0,229,255,.2);color:#e6eaf2}
+#view.cyber .pex-search input:focus{border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,.14)}
+#view.cyber .pex-search svg,#view.cyber .pex-count,#view.cyber .pex-pg{color:#9fbdd8}
+#view.cyber .pex-pgb{background:rgba(0,18,32,.6);border-color:rgba(0,229,255,.2);color:#9fbdd8}
+#view.cyber .pex-pgb:hover:not([disabled]){border-color:#00e5ff;color:#00e5ff}
+#view.cyber th.pex-sortable:hover,#view.cyber th.pex-asc::after,#view.cyber th.pex-desc::after{color:#00e5ff}
+#view.cyber .empty{color:#7fa0bd}
+#view.cyber .empty b{color:#bfd4e6}
+
+/* impressão: força papel branco / texto preto (legível) */
+@media print{
+  #view.cyber{background:#fff!important;color:#111!important}
+  #view.cyber .card,#view.cyber .banner,#view.cyber .kpi,#view.cyber .vcard,#view.cyber .etica-doc,#view.cyber .alarmcard,#view.cyber .filecard,#view.cyber .kmcard{background:#fff!important;border-color:#ccc!important;box-shadow:none!important;color:#111!important}
+  #view.cyber .card .card-h h3,#view.cyber .banner b,#view.cyber .kpi .k-val,#view.cyber table.tbl td,#view.cyber .detail-head .dh-main h2{color:#111!important;text-shadow:none!important}
+  #view.cyber table.tbl th,#view.cyber .grouprow td{background:#f0f0f0!important;color:#333!important}
+}
+
+/* ==========================================================================
    TEMA CYBER — ABA INÍCIO + PAINEL DE CONTROLE (v6.16)
    Evolução do "Centro de Comando" escuro para o estilo cyber neon azul do
    briefing (imersivo/futurista): fundo profundo, cards com borda iluminada e
