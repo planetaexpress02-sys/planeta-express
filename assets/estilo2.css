@@ -1673,3 +1673,42 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .pn-acts{display:flex;gap:8px;border-top:1px solid rgba(0,229,255,.1);padding-top:12px}
 @media(max-width:900px){ .pn-panel{top:auto;height:80vh;bottom:0;width:100%;border-left:none;border-top:1px solid rgba(0,229,255,.2);border-radius:16px 16px 0 0;transform:translateY(100%)} .pn-panel.show{transform:none} }
 @media(prefers-reduced-motion:reduce){ .pn-tire rect{animation:none} }
+
+/* ==========================================================================
+   DESCARGAS (v6.29) — pesquisa rápida + filtro + ACORDEÃO por mês/competência.
+   Usa os tokens do tema cyber (#view.cyber). Só aparência/organização.
+   ========================================================================== */
+.dsc-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.dsc-search{position:relative;flex:1;min-width:240px;display:flex;align-items:center}
+.dsc-search>svg{position:absolute;left:13px;width:18px;height:18px;color:var(--text-mute);pointer-events:none;filter:drop-shadow(0 0 5px rgba(0,229,255,.35))}
+.dsc-search input{width:100%;padding:11px 14px 11px 40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14px;transition:border-color .15s,box-shadow .15s}
+.dsc-search input::placeholder{color:var(--text-mute)}
+.dsc-search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.14)}
+.dsc-meta{font-size:12.5px;margin:0 2px 14px}
+.dsc-months{display:flex;flex-direction:column;gap:14px}
+.dsc-month{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 0 18px rgba(0,229,255,.06),0 14px 34px rgba(0,0,0,.3);
+  animation:dscUp .42s cubic-bezier(.16,1,.3,1) both}
+.dsc-month.open{border-color:rgba(0,229,255,.28);box-shadow:0 0 24px rgba(0,229,255,.12),0 16px 40px rgba(0,0,0,.38)}
+.dsc-month-h{width:100%;display:flex;align-items:center;gap:12px;padding:15px 18px;background:transparent;border:none;cursor:pointer;color:var(--text);text-align:left;font-family:inherit;transition:background .15s}
+.dsc-month-h:hover{background:rgba(0,229,255,.06)}
+.dsc-chev{display:inline-flex;color:var(--text-mute);transition:transform .3s,color .3s}
+.dsc-chev svg{width:16px;height:16px}
+.dsc-month.open .dsc-chev{transform:rotate(90deg);color:var(--accent)}
+.dsc-cal{display:inline-flex;color:var(--accent)}
+.dsc-cal svg{width:19px;height:19px;filter:drop-shadow(0 0 5px rgba(0,229,255,.45))}
+.dsc-mtitle{font-size:15.5px;font-weight:700;letter-spacing:-.2px}
+.dsc-mcount{min-width:24px;text-align:center;font-weight:800;font-size:12px;padding:2px 9px;border-radius:20px;background:rgba(0,229,255,.14);color:var(--accent);font-variant-numeric:tabular-nums}
+.dsc-mspacer{flex:1}
+.dsc-mtot{font-weight:800;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(0,229,255,.25)}
+.dsc-monthbody{max-height:0;overflow:hidden;transition:max-height .42s cubic-bezier(.4,0,.2,1)}
+.dsc-monthbody .tbl-wrap{border:none!important;border-top:1px solid var(--line-2)!important;border-radius:0}
+.dsc-imp-cols{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-soft);background:rgba(0,229,255,.06);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.dsc-imp-cols svg{width:16px;height:16px;color:var(--accent);flex:0 0 auto}
+.dsc-imp-cols b{color:var(--text)}
+@keyframes dscUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:640px){ .dsc-search{min-width:100%} .dsc-mtot{font-size:13.5px} .dsc-mtitle{font-size:14px} }
+@media(prefers-reduced-motion:reduce){ .dsc-month{animation:none} .dsc-monthbody,.dsc-chev{transition:none} }
+/* impressão: abre todos os meses e remove o efeito de recolher */
+@media print{ .dsc-monthbody{max-height:none!important;overflow:visible!important} .dsc-toolbar,.dsc-meta{display:none!important} }

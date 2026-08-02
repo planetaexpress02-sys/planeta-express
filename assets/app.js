@@ -286,6 +286,9 @@ const IC = {
   cal:'<rect x="3" y="4.5" width="18" height="16.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.7"/>',
   trend:'<path d="M3 17l6-6 4 4 8-8M21 7v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>',
   coins:'<ellipse cx="9" cy="6" rx="6" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 6v5c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 13.6v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-5c0-1.4-2.7-2.6-6-2.6" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  search:'<circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m20.5 20.5-4.2-4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  chevron:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  filter:'<path d="M3 5h18M6 12h12M10 19h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
@@ -469,10 +472,11 @@ function router(){
 /* ================================================================== */
 function pexAfterRender(rota){
   try{ var _vw=document.getElementById('view'); if(_vw){ _vw.setAttribute('data-route',rota);
-      /* tema CYBER global: liga em todas as telas, EXCETO Viagens/Descargas (ficam claras)
+      /* tema CYBER global: liga em todas as telas, EXCETO Viagens (fica clara)
          e Início/Painel/Manutenção (já têm bloco cyber próprio scoped) */
-      var _noCy={viagens:1,descargas:1,inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
+      var _noCy={viagens:1,inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
+    if(rota==='descargas' && typeof descInit==='function') descInit();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
 /* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */
@@ -496,6 +500,7 @@ function pexZoomChart(card){
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
   document.querySelectorAll('#view table.tbl').forEach(function(tbl){
+    if(tbl.closest('.dsc-months')) return;          // acordeão de Descargas tem busca/ordenação próprias
     var tbody=tbl.tBodies[0]; if(!tbody) return;
     var rows=[].slice.call(tbody.rows).filter(function(r){ return !r.querySelector('.empty') && r.cells.length>1; });
     if(rows.length<6) return;                      // só vale a pena em tabelas maiores
@@ -2922,44 +2927,143 @@ function salvarViagem(id){ const d={data:val('f_data'),placa:val('f_placa'),moto
 function excluirViagem(id){ if(!confirm('Excluir esta viagem?'))return; DB.viagens=DB.viagens.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
 /* ---------- DESCARGAS ---------- */
-let descMes='todos';
-function viewDescargas(){
-  const h=hoje(); const total=DB.descargas.reduce((s,d)=>s+(Number(d.valor)||0),0);
-  const meses=[...new Set(DB.descargas.map(d=>(d.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
-  let lista=DB.descargas.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
-  if(descMes!=='todos') lista=lista.filter(d=>(d.data||'').slice(0,7)===descMes);
-  const totalFiltro=lista.reduce((s,d)=>s+(Number(d.valor)||0),0);
-  const mesAtual=DB.descargas.filter(d=>{ const dt=parseD(d.data); return dt&&dt.getMonth()===h.getMonth()&&dt.getFullYear()===h.getFullYear(); });
-  const totalMes=mesAtual.reduce((s,d)=>s+(Number(d.valor)||0),0);
-  const rows=lista.map(d=>{ const v=veiculoByPlaca(d.placa);
-    return `<tr class="clickable" onclick="modalDescarga('${d.id}')"><td class="mono">${fmtD(d.data)}</td><td>${v?plate(v.placa,v.tipo):esc(d.placa)}</td>
-      <td class="mono">${esc(d.transporte||'—')}</td><td class="mono muted">${esc(d.senha||'—')}</td><td class="mono"><b>${money(d.valor)}</b></td>
-      <td>${esc(d.local||'—')}</td><td class="muted">${esc(d.pago||'—')}</td>
-      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalDescarga('${d.id}')">${svg('edit')}</button></td></tr>`;
-  }).join('');
-  return `
-  <div class="banner">${svg('box')}<div><b>Descargas</b><span>Senhas e valores de descarga (pagos via Bradesco). Use o filtro para ver por mês.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-    ${kpi('box','i-blue',DB.descargas.length,'Descargas registradas','')}
-    ${kpi('money','i-green',money(totalMes),'Valor no mês (atual)',mesAtual.length+' descarga(s)')}
-    ${kpi('export','i-amber',money(total),'Valor acumulado','')}
-  </div>
-  <div class="toolbar"><div class="seg no-print"><button class="${descMes==='todos'?'active':''}" onclick="descMes='todos';router()">Todos</button></div>
-    <select class="selectlite no-print" onchange="descMes=this.value;router()"><option value="todos">Todos os meses</option>
-      ${meses.map(m=>`<option value="${m}" ${descMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
-    <div class="spacer"></div><div class="muted">${lista.length} descarga(s) · <b>${money(totalFiltro)}</b></div>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Data</th><th>Placa</th><th>Transporte</th><th>Senha</th><th>Valor</th><th>Local</th><th>Pago</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhuma descarga neste período.')}</td></tr>`}</tbody></table></div></div></div>`;
+/*  Reformulado (v6.29): tema cyber + pesquisa rápida + filtro por placa +
+    ACORDEÃO por competência (mês/ano), do mais recente ao mais antigo, com
+    ordenação cronológica dentro de cada mês. Importação inteligente de Excel. */
+let descBusca='';            // pesquisa rápida (texto)
+let descPlaca='todos';       // filtro por placa
+const descAbertos={};        // meses expandidos: 'AAAA-MM' -> 1
+let _descIniciou=false;      // 1ª visita: abre o mês mais recente
+
+function _descComp(d){ return (d.data||'').slice(0,7); }               // AAAA-MM
+function _descNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),''); }
+function _descMatch(d,q){
+  if(!q) return true;
+  const v=veiculoByPlaca(d.placa);
+  const hay=_descNorm([d.placa,(v?v.tipo:''),d.transporte,d.senha,d.local,d.pago,fmtD(d.data),String(d.valor)].join(' '));
+  return _descNorm(q).split(/\s+/).every(t=>!t||hay.indexOf(t)>=0);
 }
+/* filtra + agrupa por competência (usado no 1º render e na pesquisa ao vivo) */
+function _descGrupos(){
+  const q=descBusca.trim().toLowerCase();
+  const lista=DB.descargas.filter(d=>(descPlaca==='todos'||d.placa===descPlaca)&&_descMatch(d,q));
+  const grupos={}; lista.forEach(d=>{ const c=_descComp(d)||'0000-00'; (grupos[c]=grupos[c]||[]).push(d); });
+  const comps=Object.keys(grupos).sort().reverse();
+  return { lista, grupos, comps, buscando:(!!q || descPlaca!=='todos') };
+}
+/* HTML dos meses (acordeão) — recalculado na pesquisa sem re-render total */
+function descMonthsHTML(){
+  const {grupos, comps, buscando}=_descGrupos();
+  if(!_descIniciou){ _descIniciou=true; if(comps[0]) descAbertos[comps[0]]=1; }
+  if(!comps.length){
+    return `<div class="card"><div class="card-b">${emptyState(buscando
+      ?'Nenhuma descarga encontrada com esse filtro.'
+      :'Nenhuma descarga registrada. Use "Nova descarga" ou "Importar Planilha Excel".')}</div></div>`;
+  }
+  return comps.map(c=>{
+    const arr=grupos[c].slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')||String(a.id).localeCompare(String(b.id)));
+    const sub=arr.reduce((s,d)=>s+(Number(d.valor)||0),0);
+    const aberto=buscando || descAbertos[c];
+    const label=(c==='0000-00')?'Sem competência':mesLabel(c);
+    const rows=arr.map(d=>{ const v=veiculoByPlaca(d.placa);
+      return `<tr class="clickable" onclick="modalDescarga('${d.id}')">
+        <td class="mono">${fmtD(d.data)}</td>
+        <td>${v?plate(v.placa,v.tipo):esc(d.placa||'—')}</td>
+        <td class="mono">${esc(d.transporte||'—')}</td>
+        <td class="mono muted">${esc(d.senha||'—')}</td>
+        <td class="mono"><b>${money(d.valor)}</b></td>
+        <td>${esc(d.local||'—')}</td>
+        <td class="muted">${esc(d.pago||'—')}</td>
+        <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalDescarga('${d.id}')">${svg('edit')}</button></td></tr>`;
+    }).join('');
+    return `<div class="dsc-month ${aberto?'open':''}" data-m="${c}">
+      <button class="dsc-month-h" type="button" onclick="descToggle('${c}')">
+        <span class="dsc-chev">${svg('chevron')}</span>
+        <span class="dsc-cal">${svg('cal')}</span>
+        <span class="dsc-mtitle">${esc(label)}</span>
+        <span class="dsc-mcount">${arr.length}</span>
+        <span class="dsc-mspacer"></span>
+        <span class="dsc-mtot">${money(sub)}</span>
+      </button>
+      <div class="dsc-monthbody"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Data</th><th>Placa</th><th>Transporte</th><th>Senha</th><th>Valor</th><th>Local</th><th>Pago</th><th class="no-print"></th></tr></thead>
+        <tbody>${rows}</tbody></table></div></div></div>`;
+  }).join('');
+}
+function viewDescargas(){
+  const h=hoje();
+  const todas=DB.descargas;
+  const total=todas.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const compAtual=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  const mesAtual=todas.filter(d=>_descComp(d)===compAtual);
+  const totalMes=mesAtual.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const ticket=todas.length?total/todas.length:0;
+  const placas=[...new Set(todas.map(d=>d.placa).filter(Boolean))].sort();
+  const {lista, comps}=_descGrupos();
+  const totalFiltro=lista.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const buscando=(descBusca.trim()||descPlaca!=='todos');
+  return `
+  <div class="banner">${svg('box')}<div><b>Descargas</b><span>Senhas e valores de descarga (pagos via Bradesco), organizados por mês.</span></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="modalImportarDescarga()">${svg('upload')} Importar Planilha Excel</button>
+      <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kpi('box','i-blue',DB.descargas.length,'Descargas registradas','')}
+    ${kpi('money','i-green',money(totalMes),'Valor no mês atual',mesAtual.length+' descarga(s)')}
+    ${kpi('coins','i-amber',money(total),'Valor acumulado','')}
+    ${kpi('trend','i-orange',money(ticket),'Ticket médio','por descarga')}
+  </div>
+  <div class="dsc-toolbar no-print">
+    <div class="dsc-search">${svg('search')}<input id="descBusca" placeholder="Pesquisa rápida: placa, local, senha, transporte, valor…" value="${esc(descBusca)}" oninput="descSetBusca(this.value)"></div>
+    <select class="selectlite" onchange="descPlaca=this.value;router()"><option value="todos">Todas as placas</option>${placas.map(p=>`<option value="${esc(p)}" ${descPlaca===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
+    ${buscando?`<button class="btn ghost sm" onclick="descLimpar()">Limpar</button>`:''}
+    <span class="spacer"></span>
+    <button class="btn ghost sm" onclick="descExpandir(1)">Expandir tudo</button>
+    <button class="btn ghost sm" onclick="descExpandir(0)">Recolher tudo</button>
+    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+  </div>
+  <div id="dscMeta" class="dsc-meta muted no-print">${lista.length} descarga(s) em ${comps.length} mês(es) · <b>${money(totalFiltro)}</b></div>
+  <div id="dscMonths" class="dsc-months">${descMonthsHTML()}</div>`;
+}
+/* pós-render: define a altura de cada mês (anima a expansão) */
+function descInit(){
+  document.querySelectorAll('#view .dsc-month').forEach(function(sec){
+    const body=sec.querySelector('.dsc-monthbody'); if(!body) return;
+    body.style.maxHeight = sec.classList.contains('open') ? body.scrollHeight+'px' : '0px';
+  });
+}
+function descToggle(c){
+  const sec=document.querySelector('#view .dsc-month[data-m="'+c+'"]'); if(!sec) return;
+  const open=sec.classList.toggle('open');
+  if(open) descAbertos[c]=1; else delete descAbertos[c];
+  const body=sec.querySelector('.dsc-monthbody');
+  if(body) body.style.maxHeight = open ? body.scrollHeight+'px' : '0px';
+}
+function descExpandir(on){
+  _descGrupos().comps.forEach(function(c){ if(on) descAbertos[c]=1; else delete descAbertos[c]; });
+  document.querySelectorAll('#view .dsc-month').forEach(function(sec){
+    sec.classList.toggle('open',!!on);
+    const body=sec.querySelector('.dsc-monthbody');
+    if(body) body.style.maxHeight = on ? body.scrollHeight+'px' : '0px';
+  });
+}
+/* pesquisa ao vivo — atualiza só a lista (mantém o foco no campo) */
+function descSetBusca(v){
+  descBusca=v;
+  const m=document.getElementById('dscMonths'); if(m) m.innerHTML=descMonthsHTML();
+  const g=_descGrupos(); const tot=g.lista.reduce((s,d)=>s+(Number(d.valor)||0),0);
+  const meta=document.getElementById('dscMeta'); if(meta) meta.innerHTML=g.lista.length+' descarga(s) em '+g.comps.length+' mês(es) · <b>'+money(tot)+'</b>';
+  descInit();
+}
+function descLimpar(){ descBusca=''; descPlaca='todos'; router(); }
+
 function modalDescarga(id){
   const d=id?DB.descargas.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),placa:(DB.veiculos[0]||{}).placa||'',transporte:'',senha:'',valor:'',pago:'Bradesco',local:''};
+  const placas=DB.veiculos.map(v=>v.placa); if(d.placa && placas.indexOf(d.placa)<0) placas.push(d.placa);  // preserva placa fora da frota (importada)
   openModal(`<div class="m-h">${svg('box')}<h3>${id?'Editar descarga':'Nova descarga'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">${fld('Data','f_data',d.data,'date')}
-        <div class="field"><label>Placa</label><select id="f_placa">${DB.veiculos.map(x=>`<option ${d.placa===x.placa?'selected':''}>${esc(x.placa)}</option>`).join('')}</select></div></div>
+        <div class="field"><label>Placa</label><select id="f_placa">${placas.map(pl=>`<option ${d.placa===pl?'selected':''}>${esc(pl)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Nº Transporte','f_transp',d.transporte)}${fld('Senha','f_senha',d.senha)}</div>
       <div class="field-row">${fldR$('Valor (R$)','f_valor',d.valor)}${fld('Pago por','f_pago',d.pago)}</div>
       ${fld('Local','f_local',d.local)}
@@ -2970,6 +3074,175 @@ function modalDescarga(id){
 function salvarDescarga(id){ const d={data:val('f_data'),placa:val('f_placa'),transporte:val('f_transp'),senha:val('f_senha'),valor:parseBRL(val('f_valor')),pago:val('f_pago'),local:val('f_local')};
   if(id)Object.assign(DB.descargas.find(x=>x.id===id),d); else{ d.id=uid('dc'); DB.descargas.push(d); } saveDB(); closeModal(); toast('Descarga salva.'); router(); }
 function excluirDescarga(id){ if(!confirm('Excluir esta descarga?'))return; DB.descargas=DB.descargas.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
+
+/* ================================================================== */
+/*  IMPORTAÇÃO INTELIGENTE DE PLANILHA (Descargas) — v6.29             */
+/*  Lê .xlsx/.csv, identifica as colunas sozinho, extrai os dados,     */
+/*  aponta inconsistências/duplicados e importa após conferência.      */
+/* ================================================================== */
+function _dnorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').trim(); }
+/* número da célula: aceita cru do xlsx (560 / 560.5) e padrão BR (1.234,56 / R$ 90,00) */
+function _descNum(s){
+  s=String(s==null?'':s).trim(); if(!s) return null;
+  if(/^-?\d+(\.\d+)?$/.test(s)){ const n=parseFloat(s); return isNaN(n)?null:Math.round(n*100)/100; }
+  const n=parseBRL(s); return n?n:null;
+}
+/* já existe no banco? (mesma data + nº transporte, ou mesma data + placa + valor) */
+function _descDupeDB(o){
+  return DB.descargas.some(d=>{
+    if(!o.data || d.data!==o.data) return false;
+    if(o.transporte && d.transporte && _dnorm(d.transporte)===_dnorm(o.transporte)) return true;
+    if(o.valor!=null && Number(d.valor)===Number(o.valor) && _plk(d.placa)===_plk(o.placa) && _plk(o.placa)) return true;
+    return false;
+  });
+}
+/* identifica colunas por cabeçalho e extrai as linhas de todas as abas */
+function _descDetectar(sheets){
+  const FIELDS=[
+    ['data',      /(^|\W)(data|dia|\bdt\b|emiss)/],
+    ['placa',     /placa|veiculo|cavalo|carreta|reboque|caminh|frota/],
+    ['valor',     /valor|preco|custo|tarifa|r\$|total/],
+    ['senha',     /senha|codigo|autoriza|libera|protocolo/],
+    ['transporte',/transporte|nota|\bnf\b|nfe|documento|manifesto|conhecimento|\bcte\b|romaneio|pedido|numero|\bn[o°º.]/],
+    ['pago',      /pago|pagamento|forma|banco|conta|quita/],
+    ['local',     /local|cliente|destino|estabelec|loja|mercado|super\b|rede|recebedor|entrega|descarreg|unidade|filial/],
+  ];
+  const LABEL={data:'Data',placa:'Placa',transporte:'Transporte',senha:'Senha',valor:'Valor',pago:'Pago',local:'Local'};
+  const rows=[]; const campos={}; const vistos={};
+  (sheets||[]).forEach(sh=>{
+    const grid=sh.grid||[]; if(!grid.length) return;
+    // acha a linha de cabeçalho: a que casa mais campos distintos (>=2)
+    let hr=-1, best=0;
+    for(let r=0; r<Math.min(grid.length,30); r++){
+      const row=grid[r]||[]; const hit={};
+      for(let c=0;c<row.length;c++){ const t=_dnorm(row[c]); if(!t) continue;
+        for(const [f,re] of FIELDS){ if(hit[f]) continue; if(re.test(t)){ hit[f]=1; break; } } }
+      const n=Object.keys(hit).length;
+      if(n>best){ best=n; hr=r; }
+    }
+    if(hr<0 || best<2) return;
+    // mapeia cada coluna ao melhor campo ainda livre
+    const map={}, used={}, hrow=grid[hr]||[];
+    for(let c=0;c<hrow.length;c++){ const raw=hrow[c], t=_dnorm(raw); if(!t) continue;
+      for(const [f,re] of FIELDS){ if(used[f]) continue; if(re.test(t)){ map[f]=c; used[f]=1; if(!campos[f]) campos[f]=String(raw).trim(); break; } } }
+    if(!('data' in map) && !(('placa' in map)&&('valor' in map))) return;   // precisa de algo pra ancorar
+    const get=(row,f)=>{ const c=map[f]; return c==null?'':String((row&&row[c])!=null?row[c]:'').trim(); };
+    for(let r=hr+1; r<grid.length; r++){
+      const row=grid[r]||[];
+      const rawData=get(row,'data'), rawPlaca=get(row,'placa'), rawTransp=get(row,'transporte'),
+            rawSenha=get(row,'senha'), rawValor=get(row,'valor'), rawLocal=get(row,'local'), rawPago=get(row,'pago');
+      if(!rawData && !rawPlaca && !rawTransp && !rawSenha && !rawValor && !rawLocal) continue;   // linha vazia
+      const dataISO=_impISO(rawData);
+      const valor=_descNum(rawValor);
+      // pula linhas totalmente inúteis (sem data, sem valor e sem identificação)
+      if(!dataISO && valor==null && !rawPlaca && !rawTransp && !rawLocal) continue;
+      const o={ data:dataISO, placa:rawPlaca, transporte:rawTransp, senha:rawSenha, valor:valor, local:rawLocal, pago:rawPago };
+      // problemas apontados ao usuário
+      const issues=[];
+      if(!dataISO) issues.push('sem data');
+      if(valor==null) issues.push('sem valor');
+      if(rawPlaca && !veiculoByPlaca(rawPlaca)) issues.push('placa fora da frota');
+      // duplicados (no banco ou dentro do próprio arquivo)
+      const chave=(dataISO||'')+'|'+_plk(rawPlaca)+'|'+_dnorm(rawTransp)+'|'+(valor==null?'':valor);
+      const dupeArq=!!vistos[chave]; vistos[chave]=1;
+      const dupe=dupeArq || _descDupeDB(o);
+      o.status = dupe ? 'dupe' : (issues.length ? 'aviso' : 'ok');
+      o.issues = issues;
+      o.incluir = (o.status!=='dupe');
+      rows.push(o);
+    }
+  });
+  const detectadas=Object.keys(campos).map(f=>LABEL[f]+' («'+campos[f]+'»)');
+  return { rows, detectadas };
+}
+
+function modalImportarDescarga(){
+  const suporta=!window.PEXImport || PEXImport.suportaXLSX();
+  openModal(`<div class="m-h">${svg('upload')}<h3>Importar Planilha Excel — Descargas</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="banner" style="margin:0 0 14px">${svg('box')}<div><b>Importe as descargas de uma planilha</b><span>Escolha um arquivo <b>.xlsx</b> ou <b>.csv</b>. O sistema identifica sozinho as colunas (Data, Placa, Transporte, Senha, Valor, Local, Pago), lê tudo e monta uma prévia. Você confere as inconsistências e confirma — sem digitar nada que já esteja na planilha.</span></div></div>
+      ${suporta?'':`<div class="hint" style="color:var(--danger)">Este navegador não abre .xlsx direto — use o Chrome ou o Edge, ou salve a planilha como CSV.</div>`}
+      <div class="field">
+        <label>Arquivo (Excel ou CSV)</label>
+        <label class="btn">${svg('upload')} Escolher planilha…<input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="descImpLer(this)" style="display:none"></label>
+        <span id="dscImpNome" class="muted" style="font-size:12.5px;margin-left:8px">Nenhum arquivo escolhido</span>
+      </div>
+      <div id="dscImpPreview"></div>
+    </div>
+    <div class="m-f">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="dscImpBtn" style="display:none" onclick="descImpConfirmar()">Importar selecionadas</button>
+    </div>`, true);
+  window._dscImp=[];
+}
+async function descImpLer(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const nomeEl=document.getElementById('dscImpNome'); if(nomeEl) nomeEl.textContent=file.name;
+  const prev=document.getElementById('dscImpPreview');
+  prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
+  try{
+    const {sheets}=await PEXImport.lerArquivo(file);
+    const {rows, detectadas}=_descDetectar(sheets);
+    window._dscImp=rows; window._dscImpCols=detectadas;
+    descImpRender();
+  }catch(e){
+    prev.innerHTML=`<div class="hint" style="color:var(--danger)">Não consegui ler: ${esc((e&&e.message)||e)}<br><span class="muted">Se o arquivo for um .xls antigo, abra-o no Excel e salve como <b>.xlsx</b> ou <b>.csv</b>.</span></div>`;
+    const b=document.getElementById('dscImpBtn'); if(b) b.style.display='none';
+  }
+}
+function descImpRender(){
+  const prev=document.getElementById('dscImpPreview'), btn=document.getElementById('dscImpBtn');
+  const rows=window._dscImp||[];
+  if(!rows.length){
+    prev.innerHTML=`<div class="hint">Não encontrei uma tabela de descargas nesta planilha. O ideal é ter uma linha de cabeçalho com colunas como <b>Data</b>, <b>Placa</b>, <b>Transporte</b>, <b>Senha</b>, <b>Valor</b>, <b>Local</b> e <b>Pago</b>. Você também pode lançar manualmente pelo botão <b>Nova descarga</b>.</div>`;
+    if(btn) btn.style.display='none'; return;
+  }
+  const badge={ok:'<span class="st ok">Novo</span>',aviso:'<span class="st warn">Conferir</span>',dupe:'<span class="st neutro">Já existe</span>'};
+  const linhas=rows.map((r,i)=>{
+    const av=r.issues&&r.issues.length?`<div class="muted" style="font-size:10.5px">⚠ ${esc(r.issues.join(' · '))}</div>`:'';
+    return `<tr class="${r.incluir?'':'imp-off'}">
+      <td class="no-print" style="text-align:center"><input type="checkbox" ${r.incluir?'checked':''} onchange="descImpToggle(${i},this.checked)"></td>
+      <td class="mono">${r.data?fmtD(r.data):'<span class="st crit">—</span>'}</td>
+      <td class="mono">${esc(r.placa||'—')}</td>
+      <td class="mono">${esc(r.transporte||'—')}</td>
+      <td class="mono muted">${esc(r.senha||'—')}</td>
+      <td class="mono"><b>${r.valor==null?'<span class="muted">—</span>':money(r.valor)}</b></td>
+      <td>${esc(r.local||'—')}</td>
+      <td>${badge[r.status]||''}${av}</td>
+    </tr>`;
+  }).join('');
+  const cont={}; rows.forEach(r=>cont[r.status]=(cont[r.status]||0)+1);
+  const resumo=[cont.ok?cont.ok+' novo(s)':'',cont.aviso?cont.aviso+' p/ conferir':'',cont.dupe?cont.dupe+' já existe(m)':''].filter(Boolean).join(' · ');
+  const cols=(window._dscImpCols||[]);
+  const colInfo=cols.length?`<div class="dsc-imp-cols">${svg('filter')} <b>Colunas identificadas:</b> ${esc(cols.join(' · '))}</div>`:'';
+  const nSel=rows.filter(r=>r.incluir).length;
+  prev.innerHTML=`${colInfo}
+    <div class="muted" style="margin:8px 0;font-size:12.5px">Encontrei <b>${rows.length}</b> descarga(s). ${resumo?'('+resumo+')':''} Confira e desmarque o que não quiser.</div>
+    <div class="tbl-wrap" style="max-height:44vh;overflow:auto"><table class="tbl">
+      <thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Placa</th><th>Transporte</th><th>Senha</th><th>Valor</th><th>Local</th><th>Situação</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>`;
+  if(btn){ btn.style.display=''; btn.textContent=nSel?('Importar '+nSel+' selecionada(s)'):'Nada selecionado'; btn.disabled=!nSel; }
+}
+function descImpToggle(i,on){
+  const r=(window._dscImp||[])[i]; if(!r) return; r.incluir=!!on;
+  const nSel=(window._dscImp||[]).filter(x=>x.incluir).length;
+  const b=document.getElementById('dscImpBtn'); if(b){ b.textContent=nSel?('Importar '+nSel+' selecionada(s)'):'Nada selecionado'; b.disabled=!nSel; }
+  const tr=document.querySelectorAll('#dscImpPreview tbody tr')[i]; if(tr) tr.classList.toggle('imp-off',!on);
+}
+function descImpConfirmar(){
+  let novas=0, pulados=0;
+  (window._dscImp||[]).forEach(r=>{
+    if(!r.incluir){ pulados++; return; }
+    DB.descargas.push({ id:uid('dc'), data:r.data||'', placa:(r.placa||'').trim(), transporte:(r.transporte||'').trim(),
+      senha:(r.senha||'').trim(), valor:(r.valor==null?'':r.valor), pago:(r.pago||'').trim()||'Bradesco', local:(r.local||'').trim() });
+    novas++;
+  });
+  saveDB(); closeModal();
+  toast('Importado: '+novas+' descarga(s)'+(pulados?', '+pulados+' ignorada(s)':'')+'.');
+  descBusca=''; descPlaca='todos'; _descIniciou=false;   // reabre o mês mais recente (provável mês importado)
+  if((location.hash.slice(1).split('/')[0])!=='descargas') location.hash='descargas';
+  router();
+}
 
 /* ---------- ABASTECIMENTOS + MÉDIAS ---------- */
 function mediaVeiculo(v){
