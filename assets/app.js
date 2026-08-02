@@ -2317,45 +2317,209 @@ function salvarEstoquePneu(id){ let q=parseInt(val('f_qtd'))||1; if(q<1)q=1;
   const d={data:val('f_data'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),local:val('f_local'),localEstoque:val('f_locest'),valor:parseBRL(val('f_valor')),qtd:q,obs:val('f_obs')};
   if(id)Object.assign(DB.estoquePneus.find(y=>y.id===id),d); else{ d.id=uid('ep'); DB.estoquePneus.push(d); } saveDB(); closeModal(); toast('Pneu em estoque salvo.'); router(); }
 function excluirEstoquePneu(id){ if(!confirm('Excluir este pneu em estoque?'))return; DB.estoquePneus=DB.estoquePneus.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
-/* Detalhe: pneus de UM veículo (aberto ao clicar na placa) */
+/* ================================================================== */
+/*  PNEUS — GESTÃO INTELIGENTE (diagrama do veículo, condição, painel)  */
+/* ================================================================== */
+function pneuCondicao(p){
+  const min=Number(DB.config.sulcoMinimo)||3; const st=(p.status||'').toLowerCase();
+  if(/descarte|remov/.test(st)) return {cor:'#8695ab',key:'rem',label:'Removido'};
+  const s=(p.sulco!=null&&p.sulco!=='')?Number(p.sulco):null;
+  if(s!=null){ if(s<=min) return {cor:'#ff3b30',key:'crit',label:'Crítico'};
+    if(s<=min+2) return {cor:'#ff8c1a',key:'troca',label:'Próximo da troca'};
+    if(s<=min+5) return {cor:'#ffb020',key:'aten',label:'Atenção'};
+    return {cor:'#25e88f',key:'bom',label:'Excelente'}; }
+  const b=(p.borracha!=null&&p.borracha!=='')?Number(p.borracha):null;
+  if(b!=null){ if(b<25) return {cor:'#ff3b30',key:'crit',label:'Crítico'};
+    if(b<45) return {cor:'#ff8c1a',key:'troca',label:'Próximo da troca'};
+    if(b<65) return {cor:'#ffb020',key:'aten',label:'Atenção'};
+    return {cor:'#25e88f',key:'bom',label:'Excelente'}; }
+  if(/estepe/.test(st)) return {cor:'#8695ab',key:'estepe',label:'Estepe'};
+  if(/novo/.test(st)) return {cor:'#25e88f',key:'bom',label:'Excelente'};
+  if(/recap|usado/.test(st)) return {cor:'#ffb020',key:'aten',label:'Atenção'};
+  return {cor:'#8695ab',key:'sem',label:'Sem dados'};
+}
+function pneuVidaPct(p){ const min=Number(DB.config.sulcoMinimo)||3;
+  const s=(p.sulco!=null&&p.sulco!=='')?Number(p.sulco):null;
+  if(s!=null){ return Math.max(0,Math.min(100,Math.round((s-min)/(16-min)*100))); }
+  const b=(p.borracha!=null&&p.borracha!=='')?Number(p.borracha):null; if(b!=null) return Math.max(0,Math.min(100,Math.round(b)));
+  return null; }
+function pneuCustoKmTxt(p){ const km=pneuKmRodado(p); const val=Number(p.valor)||0;
+  if(!val||!km) return '—'; return 'R$ '+(val/km).toFixed(3).replace('.',',')+'/km'; }
+function pneuSlots(v){ const cavalo=v.tipo==='Cavalo';
+  if(cavalo) return [
+    {id:'1E',eixo:1,lbl:'1E',x:66,y:150},{id:'1D',eixo:1,lbl:'1D',x:234,y:150},
+    {id:'2EE',eixo:2,lbl:'2EE',x:44,y:300},{id:'2EI',eixo:2,lbl:'2EI',x:82,y:300},{id:'2DI',eixo:2,lbl:'2DI',x:218,y:300},{id:'2DE',eixo:2,lbl:'2DE',x:256,y:300},
+    {id:'3EE',eixo:3,lbl:'3EE',x:44,y:378},{id:'3EI',eixo:3,lbl:'3EI',x:82,y:378},{id:'3DI',eixo:3,lbl:'3DI',x:218,y:378},{id:'3DE',eixo:3,lbl:'3DE',x:256,y:378},
+    {id:'E1',eixo:0,lbl:'Estepe 1',x:126,y:466,spare:1},{id:'E2',eixo:0,lbl:'Estepe 2',x:174,y:466,spare:1}];
+  return [
+    {id:'C1EE',eixo:1,lbl:'1EE',x:44,y:120},{id:'C1EI',eixo:1,lbl:'1EI',x:82,y:120},{id:'C1DI',eixo:1,lbl:'1DI',x:218,y:120},{id:'C1DE',eixo:1,lbl:'1DE',x:256,y:120},
+    {id:'C2EE',eixo:2,lbl:'2EE',x:44,y:225},{id:'C2EI',eixo:2,lbl:'2EI',x:82,y:225},{id:'C2DI',eixo:2,lbl:'2DI',x:218,y:225},{id:'C2DE',eixo:2,lbl:'2DE',x:256,y:225},
+    {id:'C3EE',eixo:3,lbl:'3EE',x:44,y:330},{id:'C3EI',eixo:3,lbl:'3EI',x:82,y:330},{id:'C3DI',eixo:3,lbl:'3DI',x:218,y:330},{id:'C3DE',eixo:3,lbl:'3DE',x:256,y:330},
+    {id:'CE1',eixo:0,lbl:'Estepe',x:150,y:420,spare:1}];
+}
+function pneuEixoNome(e){ return e===0?'Estepes':'Eixo '+e; }
+function pneuPlacements(v, pneus){ const slots=pneuSlots(v); const bySlot={}; const used={};
+  pneus.forEach(p=>{ if(p.slot && slots.some(s=>s.id===p.slot) && !bySlot[p.slot]){ bySlot[p.slot]=p; used[p.id]=1; } });
+  const rest=pneus.filter(p=>!used[p.id]);
+  const pools={dir:slots.filter(s=>s.eixo===1),drv:slots.filter(s=>s.eixo>=2),sp:slots.filter(s=>s.spare)};
+  const takeFrom=arr=>{ for(let i=0;i<arr.length;i++){ if(!bySlot[arr[i].id]) return arr[i]; } return null; };
+  rest.forEach(p=>{ const pos=(p.posicao||'').toLowerCase(), st=(p.status||'').toLowerCase();
+    let n=Math.max(1,parseInt(p.qtd)||1); if(n>6)n=6;
+    const order=/estepe/.test(pos+' '+st)?['sp','drv','dir']:(/dian|dire/.test(pos)?['dir','drv','sp']:['drv','dir','sp']);
+    while(n-->0){ let placed=false; for(let k=0;k<order.length;k++){ const s=takeFrom(pools[order[k]]); if(s){ bySlot[s.id]=p; placed=true; break; } } if(!placed) break; }
+  });
+  return {slots, bySlot};
+}
+function pneuDiagramaSVG(v, pl){ const cavalo=v.tipo==='Cavalo'; const H=cavalo?520:470;
+  const eixosY=cavalo?[150,300,378]:[120,225,330];
+  const eixos=eixosY.map(y=>`<line class="pn-axle" x1="34" y1="${y}" x2="266" y2="${y}"/>`).join('');
+  const body=cavalo
+    ? `<rect class="pn-body" x="98" y="118" width="104" height="292" rx="16"/><rect class="pn-cab" x="106" y="30" width="88" height="94" rx="14"/><line class="pn-axle" x1="150" y1="118" x2="150" y2="410"/>`
+    : `<rect class="pn-body" x="98" y="60" width="104" height="300" rx="16"/><circle class="pn-king" cx="150" cy="74" r="9"/><line class="pn-axle" x1="150" y1="74" x2="150" y2="360"/>`;
+  const tires=pl.slots.map(s=>{ const p=pl.bySlot[s.id]; const cond=p?pneuCondicao(p):{cor:'#33465e',label:'Vazio'};
+    const w=22,h=42; const cls=p?'pn-tire has':'pn-tire empty';
+    return `<g class="${cls}" onclick="pneuAbrir('${p?('p:'+p.id):('s:'+s.id)}','${v.id}')" data-tip="${esc(s.lbl)}${p?(' · '+esc(p.marca||'Pneu')+' · '+cond.label+(p.sulco?' · '+p.sulco+'mm':'')):' · vazio'}">
+      <rect x="${(s.x-w/2)}" y="${(s.y-h/2)}" width="${w}" height="${h}" rx="6" fill="${cond.cor}"/>
+      <text x="${s.x}" y="${s.y+3}" text-anchor="middle" class="pn-tlbl">${esc(s.lbl.replace('Estepe ','E'))}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 300 ${H}" class="pn-diagram" preserveAspectRatio="xMidYMid meet">${body}${eixos}${tires}</svg>`;
+}
+/* Detalhe: pneus de UM veículo — diagrama inteligente + painel + ficha */
 function viewPneusVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
   const cavalo=v.tipo==='Cavalo';
-  const ps=DB.pneus.filter(p=>p.veiculoId===v.id).sort((a,b)=>(a.posicao||'').localeCompare(b.posicao||''));
-  const rows=ps.map(p=>{ const km=pneuKmRodado(p);
-    return `<tr class="clickable" onclick="modalPneu('${p.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
-      <td><b>${esc(p.posicao||'—')}</b></td>
-      <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.medida||'')}</div></td>
-      <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${fmtD(p.dataInstalacao)}</td>
+  const ps=DB.pneus.filter(p=>p.veiculoId===v.id);
+  const pl=pneuPlacements(v, ps);
+  const instalados=Object.values(pl.bySlot);
+  const cont={bom:0,aten:0,troca:0,crit:0,rem:0};
+  instalados.forEach(p=>{ const k=pneuCondicao(p).key; cont[/crit/.test(k)?'crit':/troca/.test(k)?'troca':/aten/.test(k)?'aten':/bom/.test(k)?'bom':'rem']++; });
+  const proxTroca=instalados.filter(p=>['troca','crit'].indexOf(pneuCondicao(p).key)>=0)
+    .sort((a,b)=>(pneuVidaPct(a)==null?999:pneuVidaPct(a))-(pneuVidaPct(b)==null?999:pneuVidaPct(b)));
+  // análise por eixo
+  const eixos={}; pl.slots.forEach(s=>{ const p=pl.bySlot[s.id]; if(!p) return; const e=s.eixo;
+    eixos[e]=eixos[e]||{custo:0,vidas:[],n:0}; eixos[e].custo+=Number(p.valor)||0; eixos[e].n++; const vp=pneuVidaPct(p); if(vp!=null)eixos[e].vidas.push(vp); });
+  const eixoKeys=Object.keys(eixos).sort();
+  const custoBars=eixoKeys.map(e=>({label:pneuEixoNome(+e),value:Math.round(eixos[e].custo),vtxt:moneyK(eixos[e].custo),color:'#2f8fff'}));
+  const custoTotal=instalados.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const kmTotal=instalados.reduce((s,p)=>{ const k=pneuKmRodado(p); return s+(k||0); },0);
+  const custoKmFrota= (custoTotal&&kmTotal)? 'R$ '+(custoTotal/kmTotal).toFixed(3).replace('.',',')+'/km' : '—';
+  const desgasteHTML=eixoKeys.map(e=>{ const vs=eixos[e].vidas; const avg=vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):null;
+    const cor=avg==null?'#8695ab':avg<25?'#ff3b30':avg<45?'#ff8c1a':avg<65?'#ffb020':'#25e88f';
+    return `<div class="pn-desg"><span>${pneuEixoNome(+e)}</span><div class="pn-desg-bar"><i style="width:${avg==null?0:avg}%;background:${cor}"></i></div><b>${avg==null?'—':avg+'%'}</b></div>`; }).join('') || '<div class="muted">Sem dados de sulco/borracha ainda.</div>';
+  const proxHTML=proxTroca.length? proxTroca.map(p=>{ const c=pneuCondicao(p); const slot=Object.keys(pl.bySlot).find(k=>pl.bySlot[k]===p)||'';
+    return `<div class="pn-prox clk" onclick="pneuAbrir('p:${p.id}','${v.id}')"><span class="pn-dot" style="background:${c.cor}"></span><div class="a-main"><b>${esc(slot)} — ${esc(p.marca||'Pneu')}</b><span>${esc(p.medida||'')}${p.sulco?' · '+p.sulco+'mm':''}</span></div><span class="st ${c.key==='crit'?'crit':'warn'}">${c.label}</span></div>`; }).join('') : `<div class="pn-ok">${svg('check')} Nenhum pneu na faixa de troca. 👍</div>`;
+  const un=cavalo?'KM':'Horas';
+  return `${detalheVeiculoHead(v, `<a class="btn" href="#km">${svg('gauge')} ${un}</a><button class="btn primary" onclick="modalPneu(null,'${v.id}')">${svg('plus')} Novo pneu</button>`)}
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin:4px 0 16px">
+    ${kpi('tire','i-green',cont.bom,'Excelentes','')}
+    ${kpi('tire','i-amber',cont.aten+cont.troca,'Atenção / troca','')}
+    ${kpi('tire','i-red',cont.crit,'Críticos','')}
+    ${kpi('money','i-blue',money(custoTotal),'Investido em pneus',custoKmFrota+' médio')}
+  </div>
+  <div class="grid" style="grid-template-columns:minmax(300px,380px) 1fr;gap:16px;align-items:start">
+    <div class="card pn-stage"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">${esc(v.placa)} · ${cavalo?'Cavalo (3 eixos)':'Carreta (3 eixos)'}</h3><span class="sub" style="margin-left:auto">clique num pneu</span></div>
+      <div class="card-b pn-stage-b">
+        ${pneuDiagramaSVG(v, pl)}
+        <div class="pn-legend">
+          <span><i style="background:#25e88f"></i>Excelente</span><span><i style="background:#ffb020"></i>Atenção</span>
+          <span><i style="background:#ff8c1a"></i>Próx. troca</span><span><i style="background:#ff3b30"></i>Crítico</span>
+          <span><i style="background:#8695ab"></i>Estoque/Removido</span><span><i style="background:#33465e"></i>Vazio</span>
+        </div>
+      </div>
+      <aside class="pn-panel" id="pneuPanel"></aside>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card"><div class="card-h">${svg('bell')}<h3 style="font-size:14px">Pneus próximos da troca</h3></div><div class="card-b p0" style="padding:8px 12px">${proxHTML}</div></div>
+      <div class="grid two-col" style="gap:16px">
+        <div class="card"><div class="card-h">${svg('dash')}<h3 style="font-size:14px">Desgaste por eixo</h3></div><div class="card-b">${desgasteHTML}</div></div>
+        <div class="card"><div class="card-h">${svg('money')}<h3 style="font-size:14px">Custo por eixo</h3></div><div class="card-b">${custoBars.length?barChart(custoBars,{h:150,w:300}):'<div class="muted">Cadastre o valor dos pneus.</div>'}</div></div>
+      </div>
+    </div>
+  </div>
+  ${pneuFichaTabela(v, ps)}`;
+}
+function pneuFichaTabela(v, ps){
+  const rows=ps.slice().sort((a,b)=>(a.slot||a.posicao||'').localeCompare(b.slot||b.posicao||'')).map(p=>{ const km=pneuKmRodado(p); const c=pneuCondicao(p);
+    return `<tr class="clickable" onclick="pneuAbrir('p:${p.id}','${v.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
+      <td><b>${esc(p.slot||p.posicao||'—')}</b></td>
+      <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.modelo||'')} ${esc(p.medida||'')}</div></td>
+      <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${p.sulco?p.sulco+'mm':'—'}</td>
       <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
-      <td><span class="tag">${esc(p.status||'—')}</span>${(/usado|recap/i.test(p.status||'')&&p.borracha!=null&&p.borracha!=='')?`<br><span class="borracha-badge">${p.borracha}% borracha</span>`:''}</td>
-      <td class="muted" style="font-size:12px">${esc(p.obs||'—')}</td>
+      <td><span class="st" style="background:${c.cor}22;color:${c.cor}"><i style="width:7px;height:7px;border-radius:50%;background:${c.cor};display:inline-block"></i>${c.label}</span></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPneu('${p.id}')">${svg('edit')}</button></td></tr>`;
   }).join('');
-  return `${detalheVeiculoHead(v, `<a class="btn" href="#km">${svg('gauge')} KM/Horas</a><button class="btn primary" onclick="modalPneu(null,'${v.id}')">${svg('plus')} Novo pneu</button>`)}
-  <div class="card"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Pneus de ${esc(v.placa)} — ${pneuTotal(ps)} no total</h3></div>
+  return `<div class="card" style="margin-top:16px"><div class="card-h">${svg('tire')}<h3 style="font-size:14px">Ficha completa — ${pneuTotal(ps)} pneu(s)</h3></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Medida</th><th>DOT</th><th>Instalação</th><th>Rodado</th><th>Status</th><th>Obs</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="9">${emptyState('Nenhum pneu cadastrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>
-  <div class="muted no-print" style="font-size:12px;margin-top:10px">O <b>Rodado</b> é calculado automaticamente (KM atual − KM da instalação) e acompanha a aba KM/Horas.</div>`;
+      <thead><tr><th>Qtd</th><th>Posição</th><th>Marca / Modelo</th><th>DOT</th><th>Sulco</th><th>Rodado</th><th>Condição</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum pneu cadastrado para este veículo.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
-function modalPneu(id, vId){
-  const p=id?DB.pneus.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,qtd:1,posicao:'',marca:'',medida:'',dot:'',dataInstalacao:'',kmInstalacao:'',status:'Novo',borracha:'',obs:''};
+/* ---- Painel lateral do pneu ---- */
+function pneuAbrir(ref, vId){ const el=document.getElementById('pneuPanel'); if(!el) return;
+  document.querySelectorAll('.pn-tire.sel').forEach(e=>e.classList.remove('sel'));
+  const v=veiculo(vId);
+  if(ref.slice(0,2)==='p:'){ const p=DB.pneus.find(x=>x.id===ref.slice(2)); if(p){ el.innerHTML=pneuPanelHTML(p,v); el.classList.add('show'); } }
+  else { el.innerHTML=pneuPanelVazio(ref.slice(2),v); el.classList.add('show'); }
+}
+function pneuFecharPanel(){ const el=document.getElementById('pneuPanel'); if(el) el.classList.remove('show'); }
+function _pnRow(l,val){ return `<div class="pn-f"><small>${l}</small><b>${val==null||val===''?'—':val}</b></div>`; }
+function pneuPanelHTML(p, v){ const c=pneuCondicao(p); const km=pneuKmRodado(p); const vida=pneuVidaPct(p);
+  const slot=Object.keys(pneuPlacements(v, DB.pneus.filter(x=>x.veiculoId===v.id)).bySlot).find(k=>{ const b=pneuPlacements(v, DB.pneus.filter(x=>x.veiculoId===v.id)).bySlot[k]; return b&&b.id===p.id; });
+  const slots=pneuSlots(v);
+  const moveOpts=slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.lbl)}</option>`).join('');
+  const fotos=(typeof filesDe==='function')?filesDe('pneu',p.id):[];
+  const fotosHTML=fotos.length? fotos.map(f=>`<button class="pn-foto" title="${esc(f.name||f.nome||'foto')}" onclick="${f.id?`verArquivo('${f.id}')`:`abrirReal('${esc(f.path)}')`}">${svg('eye')}</button>`).join('') : '<span class="muted" style="font-size:12px">Sem fotos</span>';
+  return `<button class="pn-x" onclick="pneuFecharPanel()">×</button>
+    <div class="pn-head"><span class="pn-badge" style="background:${c.cor}"></span><div><b class="pn-pos">${esc(slot||p.posicao||'Pneu')}</b><span class="pn-cond" style="color:${c.cor}">${c.label}</span></div></div>
+    <div class="pn-vida"><small>Vida útil restante</small><div class="pn-vida-bar"><i style="width:${vida==null?0:vida}%;background:${c.cor}"></i></div><b>${vida==null?'—':vida+'%'}</b></div>
+    <div class="pn-grid">
+      ${_pnRow('Marca',esc(p.marca))}${_pnRow('Modelo',esc(p.modelo))}
+      ${_pnRow('Medida',esc(p.medida))}${_pnRow('DOT',esc(p.dot))}
+      ${_pnRow('Nº de Fogo',esc(p.fogo))}${_pnRow('Nota Fiscal',esc(p.nf))}
+      ${_pnRow('Fornecedor',esc(p.fornecedor))}${_pnRow('Data da compra',fmtD(p.dataCompra))}
+      ${_pnRow('Valor',money(p.valor))}${_pnRow('Sulco',p.sulco?esc(p.sulco)+' mm':'—')}
+      ${_pnRow('KM rodados',km!=null?num(km)+' km':'—')}${_pnRow('Custo por KM',pneuCustoKmTxt(p))}
+      ${_pnRow('Rodízios',p.rodizios||0)}${_pnRow('Reformas',p.reformas||0)}
+      ${_pnRow('Status',esc(p.status))}${_pnRow('Instalado em',fmtD(p.dataInstalacao))}
+    </div>
+    <div class="pn-sec"><small>Observações</small><div class="pn-obs">${esc(p.obs)||'<span class="muted">—</span>'}</div></div>
+    <div class="pn-sec"><small>Fotos</small><div class="pn-fotos">${fotosHTML}<button class="btn ghost sm" onclick="uploadPara('pneu','${p.id}','Foto do pneu')">${svg('upload')} Foto</button></div></div>
+    <div class="pn-move"><small>Mover para posição</small><div style="display:flex;gap:8px"><select id="pnMove">${moveOpts}</select><button class="btn sm" onclick="pneuMover('${p.id}',document.getElementById('pnMove').value)">Mover</button></div></div>
+    <div class="pn-acts"><button class="btn sm" onclick="modalPneu('${p.id}')">${svg('edit')} Editar</button><button class="btn ghost sm" onclick="pneuRemoverPos('${p.id}')">Tirar da posição</button></div>`;
+}
+function pneuPanelVazio(slotId, v){ const slots=pneuSlots(v); const s=slots.find(x=>x.id===slotId)||{lbl:slotId};
+  return `<button class="pn-x" onclick="pneuFecharPanel()">×</button>
+    <div class="pn-head"><span class="pn-badge" style="background:#33465e"></span><div><b class="pn-pos">${esc(s.lbl)}</b><span class="pn-cond muted">Posição vazia</span></div></div>
+    <p class="muted" style="font-size:13px;margin:14px 0">Nenhum pneu nesta posição. Instale um pneu novo aqui ou mova um pneu existente pelo painel de outro pneu.</p>
+    <button class="btn primary" style="width:100%" onclick="modalPneu(null,'${v.id}','${slotId}')">${svg('plus')} Instalar pneu aqui</button>`;
+}
+function pneuMover(pneuId, slotId){ const p=DB.pneus.find(x=>x.id===pneuId); if(!p) return;
+  const outro=DB.pneus.find(x=>x!==p && x.veiculoId===p.veiculoId && x.slot===slotId);
+  if(outro) outro.slot=p.slot||''; /* troca de posição */
+  p.slot=slotId; (p.hist=p.hist||[]).push({t:'move',slot:slotId,data:new Date().toISOString().slice(0,10)});
+  p.rodizios=(parseInt(p.rodizios)||0)+1; saveDB(); toast('Pneu movido para '+slotId+'.'); router(); }
+function pneuRemoverPos(pneuId){ const p=DB.pneus.find(x=>x.id===pneuId); if(!p) return; p.slot=''; p.status='Estepe'; saveDB(); toast('Pneu tirado da posição (vai para estepe/estoque).'); router(); }
+function modalPneu(id, vId, slotId){
+  const p=id?DB.pneus.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,qtd:1,posicao:'',slot:slotId||'',marca:'',modelo:'',medida:'',dot:'',fogo:'',nf:'',fornecedor:'',dataCompra:'',valor:'',sulco:'',dataInstalacao:'',kmInstalacao:'',status:'Novo',borracha:'',rodizios:0,reformas:0,obs:''};
+  const _sv=veiculo(p.veiculoId)||DB.veiculos[0]; const _slots=_sv?pneuSlots(_sv):[];
   openModal(`<div class="m-h">${svg('tire')}<h3>${id?'Editar pneu':'Novo pneu'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${p.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join('')}</select></div>
-      <datalist id="dl_pos"><option>Dianteira</option><option>Tração</option><option>Traseira</option><option>Estepe 1</option><option>Estepe 2</option><option>Estepe</option></datalist>
-      <div class="field-row">${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 (dá para cadastrar 2 estepes de uma vez)')}
-        <div class="field"><label>Posição</label><input id="f_pos" list="dl_pos" value="${esc(p.posicao||'')}"><div class="hint">Ex.: Dianteira, Tração, Traseira, Estepe 1, Estepe 2</div></div></div>
-      <div class="field-row">${fld('Marca','f_marca',p.marca)}${fld('Medida','f_medida',p.medida,'text','Ex.: 295/80 R22.5')}</div>
-      ${!id && DB.estoquePneus.some(e=>(parseInt(e.qtd)||0)>0) ? `<div class="field"><label>Tirar do estoque (opcional)</label><select id="f_estq"><option value="">— não usar estoque —</option>${DB.estoquePneus.filter(e=>(parseInt(e.qtd)||0)>0).map(e=>`<option value="${e.id}">${esc(e.marca||'Pneu')} ${esc(e.medida||'')} — ${e.qtd} em estoque${e.localEstoque?' ('+esc(e.localEstoque)+')':''}</option>`).join('')}</select><div class="hint">Se escolher, dá baixa automática no estoque ao salvar.</div></div>`:''}
+      <div class="field-row">
+        <div class="field"><label>Posição no diagrama</label><select id="f_slot"><option value="">— não posicionado —</option>${_slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.lbl)}</option>`).join('')}</select></div>
+        ${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 (dá p/ cadastrar 2 de uma vez)')}</div>
+      <div class="field-row">${fld('Marca','f_marca',p.marca)}${fld('Modelo','f_modelo',p.modelo)}</div>
+      <div class="field-row">${fld('Medida','f_medida',p.medida,'text','Ex.: 295/80 R22.5')}${fld('Sulco (mm)','f_sulco',p.sulco,'number','Profundidade atual. Ex.: 12')}</div>
       <div class="field-row">
         <div class="field"><label>Status</label><select id="f_status" onchange="pneuToggleBorracha(this.value)">${PNEU_STATUS.map(o=>`<option ${o===p.status?'selected':''}>${esc(o)}</option>`).join('')}</select></div>
         ${fld('DOT (semana/ano)','f_dot',p.dot)}</div>
       <div class="field-row" id="f_borracha_wrap" style="${/usado|recap/i.test(p.status||'')?'':'display:none'}">
-        ${fld('% de borracha restante','f_borracha',p.borracha,'number','Só para pneu usado/recapado. Ex.: 70')}
-        <div class="field"><label>&nbsp;</label><div class="hint">Quanto de vida útil o pneu ainda tem.</div></div></div>
+        ${fld('% de borracha restante','f_borracha',p.borracha,'number','Só p/ usado/recapado. Ex.: 70')}
+        ${fld('Nº de fogo','f_fogo',p.fogo,'text','Marcação de identificação')}</div>
+      <div class="field-row">${fldR$('Valor (R$)','f_valor',p.valor)}${fld('Fornecedor','f_forn',p.fornecedor)}</div>
+      <div class="field-row">${fld('Data da compra','f_datac',p.dataCompra,'date')}${fld('Nota Fiscal','f_nf',p.nf)}</div>
+      ${!id && DB.estoquePneus.some(e=>(parseInt(e.qtd)||0)>0) ? `<div class="field"><label>Tirar do estoque (opcional)</label><select id="f_estq"><option value="">— não usar estoque —</option>${DB.estoquePneus.filter(e=>(parseInt(e.qtd)||0)>0).map(e=>`<option value="${e.id}">${esc(e.marca||'Pneu')} ${esc(e.medida||'')} — ${e.qtd} em estoque${e.localEstoque?' ('+esc(e.localEstoque)+')':''}</option>`).join('')}</select><div class="hint">Se escolher, dá baixa automática no estoque ao salvar.</div></div>`:''}
       <div class="field-row">${fld('Data instalação','f_data',p.dataInstalacao,'date')}${fld('KM na instalação','f_km',p.kmInstalacao,'number')}</div>
+      <div class="field-row">${fld('Rodízios','f_rod',p.rodizios||0,'number')}${fld('Reformas / recapagens','f_ref',p.reformas||0,'number')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(p.obs)}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirPneu('${id}')">${svg('trash')} Excluir</button>`:''}
@@ -2364,9 +2528,13 @@ function modalPneu(id, vId){
 function pneuToggleBorracha(v){ const w=document.getElementById('f_borracha_wrap'); if(w) w.style.display=/usado|recap/i.test(v||'')?'':'none'; }
 function salvarPneu(id){
   let q=parseInt(val('f_qtd'))||1; if(q<1)q=1; if(q>50)q=50;
-  const st=val('f_status');
-  const d={veiculoId:val('f_veic'),qtd:q,posicao:val('f_pos'),marca:val('f_marca'),medida:val('f_medida'),dot:val('f_dot'),
-    status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),obs:val('f_obs')};
+  const st=val('f_status'); const slot=val('f_slot');
+  const _v=veiculo(val('f_veic')); const _s=_v?pneuSlots(_v).find(x=>x.id===slot):null; const oldP=id?DB.pneus.find(x=>x.id===id):null;
+  const d={veiculoId:val('f_veic'),qtd:q,slot:slot,posicao:_s?_s.lbl:(oldP?oldP.posicao||'':''),
+    marca:val('f_marca'),modelo:val('f_modelo'),medida:val('f_medida'),dot:val('f_dot'),
+    fogo:val('f_fogo'),nf:val('f_nf'),fornecedor:val('f_forn'),dataCompra:val('f_datac'),valor:parseBRL(val('f_valor')),
+    sulco:numOrNull('f_sulco'),status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),
+    dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),rodizios:numOrNull('f_rod')||0,reformas:numOrNull('f_ref')||0,obs:val('f_obs')};
   let baixa='';
   if(id)Object.assign(DB.pneus.find(x=>x.id===id),d); else{ d.id=uid('pn'); DB.pneus.push(d);
     const eid=val('f_estq'); if(eid){ const e=DB.estoquePneus.find(x=>x.id===eid); if(e){ e.qtd=(parseInt(e.qtd)||0)-q;
