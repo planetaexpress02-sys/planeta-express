@@ -1712,3 +1712,105 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){ .dsc-month{animation:none} .dsc-monthbody,.dsc-chev{transition:none} }
 /* impressão: abre todos os meses e remove o efeito de recolher */
 @media print{ .dsc-monthbody{max-height:none!important;overflow:visible!important} .dsc-toolbar,.dsc-meta{display:none!important} }
+
+/* ==========================================================================
+   TOPBAR / COCKPIT — TEMA CYBER (v6.32)
+   O cabeçalho superior é um elemento GLOBAL (fora do #view.cyber), então os
+   tokens :root claros não valem aqui — cores cyber explícitas. Vale em TODAS
+   as abas. A paleta Ctrl+K e o dropdown de notificações já eram escuros.
+   ========================================================================== */
+.topbar{background:rgba(6,15,27,.82)!important;border-bottom:1px solid rgba(0,229,255,.12)!important;
+  backdrop-filter:saturate(1.2) blur(16px);-webkit-backdrop-filter:saturate(1.2) blur(16px)}
+.topbar .page-title{color:#eaf4ff}
+.topbar .page-title small{color:#7fa0bd}
+/* busca-comando */
+.cock-search{background:rgba(0,18,32,.6);border-color:rgba(0,229,255,.16)}
+.cock-search:hover{background:rgba(0,26,47,.72);border-color:rgba(0,229,255,.4);box-shadow:0 0 14px rgba(0,229,255,.12)}
+.cock-search>svg{color:#7fa0bd}
+.cock-search span{color:#8fa9c2}
+.cock-kbd{border-color:rgba(0,229,255,.22);color:#8fb6d8;background:rgba(0,229,255,.07)}
+/* ícones do cluster */
+.cock-ico{color:#9fbdd8}
+.cock-ico:hover{background:rgba(0,229,255,.12);color:#00e5ff;border-color:rgba(0,229,255,.22)}
+.cock-badge{box-shadow:0 0 0 2px #0a1524}
+@keyframes cockBadge{0%{box-shadow:0 0 0 2px #0a1524,0 0 0 0 rgba(255,59,48,.5)}70%{box-shadow:0 0 0 2px #0a1524,0 0 0 7px rgba(255,59,48,0)}100%{box-shadow:0 0 0 2px #0a1524,0 0 0 0 rgba(255,59,48,0)}}
+/* clima */
+.cock-weather{background:rgba(0,18,32,.55);border-color:rgba(0,229,255,.14)}
+.cock-weather .wx-tx b{color:#eaf4ff}
+.cock-weather .wx-tx small{color:#7fa0bd}
+/* relógio */
+.cock-clock b{color:#eaf6ff;text-shadow:0 0 12px rgba(0,229,255,.25)}
+.cock-clock span{color:#7fa0bd}
+/* status */
+.cock-status.on{color:#25e88f;background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.25)}
+.cock-status.off{color:#8fa6ba;background:rgba(120,150,190,.1);border-color:rgba(120,150,190,.18)}
+/* botão Relatório + userbadge + menu/voltar */
+.topbar .btn{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);color:#bfe9ff}
+.topbar .btn:hover{border-color:#00e5ff;color:#fff;box-shadow:0 0 12px rgba(0,229,255,.3)}
+.userbadge{background:rgba(0,229,255,.12);color:#7fe0ff;border:1px solid rgba(0,229,255,.2)}
+.topbar .menu-toggle,.topbar .back-btn{background:rgba(0,18,32,.5);border:1px solid rgba(0,229,255,.14);color:#9fbdd8}
+.topbar .menu-toggle:hover,.topbar .back-btn:hover{border-color:rgba(0,229,255,.35);color:#00e5ff}
+
+/* ==========================================================================
+   MODAIS — TEMA CYBER (v6.32)
+   As janelinhas de cadastro (#overlay .modal) escuras cyber. Redefino os
+   tokens no próprio .modal (componentes baseados em token adaptam sozinhos) +
+   overrides das superfícies brancas "chumbadas". O scrim já era escuro.
+   ========================================================================== */
+#overlay .modal{
+  --card:rgba(0,26,47,.6); --line:rgba(0,229,255,.14); --line-2:rgba(0,229,255,.08);
+  --text:#e6eaf2; --text-soft:#9fbdd8; --text-mute:#7fa0bd;
+  --accent:#00e5ff; --accent-2:#00c8e6; --accent-soft:rgba(0,229,255,.12);
+  --ok:#25e88f; --ok-bg:rgba(0,255,136,.14); --warn:#ffc061; --warn-bg:rgba(255,176,32,.15);
+  --crit:#ffb27a; --crit-bg:rgba(255,157,92,.15); --danger:#ff6b6b; --danger-bg:rgba(255,59,48,.15);
+  background:linear-gradient(180deg,rgba(10,22,38,.98),rgba(6,15,27,.98));
+  border:1px solid rgba(0,229,255,.18);color:#e6eaf2;
+  box-shadow:0 0 46px rgba(0,229,255,.1),0 30px 80px rgba(0,0,0,.62)}
+#overlay .modal .m-h{border-bottom-color:rgba(0,229,255,.1)}
+#overlay .modal .m-h h3{color:#eaf4ff}
+#overlay .modal .m-h>svg{color:#00e5ff;filter:drop-shadow(0 0 6px rgba(0,229,255,.5))}
+#overlay .modal .m-h .x{background:rgba(0,229,255,.08);color:#9fbdd8}
+#overlay .modal .m-h .x:hover{background:rgba(0,229,255,.16);color:#eaf4ff}
+#overlay .modal .m-f{background:rgba(0,14,26,.6);border-top-color:rgba(0,229,255,.1)}
+/* campos */
+#overlay .modal .field label{color:#9fbdd8}
+#overlay .modal .field input,#overlay .modal .field select,#overlay .modal .field textarea,#overlay .modal .selectlite{
+  background:rgba(0,18,32,.62);color:#e6eaf2;border-color:rgba(0,229,255,.18)}
+#overlay .modal .field input:focus,#overlay .modal .field select:focus,#overlay .modal .field textarea:focus,#overlay .modal .selectlite:focus{
+  border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,.14)}
+#overlay .modal select option{background:#0a1622;color:#e6eaf2}
+#overlay .modal .field .hint,#overlay .modal .hint{color:#7fa0bd}
+#overlay .modal .muted{color:#7fa0bd}
+#overlay .modal .seg{background:rgba(0,20,36,.6);border:1px solid rgba(0,229,255,.15)}
+#overlay .modal .seg button{color:#9fbdd8}
+#overlay .modal .seg button.active{background:rgba(0,229,255,.14);color:#eaf6ff}
+/* botões */
+#overlay .modal .btn{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);color:#bfe9ff}
+#overlay .modal .btn:hover{border-color:#00e5ff;color:#fff;box-shadow:0 0 12px rgba(0,229,255,.3)}
+#overlay .modal .btn.ghost{background:transparent;border-color:transparent}
+#overlay .modal .btn.ghost:hover{background:rgba(0,229,255,.08)}
+#overlay .modal .btn.primary{background:linear-gradient(180deg,#12b9ff,#0077ff);border-color:#0077ff;color:#fff;box-shadow:0 0 16px rgba(0,229,255,.4)}
+#overlay .modal .btn.primary:hover{background:linear-gradient(180deg,#28c3ff,#0a84ff);box-shadow:0 0 24px rgba(0,229,255,.6)}
+#overlay .modal .btn.danger{background:rgba(255,59,48,.08);border-color:rgba(255,59,48,.35);color:#ff6b6b}
+#overlay .modal .btn.danger:hover{background:rgba(255,59,48,.16)}
+/* banner interno (modais de importação) */
+#overlay .modal .banner{background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.12);color:#e6eaf2}
+#overlay .modal .banner>svg{color:#00e5ff}
+#overlay .modal .banner b{color:#eaf4ff}
+#overlay .modal .banner span{color:#9fbdd8}
+/* tabelas de prévia dentro do modal */
+#overlay .modal .tbl-wrap{border:1px solid rgba(0,229,255,.1);border-radius:12px}
+#overlay .modal table.tbl th{background:rgba(0,18,32,.72);color:#7fa0bd;border-bottom-color:rgba(0,229,255,.14)}
+#overlay .modal table.tbl td{color:#cfe0ef;border-bottom-color:rgba(0,229,255,.07)}
+#overlay .modal table.tbl tbody tr:hover{background:rgba(0,229,255,.06)}
+#overlay .modal tr.imp-off{opacity:.4}
+/* badges / tags / chips */
+#overlay .modal .st.ok{background:rgba(0,255,136,.14);color:#25e88f}
+#overlay .modal .st.warn{background:rgba(255,176,32,.15);color:#ffc061}
+#overlay .modal .st.crit,#overlay .modal .st.vencido{background:rgba(255,59,48,.15);color:#ff6b6b}
+#overlay .modal .st.neutro{background:rgba(140,180,210,.12);color:#9fc0da}
+#overlay .modal .tag{background:rgba(140,180,210,.12);color:#9fc0da}
+#overlay .modal .empty{color:#7fa0bd}
+#overlay .modal .empty b{color:#bfd4e6}
+/* impressão: modais voltam a papel branco (raro, mas seguro) */
+@media print{ #overlay .modal{background:#fff!important;color:#111!important} }
