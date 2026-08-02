@@ -1862,3 +1862,51 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @keyframes almIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){ .alm-card{animation:none} }
 @media(max-width:560px){ .alm-grid{grid-template-columns:1fr} }
+
+/* ==========================================================================
+   NAVEGAÇÃO MOBILE PREMIUM (v6.34)
+   Só afeta telas ≤860px. Desktop e tema INTACTOS. Menu ☰ grande e tocável ao
+   lado da marca, botão Voltar em todas as telas secundárias, ripple/glow,
+   slide do menu (~250ms) + scrim com desfoque. Área de toque ≥48–56px.
+   ========================================================================== */
+.tb-brand{display:none}                                    /* desktop: a marca fica na sidebar */
+/* scrim do menu — desfoque + fade premium (só aparece com .show) */
+.scrim{display:block;background:rgba(3,10,20,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease}
+.scrim.show{opacity:1;visibility:visible;pointer-events:auto}
+@media(max-width:860px){
+  .topbar{gap:8px;padding:0 12px}
+  /* o menu desliza suave (a transição global da sidebar é só p/ o trilho desktop) */
+  .sidebar{transition:transform .26s cubic-bezier(.16,1,.3,1)}
+  /* botão de MENU — grande (56px), tocável, com pressão/ripple/glow */
+  .topbar .menu-toggle{display:flex!important;width:56px;height:56px;border-radius:16px;position:relative;overflow:hidden;
+    -webkit-tap-highlight-color:transparent;transition:transform .12s ease,box-shadow .18s,border-color .18s}
+  .topbar .menu-toggle svg{width:26px;height:26px}
+  .topbar .menu-toggle:active{transform:scale(.9)}
+  .topbar .menu-toggle:hover,.topbar .back-btn:hover{box-shadow:0 0 14px rgba(0,229,255,.22)}
+  /* botão VOLTAR — visível só em telas secundárias */
+  .topbar .back-btn{display:flex;width:50px;height:50px;border-radius:15px;position:relative;overflow:hidden;
+    -webkit-tap-highlight-color:transparent;transition:transform .12s ease,box-shadow .18s,border-color .18s}
+  .topbar .back-btn svg{width:24px;height:24px}
+  .topbar .back-btn:active{transform:scale(.9)}
+  body.pex-home .topbar .back-btn{display:none}
+  /* ripple discreto (menu + voltar) */
+  .topbar .menu-toggle::after,.topbar .back-btn::after{content:"";position:absolute;left:50%;top:50%;width:150%;padding-bottom:150%;
+    transform:translate(-50%,-50%) scale(0);border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.42),transparent 60%);opacity:0;pointer-events:none}
+  .topbar .menu-toggle:active::after,.topbar .back-btn:active::after{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .45s ease-out,opacity .6s ease-out}
+  .topbar .menu-toggle:focus-visible,.topbar .back-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,229,255,.4)}
+  /* MARCA ao lado do menu: [logo] PLANETA EXPRESS */
+  .tb-brand{display:flex;align-items:center;gap:9px;text-decoration:none;flex:0 1 auto;min-width:0}
+  .tb-logo{width:36px;height:36px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;padding:5px;flex:0 0 auto;
+    box-shadow:0 0 14px rgba(0,229,255,.18),0 2px 8px rgba(0,0,0,.32)}
+  .tb-logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .tb-word{font-weight:800;letter-spacing:1.1px;font-size:14.5px;color:#eaf6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body:not(.pex-home) .tb-word{display:none}              /* em telas secundárias, dá espaço p/ o Voltar */
+  .cock-cluster #cockNew{display:none}                    /* "+" redundante com a busca no mobile — libera espaço p/ a marca */
+  /* toques maiores no cluster + sem rolagem horizontal acidental */
+  .cock-ico{width:46px;height:46px}
+  .content{overflow-x:clip}
+}
+@media(max-width:480px){ .tb-logo{display:none} }         /* telas estreitas: menu + PLANETA EXPRESS (sem o selo do logo) */
+@media(max-width:400px){ .tb-word{font-size:13px;letter-spacing:.4px} }
+@media(prefers-reduced-motion:reduce){ .sidebar,.scrim{transition:none} .topbar .menu-toggle:active::after,.topbar .back-btn:active::after{transition:none} }

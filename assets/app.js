@@ -425,6 +425,7 @@ const ROTAS = {
 function go(h){ location.hash=h; }
 function router(){
   const h = (location.hash||'#inicio').slice(1);
+  try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
   const [rota, arg] = h.split('/');
   renderSidebar(rota);
   const meta = ROTAS[rota] || ROTAS.inicio;
@@ -475,6 +476,7 @@ function pexAfterRender(rota){
       /* tema CYBER global: liga em todas as telas, EXCETO Início/Painel/Manutenção
          (já têm bloco cyber próprio scoped). Viagens/Descargas também são cyber. */
       var _noCy={inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
+    document.body.classList.toggle('pex-home', rota==='inicio'||rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
@@ -3801,6 +3803,26 @@ function imprimirRelatorio(){
 }
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('scrim').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar')?.classList.remove('open'); document.getElementById('scrim')?.classList.remove('show'); }
+
+/* ---- Navegação mobile: pilha de histórico para o botão Voltar ---- */
+var PEX_NAV=[]; var _pexNavBack=false;
+function _pexTrackNav(){
+  var h=location.hash||'#inicio';
+  if(_pexNavBack){ _pexNavBack=false; return; }           // veio do "Voltar": não re-empilha
+  if(PEX_NAV[PEX_NAV.length-1]!==h) PEX_NAV.push(h);       // ignora repetição da mesma tela
+  if(PEX_NAV.length>60) PEX_NAV.shift();
+}
+function navVoltar(){
+  closeSidebar();
+  if(PEX_NAV.length>1){
+    PEX_NAV.pop();                                          // remove a tela atual
+    var alvo=PEX_NAV[PEX_NAV.length-1]||'#inicio';
+    _pexNavBack=true;
+    if((location.hash||'#inicio')===alvo){ router(); } else { location.hash=alvo; }
+  } else {                                                  // sem histórico → Início (nunca prende o usuário)
+    if((location.hash||'#inicio')!=='#inicio') location.hash='#inicio'; else router();
+  }
+}
 /* Recolher menu para "trilho" só-ícones (desktop). Estado salvo no aparelho. */
 function toggleRail(){ const on=!document.body.classList.contains('rail'); document.body.classList.toggle('rail',on);
   try{ localStorage.setItem('pex_rail', on?'1':'0'); }catch(e){}
