@@ -1814,3 +1814,51 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 #overlay .modal .empty b{color:#bfd4e6}
 /* impressão: modais voltam a papel branco (raro, mas seguro) */
 @media print{ #overlay .modal{background:#fff!important;color:#111!important} }
+
+/* ==========================================================================
+   CABEÇALHO — remove a descrição repetitiva da aba (v6.33)
+   Cada tela já se identifica no próprio banner; o rótulo no topbar era redundante.
+   ========================================================================== */
+.topbar .page-title{display:none}
+
+/* ==========================================================================
+   ALARMES THERMO KING — VISUAL MODERNO (v6.33)
+   Cards por categoria (ícone + cor de acento), chips de filtro, glow e entrada
+   animada. Escopo pela tela de alarmes (classes alm-*). Usa tokens do cyber.
+   ========================================================================== */
+.alm-tools{display:flex;flex-direction:column;gap:12px;margin-bottom:10px}
+.alm-search{position:relative;display:flex;align-items:center}
+.alm-search>svg{position:absolute;left:14px;width:18px;height:18px;color:var(--text-mute);pointer-events:none;filter:drop-shadow(0 0 5px rgba(0,229,255,.3))}
+.alm-search input{width:100%;padding:12px 16px 12px 42px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:14.5px;transition:border-color .15s,box-shadow .15s}
+.alm-search input::placeholder{color:var(--text-mute)}
+.alm-search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.14)}
+.alm-chips{display:flex;flex-wrap:wrap;gap:8px}
+.alm-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:22px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;
+  background:rgba(0,20,36,.55);border:1px solid var(--line);color:var(--text-soft);transition:background .16s,border-color .16s,color .16s,box-shadow .16s}
+.alm-chip .alm-chip-dot{width:9px;height:9px;border-radius:50%;background:var(--ac);box-shadow:0 0 7px var(--ac)}
+.alm-chip b{font-weight:800;color:var(--text-mute);font-variant-numeric:tabular-nums}
+.alm-chip:hover{border-color:var(--ac);color:var(--text)}
+.alm-chip.on{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:var(--ac);color:#eaf6ff;box-shadow:0 0 16px -2px var(--ac)}
+.alm-chip.on b{color:#eaf6ff}
+.alm-count{font-size:12px;margin:2px 2px 14px}
+.alm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:13px}
+.alm-card{position:relative;display:flex;align-items:center;gap:13px;text-align:left;width:100%;font-family:inherit;cursor:pointer;
+  padding:14px 15px 14px 19px;border-radius:15px;background:rgba(0,26,47,.6);border:1px solid rgba(0,229,255,.1);color:var(--text);overflow:hidden;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.28);
+  transition:transform .16s,border-color .16s,box-shadow .16s;animation:almIn .4s cubic-bezier(.16,1,.3,1) both}
+.alm-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac);box-shadow:0 0 12px var(--ac);opacity:.92}
+.alm-card:hover{transform:translateY(-3px);border-color:var(--ac);box-shadow:0 0 22px -4px var(--ac),0 18px 40px rgba(0,0,0,.42)}
+.alm-ico{flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,18,32,.7);border:1px solid color-mix(in srgb,var(--ac) 42%,transparent);color:var(--ac)}
+.alm-ico svg{width:21px;height:21px;filter:drop-shadow(0 0 5px var(--ac))}
+.alm-code{flex:0 0 auto;min-width:38px;text-align:center;font-size:19px;font-weight:800;letter-spacing:.5px;color:#eaf6ff;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 14px color-mix(in srgb,var(--ac) 55%,transparent)}
+.alm-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.alm-desc{font-size:12.5px;font-weight:600;color:#dbe8f6;line-height:1.28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.alm-cat{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ac);opacity:.92}
+.alm-go{flex:0 0 auto;color:var(--text-mute);display:flex;transition:transform .16s,color .16s}
+.alm-go svg{width:16px;height:16px}
+.alm-card:hover .alm-go{color:var(--ac);transform:translateX(3px)}
+@keyframes almIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){ .alm-card{animation:none} }
+@media(max-width:560px){ .alm-grid{grid-template-columns:1fr} }

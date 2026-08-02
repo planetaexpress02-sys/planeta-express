@@ -2125,31 +2125,63 @@ function toast(msg,tipo){ const box=document.getElementById('toasts'); const t=d
 
 /* ---------- ALARMES THERMO KING ---------- */
 let alarmeBusca='';
-function viewAlarmes(){
-  const lista = (typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]).filter(a=>{
-    if(!alarmeBusca) return true; const q=alarmeBusca.toLowerCase();
-    return a.c.toLowerCase().includes(q) || a.d.toLowerCase().includes(q);
+let alarmeCat='todos';
+/* categoriza um alarme pela descrição → {key,label,ico,cor} (1ª regra que casa vence) */
+const ALARME_CATS=[
+  {key:'controle', label:'Controlador', ico:'chip',    cor:'#b18cff', re:/micro|processad|controlad|display|hmi|memoria|reset|software|comunica|\bplaca\b|rele|relay|cpu|firmware/},
+  {key:'energia',  label:'Energia',     ico:'battery', cor:'#ffc061', re:/bateria|batter|voltag|tensao|\bvolt|alternador|\bcarga|energia|fusivel|corrente|amper/},
+  {key:'sensor',   label:'Sensor',      ico:'gauge',   cor:'#00e5ff', re:/sensor|bobina|termistor|sonda|leitura|probe/},
+  {key:'temp',     label:'Temperatura', ico:'alarm',   cor:'#ff9d5c', re:/temp|ambient|degelo|defrost|aquec|\bfrio|quente|setpoint|set\s*point|calor/},
+  {key:'motor',    label:'Motor / Refrigeração', ico:'wrench', cor:'#ff6b6b', re:/motor|engine|\brpm|rota[çc]|oleo|\boil|arrefec|radiador|combust|fuel|diesel|pressao|compressor|\bgas|refriger|condensad|evaporad|correia|ventilad|damper/},
+];
+function _alarmeCat(a){
+  const t=_dnorm((a.d||'')+' '+(a.ex||''));
+  for(const c of ALARME_CATS){ if(c.re.test(t)) return c; }
+  return {key:'geral', label:'Geral', ico:'alarm', cor:'#7fe0ff'};
+}
+function _alarmesFiltrados(){
+  const q=_dnorm(alarmeBusca);
+  return (typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]).filter(a=>{
+    if(alarmeCat!=='todos' && _alarmeCat(a).key!==alarmeCat) return false;
+    if(!q) return true;
+    return _dnorm(a.c).includes(q) || _dnorm(a.d).includes(q) || _dnorm(a.ex||'').includes(q);
   });
+}
+function viewAlarmes(){
+  const todos=(typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]);
+  const lista=_alarmesFiltrados();
+  // contagem por categoria (para os chips de filtro)
+  const cont={}; todos.forEach(a=>{ const k=_alarmeCat(a).key; cont[k]=(cont[k]||0)+1; });
+  const chip=(key,label,cor)=>`<button class="alm-chip ${alarmeCat===key?'on':''}" style="--ac:${cor}" onclick="alarmeCat='${key}';renderAlarmesList();alarmeSyncChips()">
+    ${key!=='todos'?`<i class="alm-chip-dot"></i>`:''}${label}<b>${key==='todos'?todos.length:(cont[key]||0)}</b></button>`;
+  const chips=`<button class="alm-chip ${alarmeCat==='todos'?'on':''}" style="--ac:#00e5ff" onclick="alarmeCat='todos';renderAlarmesList();alarmeSyncChips()">Todos<b>${todos.length}</b></button>`
+    + ALARME_CATS.map(c=>chip(c.key,c.label,c.cor)).join('');
   return `
   <div class="banner">${svg('alarm')}<div><b>Tabela de Alarmes Thermo King</b><span>Referência dos códigos das unidades SB III / Super II / 190 / 210 / 210+ / 310 / 310+ / 400. Digite o número que aparece no visor para encontrar o significado.</span></div></div>
-  <div class="toolbar">
-    <div class="search" style="position:relative;flex:1;max-width:420px">
-      ${svg('search')}<input id="alarmeSearch" class="alarme-input" placeholder="Buscar código ou descrição… (ex.: 61, bateria)" value="${esc(alarmeBusca)}" oninput="alarmeBusca=this.value;renderAlarmesList()">
-    </div>
-    <div class="spacer"></div><div class="muted">${lista.length} de ${(typeof ALARMES_TK!=='undefined'?ALARMES_TK.length:0)} códigos</div>
+  <div class="alm-tools no-print">
+    <div class="alm-search">${svg('search')}<input id="alarmeSearch" placeholder="Buscar código, descrição ou peça… (ex.: 61, bateria, sensor)" value="${esc(alarmeBusca)}" oninput="alarmeBusca=this.value;renderAlarmesList()"></div>
+    <div id="almChips" class="alm-chips">${chips}</div>
   </div>
-  <div id="alarmeList" class="grid alarmgrid">${alarmeCards(lista)}</div>`;
+  <div class="alm-count no-print muted" id="almCount">${lista.length} de ${todos.length} códigos</div>
+  <div id="alarmeList" class="alm-grid">${alarmeCards(lista)}</div>`;
 }
 function alarmeCards(lista){
-  if(!lista.length) return emptyState('Nenhum código encontrado para essa busca.');
-  return lista.map(a=>`<div class="alarmcard" onclick="modalAlarme('${esc(a.c)}')" title="Ver causa e solução"><div class="alarm-code">${esc(a.c)}</div><div class="alarm-desc">${esc(a.d)}</div><i class="alarm-go">→</i></div>`).join('');
+  if(!lista.length) return `<div style="grid-column:1/-1">${emptyState('Nenhum código encontrado para essa busca.')}</div>`;
+  return lista.map((a,i)=>{ const cat=_alarmeCat(a);
+    return `<button class="alm-card" style="--ac:${cat.cor};animation-delay:${Math.min(i,18)*22}ms" onclick="modalAlarme('${esc(a.c)}')" title="Ver o que significa e o que fazer">
+      <span class="alm-ico">${svg(cat.ico)}</span>
+      <span class="alm-code">${esc(a.c)}</span>
+      <span class="alm-main"><span class="alm-desc">${esc(a.d)}</span><span class="alm-cat">${esc(cat.label)}</span></span>
+      <span class="alm-go">${svg('chevron')}</span>
+    </button>`;
+  }).join('');
 }
 function renderAlarmesList(){
-  const el=document.getElementById('alarmeList'); if(!el) return;
-  const q=alarmeBusca.toLowerCase();
-  const lista=(typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]).filter(a=>!q||a.c.toLowerCase().includes(q)||a.d.toLowerCase().includes(q));
-  el.innerHTML=alarmeCards(lista);
+  const el=document.getElementById('alarmeList'); if(el) el.innerHTML=alarmeCards(_alarmesFiltrados());
+  const c=document.getElementById('almCount'); if(c){ const tot=(typeof ALARMES_TK!=='undefined'?ALARMES_TK.length:0); c.textContent=_alarmesFiltrados().length+' de '+tot+' códigos'; }
 }
+function alarmeSyncChips(){ const box=document.getElementById('almChips'); if(!box) return;
+  box.querySelectorAll('.alm-chip').forEach(b=>{ const on=/alarmeCat='([^']+)'/.exec(b.getAttribute('onclick')); b.classList.toggle('on', on&&on[1]===alarmeCat); }); }
 
 /* ---------- NOTAS FISCAIS ---------- */
 function totalNota(n){ return (Number(n.alexandria)||0)+(Number(n.notasGerais)||0)+(Number(n.combustivel)||0); }
@@ -2926,7 +2958,9 @@ function viewViagens(){
   }).join('');
   return `
   <div class="banner">${svg('route')}<div><b>Controle de Viagens BRF</b><span>Registre a saída do motorista com o número de transporte e o termo pallet. Filtre por mês e por placa.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
+      <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('route','i-blue', mesAtual, 'Viagens no mês','')}
     ${kpi('truck', emV?'i-orange':'i-green', emV, 'Pendentes','')}
@@ -2945,10 +2979,11 @@ function viewViagens(){
 }
 function modalViagem(id){
   const v=id?DB.viagens.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),placa:(DB.veiculos.find(x=>x.tipo==='Cavalo')||{}).placa||'',motorista:'',transporte:'',destino:'',baixado:'',termoPallet:'',termoBaixado:'',status:'Pendente',obs:''};
+  const _plcs=DB.veiculos.filter(x=>x.status!=='Arquivado').map(x=>x.placa); if(v.placa && _plcs.indexOf(v.placa)<0) _plcs.push(v.placa);  // preserva placa fora da frota (importada)
   openModal(`<div class="m-h">${svg('route')}<h3>${id?'Editar viagem':'Nova viagem'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">${fld('Data','f_data',v.data,'date')}
-        <div class="field"><label>Placa</label><select id="f_placa">${DB.veiculos.filter(x=>x.status!=='Arquivado').map(x=>`<option ${v.placa===x.placa?'selected':''}>${esc(x.placa)}</option>`).join('')}</select></div></div>
+        <div class="field"><label>Placa</label><select id="f_placa">${_plcs.map(pl=>`<option ${v.placa===pl?'selected':''}>${esc(pl)}</option>`).join('')}</select></div></div>
       <div class="field-row">${fld('Motorista','f_mot',v.motorista)}${fld('Nº Transporte','f_transp',v.transporte)}</div>
       ${fld('Destino','f_dest',v.destino)}
       <div class="field-row">${sel('Transporte baixado','f_baix',v.baixado||'',['','SIM','TSP','NÃO'])}${sel('Status','f_status',v.status,['Pendente','Concluída','Cancelada'])}</div>
@@ -2961,6 +2996,158 @@ function modalViagem(id){
 function salvarViagem(id){ const d={data:val('f_data'),placa:val('f_placa'),motorista:val('f_mot'),transporte:val('f_transp'),destino:val('f_dest'),baixado:val('f_baix'),termoPallet:val('f_termo'),termoBaixado:val('f_termob'),status:val('f_status'),obs:val('f_obs')};
   if(id)Object.assign(DB.viagens.find(x=>x.id===id),d); else{ d.id=uid('vg'); DB.viagens.push(d); } saveDB(); closeModal(); toast('Viagem salva.'); router(); }
 function excluirViagem(id){ if(!confirm('Excluir esta viagem?'))return; DB.viagens=DB.viagens.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
+
+/* ================================================================== */
+/*  IMPORTAÇÃO INTELIGENTE DE PLANILHA (Viagens) — v6.33               */
+/*  Identifica as colunas sozinho e extrai as viagens da planilha.     */
+/* ================================================================== */
+function _viagemDetectar(sheets){
+  const FIELDS=[
+    ['data',        /(^|\W)(data|dia|\bdt\b|saida|emiss)/],
+    ['placa',       /placa|veiculo|cavalo|carreta|caminh|frota/],
+    ['motorista',   /motorista|condutor|funcion|\bnome\b/],
+    ['status',      /status|situacao/],
+    ['termoBaixado',/termo\s*baix/],
+    ['baixado',     /baix/],
+    ['termoPallet', /termo\s*pallet|pallet|termo\s*p\b/],
+    ['transporte',  /transporte|nota|\bnf\b|nfe|documento|conhecimento|\bcte\b|romaneio|numero|\bn[o°º.]/],
+    ['destino',     /destino|cliente|cidade|entrega|\brota\b|recebedor|local|praca/],
+  ];
+  const LABEL={data:'Data',placa:'Placa',motorista:'Motorista',transporte:'Transporte',destino:'Destino',baixado:'Baixado',termoPallet:'Termo Pallet',termoBaixado:'Termo baixado',status:'Status'};
+  const rows=[]; const campos={}; const vistos={};
+  (sheets||[]).forEach(sh=>{
+    const grid=sh.grid||[]; if(!grid.length) return;
+    let hr=-1, best=0;
+    for(let r=0;r<Math.min(grid.length,30);r++){ const row=grid[r]||[]; const hit={};
+      for(let c=0;c<row.length;c++){ const t=_dnorm(row[c]); if(!t) continue;
+        for(const [f,re] of FIELDS){ if(hit[f]) continue; if(re.test(t)){ hit[f]=1; break; } } }
+      const n=Object.keys(hit).length; if(n>best){ best=n; hr=r; } }
+    if(hr<0 || best<2) return;
+    const map={}, used={}, hrow=grid[hr]||[];
+    for(let c=0;c<hrow.length;c++){ const raw=hrow[c], t=_dnorm(raw); if(!t) continue;
+      for(const [f,re] of FIELDS){ if(used[f]) continue; if(re.test(t)){ map[f]=c; used[f]=1; if(!campos[f]) campos[f]=String(raw).trim(); break; } } }
+    if(!('data' in map) && !(('placa' in map)&&('transporte' in map))) return;
+    const get=(row,f)=>{ const c=map[f]; return c==null?'':String((row&&row[c])!=null?row[c]:'').trim(); };
+    for(let r=hr+1;r<grid.length;r++){ const row=grid[r]||[];
+      const rData=get(row,'data'),rPlaca=get(row,'placa'),rMot=get(row,'motorista'),rTr=get(row,'transporte'),
+            rDest=get(row,'destino'),rBx=get(row,'baixado'),rTp=get(row,'termoPallet'),rTb=get(row,'termoBaixado'),rSt=get(row,'status');
+      if(!rData && !rPlaca && !rMot && !rTr && !rDest && !rTp) continue;
+      const dataISO=_impISO(rData);
+      if(!dataISO && !rPlaca && !rTr && !rMot) continue;
+      // normaliza "baixado" (SIM/TSP/NÃO)
+      const bxU=_dnorm(rBx); let baixado='';
+      if(/tsp/.test(bxU)) baixado='TSP'; else if(/sim|\bok\b|baix|^s$/.test(bxU)) baixado='SIM';
+      else if(/nao|^n$|pend/.test(bxU)) baixado='NÃO'; else baixado=rBx?String(rBx).toUpperCase():'';
+      const tbU=_dnorm(rTb); let termoB='';
+      if(/sim|\bok\b|baix|^s$/.test(tbU)) termoB='SIM'; else if(/nao|^n$/.test(tbU)) termoB='NÃO'; else termoB=rTb?String(rTb).toUpperCase():'';
+      const stU=_dnorm(rSt); let status='';
+      if(/conclu|finaliz|entreg/.test(stU)) status='Concluída'; else if(/cancel/.test(stU)) status='Cancelada'; else if(/pend|aberto|andamento/.test(stU)) status='Pendente';
+      if(!status) status=(baixado==='SIM'||baixado==='TSP')?'Concluída':'Pendente';
+      const o={ data:dataISO, placa:rPlaca, motorista:rMot, transporte:rTr, destino:rDest, baixado:baixado, termoPallet:rTp, termoBaixado:termoB, status:status };
+      const issues=[];
+      if(!dataISO) issues.push('sem data');
+      if(!rPlaca) issues.push('sem placa'); else if(!veiculoByPlaca(rPlaca)) issues.push('placa fora da frota');
+      if(!rMot) issues.push('sem motorista');
+      const chave=(dataISO||'')+'|'+_plk(rPlaca)+'|'+_dnorm(rTr)+'|'+_dnorm(rMot);
+      const dupeArq=!!vistos[chave]; vistos[chave]=1;
+      const dupe=dupeArq
+        || (rTr && DB.viagens.some(x=>x.data===dataISO && _dnorm(x.transporte)===_dnorm(rTr)))
+        || (dataISO && rMot && DB.viagens.some(x=>x.data===dataISO && _plk(x.placa)===_plk(rPlaca) && _dnorm(x.motorista)===_dnorm(rMot)));
+      o.imp = dupe?'dupe':(issues.length?'aviso':'ok');
+      o.issues=issues; o.incluir=(o.imp!=='dupe');
+      rows.push(o);
+    }
+  });
+  const detectadas=Object.keys(campos).map(f=>LABEL[f]+' («'+campos[f]+'»)');
+  return { rows, detectadas };
+}
+function modalImportarViagem(){
+  const suporta=!window.PEXImport || PEXImport.suportaXLSX();
+  openModal(`<div class="m-h">${svg('upload')}<h3>Importar Planilha Excel — Viagens</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="banner" style="margin:0 0 14px">${svg('route')}<div><b>Importe as viagens de uma planilha</b><span>Escolha um arquivo <b>.xlsx</b> ou <b>.csv</b>. O sistema identifica sozinho as colunas (Data, Placa, Motorista, Transporte, Destino, Baixado, Termo Pallet, Status), lê tudo e monta uma prévia. Você confere as inconsistências e confirma.</span></div></div>
+      ${suporta?'':`<div class="hint" style="color:var(--danger)">Este navegador não abre .xlsx direto — use o Chrome ou o Edge, ou salve a planilha como CSV.</div>`}
+      <div class="field">
+        <label>Arquivo (Excel ou CSV)</label>
+        <label class="btn">${svg('upload')} Escolher planilha…<input type="file" accept=".xlsx,.xls,.csv,.txt" onchange="viagemImpLer(this)" style="display:none"></label>
+        <span id="vgImpNome" class="muted" style="font-size:12.5px;margin-left:8px">Nenhum arquivo escolhido</span>
+      </div>
+      <div id="vgImpPreview"></div>
+    </div>
+    <div class="m-f">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="vgImpBtn" style="display:none" onclick="viagemImpConfirmar()">Importar selecionadas</button>
+    </div>`, true);
+  window._vgImp=[];
+}
+async function viagemImpLer(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const nomeEl=document.getElementById('vgImpNome'); if(nomeEl) nomeEl.textContent=file.name;
+  const prev=document.getElementById('vgImpPreview');
+  prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
+  try{
+    const {sheets}=await PEXImport.lerArquivo(file);
+    const {rows, detectadas}=_viagemDetectar(sheets);
+    window._vgImp=rows; window._vgImpCols=detectadas;
+    viagemImpRender();
+  }catch(e){
+    prev.innerHTML=`<div class="hint" style="color:var(--danger)">Não consegui ler: ${esc((e&&e.message)||e)}<br><span class="muted">Se o arquivo for um .xls antigo, abra-o no Excel e salve como <b>.xlsx</b> ou <b>.csv</b>.</span></div>`;
+    const b=document.getElementById('vgImpBtn'); if(b) b.style.display='none';
+  }
+}
+function viagemImpRender(){
+  const prev=document.getElementById('vgImpPreview'), btn=document.getElementById('vgImpBtn');
+  const rows=window._vgImp||[];
+  if(!rows.length){
+    prev.innerHTML=`<div class="hint">Não encontrei uma tabela de viagens nesta planilha. O ideal é ter uma linha de cabeçalho com colunas como <b>Data</b>, <b>Placa</b>, <b>Motorista</b>, <b>Transporte</b> e <b>Destino</b>. Você também pode lançar manualmente pelo botão <b>Nova viagem</b>.</div>`;
+    if(btn) btn.style.display='none'; return;
+  }
+  const badge={ok:'<span class="st ok">Nova</span>',aviso:'<span class="st warn">Conferir</span>',dupe:'<span class="st neutro">Já existe</span>'};
+  const linhas=rows.map((r,i)=>{
+    const av=r.issues&&r.issues.length?`<div class="muted" style="font-size:10.5px">⚠ ${esc(r.issues.join(' · '))}</div>`:'';
+    return `<tr class="${r.incluir?'':'imp-off'}">
+      <td class="no-print" style="text-align:center"><input type="checkbox" ${r.incluir?'checked':''} onchange="viagemImpToggle(${i},this.checked)"></td>
+      <td class="mono">${r.data?fmtD(r.data):'<span class="st crit">—</span>'}</td>
+      <td class="mono">${esc(r.placa||'—')}</td>
+      <td>${esc(r.motorista||'—')}</td>
+      <td class="mono">${esc(r.transporte||'—')}</td>
+      <td>${esc(r.destino||'—')}</td>
+      <td>${badge[r.imp]||''}${av}</td>
+    </tr>`;
+  }).join('');
+  const cont={}; rows.forEach(r=>cont[r.imp]=(cont[r.imp]||0)+1);
+  const resumo=[cont.ok?cont.ok+' nova(s)':'',cont.aviso?cont.aviso+' p/ conferir':'',cont.dupe?cont.dupe+' já existe(m)':''].filter(Boolean).join(' · ');
+  const cols=(window._vgImpCols||[]);
+  const colInfo=cols.length?`<div class="dsc-imp-cols">${svg('filter')} <b>Colunas identificadas:</b> ${esc(cols.join(' · '))}</div>`:'';
+  const nSel=rows.filter(r=>r.incluir).length;
+  prev.innerHTML=`${colInfo}
+    <div class="muted" style="margin:8px 0;font-size:12.5px">Encontrei <b>${rows.length}</b> viagem(ns). ${resumo?'('+resumo+')':''} Confira e desmarque o que não quiser.</div>
+    <div class="tbl-wrap" style="max-height:44vh;overflow:auto"><table class="tbl">
+      <thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Situação</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>`;
+  if(btn){ btn.style.display=''; btn.textContent=nSel?('Importar '+nSel+' selecionada(s)'):'Nada selecionado'; btn.disabled=!nSel; }
+}
+function viagemImpToggle(i,on){
+  const r=(window._vgImp||[])[i]; if(!r) return; r.incluir=!!on;
+  const nSel=(window._vgImp||[]).filter(x=>x.incluir).length;
+  const b=document.getElementById('vgImpBtn'); if(b){ b.textContent=nSel?('Importar '+nSel+' selecionada(s)'):'Nada selecionado'; b.disabled=!nSel; }
+  const tr=document.querySelectorAll('#vgImpPreview tbody tr')[i]; if(tr) tr.classList.toggle('imp-off',!on);
+}
+function viagemImpConfirmar(){
+  let novas=0, pulados=0;
+  (window._vgImp||[]).forEach(r=>{
+    if(!r.incluir){ pulados++; return; }
+    DB.viagens.push({ id:uid('vg'), data:r.data||'', placa:(r.placa||'').trim(), motorista:(r.motorista||'').trim(),
+      transporte:(r.transporte||'').trim(), destino:(r.destino||'').trim(), baixado:r.baixado||'',
+      termoPallet:(r.termoPallet||'').trim(), termoBaixado:r.termoBaixado||'', status:r.status||'Pendente', obs:'' });
+    novas++;
+  });
+  saveDB(); closeModal();
+  toast('Importado: '+novas+' viagem(ns)'+(pulados?', '+pulados+' ignorada(s)':'')+'.');
+  viagemFiltro='todas'; viagemMes='todos'; viagemPlaca='todas';
+  if((location.hash.slice(1).split('/')[0])!=='viagens') location.hash='viagens';
+  router();
+}
 
 /* ---------- DESCARGAS ---------- */
 /*  Reformulado (v6.29): tema cyber + pesquisa rápida + filtro por placa +
