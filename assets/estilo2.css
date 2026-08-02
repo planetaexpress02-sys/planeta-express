@@ -1444,3 +1444,87 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .ini-cmd .ini-kpi{animation:none}
   .ini-cmd .cy-spark-line{animation:none;stroke-dashoffset:0}
 }
+
+/* ==========================================================================
+   MOTOR DE GRÁFICOS v2 (v6.21) — todos os gráficos "vivos"
+   Animação ao carregar, linhas que se desenham, barras crescendo, glow azul
+   discreto, tooltip moderno, comparação de período, zoom, legenda, novos tipos
+   (linha/área/heatmap/timeline/radar/sparkline). Só apresentação — os dados e
+   a lógica não mudam. Funciona em tema claro e cyber.
+   ========================================================================== */
+/* grades sutis */
+.bc-grid{stroke:rgba(130,160,200,.14)}
+.ini-cmd .bc-grid,#view.cyber .bc-grid,#view[data-route="manutencao"] .bc-grid{stroke:rgba(120,180,255,.10)}
+/* barras: crescem + glow azul discreto */
+.barchart .bc-bar{transform-box:fill-box;transform-origin:50% 100%;animation:pexGrow .85s cubic-bezier(.16,1,.3,1) both;filter:drop-shadow(0 1px 4px rgba(0,119,255,.26));transition:filter .15s}
+.barchart g:hover .bc-bar{filter:drop-shadow(0 0 7px rgba(0,170,255,.6)) brightness(1.08)}
+@keyframes pexGrow{from{transform:scaleY(0)}}
+.bc-cmp{fill:rgba(140,170,210,.20)}
+.ini-cmd .bc-cmp,#view.cyber .bc-cmp{fill:rgba(150,185,235,.15)}
+
+/* linha / área: a linha se desenha, a área aparece, os pontos surgem */
+.linechart .ln-area{opacity:0;animation:pexFadeIn .9s ease .3s forwards}
+@keyframes pexFadeIn{to{opacity:1}}
+.linechart .ln-line{fill:none;stroke:#12b9ff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 5px rgba(0,170,255,.55));stroke-dasharray:1;stroke-dashoffset:1;animation:cySpark 1.2s cubic-bezier(.16,1,.3,1) .2s forwards}
+.linechart .ln-cmp{stroke:rgba(150,180,220,.55);stroke-width:1.6;stroke-dasharray:4 4;fill:none}
+.linechart .ln-dot{fill:#eaf6ff;stroke:#12b9ff;stroke-width:2;opacity:0;animation:pexFadeIn .4s ease 1.15s forwards;transition:r .12s}
+.linechart .ln-dot:hover{r:5.4}
+
+/* sparkline: desenha sozinha (global) */
+.cy-spark-line{stroke-dasharray:1;stroke-dashoffset:1;animation:cySpark 1.15s cubic-bezier(.16,1,.3,1) .2s forwards;filter:drop-shadow(0 0 2px rgba(0,170,255,.5))}
+
+/* donut: glow discreto + aparece ao carregar */
+.donut{filter:drop-shadow(0 2px 6px rgba(0,119,255,.16))}
+.donut-wrap .donut,.mnt-donut .donut,.card-b .donut{animation:pexPop .6s cubic-bezier(.16,1,.3,1)}
+.donut-seg{transition:filter .15s,stroke-width .15s}
+.donut-seg:hover{filter:brightness(1.14) drop-shadow(0 0 5px currentColor)}
+
+/* HEATMAP (mapa de calor) */
+.heatmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:8px}
+.hm-cell{position:relative;border-radius:10px;padding:12px 4px 9px;text-align:center;overflow:hidden;
+  border:1px solid rgba(120,170,220,.18);animation:pexUp .45s cubic-bezier(.16,1,.3,1) both}
+.hm-cell::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#16b6ff,#0062e0);opacity:var(--i,.2)}
+.hm-cell>*{position:relative}
+.hm-cell.clk{cursor:pointer;transition:transform .14s,box-shadow .14s}
+.hm-cell.clk:hover{transform:translateY(-2px);box-shadow:0 0 14px rgba(0,170,255,.45)}
+.hm-v{display:block;font-size:16px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,10,30,.45)}
+.hm-l{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(233,242,255,.82);margin-top:3px;text-shadow:0 1px 2px rgba(0,10,30,.4)}
+
+/* TIMELINE (linha do tempo) */
+.timeline{position:relative}
+.tl-row{position:relative;display:flex;align-items:center;gap:12px;padding:10px 6px 10px 22px;border-radius:9px;transition:background .14s;animation:pexUp .45s cubic-bezier(.16,1,.3,1) both}
+.tl-row::before{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;background:rgba(120,170,220,.22)}
+.tl-row:first-child::before{top:50%}.tl-row:last-child::before{bottom:50%}
+.tl-row.clk{cursor:pointer}.tl-row.clk:hover{background:rgba(0,170,255,.07)}
+.tl-dot{position:absolute;left:0;width:11px;height:11px;border-radius:50%;background:#12b9ff;box-shadow:0 0 8px rgba(0,170,255,.6);z-index:1}
+.tl-dot.crit{background:#ff3b30;box-shadow:0 0 8px rgba(255,59,48,.6)}
+.tl-dot.warn{background:#ffb020;box-shadow:0 0 8px rgba(255,176,32,.6)}
+.tl-dot.ok{background:#25e88f;box-shadow:0 0 8px rgba(0,255,136,.5)}
+.tl-main{flex:1;min-width:0}
+.tl-main b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-main span{font-size:11.5px;color:var(--text-mute)}
+.tl-when{font-size:11px;font-family:"Consolas",monospace;color:var(--text-mute);flex:0 0 auto}
+
+/* RADAR */
+.radar .rd-ring{fill:none;stroke:rgba(120,170,220,.16)}
+.radar .rd-spoke{stroke:rgba(120,170,220,.14)}
+.radar .rd-area{fill:rgba(0,170,255,.22);stroke:#12b9ff;stroke-width:2;filter:drop-shadow(0 0 5px rgba(0,170,255,.5));
+  transform-box:fill-box;transform-origin:center;animation:pexPop .7s cubic-bezier(.16,1,.3,1)}
+.radar .rd-lbl{fill:var(--text-mute);font-size:10px;font-weight:600}
+
+/* botão de AMPLIAR (zoom) + gráfico no modal */
+.chart-zoom{padding:5px 9px!important}
+.chart-zoom svg{width:15px;height:15px}
+.chart-zoom-body{padding:22px 20px!important}
+.chart-zoom-body .barchart,.chart-zoom-body .linechart{height:auto}
+.chart-zoom-body svg.barchart,.chart-zoom-body svg.linechart{width:100%;height:auto}
+.chart-zoom-body .donut-wrap{justify-content:center;gap:34px}
+.chart-zoom-body .donut{width:240px!important;height:240px!important}
+.chart-zoom-body .heatmap{grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}
+
+@media print{ .chart-zoom{display:none!important} }
+@media(prefers-reduced-motion:reduce){
+  .barchart .bc-bar,.linechart .ln-line,.linechart .ln-area,.linechart .ln-dot,.cy-spark-line,
+  .donut-wrap .donut,.mnt-donut .donut,.card-b .donut,.hm-cell,.tl-row,.radar .rd-area{animation:none;stroke-dashoffset:0;opacity:1}
+}

@@ -320,24 +320,74 @@ function donut(data, opts){
   </svg>`;
 }
 function barChart(data, opts){
-  opts=opts||{}; const h=opts.h||150, w=opts.w||420, pad=26, bw=(w-pad*2)/data.length*0.55, gap=(w-pad*2)/data.length;
-  const max = Math.max(1,...data.map(d=>d.value));
-  const bars = data.map((d,i)=>{
-    const bh = d.value/max*(h-34);
-    const x = pad + i*gap + (gap-bw)/2, y = h-24-bh;
-    const clk = d.js? ` class="bar-clk" onclick="${d.js}"` : (d.hash? ` class="bar-clk" onclick="location.hash='${d.hash}'"` : '');
-    const tip = ` data-tip="${esc(d.label)}: ${d.vtxt!=null?esc(d.vtxt):d.value}"`;
+  opts=opts||{}; const h=opts.h||150, w=opts.w||420, pad=26, base=h-24, top=16;
+  const n=Math.max(1,data.length); const gap=(w-pad*2)/n; const bw=Math.min(opts.bw||40, gap*0.56);
+  const cmpArr=opts.compare||null;
+  const max=Math.max(1,...data.map(d=>d.value||0), ...(cmpArr||[]));
+  const totalV=data.reduce((s,d)=>s+(d.value||0),0)||1;
+  let grid=''; for(let g=1;g<=4;g++){ const gy=(top+(base-top)*(1-g/4)); grid+=`<line class="bc-grid" x1="${pad}" y1="${gy.toFixed(1)}" x2="${w-pad}" y2="${gy.toFixed(1)}"/>`; }
+  const bars=data.map((d,i)=>{
+    const bh=Math.max(0,d.value||0)/max*(base-top);
+    const x=pad+i*gap+(gap-bw)/2, y=base-bh;
+    const clk=d.js?` class="bar-clk" onclick="${d.js}"`:(d.hash?` class="bar-clk" onclick="location.hash='${d.hash}'"`:'');
+    const lbl=d.vtxt!=null?esc(d.vtxt):(opts.pct?Math.round((d.value||0)/totalV*100)+'%':(d.value||0));
+    let cmp=''; if(cmpArr&&cmpArr[i]!=null){ const ch=Math.max(0,cmpArr[i])/max*(base-top); cmp=`<rect class="bc-cmp" x="${(x-4).toFixed(1)}" y="${(base-ch).toFixed(1)}" width="${(bw+8).toFixed(1)}" height="${ch.toFixed(1)}" rx="4"/>`; }
+    const tip=` data-tip="${esc(d.label)}: ${d.vtxt!=null?esc(d.vtxt):(d.value||0)}${cmpArr&&cmpArr[i]!=null?' · período anterior: '+cmpArr[i]:''}"`;
     return `<g${clk}${tip}>
-      ${d.hash?`<rect x="${pad+i*gap}" y="0" width="${gap}" height="${h}" fill="transparent"/>`:''}
-      <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${d.color||'url(#bg)'}"/>
-      ${d.value?`<text x="${x+bw/2}" y="${y-5}" text-anchor="middle" class="bar-val">${d.vtxt!=null?esc(d.vtxt):d.value}</text>`:''}
-      <text x="${x+bw/2}" y="${h-8}" text-anchor="middle" class="bar-lbl">${esc(d.label)}</text>
+      ${d.hash?`<rect x="${(pad+i*gap).toFixed(1)}" y="0" width="${gap.toFixed(1)}" height="${h}" fill="transparent"/>`:''}
+      ${cmp}
+      <rect class="bc-bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="4" fill="${d.color||'url(#bg)'}"/>
+      ${(d.value||0)?`<text x="${(x+bw/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" class="bar-val">${lbl}</text>`:''}
+      <text x="${(x+bw/2).toFixed(1)}" y="${h-8}" text-anchor="middle" class="bar-lbl">${esc(d.label)}</text>
     </g>`;
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" class="barchart" preserveAspectRatio="xMidYMid meet">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
-    ${bars}</svg>`;
+    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22a7ff"/><stop offset="1" stop-color="#0062e0"/></linearGradient></defs>
+    <g class="bc-grids">${grid}</g>${bars}</svg>`;
 }
+/* ---- Linha / Área (desenha sozinha) ---- */
+function lineChart(data, opts){
+  opts=opts||{}; const h=opts.h||160, w=opts.w||460, pad=30, top=16, base=h-26;
+  const n=data.length; if(!n) return emptyState('Sem dados para o gráfico.');
+  const cmpArr=opts.compare||null;
+  const max=Math.max(1,...data.map(d=>d.value||0), ...(cmpArr||[]));
+  const X=i=> pad+(w-pad*2)*(n<=1?0.5:i/(n-1));
+  const Y=v=> base-(Math.max(0,v||0)/max)*(base-top);
+  const pts=data.map((d,i)=>[X(i),Y(d.value)]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=`M${X(0).toFixed(1)} ${base} `+pts.map(p=>'L'+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')+` L${X(n-1).toFixed(1)} ${base} Z`;
+  let grid=''; for(let g=0;g<=3;g++){ const gy=top+(base-top)*g/3; grid+=`<line class="bc-grid" x1="${pad}" y1="${gy.toFixed(1)}" x2="${w-pad}" y2="${gy.toFixed(1)}"/>`; }
+  let cmp=''; if(cmpArr){ const cl=cmpArr.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(' '); cmp=`<path class="ln-cmp" d="${cl}" fill="none" pathLength="1"/>`; }
+  const dots=pts.map((p,i)=>`<circle class="ln-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" data-tip="${esc(data[i].label)}: ${data[i].vtxt!=null?esc(data[i].vtxt):(data[i].value||0)}"${data[i].js?` style="cursor:pointer" onclick="${data[i].js}"`:''}/>`).join('');
+  const labels=data.map((d,i)=>`<text x="${X(i).toFixed(1)}" y="${h-6}" text-anchor="middle" class="bar-lbl">${esc(d.label)}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" class="linechart" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="lnf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(0,170,255,.34)"/><stop offset="1" stop-color="rgba(0,119,255,0)"/></linearGradient></defs>
+    <g class="bc-grids">${grid}</g>
+    <path class="ln-area" d="${area}" fill="url(#lnf)"/>${cmp}
+    <path class="ln-line" d="${line}" fill="none" pathLength="1"/>${dots}${labels}</svg>`;
+}
+/* ---- Sparkline reutilizável (desenha sozinha) ---- */
+function sparkline(values, opts){ opts=opts||{}; const w=opts.w||80, h=opts.h||26, n=(values||[]).length; if(!n) return '';
+  const max=Math.max(...values), min=Math.min(...values), rng=(max-min)||1;
+  const pts=values.map((v,i)=>[(n<=1?w/2:i/(n-1)*w),(h-3)-((v-min)/rng)*(h-6)]);
+  return `<svg class="ini-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" pathLength="1" fill="none" stroke="${opts.color||'#00e5ff'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+/* ---- Heatmap (intensidade por célula) ---- */
+function heatmap(cells, opts){ opts=opts||{}; const max=Math.max(1,...cells.map(c=>c.value||0));
+  return `<div class="heatmap">${cells.map(c=>{ const t=(c.value||0)/max; const op=(0.10+t*0.9).toFixed(2);
+    return `<div class="hm-cell${c.hash?' clk':''}"${c.hash?` onclick="location.hash='${c.hash}'"`:''} data-tip="${esc(c.tip||(c.label+': '+(c.value||0)))}" style="--i:${op}"><span class="hm-v">${c.value||0}</span><span class="hm-l">${esc(c.label)}</span></div>`; }).join('')}</div>`; }
+/* ---- Timeline (eventos com linha) ---- */
+function timeline(events, opts){ opts=opts||{}; if(!events||!events.length) return emptyState('Nada na linha do tempo.');
+  return `<div class="timeline">${events.map(e=>`<div class="tl-row${e.hash?' clk':''}"${e.hash?` onclick="location.hash='${e.hash}'"`:''}><span class="tl-dot ${e.cls||''}"></span><div class="tl-main"><b>${esc(e.title)}</b>${e.sub?`<span>${esc(e.sub)}</span>`:''}</div>${e.when?`<div class="tl-when">${esc(e.when)}</div>`:''}</div>`).join('')}</div>`; }
+/* ---- Radar (perfil multieixo) ---- */
+function radar(axes, opts){ opts=opts||{}; const size=opts.size||220, cx=size/2, cy=size/2, R=size/2-30, n=(axes||[]).length; if(n<3) return '';
+  const max=opts.max||Math.max(1,...axes.map(a=>a.value||0));
+  const ang=i=> -Math.PI/2 + i*2*Math.PI/n;
+  const pt=(i,rr)=>[cx+Math.cos(ang(i))*rr, cy+Math.sin(ang(i))*rr];
+  let rings=''; for(let g=1;g<=3;g++){ const rr=R*g/3; rings+=`<polygon class="rd-ring" points="${axes.map((a,i)=>pt(i,rr).map(v=>v.toFixed(1)).join(',')).join(' ')}"/>`; }
+  let spokes=''; for(let i=0;i<n;i++){ const p=pt(i,R); spokes+=`<line class="rd-spoke" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`; }
+  const dataPoly=axes.map((a,i)=>pt(i,R*Math.min(1,(a.value||0)/max)).map(v=>v.toFixed(1)).join(',')).join(' ');
+  const labels=axes.map((a,i)=>{ const p=pt(i,R+15); return `<text class="rd-lbl" x="${p[0].toFixed(1)}" y="${p[1].toFixed(1)}" text-anchor="middle">${esc(a.label)}</text>`; }).join('');
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="radar">${rings}${spokes}<polygon class="rd-area" points="${dataPoly}"/>${labels}</svg>`; }
 
 /* ================================================================== */
 /*  6. ROTEADOR                                                        */
@@ -422,8 +472,26 @@ function pexAfterRender(rota){
       /* tema CYBER global: liga em todas as telas, EXCETO Viagens/Descargas (ficam claras)
          e Início/Painel/Manutenção (já têm bloco cyber próprio scoped) */
       var _noCy={viagens:1,descargas:1,inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
-    pexTipInit(); pexEnhanceTables(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
+    pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
+}
+/* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */
+function pexEnhanceCharts(){
+  document.querySelectorAll('#view .card').forEach(function(card){
+    if(!card.querySelector('.barchart,.linechart,.donut,.heatmap,.radar')) return;
+    var head=card.querySelector('.card-h'); if(!head || head.querySelector('.chart-zoom')) return;
+    var r=head.querySelector('.r'); if(!r){ r=document.createElement('div'); r.className='r'; head.appendChild(r); }
+    var b=document.createElement('button'); b.type='button'; b.className='btn ghost sm chart-zoom no-print'; b.title='Ampliar gráfico';
+    b.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"/></svg>';
+    b.addEventListener('click', function(){ pexZoomChart(card); });
+    r.insertBefore(b, r.firstChild);
+  });
+}
+function pexZoomChart(card){
+  var title=((card.querySelector('.card-h h3')||{}).textContent||'Gráfico').trim();
+  var body=card.querySelector('.card-b'); if(!body) return;
+  openModal('<div class="m-h">'+svg('dash')+'<h3>'+esc(title)+'</h3><button class="x" onclick="closeModal()">×</button></div>'+
+    '<div class="m-b chart-zoom-body">'+body.innerHTML+'</div>', true);
 }
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
@@ -574,6 +642,17 @@ function viewDashboard(){
   const viagensMes=ult6.map(m=>({label:m.label, value:DB.viagens.filter(v=>(v.data||'').slice(0,7)===m.ym).length, js:"viagemMes='"+m.ym+"';location.hash='viagens'"}));
   const despMes=ult6.map(m=>({label:m.label, value:Math.round(DB.notas.filter(n=>(n.fim||'').slice(0,7)===m.ym).reduce((s,n)=>s+totalNota(n),0)), color:'url(#bg)', js:"location.hash='notas'"}));
   const vSitData=[{label:'Pendentes',value:DB.viagens.filter(v=>v.status==='Pendente').length,color:'#c99a2e'},{label:'Concluídas',value:DB.viagens.filter(v=>v.status==='Concluída').length,color:'#0f766e'},{label:'Canceladas',value:DB.viagens.filter(v=>v.status==='Cancelada').length,color:'#9f1239'}];
+  // Período anterior (6 meses antes) — para comparação nos gráficos de linha
+  const prev6=[]; for(let i=11;i>=6;i--){ const d=new Date(now2.getFullYear(),now2.getMonth()-i,1); prev6.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
+  const viagensCmp=prev6.map(ym=>DB.viagens.filter(v=>(v.data||'').slice(0,7)===ym).length);
+  const despCmp=prev6.map(ym=>Math.round(DB.notas.filter(n=>(n.fim||'').slice(0,7)===ym).reduce((s,n)=>s+totalNota(n),0)));
+  const _sum=a=>a.reduce((s,x)=>s+(x||0),0);
+  const vgAtual=_sum(viagensMes.map(m=>m.value)), vgAnt=_sum(viagensCmp);
+  const vgPct= vgAnt? Math.round((vgAtual-vgAnt)/vgAnt*100) : null;
+  // Heatmap de atividade (viagens nos últimos 12 meses)
+  const heat=[]; for(let i=11;i>=0;i--){ const d=new Date(now2.getFullYear(),now2.getMonth()-i,1); const ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); const cnt=DB.viagens.filter(v=>(v.data||'').slice(0,7)===ym).length; heat.push({label:MESES[d.getMonth()].slice(0,3), value:cnt, hash:'#viagens', tip:MESES[d.getMonth()]+'/'+d.getFullYear()+': '+cnt+' viagem(ns)'}); }
+  // Timeline dos próximos vencimentos
+  const tlVenc = prox.map(x=>({ title:(x.v.tipo||'Documento')+(_vencNome(x.v)?' — '+_vencNome(x.v):''), sub:(x.s.dias<=0?'Vencido':'Vence em '+x.s.dias+' dia(s)'), when:fmtD(x.v.validade), cls:(x.s.ord===0?'crit':x.s.ord<=2?'warn':'ok'), hash:'#vencimentos' }));
 
   return `<div class="ini-cmd ini-dash">
   <div class="ini-top">
@@ -661,14 +740,26 @@ function viewDashboard(){
 
   <div class="grid two-col" style="margin-top:18px">
     <div class="card">
-      <div class="card-h">${svg('route')}<h3>Viagens por mês</h3><span class="sub">clique numa barra</span>
+      <div class="card-h">${svg('route')}<h3>Viagens por mês</h3><span class="sub">últimos 6 meses${vgPct!=null?` · <b style="color:${vgPct>=0?'#25e88f':'#ff6b6b'}">${vgPct>=0?'▲':'▼'} ${Math.abs(vgPct)}%</b> vs. período anterior`:''}</span>
         <div class="r"><a class="btn sm" href="#viagens">Ver viagens</a></div></div>
-      <div class="card-b">${barChart(viagensMes)}</div>
+      <div class="card-b">${lineChart(viagensMes,{compare:viagensCmp})}</div>
     </div>
     <div class="card">
-      <div class="card-h">${svg('money')}<h3>Despesas por mês</h3><span class="sub">clique para ver</span>
+      <div class="card-h">${svg('money')}<h3>Despesas por mês</h3><span class="sub">área · linha tracejada = período anterior</span>
         <div class="r"><a class="btn sm" href="#notas">Ver despesas</a></div></div>
-      <div class="card-b">${DB.notas.length? barChart(despMes) : emptyState('Lance despesas para ver o gráfico.')}</div>
+      <div class="card-b">${DB.notas.length? lineChart(despMes,{compare:despCmp}) : emptyState('Lance despesas para ver o gráfico.')}</div>
+    </div>
+  </div>
+
+  <div class="grid two-col" style="margin-top:18px">
+    <div class="card">
+      <div class="card-h">${svg('dash')}<h3>Mapa de atividade</h3><span class="sub">viagens · últimos 12 meses</span></div>
+      <div class="card-b">${heatmap(heat)}</div>
+    </div>
+    <div class="card">
+      <div class="card-h">${svg('bell')}<h3>Linha do tempo — vencimentos</h3>
+        <div class="r"><a class="btn sm" href="#vencimentos">Ver todos</a></div></div>
+      <div class="card-b p0" style="padding:8px 14px 12px">${timeline(tlVenc)}</div>
     </div>
   </div>
 
@@ -2819,11 +2910,7 @@ function modalAlarme(code){
 /*  FINANCEIRO (protegido por senha)                                  */
 /* ================================================================== */
 let finUnlocked=false;
-function viewFinanceiro(){
-  if(!DB.config.finPin) return viewFinSetPin();
-  if(!finUnlocked) return viewFinLock();
-  return viewFinConteudo();
-}
+function viewFinanceiro(){ return viewFinConteudo(); }  /* senha removida a pedido do cliente — acesso direto */
 function viewFinSetPin(){
   return `<div class="fin-gate"><div class="fin-card">
     <div class="fin-lock">${svg('lock')}</div>
@@ -2885,10 +2972,7 @@ function viewFinConteudo(){
       <div class="mono" style="font-weight:800;font-size:16px;color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
 
   return `
-  <div class="banner">${svg('lock')}<div><b>Financeiro — acesso restrito</b><span>Faturamento e vales dos motoristas. Os vales são somados automaticamente por motorista.</span></div>
-    <div class="no-print" style="margin-left:auto;display:flex;gap:8px">
-      <button class="btn" onclick="modalFinPin()">${svg('lock')} Alterar senha</button>
-      <button class="btn" onclick="finUnlocked=false;router()">Bloquear</button></div></div>
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento e vales dos motoristas. Os vales são somados automaticamente por motorista.</span></div></div>
 
   <div class="grid kpis fin-gold" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('money','i-green', money(fatMes), 'Faturamento no mês','')}
