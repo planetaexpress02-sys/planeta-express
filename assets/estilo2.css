@@ -950,6 +950,84 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 @media(prefers-reduced-motion:reduce){ #view[data-route="manutencao"] .barchart g rect[rx="4"]{animation:none} }
 
 /* ==========================================================================
+   MENU LATERAL PREMIUM (v6.18) — painel de navegação corporativo
+   Inspiração SpaceX/Tesla Fleet/Stripe/Linear/Palantir, mantendo a identidade
+   Planeta Express. SÓ design/UX: ícones refinados, hover elegante, indicador
+   ativo neon, badges pulsantes, recolher para trilho de ícones com tooltip.
+   NÃO altera rotas, permissões, módulos nem funcionalidade.
+   ========================================================================== */
+.sidebar{transition:width .28s cubic-bezier(.4,0,.2,1),flex-basis .28s cubic-bezier(.4,0,.2,1);
+  background:linear-gradient(180deg,#0b1424 0%,#070d18 100%)}
+.sidebar::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(440px 320px at 50% -8%,rgba(0,119,255,.10),transparent 62%)}
+.brand{position:relative;z-index:1}
+.brand .logo-badge{box-shadow:0 0 18px rgba(0,229,255,.16),0 6px 16px rgba(0,0,0,.42)}
+
+/* botão recolher (chevron na borda direita) */
+.rail-toggle{position:absolute;top:26px;right:-12px;z-index:50;width:24px;height:24px;border-radius:50%;
+  background:#12203a;border:1px solid rgba(0,229,255,.3);color:#8fb6d8;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.45);transition:color .2s,border-color .2s,box-shadow .2s}
+.rail-toggle:hover{color:#00e5ff;border-color:#00e5ff;box-shadow:0 0 12px rgba(0,229,255,.5)}
+.rail-toggle svg{width:14px;height:14px;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+body.rail .rail-toggle svg{transform:rotate(180deg)}
+
+/* nav + categorias com separador elegante */
+.nav{padding:16px 12px;position:relative;z-index:1}
+.nav .group{font-size:10px;letter-spacing:1.6px;color:#586a88;margin:18px 12px 8px;position:relative;padding-top:14px}
+.nav .group::before{content:"";position:absolute;top:0;left:2px;right:12px;height:1px;
+  background:linear-gradient(90deg,rgba(120,160,210,.18),transparent)}
+.nav .group:first-child{margin-top:2px;padding-top:0}
+.nav .group:first-child::before{display:none}
+
+/* itens */
+.nav a{gap:13px;padding:10px 13px;border-radius:11px;font-size:13.5px;color:#a9b6cd;margin-bottom:3px;
+  border:1px solid transparent;transition:background .18s,color .18s,border-color .18s,box-shadow .25s}
+.nav a .ico{width:21px;height:21px;opacity:.9;transition:transform .22s cubic-bezier(.34,1.56,.64,1),color .18s,filter .2s}
+.nav a:hover{background:rgba(120,160,220,.07);color:#eaf2fb;border-color:rgba(120,160,220,.08)}
+.nav a:hover .ico{transform:scale(1.14);color:#7fc5ff}
+
+/* item ativo: gradiente azul suave + linha neon animada + glow discreto */
+.nav a.active{background:linear-gradient(90deg,rgba(0,119,255,.16),rgba(0,119,255,.03));color:#fff;
+  border-color:rgba(0,229,255,.14);box-shadow:inset 0 0 0 1px rgba(0,229,255,.05),0 6px 20px -8px rgba(0,119,255,.6)}
+.nav a.active .ico{opacity:1;color:#00e5ff;filter:drop-shadow(0 0 6px rgba(0,229,255,.6))}
+.nav a.active::before{content:"";position:absolute;left:-12px;top:50%;bottom:auto;transform:translateY(-50%);height:0;width:3px;
+  border-radius:0 3px 3px 0;background:linear-gradient(180deg,#00e5ff,#0077ff);box-shadow:0 0 10px rgba(0,229,255,.85);
+  animation:navBar .32s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes navBar{to{height:62%}}
+
+/* badge de alerta: vermelho elegante + pulso lento */
+.nav a .badge{background:linear-gradient(180deg,#ff5a52,#e11d1d);box-shadow:0 0 0 0 rgba(255,59,48,.6);animation:navPulse 2.6s ease-out infinite}
+.nav a .badge.warn{background:linear-gradient(180deg,#ffb020,#e8940f);animation:none}
+@keyframes navPulse{0%{box-shadow:0 0 0 0 rgba(255,59,48,.5)}70%{box-shadow:0 0 0 7px rgba(255,59,48,0)}100%{box-shadow:0 0 0 0 rgba(255,59,48,0)}}
+
+.sidebar .foot{position:relative;z-index:1}
+
+/* ---- MODO TRILHO (recolhido) — só ícones + tooltip (desktop) ---- */
+@media(min-width:961px){
+  body.rail{--sidebar-w:76px}
+  body.rail .sidebar{width:76px;flex-basis:76px}
+  body.rail .brand{justify-content:center;padding:22px 0 16px}
+  body.rail .brand .btxt{display:none}
+  body.rail .nav{padding:16px 10px}
+  body.rail .nav a{justify-content:center;padding:11px 0;gap:0}
+  body.rail .nav a span:not(.badge){display:none}
+  body.rail .nav a .badge{position:absolute;top:4px;right:8px;min-width:16px;height:16px;font-size:9.5px;padding:0 4px}
+  body.rail .nav a.active::before{left:-10px}
+  body.rail .nav .group{height:1px;overflow:hidden;color:transparent;margin:12px 14px;padding:0}
+  body.rail .nav .group::before{top:auto;left:0;right:0}
+  body.rail .sidebar .foot{font-size:0;padding:12px 0;text-align:center}
+  body.rail .sidebar .foot br{display:none}
+  body.rail .sidebar .foot b{font-size:10px;color:#5f6d88}
+  body.rail .nav a::after{content:attr(data-label);position:absolute;left:calc(100% + 14px);top:50%;
+    transform:translateY(-50%) translateX(-6px);background:#0d1930;color:#eaf2fb;font-size:12.5px;font-weight:600;white-space:nowrap;
+    padding:7px 12px;border-radius:9px;border:1px solid rgba(0,229,255,.18);box-shadow:0 10px 30px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;z-index:60}
+  body.rail .nav a:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+}
+@media(max-width:960px){ .rail-toggle{display:none} }
+@media(prefers-reduced-motion:reduce){ .nav a .badge{animation:none} .nav a.active::before{animation:none;height:62%} }
+
+/* ==========================================================================
    TEMA CYBER — ABA INÍCIO + PAINEL DE CONTROLE (v6.16)
    Evolução do "Centro de Comando" escuro para o estilo cyber neon azul do
    briefing (imersivo/futurista): fundo profundo, cards com borda iluminada e

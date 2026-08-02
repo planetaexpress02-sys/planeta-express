@@ -501,7 +501,7 @@ function renderSidebar(rota){
   const c = contadores();
   const item=(k,badge)=>{ const m=ROTAS[k];
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
-    return `<a href="#${k}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
+    return `<a href="#${k}" data-label="${esc(m.t)}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
   document.getElementById('nav').innerHTML =
     `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
@@ -3059,6 +3059,13 @@ function imprimirRelatorio(){
 }
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('scrim').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar')?.classList.remove('open'); document.getElementById('scrim')?.classList.remove('show'); }
+/* Recolher menu para "trilho" só-ícones (desktop). Estado salvo no aparelho. */
+function toggleRail(){ const on=!document.body.classList.contains('rail'); document.body.classList.toggle('rail',on);
+  try{ localStorage.setItem('pex_rail', on?'1':'0'); }catch(e){}
+  const b=document.querySelector('.rail-toggle'); if(b) b.title = on?'Expandir menu':'Recolher menu'; }
+function applyRail(){ let on=false; try{ on=localStorage.getItem('pex_rail')==='1'; }catch(e){}
+  document.body.classList.toggle('rail',on);
+  const b=document.querySelector('.rail-toggle'); if(b) b.title = on?'Expandir menu':'Recolher menu'; }
 function hideSplash(){ const s=document.getElementById('splash'); if(!s)return; s.classList.add('gone'); setTimeout(()=>s.remove(),700); }
 
 /* ================================================================== */
@@ -3162,6 +3169,7 @@ async function bootOnline(){
 
 async function init(){
   loadDB();
+  applyRail();
   try{ await idbOpen(); await reloadFiles(); }catch(e){ FILES=[]; }
   tick(); setInterval(tick,30000);
   window.addEventListener('hashchange',router);
