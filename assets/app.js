@@ -1074,51 +1074,67 @@ function viewTacografos(){
 }
 
 let vencFiltro='todos', vencTipo='todos';
+const VENC_SEC={
+  venc:{t:'Vencidos',ico:'alarm',cor:'#ff4d4d',sub:'ação imediata',kico:'i-red'},
+  d10:{t:'Vence em até 10 dias',ico:'bell',cor:'#ff8c1a',sub:'urgente',kico:'i-orange'},
+  d20:{t:'Vence em 11 a 20 dias',ico:'bell',cor:'#ffb020',sub:'atenção',kico:'i-amber'},
+  d30:{t:'Vence em 21 a 30 dias',ico:'cal',cor:'#2f8fff',sub:'programar',kico:'i-blue'}
+};
+function _vencBucket(d){ return d<0?'venc':(d<=10?'d10':(d<=20?'d20':'d30')); }
 function viewVencimentos(){
-  let list=todosVencimentos().map(v=>({v,s:situacao(v.validade)}));
+  let all=todosVencimentos().map(v=>({v,d:diasAte(v.validade)}));
   const tipos=[...new Set(todosVencimentos().map(v=>v.tipo))].sort();
-  if(vencFiltro==='vencido') list=list.filter(x=>x.s.ord===0);
-  else if(vencFiltro==='critico') list=list.filter(x=>x.s.ord===1);
-  else if(vencFiltro==='atencao') list=list.filter(x=>x.s.ord===2);
-  else if(vencFiltro==='emdia') list=list.filter(x=>x.s.ord===3);
-  if(vencTipo!=='todos') list=list.filter(x=>x.v.tipo===vencTipo);
-  list.sort((a,b)=> a.s.ord-b.s.ord || (a.s.dias??9e9)-(b.s.dias??9e9));
+  if(vencTipo!=='todos') all=all.filter(x=>x.v.tipo===vencTipo);
+  const semData=all.filter(x=>x.d==null).length;
+  const faixa=all.filter(x=>x.d!=null && x.d<=30);   /* só a faixa: vencidos + próximos 30 dias */
+  const groups={venc:[],d10:[],d20:[],d30:[]};
+  faixa.forEach(x=>groups[_vencBucket(x.d)].push(x));
+  Object.keys(groups).forEach(k=>groups[k].sort((a,b)=>a.d-b.d));
+  const cont={venc:groups.venc.length,d10:groups.d10.length,d20:groups.d20.length,d30:groups.d30.length};
+  const total=faixa.length;
 
-  const cont={vencido:0,critico:0,atencao:0,emdia:0};
-  todosVencimentos().forEach(v=>{const o=situacao(v.validade).ord; if(o===0)cont.vencido++;else if(o===1)cont.critico++;else if(o===2)cont.atencao++;else if(o===3)cont.emdia++;});
-  const fb=(k,l,n)=>`<button class="${vencFiltro===k?'active':''}" onclick="vencFiltro='${k}';router()">${l}${n!=null?` <b style="opacity:.55">${n}</b>`:''}</button>`;
+  const kpiV=(k)=>{ const d=VENC_SEC[k]; return `<a class="kpi link ${vencFiltro===k?'ativo':''}" style="cursor:pointer" onclick="vencFiltro='${vencFiltro===k?'todos':k}';router()">
+    <div class="k-top"><div class="k-ico ${d.kico}">${svg(d.ico)}</div><span class="k-go">→</span></div>
+    <div class="k-val">${cont[k]}</div><div class="k-label">${d.t.replace('Vence em ','').replace('até ','≤')}</div></a>`; };
 
-  const rows=list.map(x=>{ const v=x.v;
+  const itemRow=(x,cor)=>{ const v=x.v;
     const alvo=v.entidade==='veiculo'?('frota/'+v.refId):(v.entidade==='motorista'?('motoristas/'+v.refId):'vencimentos');
     const ent=v.entidade==='veiculo'?'Veículo':(v.entidade==='motorista'?'Motorista':'Empresa');
     const anexo=(v.anexoId&&arquivoPorId(v.anexoId));
-    return `<tr>
-      <td class="clickable" onclick="modalVencimento('${v.id}')"><b>${esc(v.tipo)}</b>${v.numero?`<div class="muted" style="font-size:11.5px">Nº ${esc(v.numero)}</div>`:''}${v.obs?`<div class="muted" style="font-size:12px">${esc(v.obs)}</div>`:''}</td>
-      <td class="clickable" onclick="location.hash='${alvo}'"><span class="pill-link">${esc(nomeEntidade(v))}</span><div class="muted" style="font-size:11.5px">${ent}${v.orgao?' · '+esc(v.orgao):''}</div></td>
-      <td class="mono muted">${fmtD(v.emissao)}</td>
-      <td class="mono">${fmtD(v.validade)}</td>
-      <td>${stBadge(v.validade)}</td>
-      <td class="no-print" style="text-align:right;white-space:nowrap">
-        ${anexo?`<button class="btn ghost sm" title="Baixar anexo" onclick="baixarArquivo('${anexo.id}')">${svg('download')}</button>`:''}
-        <button class="btn ghost sm" onclick="modalVencimento('${v.id}')">${svg('edit')}</button></td>
-    </tr>`;
-  }).join('');
+    const dtxt = x.d<0?('Vencido há '+Math.abs(x.d)+' dia'+(Math.abs(x.d)===1?'':'s')):('Vence em '+x.d+' dia'+(x.d===1?'':'s'));
+    return `<div class="venc-row">
+      <div class="venc-ico" style="color:${cor};background:${cor}1f">${svg(tipoIcone(v.tipo))}</div>
+      <div class="venc-main"><b onclick="modalVencimento('${v.id}')">${esc(v.tipo)}${v.numero?` · Nº ${esc(v.numero)}`:''}</b>
+        <span onclick="event.stopPropagation();location.hash='${alvo}'">${esc(nomeEntidade(v))} · ${ent}${v.orgao?' · '+esc(v.orgao):''}</span></div>
+      <div class="venc-when"><b class="mono">${fmtD(v.validade)}</b><span class="venc-dias" style="color:${cor};background:${cor}1f">${dtxt}</span></div>
+      <div class="venc-act no-print">${anexo?`<button class="btn ghost sm" title="Baixar anexo" onclick="baixarArquivo('${anexo.id}')">${svg('download')}</button>`:''}<button class="btn ghost sm" title="Editar" onclick="modalVencimento('${v.id}')">${svg('edit')}</button></div>
+    </div>`; };
+
+  const section=(k)=>{ const g=groups[k]; if(!g.length) return ''; if(vencFiltro!=='todos' && vencFiltro!==k) return ''; const d=VENC_SEC[k];
+    return `<div class="card venc-sec" style="border-left:3px solid ${d.cor}">
+      <div class="venc-sec-h"><span class="venc-sec-dot" style="background:${d.cor};box-shadow:0 0 10px ${d.cor}"></span>
+        <div><b>${d.t}</b><small>${d.sub}</small></div><span class="venc-sec-n" style="color:${d.cor};background:${d.cor}22">${g.length}</span></div>
+      <div class="venc-list">${g.map(x=>itemRow(x,d.cor)).join('')}</div></div>`; };
 
   return `
+  <div class="banner">${svg('bell')}<div><b>Vencimentos — faixa de atenção</b><span>Mostra apenas o que está vencido ou vence nos próximos 30 dias, agrupado por prazo. O que está em dia (mais de 30 dias) fica oculto.</span></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kpiV('venc')}${kpiV('d10')}${kpiV('d20')}${kpiV('d30')}
+  </div>
   <div class="toolbar">
-    <div class="seg">${fb('todos','Todos')}${fb('vencido','Vencidos',cont.vencido)}${fb('critico','Críticos',cont.critico)}${fb('atencao','Atenção',cont.atencao)}${fb('emdia','Em dia',cont.emdia)}</div>
     <select class="selectlite" onchange="vencTipo=this.value;router()">
       <option value="todos">Todos os tipos</option>
       ${tipos.map(t=>`<option value="${esc(t)}" ${vencTipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+    ${vencFiltro!=='todos'?`<button class="btn sm no-print" onclick="vencFiltro='todos';router()">${svg('list')} Ver todas as faixas</button>`:''}
     <div class="spacer"></div>
+    <div class="muted no-print" style="font-size:12.5px">${total} vencimento(s) na faixa</div>
     <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
     <button class="btn no-print" onclick="modalImportar()" title="Importe uma planilha (Excel ou CSV) e o sistema puxa as validades sozinho">${svg('upload')} Importar planilha</button>
-    <button class="btn primary" onclick="modalVencimento()">${svg('plus')} Novo</button>
   </div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap">
-    <table class="tbl"><thead><tr><th>Documento / Tipo</th><th>Vinculado a</th><th>Emissão</th><th>Validade</th><th>Situação</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows||`<tr><td colspan="6">${emptyState('Nenhum vencimento neste filtro.')}</td></tr>`}</tbody></table>
-  </div></div></div>`;
+  ${total? `<div class="grid" style="gap:14px">${section('venc')}${section('d10')}${section('d20')}${section('d30')}</div>`
+    : `<div class="card"><div class="card-b">${emptyState('Nada vencido e nada vence nos próximos 30 dias. Tudo em dia! 👍')}</div></div>`}
+  ${semData?`<div class="muted no-print" style="font-size:12.5px;margin-top:14px">${svg('bell')} ${semData} documento(s) sem data de validade cadastrada — cadastre a validade para acompanhá-los aqui.</div>`:''}`;
 }
 
 /* ================================================================== */
