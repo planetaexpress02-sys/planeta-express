@@ -437,7 +437,7 @@ function router(){
   else if(rota==='direcao') el.innerHTML=viewDirecao();
   else if(rota==='tacografos') el.innerHTML=viewTacografos();
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
-  else if(rota==='km') el.innerHTML=viewKM();
+  else if(rota==='km'){ kmFiltro=arg||'todos'; el.innerHTML=viewKM(); }
   else if(rota==='oleo') el.innerHTML=viewOleo();
   else if(rota==='manutencao'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Relatório de Manutenção'; } el.innerHTML=viewManutencaoVeiculo(arg); } else el.innerHTML=viewManutencao(); }
   else if(rota==='pneus'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else el.innerHTML=viewPneus(); }
@@ -693,10 +693,10 @@ function viewDashboard(){
     </div>
     <div class="card">
       <div class="card-h">${svg('wrench')}<h3>Trocas a vencer (KM / Horas)</h3>
-        <div class="r"><a class="btn sm" href="#km">Atualizar</a></div></div>
+        <div class="r"><a class="btn sm" href="#km/avencer">Ver / atualizar</a></div></div>
       <div class="card-b p0">
         ${manutAlerta.length? manutAlerta.slice(0,6).map(x=>`
-          <div class="alert-row" onclick="location.hash='km'">
+          <div class="alert-row" onclick="location.hash='km/avencer'">
             <div class="a-ico ${x.info.st==='vencido'?'i-red':'i-orange'}">${svg('gauge')}</div>
             <div class="a-main"><b>${esc(x.v.placa)} — ${esc(x.p.item)}</b><span>Atual: ${num(x.info.atual)} ${x.info.un} · Próx.: ${num(x.info.prox)} ${x.info.un}</span></div>
             <div class="a-when"><span class="st ${x.info.st}">${x.info.restante<=0?'Vencido':num(x.info.restante)+' '+x.info.un}</span></div>
@@ -1140,9 +1140,12 @@ function viewVencimentos(){
 /* ================================================================== */
 /*  14. KM / HORAS                                                     */
 /* ================================================================== */
+let kmFiltro='todos';
+function _kmAvencer(v){ const p=primaryItem(v); if(!p) return false; const info=manutInfo(p,v); return info.ok && (info.st==='vencido'||info.st==='crit'); }
 function viewKM(){
-  const cavalos=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado');
-  const carretas=DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado');
+  const avencer = kmFiltro==='avencer';
+  const cavalos=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado'&&(!avencer||_kmAvencer(v)));
+  const carretas=DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado'&&(!avencer||_kmAvencer(v)));
   const cardVeic=(v)=>{ const cavalo=v.tipo==='Cavalo'; const p=primaryItem(v); const info=p?manutInfo(p,v):null;
     const atual = cavalo? v.kmAtual : v.horaAtual; const un=cavalo?'km':'h';
     return `<div class="kmcard">
@@ -1153,15 +1156,22 @@ function viewKM(){
           <input type="number" id="km_${v.id}" value="${atual!=null?atual:''}" placeholder="0">
           <button class="btn primary sm" onclick="salvarKM('${v.id}')">Atualizar</button>
         </div>
-        ${(cavalo?v.kmData:v.horaData)?`<div class="muted" style="font-size:11.5px;margin-top:6px">${svg('cal')} Última alteração: <b>${fmtD(cavalo?v.kmData:v.horaData)}</b> · <a href="#" onclick="event.preventDefault();modalHistLeitura('${v.id}')">ver histórico</a></div>`:''}
+        ${(cavalo?v.kmData:v.horaData)?`<div class="muted" style="font-size:11px;margin-top:6px">Última alteração: <b>${fmtD(cavalo?v.kmData:v.horaData)}</b> · <a href="#" onclick="event.preventDefault();modalHistLeitura('${v.id}')">ver histórico</a></div>`:''}
       </div>
       ${info&&info.ok?`
         <div class="kmcard-item"><span>${esc(p.item)}</span><b class="st ${info.st}">${info.restante<=0?'Vencida há '+num(-info.restante)+' '+un:'faltam '+num(info.restante)+' '+un}</b></div>
         <div class="bt"><i class="fill-${info.st}" style="width:${info.pct}%"></i></div>
-        <div class="muted" style="font-size:11.5px;margin-top:4px">Próxima troca em ${num(info.prox)} ${un} · última ${fmtD(p.data)}</div>
-      `:`<div class="muted" style="font-size:12px;margin-top:6px">Informe o ${cavalo?'KM':'horas'} para calcular a próxima troca.</div>`}
+        <div class="muted" style="font-size:11px;margin-top:4px">Próxima troca em ${num(info.prox)} ${un} · última ${fmtD(p.data)}</div>
+      `:`<div class="muted" style="font-size:11.5px;margin-top:6px">Informe o ${cavalo?'KM':'horas'} para calcular a próxima troca.</div>`}
     </div>`;
   };
+  if(avencer){
+    return `<div class="banner">${svg('wrench')}<div><b>Trocas a vencer — KM / Horas</b><span>Somente os veículos com a troca de óleo/filtros vencida ou próxima. Atualize o KM/horas para recalcular.</span></div>
+      <button class="btn no-print" style="margin-left:auto" onclick="location.hash='km'">${svg('list')} Ver todos os veículos</button></div>
+    ${cavalos.length?`<div class="sectitulo">${svg('truck')} Cavalos</div><div class="grid kmgrid">${cavalos.map(cardVeic).join('')}</div>`:''}
+    ${carretas.length?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Carretas — Thermo King</div><div class="grid kmgrid">${carretas.map(cardVeic).join('')}</div>`:''}
+    ${(!cavalos.length&&!carretas.length)?`<div class="card"><div class="card-b">${emptyState('Nenhuma troca a vencer no momento. Tudo em dia! 👍')}</div></div>`:''}`;
+  }
   return `
   <div class="banner">${svg('gauge')}<div><b>Atualização rápida de KM e Horas</b><span>Digite o valor atual de cada veículo. O sistema recalcula automaticamente quanto falta para a próxima troca de óleo/filtros e alerta quando estiver perto.</span></div></div>
   <div class="sectitulo">${svg('truck')} Cavalos — quilometragem</div>
