@@ -2320,7 +2320,10 @@ function excluirEstoquePneu(id){ if(!confirm('Excluir este pneu em estoque?'))re
 /* ================================================================== */
 /*  PNEUS — GESTÃO INTELIGENTE (diagrama do veículo, condição, painel)  */
 /* ================================================================== */
+const PNEU_COND={'Excelente':{cor:'#25e88f',key:'bom'},'Bom':{cor:'#2fd07a',key:'bom'},'Atenção':{cor:'#ffb020',key:'aten'},'Ruim':{cor:'#ff8c1a',key:'troca'},'Crítico':{cor:'#ff3b30',key:'crit'},'Removido':{cor:'#8695ab',key:'rem'}};
+const PNEU_COND_OPCS=['','Excelente','Bom','Atenção','Ruim','Crítico','Removido'];
 function pneuCondicao(p){
+  if(p.condicao && PNEU_COND[p.condicao]){ const m=PNEU_COND[p.condicao]; return {cor:m.cor,key:m.key,label:p.condicao,manual:true}; }
   const min=Number(DB.config.sulcoMinimo)||3; const st=(p.status||'').toLowerCase();
   if(/descarte|remov/.test(st)) return {cor:'#8695ab',key:'rem',label:'Removido'};
   const s=(p.sulco!=null&&p.sulco!=='')?Number(p.sulco):null;
@@ -2347,16 +2350,16 @@ function pneuCustoKmTxt(p){ const km=pneuKmRodado(p); const val=Number(p.valor)|
   if(!val||!km) return '—'; return 'R$ '+(val/km).toFixed(3).replace('.',',')+'/km'; }
 function pneuSlots(v){ const cavalo=v.tipo==='Cavalo';
   if(cavalo) return [
-    {id:'1E',eixo:1,lbl:'1E',x:66,y:150},{id:'1D',eixo:1,lbl:'1D',x:234,y:150},
-    {id:'2EE',eixo:2,lbl:'2EE',x:44,y:300},{id:'2EI',eixo:2,lbl:'2EI',x:82,y:300},{id:'2DI',eixo:2,lbl:'2DI',x:218,y:300},{id:'2DE',eixo:2,lbl:'2DE',x:256,y:300},
-    {id:'3EE',eixo:3,lbl:'3EE',x:44,y:378},{id:'3EI',eixo:3,lbl:'3EI',x:82,y:378},{id:'3DI',eixo:3,lbl:'3DI',x:218,y:378},{id:'3DE',eixo:3,lbl:'3DE',x:256,y:378},
-    {id:'E1',eixo:0,lbl:'Estepe 1',x:126,y:466,spare:1},{id:'E2',eixo:0,lbl:'Estepe 2',x:174,y:466,spare:1}];
+    {id:'1E',eixo:1,cod:'1E',nome:'Dianteira Esquerda',x:60,y:166},{id:'1D',eixo:1,cod:'1D',nome:'Dianteira Direita',x:240,y:166},
+    {id:'2EE',eixo:2,cod:'2EE',nome:'Tração Externo LE',x:42,y:300},{id:'2EI',eixo:2,cod:'2EI',nome:'Tração Interno LE',x:80,y:300},{id:'2DI',eixo:2,cod:'2DI',nome:'Tração Interno LD',x:220,y:300},{id:'2DE',eixo:2,cod:'2DE',nome:'Tração Externo LD',x:258,y:300},
+    {id:'3EE',eixo:3,cod:'3EE',nome:'Truck Externo LE',x:42,y:378},{id:'3EI',eixo:3,cod:'3EI',nome:'Truck Interno LE',x:80,y:378},{id:'3DI',eixo:3,cod:'3DI',nome:'Truck Interno LD',x:220,y:378},{id:'3DE',eixo:3,cod:'3DE',nome:'Truck Externo LD',x:258,y:378}];
   return [
-    {id:'C1EE',eixo:1,lbl:'1EE',x:44,y:120},{id:'C1EI',eixo:1,lbl:'1EI',x:82,y:120},{id:'C1DI',eixo:1,lbl:'1DI',x:218,y:120},{id:'C1DE',eixo:1,lbl:'1DE',x:256,y:120},
-    {id:'C2EE',eixo:2,lbl:'2EE',x:44,y:225},{id:'C2EI',eixo:2,lbl:'2EI',x:82,y:225},{id:'C2DI',eixo:2,lbl:'2DI',x:218,y:225},{id:'C2DE',eixo:2,lbl:'2DE',x:256,y:225},
-    {id:'C3EE',eixo:3,lbl:'3EE',x:44,y:330},{id:'C3EI',eixo:3,lbl:'3EI',x:82,y:330},{id:'C3DI',eixo:3,lbl:'3DI',x:218,y:330},{id:'C3DE',eixo:3,lbl:'3DE',x:256,y:330},
-    {id:'CE1',eixo:0,lbl:'Estepe',x:150,y:420,spare:1}];
+    {id:'C1EE',eixo:1,cod:'1EE',nome:'Truck Externo LE',x:42,y:150},{id:'C1EI',eixo:1,cod:'1EI',nome:'Truck Interno LE',x:80,y:150},{id:'C1DI',eixo:1,cod:'1DI',nome:'Truck Interno LD',x:220,y:150},{id:'C1DE',eixo:1,cod:'1DE',nome:'Truck Externo LD',x:258,y:150},
+    {id:'C2EE',eixo:2,cod:'2EE',nome:'Eixo Meio Externo LE',x:42,y:245},{id:'C2EI',eixo:2,cod:'2EI',nome:'Eixo do Meio Interno LE',x:80,y:245},{id:'C2DI',eixo:2,cod:'2DI',nome:'Eixo do Meio Interno LD',x:220,y:245},{id:'C2DE',eixo:2,cod:'2DE',nome:'Eixo do Meio Externo LD',x:258,y:245},
+    {id:'C3EE',eixo:3,cod:'3EE',nome:'Último Eixo Externo LE',x:42,y:340},{id:'C3EI',eixo:3,cod:'3EI',nome:'Último Eixo Interno LE',x:80,y:340},{id:'C3DI',eixo:3,cod:'3DI',nome:'Último Eixo Interno LD',x:220,y:340},{id:'C3DE',eixo:3,cod:'3DE',nome:'Último Eixo Externo LD',x:258,y:340},
+    {id:'CE1',eixo:0,cod:'EST',nome:'Estepe Esquerdo',x:96,y:448,spare:1},{id:'CE2',eixo:0,cod:'EST',nome:'Estepe Direito',x:204,y:448,spare:1}];
 }
+function pneuNomeSlot(v, sid){ if(!sid) return ''; const s=pneuSlots(v).find(x=>x.id===sid); return s?s.nome:sid; }
 function pneuEixoNome(e){ return e===0?'Estepes':'Eixo '+e; }
 function pneuPlacements(v, pneus){ const slots=pneuSlots(v); const bySlot={}; const used={};
   pneus.forEach(p=>{ if(p.slot && slots.some(s=>s.id===p.slot) && !bySlot[p.slot]){ bySlot[p.slot]=p; used[p.id]=1; } });
@@ -2370,19 +2373,30 @@ function pneuPlacements(v, pneus){ const slots=pneuSlots(v); const bySlot={}; co
   });
   return {slots, bySlot};
 }
-function pneuDiagramaSVG(v, pl){ const cavalo=v.tipo==='Cavalo'; const H=cavalo?520:470;
-  const eixosY=cavalo?[150,300,378]:[120,225,330];
-  const eixos=eixosY.map(y=>`<line class="pn-axle" x1="34" y1="${y}" x2="266" y2="${y}"/>`).join('');
+function pneuDiagramaSVG(v, pl){ const cavalo=v.tipo==='Cavalo'; const H=cavalo?440:500;
+  const eixosY=cavalo?[166,300,378]:[150,245,340];
+  const axles=eixosY.map(y=>`<g><line class="pn-axle" x1="30" y1="${y}" x2="270" y2="${y}"/><circle class="pn-hub" cx="150" cy="${y}" r="6"/></g>`).join('');
   const body=cavalo
-    ? `<rect class="pn-body" x="98" y="118" width="104" height="292" rx="16"/><rect class="pn-cab" x="106" y="30" width="88" height="94" rx="14"/><line class="pn-axle" x1="150" y1="118" x2="150" y2="410"/>`
-    : `<rect class="pn-body" x="98" y="60" width="104" height="300" rx="16"/><circle class="pn-king" cx="150" cy="74" r="9"/><line class="pn-axle" x1="150" y1="74" x2="150" y2="360"/>`;
+    ? `<rect class="pn-chassis" x="122" y="118" width="56" height="296" rx="9"/>
+       <rect class="pn-body" x="100" y="116" width="100" height="150" rx="14"/>
+       <rect class="pn-cab" x="104" y="26" width="92" height="94" rx="16"/>
+       <rect class="pn-glass" x="112" y="34" width="76" height="26" rx="7"/>
+       <rect class="pn-mirror" x="95" y="60" width="9" height="18" rx="3"/><rect class="pn-mirror" x="196" y="60" width="9" height="18" rx="3"/>
+       <line class="pn-chassis-l" x1="150" y1="120" x2="150" y2="410"/>`
+    : `<rect class="pn-body" x="98" y="56" width="104" height="344" rx="16"/>
+       <rect class="pn-chassis" x="124" y="66" width="52" height="326" rx="9"/>
+       <circle class="pn-king" cx="150" cy="64" r="9"/><circle class="pn-king2" cx="150" cy="64" r="15"/>`;
   const tires=pl.slots.map(s=>{ const p=pl.bySlot[s.id]; const cond=p?pneuCondicao(p):{cor:'#33465e',label:'Vazio'};
-    const w=22,h=42; const cls=p?'pn-tire has':'pn-tire empty';
-    return `<g class="${cls}" onclick="pneuAbrir('${p?('p:'+p.id):('s:'+s.id)}','${v.id}')" data-tip="${esc(s.lbl)}${p?(' · '+esc(p.marca||'Pneu')+' · '+cond.label+(p.sulco?' · '+p.sulco+'mm':'')):' · vazio'}">
-      <rect x="${(s.x-w/2)}" y="${(s.y-h/2)}" width="${w}" height="${h}" rx="6" fill="${cond.cor}"/>
-      <text x="${s.x}" y="${s.y+3}" text-anchor="middle" class="pn-tlbl">${esc(s.lbl.replace('Estepe ','E'))}</text></g>`;
+    const w=22,h=42,x=s.x-w/2,y=s.y-h/2; const cls=p?'pn-tire has':'pn-tire empty';
+    const tread=p?[y+8,y+15,y+22,y+29,y+36].map(ty=>`<line x1="${x+3.5}" y1="${ty}" x2="${x+w-3.5}" y2="${ty}" class="pn-tread"/>`).join(''):'';
+    return `<g class="${cls}" onclick="pneuAbrir('${p?('p:'+p.id):('s:'+s.id)}','${v.id}')" data-tip="${esc(s.nome)}${p?(' · '+esc(p.marca||'Pneu')+' · '+cond.label+(p.sulco?' · '+p.sulco+'mm':'')):' · vazio'}">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${cond.cor}"/>${tread}
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="none" class="pn-tire-edge"/>
+      <text x="${s.x}" y="${s.y+3}" text-anchor="middle" class="pn-tlbl">${esc(s.cod)}</text></g>`;
   }).join('');
-  return `<svg viewBox="0 0 300 ${H}" class="pn-diagram" preserveAspectRatio="xMidYMid meet">${body}${eixos}${tires}</svg>`;
+  return `<svg viewBox="0 0 300 ${H}" class="pn-diagram" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="pnBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="rgba(0,55,95,.5)"/><stop offset=".5" stop-color="rgba(0,95,155,.62)"/><stop offset="1" stop-color="rgba(0,55,95,.5)"/></linearGradient></defs>
+    ${body}${axles}${tires}</svg>`;
 }
 /* Detalhe: pneus de UM veículo — diagrama inteligente + painel + ficha */
 function viewPneusVeiculo(id){
@@ -2407,7 +2421,7 @@ function viewPneusVeiculo(id){
     const cor=avg==null?'#8695ab':avg<25?'#ff3b30':avg<45?'#ff8c1a':avg<65?'#ffb020':'#25e88f';
     return `<div class="pn-desg"><span>${pneuEixoNome(+e)}</span><div class="pn-desg-bar"><i style="width:${avg==null?0:avg}%;background:${cor}"></i></div><b>${avg==null?'—':avg+'%'}</b></div>`; }).join('') || '<div class="muted">Sem dados de sulco/borracha ainda.</div>';
   const proxHTML=proxTroca.length? proxTroca.map(p=>{ const c=pneuCondicao(p); const slot=Object.keys(pl.bySlot).find(k=>pl.bySlot[k]===p)||'';
-    return `<div class="pn-prox clk" onclick="pneuAbrir('p:${p.id}','${v.id}')"><span class="pn-dot" style="background:${c.cor}"></span><div class="a-main"><b>${esc(slot)} — ${esc(p.marca||'Pneu')}</b><span>${esc(p.medida||'')}${p.sulco?' · '+p.sulco+'mm':''}</span></div><span class="st ${c.key==='crit'?'crit':'warn'}">${c.label}</span></div>`; }).join('') : `<div class="pn-ok">${svg('check')} Nenhum pneu na faixa de troca. 👍</div>`;
+    return `<div class="pn-prox clk" onclick="pneuAbrir('p:${p.id}','${v.id}')"><span class="pn-dot" style="background:${c.cor}"></span><div class="a-main"><b>${esc(pneuNomeSlot(v,slot))||'Pneu'} — ${esc(p.marca||'')}</b><span>${esc(p.medida||'')}${p.sulco?' · '+p.sulco+'mm':''}</span></div><span class="st ${c.key==='crit'?'crit':'warn'}">${c.label}</span></div>`; }).join('') : `<div class="pn-ok">${svg('check')} Nenhum pneu na faixa de troca. 👍</div>`;
   const un=cavalo?'KM':'Horas';
   return `${detalheVeiculoHead(v, `<a class="btn" href="#km">${svg('gauge')} ${un}</a><button class="btn primary" onclick="modalPneu(null,'${v.id}')">${svg('plus')} Novo pneu</button>`)}
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin:4px 0 16px">
@@ -2441,7 +2455,7 @@ function viewPneusVeiculo(id){
 function pneuFichaTabela(v, ps){
   const rows=ps.slice().sort((a,b)=>(a.slot||a.posicao||'').localeCompare(b.slot||b.posicao||'')).map(p=>{ const km=pneuKmRodado(p); const c=pneuCondicao(p);
     return `<tr class="clickable" onclick="pneuAbrir('p:${p.id}','${v.id}')"><td><span class="qtd-badge">${p.qtd||1}</span></td>
-      <td><b>${esc(p.slot||p.posicao||'—')}</b></td>
+      <td><b>${esc(pneuNomeSlot(v,p.slot)||p.posicao||'—')}</b></td>
       <td><b>${esc(p.marca||'—')}</b><div class="muted" style="font-size:11.5px">${esc(p.modelo||'')} ${esc(p.medida||'')}</div></td>
       <td class="mono muted">${esc(p.dot||'—')}</td><td class="mono">${p.sulco?p.sulco+'mm':'—'}</td>
       <td class="mono"><b>${km!=null?num(km)+' km':'—'}</b></td>
@@ -2465,12 +2479,14 @@ function _pnRow(l,val){ return `<div class="pn-f"><small>${l}</small><b>${val==n
 function pneuPanelHTML(p, v){ const c=pneuCondicao(p); const km=pneuKmRodado(p); const vida=pneuVidaPct(p);
   const slot=Object.keys(pneuPlacements(v, DB.pneus.filter(x=>x.veiculoId===v.id)).bySlot).find(k=>{ const b=pneuPlacements(v, DB.pneus.filter(x=>x.veiculoId===v.id)).bySlot[k]; return b&&b.id===p.id; });
   const slots=pneuSlots(v);
-  const moveOpts=slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.lbl)}</option>`).join('');
+  const moveOpts=slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.nome)}</option>`).join('');
+  const condOpts=PNEU_COND_OPCS.map(o=>`<option value="${o}" ${(p.condicao||'')===o?'selected':''}>${o||'Automático (pelo sulco)'}</option>`).join('');
   const fotos=(typeof filesDe==='function')?filesDe('pneu',p.id):[];
   const fotosHTML=fotos.length? fotos.map(f=>`<button class="pn-foto" title="${esc(f.name||f.nome||'foto')}" onclick="${f.id?`verArquivo('${f.id}')`:`abrirReal('${esc(f.path)}')`}">${svg('eye')}</button>`).join('') : '<span class="muted" style="font-size:12px">Sem fotos</span>';
   return `<button class="pn-x" onclick="pneuFecharPanel()">×</button>
-    <div class="pn-head"><span class="pn-badge" style="background:${c.cor}"></span><div><b class="pn-pos">${esc(slot||p.posicao||'Pneu')}</b><span class="pn-cond" style="color:${c.cor}">${c.label}</span></div></div>
+    <div class="pn-head"><span class="pn-badge" style="background:${c.cor}"></span><div><b class="pn-pos">${esc(pneuNomeSlot(v,slot)||p.posicao||'Pneu')}</b><span class="pn-cond" style="color:${c.cor}">${c.label}${c.manual?' · manual':''}</span></div></div>
     <div class="pn-vida"><small>Vida útil restante</small><div class="pn-vida-bar"><i style="width:${vida==null?0:vida}%;background:${c.cor}"></i></div><b>${vida==null?'—':vida+'%'}</b></div>
+    <div class="pn-condset"><small>Condição (definir manualmente)</small><select onchange="pneuSetCondicao('${p.id}',this.value)">${condOpts}</select></div>
     <div class="pn-grid">
       ${_pnRow('Marca',esc(p.marca))}${_pnRow('Modelo',esc(p.modelo))}
       ${_pnRow('Medida',esc(p.medida))}${_pnRow('DOT',esc(p.dot))}
@@ -2486,9 +2502,11 @@ function pneuPanelHTML(p, v){ const c=pneuCondicao(p); const km=pneuKmRodado(p);
     <div class="pn-move"><small>Mover para posição</small><div style="display:flex;gap:8px"><select id="pnMove">${moveOpts}</select><button class="btn sm" onclick="pneuMover('${p.id}',document.getElementById('pnMove').value)">Mover</button></div></div>
     <div class="pn-acts"><button class="btn sm" onclick="modalPneu('${p.id}')">${svg('edit')} Editar</button><button class="btn ghost sm" onclick="pneuRemoverPos('${p.id}')">Tirar da posição</button></div>`;
 }
-function pneuPanelVazio(slotId, v){ const slots=pneuSlots(v); const s=slots.find(x=>x.id===slotId)||{lbl:slotId};
+function pneuSetCondicao(pneuId, cond){ const p=DB.pneus.find(x=>x.id===pneuId); if(!p) return; p.condicao=cond||''; saveDB(); router();
+  if(typeof pneuAbrir==='function') pneuAbrir('p:'+pneuId, p.veiculoId); toast('Condição atualizada.'); }
+function pneuPanelVazio(slotId, v){ const slots=pneuSlots(v); const s=slots.find(x=>x.id===slotId)||{nome:slotId};
   return `<button class="pn-x" onclick="pneuFecharPanel()">×</button>
-    <div class="pn-head"><span class="pn-badge" style="background:#33465e"></span><div><b class="pn-pos">${esc(s.lbl)}</b><span class="pn-cond muted">Posição vazia</span></div></div>
+    <div class="pn-head"><span class="pn-badge" style="background:#33465e"></span><div><b class="pn-pos">${esc(s.nome)}</b><span class="pn-cond muted">Posição vazia</span></div></div>
     <p class="muted" style="font-size:13px;margin:14px 0">Nenhum pneu nesta posição. Instale um pneu novo aqui ou mova um pneu existente pelo painel de outro pneu.</p>
     <button class="btn primary" style="width:100%" onclick="modalPneu(null,'${v.id}','${slotId}')">${svg('plus')} Instalar pneu aqui</button>`;
 }
@@ -2505,8 +2523,9 @@ function modalPneu(id, vId, slotId){
     <div class="m-b">
       <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${p.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join('')}</select></div>
       <div class="field-row">
-        <div class="field"><label>Posição no diagrama</label><select id="f_slot"><option value="">— não posicionado —</option>${_slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.lbl)}</option>`).join('')}</select></div>
+        <div class="field"><label>Posição no diagrama</label><select id="f_slot"><option value="">— não posicionado —</option>${_slots.map(s=>`<option value="${s.id}" ${p.slot===s.id?'selected':''}>${esc(s.nome)}</option>`).join('')}</select></div>
         ${fld('Quantidade','f_qtd',p.qtd||1,'number','Ex.: 2 (dá p/ cadastrar 2 de uma vez)')}</div>
+      <div class="field"><label>Condição</label><select id="f_cond">${PNEU_COND_OPCS.map(o=>`<option value="${o}" ${(p.condicao||'')===o?'selected':''}>${o||'Automático (pela profundidade do sulco)'}</option>`).join('')}</select><div class="hint">Deixe em "Automático" para a cor sair do sulco, ou defina Excelente / Bom / Atenção / Ruim / Crítico.</div></div>
       <div class="field-row">${fld('Marca','f_marca',p.marca)}${fld('Modelo','f_modelo',p.modelo)}</div>
       <div class="field-row">${fld('Medida','f_medida',p.medida,'text','Ex.: 295/80 R22.5')}${fld('Sulco (mm)','f_sulco',p.sulco,'number','Profundidade atual. Ex.: 12')}</div>
       <div class="field-row">
@@ -2530,7 +2549,7 @@ function salvarPneu(id){
   let q=parseInt(val('f_qtd'))||1; if(q<1)q=1; if(q>50)q=50;
   const st=val('f_status'); const slot=val('f_slot');
   const _v=veiculo(val('f_veic')); const _s=_v?pneuSlots(_v).find(x=>x.id===slot):null; const oldP=id?DB.pneus.find(x=>x.id===id):null;
-  const d={veiculoId:val('f_veic'),qtd:q,slot:slot,posicao:_s?_s.lbl:(oldP?oldP.posicao||'':''),
+  const d={veiculoId:val('f_veic'),qtd:q,slot:slot,posicao:_s?_s.nome:(oldP?oldP.posicao||'':''),condicao:val('f_cond')||'',
     marca:val('f_marca'),modelo:val('f_modelo'),medida:val('f_medida'),dot:val('f_dot'),
     fogo:val('f_fogo'),nf:val('f_nf'),fornecedor:val('f_forn'),dataCompra:val('f_datac'),valor:parseBRL(val('f_valor')),
     sulco:numOrNull('f_sulco'),status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),
