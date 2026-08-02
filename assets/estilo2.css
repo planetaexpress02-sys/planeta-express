@@ -1597,6 +1597,38 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .pn-condset{margin-bottom:16px}
 .pn-condset small{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mute);margin-bottom:6px}
 .pn-condset select{width:100%;background:rgba(0,18,32,.6);color:#e6eaf2;border:1px solid rgba(0,229,255,.2);border-radius:9px;padding:8px 10px}
+
+/* ==========================================================================
+   INÍCIO (v6.24) — Monitoramento meia tela à direita, KPIs à esquerda,
+   mapa com mais vida (radar, anéis pulsando, caminhões com brilho).
+   ========================================================================== */
+.ini-mon2{grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-top:16px}
+.ini-left{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ini-left .ini-kpi{flex:1;display:flex;flex-direction:column;justify-content:center}
+.ini-left .ini-kpi .num{font-size:46px}
+.ini-left .ini-kpi .ic{width:44px;height:44px}.ini-left .ini-kpi .ic svg{width:22px;height:22px}
+.ini-map-half{height:452px}
+@media(max-width:860px){ .ini-mon2{grid-template-columns:1fr} .ini-left{flex-direction:row} .ini-left .ini-kpi .num{font-size:38px} .ini-map-half{height:380px} }
+@media(max-width:520px){ .ini-left{flex-direction:column} }
+
+/* cidades: anel pulsando */
+.pex-map-hero .ini-cityring{fill:none;stroke:#5cc8ff;stroke-width:1.4;opacity:.6;animation:iniCityPulse 3s ease-out infinite}
+.pex-map-hero .ini-cityring:nth-of-type(1){animation-delay:.6s}
+@keyframes iniCityPulse{0%{r:6;opacity:.6}75%{r:22;opacity:0}100%{opacity:0}}
+
+/* radar varredura a partir da base (Londrina) */
+.ini-beam{opacity:.7;mix-blend-mode:screen}
+
+/* caminhões com brilho + anel */
+.pex-map-hero .ini-veh use{filter:drop-shadow(0 0 6px rgba(0,229,255,.95))}
+.pex-map-hero .ini-veh .ring{fill:none;stroke:#00e5ff;stroke-width:1.4;opacity:.5;animation:iniPing 3s ease-out infinite}
+.pex-map-hero .ini-veh:hover use{filter:drop-shadow(0 0 12px rgba(120,240,255,1))}
+
+/* nota "aguardando rastreador" no painel */
+.ini-vpanel .vp-note{display:flex;align-items:center;gap:9px;margin:16px 0;padding:11px 13px;border-radius:11px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.16);font-size:12px;color:#9fc0da}
+.ini-vpanel .vp-note svg{width:16px;height:16px;color:#7cc5ff;flex:0 0 auto}
+
+@media(prefers-reduced-motion:reduce){ .pex-map-hero .ini-cityring,.pex-map-hero .ini-veh .ring{animation:none} }
 .pn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-bottom:16px}
 .pn-f small{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mute);margin-bottom:2px}
 .pn-f b{font-size:13px;color:#e6eef7;font-weight:600;word-break:break-word}

@@ -2713,28 +2713,24 @@ function abrirReal(path){ if(_arquivoLocalIndisponivel(path)) return; const a=do
 function baixarReal(path,nome){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=path; a.download=nome||''; document.body.appendChild(a); a.click(); a.remove(); }
 
 /* ---------- HOME · Centro de Comando: frota, painel lateral, count-up ---------- */
-const INI_FLEET={
-  'IRU-4G62':{modelo:'Volvo FH · Cavalo',mot:'Marcelo Ronsoni',cli:'Muffato',ori:'Londrina/PR',dest:'Maringá/PR',st:'Em rota',vel:'82 km/h',upd:'há 4 min'},
-  'IPD-9036':{modelo:'Scania · Cavalo',mot:'Odécio',cli:'BRF S.A.',ori:'Londrina/PR',dest:'Maringá/PR',st:'Em rota',vel:'76 km/h',upd:'há 9 min'},
-  'BDP-1B55':{modelo:'Scania R450 · Cavalo',mot:'Reinaldo',cli:'Atacadão',ori:'Londrina/PR',dest:'Cambé/PR',st:'Em rota',vel:'54 km/h',upd:'há 2 min'},
-  'NTY-8B66':{modelo:'Mercedes · Cavalo',mot:'Jonathan',cli:'TSP',ori:'Londrina/PR',dest:'Cambé/PR',st:'Em rota',vel:'61 km/h',upd:'há 6 min'},
-  'QIO-9J07':{modelo:'Volvo · Cavalo',mot:'Reinaldo',cli:'Muffato',ori:'Londrina/PR',dest:'Paiçandu/PR',st:'Em rota',vel:'88 km/h',upd:'há 1 min'}
-};
+function iniCavalos(){ return DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').slice(0,5); }
 function iniFecharVeic(){ const p=document.getElementById('iniVeicPanel'); if(p) p.classList.remove('show'); }
-function iniAbrirVeic(placa){ const f=INI_FLEET[placa]; const p=document.getElementById('iniVeicPanel'); if(!f||!p) return;
-  const ini=f.mot.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+function iniAbrirVeic(placa){ const v=DB.veiculos.find(x=>x.placa===placa); const p=document.getElementById('iniVeicPanel'); if(!v||!p) return;
   p.innerHTML=`<button class="x" onclick="iniFecharVeic()">×</button>
-    <div class="vp-plate">${esc(placa)}</div><div class="vp-model">${esc(f.modelo)}</div>
-    <div class="vp-st"><i></i>${esc(f.st)}</div>
-    <div class="vp-drv"><div class="av">${esc(ini)}</div><div><b>${esc(f.mot)}</b><span>${esc(f.cli)}</span></div></div>
-    <div class="vp-route"><div><small>Origem</small><b>${esc(f.ori)}</b></div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      <div class="r"><small>Destino</small><b>${esc(f.dest)}</b></div></div>
-    <div class="vp-grid"><div><small>Velocidade</small><b>${esc(f.vel)}</b></div><div><small>Última atualização</small><b>${esc(f.upd)}</b></div></div>
+    <div class="vp-plate">${esc(v.placa)}</div><div class="vp-model">${esc(((v.marca||'')+' '+(v.modelo||'')).trim()||'Cavalo')} · Cavalo</div>
+    <div class="vp-st"><i></i>Em operação</div>
+    <div class="vp-grid">
+      <div><small>Ano</small><b>${esc(v.anoModelo||'—')}</b></div>
+      <div><small>KM atual</small><b>${v.kmAtual!=null?num(v.kmAtual)+' km':'—'}</b></div>
+      <div><small>Renavam</small><b>${esc(v.renavam||'—')}</b></div>
+      <div><small>Status</small><b>${esc(v.status||'Ativo')}</b></div>
+    </div>
+    <div class="vp-note">${svg('route')} Rastreamento em tempo real: aguardando rastreador.</div>
     <div class="vp-links">
-      <a href="#documentos" onclick="iniFecharVeic()">${svg('doc')} Documentos relacionados</a>
+      <a href="#frota/${v.id}" onclick="iniFecharVeic()">${svg('truck')} Ficha do veículo</a>
+      <a href="#pneus/${v.id}" onclick="iniFecharVeic()">${svg('tire')} Pneus</a>
       <a href="#abastecimento" onclick="iniFecharVeic()">${svg('fuel')} Abastecimentos</a>
-      <a href="#viagens" onclick="iniFecharVeic()">${svg('route')} Pedágios / viagem</a>
+      <a href="#viagens" onclick="iniFecharVeic()">${svg('route')} Viagens</a>
     </div>`;
   p.classList.add('show');
 }
@@ -2767,48 +2763,54 @@ function viewInicio(){
   const cteK=Math.round(cteSum/1000);
   const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
+  const cav=iniCavalos();
+  const rotas=['pxr1','pxr1','pxr2','pxr3','pxr3'], durs=[26,26,31,20,20], begs=['0','-13','0','0','-10'];
+  const trucks=cav.map((v,i)=>`<g class="ini-veh" data-tip="${esc(v.placa)}" onclick="iniAbrirVeic('${esc(v.placa)}')"><circle class="ring" r="12"/><use href="#iniTruck"/><animateMotion dur="${durs[i%5]}s" begin="${begs[i%5]}s" rotate="auto" repeatCount="indefinite"><mpath href="#${rotas[i%5]}"/></animateMotion></g>`).join('');
+  const cidades=[['MARINGÁ',185,150],['PAIÇANDU',108,200],['CAMBÉ',330,368]];
+  const cidadesSVG=cidades.map(c=>`<g class="pex-city"><circle class="ini-cityring" cx="${c[1]}" cy="${c[2]}" r="7"/><circle cx="${c[1]}" cy="${c[2]}" r="4.6"/><text x="${c[1]}" y="${c[2]-13}" text-anchor="middle">${c[0]}</text></g>`).join('');
+  const grid=`${[130,260,390].map(y=>`<line x1="0" y1="${y}" x2="640" y2="${y}"/>`).join('')}${[160,320,480].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="520"/>`).join('')}`;
   return `<div class="ini-cmd">
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>
     <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
   </div>
 
-  <div class="ini-stage card">
-    <div class="ini-stage-h"><b>Monitoramento</b><div class="r"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-    <div class="pex-map pex-map-hero ini-map" id="pexDashMap">
-      <svg viewBox="0 0 1200 440" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.35)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
-          <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient>
-          <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
-        </defs>
-        <g class="pex-mgrid">${[110,220,330].map(y=>`<line x1="0" y1="${y}" x2="1200" y2="${y}"/>`).join('')}${[240,480,720,960].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="440"/>`).join('')}</g>
-        <polyline class="pex-corridor" points="240,285 380,315 900,235 1040,265"/>
-        <path id="pxr1" class="pex-route" d="M1040,265 Q650,335 380,315"/>
-        <path id="pxr2" class="pex-route" d="M1040,265 Q620,350 240,285"/>
-        <path id="pxr3" class="pex-route" d="M1040,265 Q975,248 900,235"/>
-        <circle cx="1040" cy="265" r="64" fill="url(#pexHubg)"/>
-        ${[['PAIÇANDU',240,285],['MARINGÁ',380,315],['CAMBÉ',900,235]].map(c=>`<g class="pex-city"><circle cx="${c[1]}" cy="${c[2]}" r="3.6"/><text x="${c[1]}" y="${c[2]-13}" text-anchor="middle">${c[0]}</text></g>`).join('')}
-        <g class="pex-city hub">
-          <circle class="pex-hubring" cx="1040" cy="265" r="9"/><circle class="pex-hubring r2" cx="1040" cy="265" r="9"/>
-          <circle cx="1040" cy="265" r="7"/>
-          <text x="1040" y="243" text-anchor="middle">LONDRINA</text>
-          <g class="pex-base"><rect x="1013" y="277" width="54" height="18" rx="9"/><text x="1040" y="290" text-anchor="middle">BASE</text></g>
-        </g>
-        <g class="ini-veh" onclick="iniAbrirVeic('IRU-4G62')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="30s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-        <g class="ini-veh" onclick="iniAbrirVeic('IPD-9036')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="30s" begin="-15s" repeatCount="indefinite"><mpath href="#pxr1"/></animateMotion></g>
-        <g class="ini-veh" onclick="iniAbrirVeic('BDP-1B55')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="17s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
-        <g class="ini-veh" onclick="iniAbrirVeic('NTY-8B66')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="17s" begin="-8.5s" repeatCount="indefinite"><mpath href="#pxr3"/></animateMotion></g>
-        <g class="ini-veh" onclick="iniAbrirVeic('QIO-9J07')"><circle class="ring" r="9"/><circle class="dot" r="4.6"/><animateMotion dur="34s" repeatCount="indefinite"><mpath href="#pxr2"/></animateMotion></g>
-      </svg>
-      <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
-      <aside class="ini-vpanel" id="iniVeicPanel"></aside>
+  <div class="grid ini-mon2">
+    <div class="ini-left">
+      ${kt('truck','', cavalos+reb, '', '', 'Veículos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+      ${kt('user','', mot, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
     </div>
-  </div>
-
-  <div class="ini-kstrip">
-    ${kt('truck','', cavalos+reb, '', '', 'Frota ativa', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
-    ${kt('user','', mot, '', '', 'Motoristas', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
+    <div class="ini-stage card">
+      <div class="ini-stage-h"><b>Monitoramento</b><div class="r"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
+      <div class="pex-map pex-map-hero ini-map ini-map-half" id="pexDashMap">
+        <svg viewBox="0 0 640 520" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.32)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
+            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient>
+            <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
+            <radialGradient id="beamG" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="156"><stop offset="0" stop-color="rgba(0,229,255,.4)"/><stop offset="1" stop-color="rgba(0,229,255,0)"/></radialGradient>
+            <g id="iniTruck"><rect x="-9" y="-4.5" width="13" height="9" rx="2.5" fill="#eaf6ff"/><rect x="4" y="-3.6" width="6.5" height="7.2" rx="1.6" fill="#8ff0ff"/></g>
+          </defs>
+          <g class="pex-mgrid">${grid}</g>
+          <polyline class="pex-corridor" points="440,258 185,150 108,200"/><polyline class="pex-corridor" points="440,258 330,368"/>
+          <path id="pxr1" class="pex-route" d="M440 258 Q305 175 185 150"/>
+          <path id="pxr2" class="pex-route" d="M440 258 Q255 235 108 200"/>
+          <path id="pxr3" class="pex-route" d="M440 258 Q395 325 330 368"/>
+          <g transform="translate(440 258)"><g class="ini-radar"><path class="ini-beam" d="M0 0 L152 -46 A159 159 0 0 1 152 46 Z" fill="url(#beamG)"/><animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0" to="360" dur="7s" repeatCount="indefinite"/></g></g>
+          <circle cx="440" cy="258" r="72" fill="url(#pexHubg)"/>
+          ${cidadesSVG}
+          <g class="pex-city hub">
+            <circle class="pex-hubring" cx="440" cy="258" r="9"/><circle class="pex-hubring r2" cx="440" cy="258" r="9"/>
+            <circle cx="440" cy="258" r="7.5"/>
+            <text x="440" y="234" text-anchor="middle">LONDRINA</text>
+            <g class="pex-base"><rect x="413" y="270" width="54" height="18" rx="9"/><text x="440" y="283" text-anchor="middle">BASE</text></g>
+          </g>
+          ${trucks}
+        </svg>
+        <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
+        <aside class="ini-vpanel" id="iniVeicPanel"></aside>
+      </div>
+    </div>
   </div>
   </div>`;
 }
