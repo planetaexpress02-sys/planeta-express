@@ -443,7 +443,7 @@ function router(){
   else if(rota==='km'){ kmFiltro=arg||'todos'; el.innerHTML=viewKM(); }
   else if(rota==='oleo') el.innerHTML=viewOleo();
   else if(rota==='manutencao'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Relatório de Manutenção'; } el.innerHTML=viewManutencaoVeiculo(arg); } else el.innerHTML=viewManutencao(); }
-  else if(rota==='pneus'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else el.innerHTML=viewPneus(); }
+  else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { pneusFiltro=(arg==='limite')?'limite':'todos'; el.innerHTML=viewPneus(); } }
   else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
   else if(rota==='abastecimento') el.innerHTML=viewAbastecimento();
   else if(rota==='viagens') el.innerHTML=viewViagens();
@@ -617,6 +617,14 @@ function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
   const venc = vs.filter(x=>x.s.ord===0), crit = vs.filter(x=>x.s.ord===1), aten = vs.filter(x=>x.s.ord===2), emdia=vs.filter(x=>x.s.ord===3);
+  /* Faixas IGUAIS às do módulo Vencimentos (v6.27): Vencidos / ≤10 / 11–20 / 21–30 dias.
+     A contagem de cada card é calculada por dias para bater EXATAMENTE com o que abre ao clicar. */
+  const _vd = todosVencimentos().map(v=>({v,d:diasAte(v.validade)}));
+  const fVenc=_vd.filter(x=>x.d!=null&&x.d<0);
+  const fD10 =_vd.filter(x=>x.d!=null&&x.d>=0&&x.d<=10);
+  const fD20 =_vd.filter(x=>x.d!=null&&x.d>10&&x.d<=20);
+  const fD30 =_vd.filter(x=>x.d!=null&&x.d>20&&x.d<=30);
+  const fTotal=fVenc.length+fD10.length+fD20.length+fD30.length;
   const cavalos = DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').length;
   const reb = DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado').length;
   const motAtivos = DB.motoristas.filter(m=>m.status==='Ativo').length;
@@ -637,7 +645,7 @@ function viewDashboard(){
   // Indicadores complementares
   const notasOrd = DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
   const ultNota = notasOrd[0]; const ultNotaTotal = ultNota? totalNota(ultNota):0;
-  const pneusAlerta = DB.pneus.filter(p=>p.sulco!=null&&p.sulco!==''&&Number(p.sulco)<=DB.config.sulcoMinimo).length;
+  const pneusAlerta = DB.pneus.filter(_pneuNoLimite).length;
   const chkMes = DB.checklists.filter(c=>{ const d=parseD(c.data),h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
   const chkUlt = DB.checklists.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).slice(0,5);
   const tipos={Cavalos:cavalos,Reboques:reb};
@@ -668,30 +676,30 @@ function viewDashboard(){
   <div class="ini-kstrip4">
     ${iniKpiTile('truck','', cavalos+reb, '', '', 'Veículos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
     ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
-    ${iniKpiTile('bell', crit.length?'crit':'', crit.length, '', '', 'Vencimentos críticos', 'vencimentos/critico', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
-    ${iniKpiTile('shield', venc.length?'crit':'', venc.length, '', '', 'Documentos vencidos', 'vencimentos/vencido', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
+    ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
+    ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
     ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
-    ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
-    ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
+    ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
+    ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
     ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
   </div>
 
   <div class="grid two-col">
     <div class="card">
-      <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3></div>
+      <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3><div class="r"><span class="muted" style="font-size:11.5px">faixa de atenção · clique para abrir</span></div></div>
       <div class="card-b">
         <div class="donut-wrap">
           ${donut([
-            {label:'Em dia',value:emdia.length,color:'#16a34a'},
-            {label:'Atenção',value:aten.length,color:'#d99200'},
-            {label:'Críticos',value:crit.length,color:'#ea580c'},
-            {label:'Vencidos',value:venc.length,color:'#dc2626'},
-          ],{center:vs.length,sub:'total'})}
+            {label:'Vencidos',value:fVenc.length,color:'#dc2626'},
+            {label:'≤10 dias',value:fD10.length,color:'#f97316'},
+            {label:'11–20 dias',value:fD20.length,color:'#eab308'},
+            {label:'21–30 dias',value:fD30.length,color:'#3b82f6'},
+          ],{center:fTotal,sub:'na faixa'})}
           <div class="legend">
-            <div class="li clk" onclick="location.hash='vencimentos/emdia'"><span class="dot" style="background:#16a34a"></span>Em dia<b>${emdia.length}</b></div>
-            <div class="li clk" onclick="location.hash='vencimentos/atencao'"><span class="dot" style="background:#d99200"></span>Atenção<b>${aten.length}</b></div>
-            <div class="li clk" onclick="location.hash='vencimentos/critico'"><span class="dot" style="background:#ea580c"></span>Críticos<b>${crit.length}</b></div>
-            <div class="li clk" onclick="location.hash='vencimentos/vencido'"><span class="dot" style="background:#dc2626"></span>Vencidos<b>${venc.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/venc'"><span class="dot" style="background:#dc2626"></span>Vencidos<b>${fVenc.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/d10'"><span class="dot" style="background:#f97316"></span>Vence em ≤10 dias<b>${fD10.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/d20'"><span class="dot" style="background:#eab308"></span>Vence em 11–20 dias<b>${fD20.length}</b></div>
+            <div class="li clk" onclick="location.hash='vencimentos/d30'"><span class="dot" style="background:#3b82f6"></span>Vence em 21–30 dias<b>${fD30.length}</b></div>
           </div>
         </div>
       </div>
@@ -716,8 +724,8 @@ function viewDashboard(){
       <div class="card-b"><div class="donut-wrap">
         ${donut([{label:'Cavalos',value:cavalos,color:'#2563eb'},{label:'Reboques',value:reb,color:'#38bdf8'}],{center:cavalos+reb,sub:'veículos'})}
         <div class="legend">
-          <div class="li clk" onclick="location.hash='frota'"><span class="dot" style="background:#2563eb"></span>Cavalos<b>${cavalos}</b></div>
-          <div class="li clk" onclick="location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Reboques<b>${reb}</b></div>
+          <div class="li clk" onclick="frotaFiltro='cavalo';location.hash='frota'"><span class="dot" style="background:#2563eb"></span>Cavalos<b>${cavalos}</b></div>
+          <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Reboques<b>${reb}</b></div>
           <div class="li"><span class="dot" style="background:#94a3b8"></span>Pneus cadastrados<b>${DB.pneus.length}</b></div>
         </div>
       </div></div>
@@ -727,7 +735,7 @@ function viewDashboard(){
         <div class="r"><a class="btn sm" href="#checklist">Ver todos</a></div></div>
       <div class="card-b p0">
         ${chkUlt.length? chkUlt.map(c=>{ const v=veiculo(c.veiculoId); const r=chkResumo(c);
-          return `<div class="alert-row" onclick="location.hash='checklist'">
+          return `<div class="alert-row" onclick="location.hash='checklist';modalChecklist('${c.id}')">
             <div class="a-ico ${r.nok?'i-red':'i-green'}">${svg('check')}</div>
             <div class="a-main"><b>${v?esc(v.placa):'—'} — ${esc(c.motoristaNome||(motorista(c.motoristaId)||{}).nome||'')}</b><span>${fmtDLong(c.data)}${c.km?' · '+num(c.km)+' km':''}</span></div>
             <div class="a-when"><span class="st ${r.nok?'crit':'ok'}">${r.nok?r.nok+' NOK':'OK'}</span></div></div>`;
@@ -2237,7 +2245,11 @@ function pneuKmRodado(p){ const v=veiculo(p.veiculoId); if(!v||v.kmAtual==null||
 /* Quantidade de um registro de pneu e total somado (cada linha pode ter vários pneus) */
 function pneuQtd(p){ return parseInt(p&&p.qtd)||1; }
 function pneuTotal(list){ return (list||DB.pneus).reduce((s,p)=>s+pneuQtd(p),0); }
+/* um pneu está "no limite" quando precisa de troca (condição crítica ou próxima da troca) */
+function _pneuNoLimite(p){ const c=pneuCondicao(p); return !!c && (c.key==='crit'||c.key==='troca'); }
+let pneusFiltro='todos';
 function viewPneus(){
+  if(pneusFiltro==='limite') return viewPneusLimite();
   const total=pneuTotal();
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comPneus=veics.filter(v=>DB.pneus.some(p=>p.veiculoId===v.id)).length;
@@ -2255,6 +2267,30 @@ function viewPneus(){
   <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div><div class="spacer"></div></div>
   ${vcardsSecoes('pneus', foot)}
   ${estoquePneusSecao()}`;
+}
+/* Navegação inteligente: só os pneus que precisam de troca (chamada do Painel via #pneus/limite) */
+function viewPneusLimite(){
+  const alertas=[];
+  DB.veiculos.filter(v=>v.status!=='Arquivado').forEach(v=>{
+    DB.pneus.filter(p=>p.veiculoId===v.id && _pneuNoLimite(p)).forEach(p=>alertas.push({v,p}));
+  });
+  alertas.sort((a,b)=>{ const ka=pneuCondicao(a.p).key==='crit'?0:1, kb=pneuCondicao(b.p).key==='crit'?0:1; return ka-kb; });
+  const rows=alertas.map(({v,p})=>{ const c=pneuCondicao(p); const crit=c.key==='crit';
+    return `<div class="alert-row" onclick="location.hash='pneus/${v.id}'">
+      <div class="a-ico ${crit?'i-red':'i-orange'}">${svg('tire')}</div>
+      <div class="a-main"><b>${plate(v.placa,v.tipo)} — ${esc(p.posicao||p.slot||'Pneu')}</b>
+        <span>${esc(p.marca||'—')}${p.modelo?' '+esc(p.modelo):''} · Sulco: ${(p.sulco!=null&&p.sulco!=='')?esc(p.sulco)+' mm':'—'}</span></div>
+      <div class="a-when"><span class="st ${crit?'crit':'warn'}">${esc(c.label||'Trocar')}</span></div></div>`;
+  }).join('');
+  return `
+  <div class="banner">${svg('tire')}<div><b>Pneus no limite</b><span>Somente os pneus em condição crítica ou próximos da troca (sulco ≤ ${DB.config.sulcoMinimo} mm). Clique num pneu para abrir o veículo e ver o diagrama.</span></div>
+    <a class="btn no-print" style="margin-left:auto" href="#pneus">${svg('tire')} Ver todos os pneus</a></div>
+  <div class="grid kpis" style="grid-template-columns:1fr;margin-bottom:16px">
+    ${kpi('tire', alertas.length?'i-red':'i-green', alertas.length, 'Pneus para trocar', 'condição crítica ou próxima da troca')}
+  </div>
+  <div class="card"><div class="card-b p0">
+    ${alertas.length? rows : emptyState('Nenhum pneu no limite. Todos com sulco acima do mínimo. 👍')}
+  </div></div>`;
 }
 function pneuIrEstoque(){ const el=document.getElementById('sec-estoque-pneus'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
 /* --- Pneus em estoque (não instalados) --- */
