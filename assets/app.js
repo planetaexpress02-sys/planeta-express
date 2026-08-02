@@ -472,9 +472,9 @@ function router(){
 /* ================================================================== */
 function pexAfterRender(rota){
   try{ var _vw=document.getElementById('view'); if(_vw){ _vw.setAttribute('data-route',rota);
-      /* tema CYBER global: liga em todas as telas, EXCETO Viagens (fica clara)
-         e Início/Painel/Manutenção (já têm bloco cyber próprio scoped) */
-      var _noCy={viagens:1,inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
+      /* tema CYBER global: liga em todas as telas, EXCETO Início/Painel/Manutenção
+         (já têm bloco cyber próprio scoped). Viagens/Descargas também são cyber. */
+      var _noCy={inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
