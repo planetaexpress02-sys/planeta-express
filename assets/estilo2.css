@@ -1910,3 +1910,31 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(max-width:480px){ .tb-logo{display:none} }         /* telas estreitas: menu + PLANETA EXPRESS (sem o selo do logo) */
 @media(max-width:400px){ .tb-word{font-size:13px;letter-spacing:.4px} }
 @media(prefers-reduced-motion:reduce){ .sidebar,.scrim{transition:none} .topbar .menu-toggle:active::after,.topbar .back-btn:active::after{transition:none} }
+
+/* ==========================================================================
+   CABEÇALHO MOBILE INTEGRADO (v6.35) — um único painel, sem "barra sobre barra".
+   Só ≤860px. O topbar deixa de ser uma faixa separada (sem borda/sombra, cor do
+   tema, compacto) e, na Início/Painel, FUNDE com o Centro de Comando: o brand
+   duplicado (logo + título) some — o topbar já mostra ☰ + PLANETA EXPRESS + ícones
+   (linha 1) e o restante vira a linha 2 (subtítulo · Operação ativa · hora).
+   Desktop e funcionalidades INTACTOS.
+   ========================================================================== */
+@media(max-width:860px){
+  /* topbar = topo do painel, não uma barra: sem divisão, compacto, na cor do tema */
+  .topbar{background:#0b1a2b!important;border-bottom:none!important;box-shadow:none!important;
+    backdrop-filter:none;-webkit-backdrop-filter:none;min-height:0;height:auto;padding:4px 12px;gap:8px}
+  .topbar .menu-toggle{width:46px;height:46px;border-radius:13px}
+  .topbar .menu-toggle svg{width:24px;height:24px}
+  .topbar .back-btn{width:44px;height:44px;border-radius:12px}
+  .cock-ico{width:44px;height:44px}
+  /* INÍCIO / PAINEL — funde com o Centro de Comando (mesma cor → sem emenda) */
+  body.pex-home .topbar{background:#0a1a2f!important}
+  body.pex-home .ini-top{margin-bottom:14px;gap:10px;min-height:0}
+  body.pex-home .ini-brand{min-width:0;flex:1 1 auto}
+  body.pex-home .ini-brand .mk{display:none}            /* logo já está na linha 1 (topbar) */
+  body.pex-home .ini-brand .tx b{display:none}          /* nome já está na linha 1 (topbar) */
+  body.pex-home .ini-brand .tx span{font-size:10px;letter-spacing:1.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.pex-home .ini-status{gap:10px;flex:0 0 auto}
+  body.pex-home .ini-status .live{font-size:9px;letter-spacing:.5px;gap:6px}
+  body.pex-home .ini-status .clk{font-size:14px;letter-spacing:1px}
+}
