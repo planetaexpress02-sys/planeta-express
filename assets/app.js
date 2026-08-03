@@ -146,7 +146,10 @@ function anexoTipo(ent, ref, re){ return todosArquivos().find(f=>f.entidade===en
 /* Selo verde "Anexado" (clicável p/ ver) OU botão "Anexar" */
 function badgeAnexo(ent, ref, re, categoria){
   const f=anexoTipo(ent,ref,re);
-  if(f) return `<span class="st ok" style="cursor:pointer" title="Ver ${esc(f.name)}" onclick="event.stopPropagation();verArquivo('${f.id}')">${svg('clip')} Anexado</span>`;
+  if(f) return `<span style="display:inline-flex;align-items:center;gap:5px">
+    <span class="st ok" style="cursor:pointer" title="Ver ${esc(f.name)}" onclick="event.stopPropagation();verArquivo('${f.id}')">${svg('clip')} Anexado</span>
+    <button class="btn ghost sm no-print" title="Baixar" onclick="event.stopPropagation();baixarArquivo('${f.id}')">${svg('download')}</button>
+    <button class="btn ghost sm no-print" title="Excluir" onclick="event.stopPropagation();excluirArquivo('${f.id}')">${svg('trash')}</button></span>`;
   return `<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('${ent}','${ref}','${esc(categoria)}')">${svg('upload')} Anexar</button>`;
 }
 
@@ -502,7 +505,7 @@ function pexZoomChart(card){
 /* ---- tabelas premium: busca + ordenação + paginação ---- */
 function pexEnhanceTables(){
   document.querySelectorAll('#view table.tbl').forEach(function(tbl){
-    if(tbl.closest('.dsc-months')) return;          // acordeão de Descargas tem busca/ordenação próprias
+    if(tbl.closest('.dsc-months')||tbl.classList.contains('pex-noenh')) return;  // Descargas/Viagens têm lista própria (sem paginação)
     var tbody=tbl.tBodies[0]; if(!tbody) return;
     var rows=[].slice.call(tbody.rows).filter(function(r){ return !r.querySelector('.empty') && r.cells.length>1; });
     if(rows.length<6) return;                      // só vale a pena em tabelas maiores
@@ -1260,8 +1263,19 @@ function manutTipoTag(t){ return (t==='Preventiva')
   ? '<span class="st ok" style="font-size:10.5px">Preventiva</span>'
   : '<span class="st warn" style="font-size:10.5px">Corretiva</span>'; }
 function _somaServ(arr){ return arr.reduce((s,x)=>s+(Number(x.valor)||0),0); }
+/* Serviços/reparos + TROCAS DE ÓLEO (que tenham valor) — óleo entra como Preventiva.
+   Assim o custo das trocas de óleo é somado nos totais/gráficos da manutenção. */
+function _manutTodos(){
+  const out=DB.servicos.slice();
+  (DB.manutencoes||[]).forEach(function(m){
+    const v=Number(m.valor)||0; if(v<=0) return;
+    out.push({ _oleoId:m.id, veiculoId:m.veiculoId, data:m.data||'', descricao:(m.item||'Troca de óleo'),
+      oficina:m.oficina||'', km:(m.kmTroca!=null?m.kmTroca:m.horasTroca), valor:v, tipo:'Preventiva' });
+  });
+  return out;
+}
 function viewManutencao(){
-  const todos=DB.servicos.slice();
+  const todos=_manutTodos();
   const ehTipo=(x,t)=> (x.tipo||'Corretiva')===t;
   const filtr = manutFiltro==='corretiva'? todos.filter(x=>ehTipo(x,'Corretiva'))
              : manutFiltro==='preventiva'? todos.filter(x=>ehTipo(x,'Preventiva')) : todos;
@@ -1286,7 +1300,7 @@ function viewManutencao(){
   <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
-    ${kpiF('coins','i-blue',money(total),'Gasto total',DB.servicos.length+' serviços','todas')}
+    ${kpiF('coins','i-blue',money(total),'Gasto total',todos.length+' lançamentos','todas')}
     ${kpiF('wrench','i-amber',money(corr),'Corretiva',corrN+' serviço(s)','corretiva')}
     ${kpiF('shield','i-green',money(prev),'Preventiva',prevN+' serviço(s)','preventiva')}
     ${kpi('cal','i-slate',money(mesTot),'Gasto no mês',mesNome)}
@@ -1311,20 +1325,20 @@ function viewManutencao(){
 function viewManutencaoVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
   const cavalo=v.tipo==='Cavalo'; const un=cavalo?'km':'h';
-  const servs=DB.servicos.filter(x=>x.veiculoId===v.id).sort((a,b)=>(a.data||'').localeCompare(b.data||'')); /* antigos → novos */
+  const servs=_manutTodos().filter(x=>x.veiculoId===v.id).sort((a,b)=>(a.data||'').localeCompare(b.data||'')); /* antigos → novos (inclui trocas de óleo com valor) */
   const soma=_somaServ(servs);
   const corr=_somaServ(servs.filter(x=>(x.tipo||'Corretiva')==='Corretiva'));
   const prev=_somaServ(servs.filter(x=>x.tipo==='Preventiva'));
-  const rows=servs.map(x=>`
-    <tr class="clickable" onclick="modalServico('${x.id}')">
+  const rows=servs.map(x=>{ const ab=x._oleoId?`modalManutencao('${x._oleoId}')`:`modalServico('${x.id}')`;
+    return `<tr class="clickable" onclick="${ab}">
       <td class="mono">${fmtD(x.data)}</td>
       <td class="mono muted">${x.km!=null&&x.km!==''?num(x.km)+' '+un:'—'}</td>
-      <td><b>${esc(x.descricao||'—')}</b>${x.obs?`<div class="muted" style="font-size:11px">${esc(x.obs)}</div>`:''}</td>
+      <td><b>${esc(x.descricao||'—')}</b>${x._oleoId?' <span class="st neutro" style="font-size:9.5px;padding:1px 6px">óleo</span>':''}${x.obs?`<div class="muted" style="font-size:11px">${esc(x.obs)}</div>`:''}</td>
       <td>${manutTipoTag(x.tipo)}</td>
       <td>${esc(x.oficina||'—')}</td>
       <td class="mono ta-r"><b>${money(x.valor)}</b></td>
-      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalServico('${x.id}')">${svg('edit')}</button></td>
-    </tr>`).join('');
+      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();${ab}">${svg('edit')}</button></td>
+    </tr>`; }).join('');
   const pctCorr= soma? Math.round(corr/soma*100):0;
   return `${detalheVeiculoHead(v, `<button class="btn primary" onclick="modalServico(null,'${v.id}')">${svg('plus')} Novo serviço</button>`)}
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin:4px 0 16px">
@@ -1666,14 +1680,22 @@ function guessCat(name){ const n=name.toLowerCase();
 }
 function _localBlob(id){ const f=FILES.find(x=>x.id===id); return f?f.blob:null; }
 async function _urlArquivo(id){
-  const b=_localBlob(id); if(b) return {url:URL.createObjectURL(b), local:true};
+  try{ const b=_localBlob(id); if(b) return {url:URL.createObjectURL(b), local:true}; }catch(e){}
   const a=(DB.anexos||[]).find(x=>x.id===id);
-  if(a && a.storagePath){ try{ const u=await nuvemUrlArquivo(a.storagePath); if(u) return {url:u, local:false}; }catch(e){} }
+  if(a && a.storagePath && typeof nuvemUrlArquivo==='function'){ try{ const u=await nuvemUrlArquivo(a.storagePath); if(u) return {url:u, local:false}; }catch(e){} }
   return null;
 }
-async function verArquivo(id){ const r=await _urlArquivo(id); if(!r){ toast('Não foi possível abrir o arquivo.','err'); return; }
+/* mensagem clara quando um arquivo enviado não está acessível aqui */
+function _msgArquivoIndisp(id){
+  const a=(DB.anexos||[]).find(x=>x.id===id);
+  if(a) return 'Este arquivo foi enviado em outro aparelho e ainda não sincronizou. Entre na sua conta (nuvem) para vê-lo em qualquer lugar, ou reenvie-o aqui.';
+  return 'Não consegui abrir este arquivo. Tente reenviá-lo pelo botão "Enviar arquivo".';
+}
+async function verArquivo(id){ let r; try{ r=await _urlArquivo(id); }catch(e){ r=null; }
+  if(!r){ toast(_msgArquivoIndisp(id),'err'); return; }
   window.open(r.url,'_blank'); if(r.local) setTimeout(()=>URL.revokeObjectURL(r.url),20000); }
-async function baixarArquivo(id){ const r=await _urlArquivo(id); if(!r){ toast('Não foi possível baixar o arquivo.','err'); return; }
+async function baixarArquivo(id){ let r; try{ r=await _urlArquivo(id); }catch(e){ r=null; }
+  if(!r){ toast(_msgArquivoIndisp(id),'err'); return; }
   const a=arquivoPorId(id); const nm=a?a.name:'arquivo';
   const el=document.createElement('a'); el.href=r.url; el.download=nm; el.target='_blank'; document.body.appendChild(el); el.click(); el.remove();
   if(r.local) setTimeout(()=>URL.revokeObjectURL(r.url),4000); }
@@ -2049,12 +2071,13 @@ function salvarBateria(id){ const d={data:val('f_data'),placa:val('f_placa'),mar
 function excluirBateria(id){ if(!confirm('Excluir esta bateria?'))return; DB.baterias=DB.baterias.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
 function modalManutencao(id,vId){
-  const m=id?DB.manutencoes.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,item:'',data:'',intervalo:'',kmTroca:'',proxKm:'',horasTroca:'',proxHoras:''};
+  const m=id?DB.manutencoes.find(x=>x.id===id):{veiculoId:vId||(DB.veiculos[0]||{}).id,item:'',data:'',intervalo:'',kmTroca:'',proxKm:'',horasTroca:'',proxHoras:'',valor:'',oficina:''};
   openModal(`<div class="m-h">${svg('wrench')}<h3>${id?'Editar manutenção':'Novo registro'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Veículo</label><select id="f_veic">${DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>`<option value="${v.id}" ${m.veiculoId===v.id?'selected':''}>${esc(v.placa)} — ${esc(v.marca)} ${esc(v.modelo)}</option>`).join('')}</select></div>
       <div class="field-row">${fld('Item / serviço','f_item',m.item)}${fld('Intervalo','f_int',m.intervalo,'text','Ex.: 20.000 km / 1.000 h')}</div>
-      ${fld('Data da última troca','f_data',m.data,'date')}
+      <div class="field-row">${fld('Data da última troca','f_data',m.data,'date')}${fldR$('Valor da troca (R$)','f_valor',m.valor)}</div>
+      ${fld('Oficina / local','f_ofi',m.oficina)}
       <div class="field-row">${fld('Odômetro na troca (km)','f_km',m.kmTroca,'number')}${fld('Próxima troca (km)','f_pkm',m.proxKm,'number')}</div>
       <div class="field-row">${fld('Horas na troca','f_h',m.horasTroca,'number')}${fld('Próxima (horas)','f_ph',m.proxHoras,'number')}</div>
       <div class="hint">Cavalos: preencha KM. Carretas (Thermo King): preencha horas.</div>
@@ -2065,7 +2088,7 @@ function modalManutencao(id,vId){
 }
 function numOrNull(id){ const s=val(id); return s===''?null:parseFloat(s); }
 function salvarManutencao(id){ if(!val('f_item')){toast('Informe o item.','err');return;}
-  const d={veiculoId:val('f_veic'),item:val('f_item'),intervalo:val('f_int'),data:val('f_data'),kmTroca:numOrNull('f_km'),proxKm:numOrNull('f_pkm'),horasTroca:numOrNull('f_h'),proxHoras:numOrNull('f_ph')};
+  const d={veiculoId:val('f_veic'),item:val('f_item'),intervalo:val('f_int'),data:val('f_data'),kmTroca:numOrNull('f_km'),proxKm:numOrNull('f_pkm'),horasTroca:numOrNull('f_h'),proxHoras:numOrNull('f_ph'),valor:parseBRL(val('f_valor')),oficina:val('f_ofi')};
   if(id)Object.assign(DB.manutencoes.find(x=>x.id===id),d); else{ d.id=uid('o'); DB.manutencoes.push(d); } saveDB(); closeModal(); toast('Manutenção salva.'); router(); }
 function excluirManutencao(id){ if(!confirm('Excluir este registro?'))return; DB.manutencoes=DB.manutencoes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
@@ -2748,13 +2771,14 @@ function importarChecklist(ev){ const f=ev.target.files[0]; if(!f)return; const 
 /* ---------- Abrir / baixar arquivos reais da pasta ---------- */
 function _arquivoLocalIndisponivel(path){
   if(String(path).indexOf('../')===0 && location.protocol.indexOf('http')===0){
-    toast('Este documento fica na pasta do computador e não abre pelo site online. Para vê-lo em qualquer lugar, reenvie-o pelo botão "Enviar arquivo".','err');
+    toast('💻 Este arquivo fica na pasta do computador — abra o sistema no PC para vê-lo. Para acessá-lo em qualquer lugar (celular/online), use "Enviar arquivo" e ele fica guardado dentro do sistema.');
     return true;
   }
   return false;
 }
-function abrirReal(path){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=path; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }
-function baixarReal(path,nome){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=path; a.download=nome||''; document.body.appendChild(a); a.click(); a.remove(); }
+function _encPath(p){ try{ return encodeURI(String(p)); }catch(e){ return p; } }
+function abrirReal(path){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=_encPath(path); a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+function baixarReal(path,nome){ if(_arquivoLocalIndisponivel(path)) return; const a=document.createElement('a'); a.href=_encPath(path); a.download=nome||''; document.body.appendChild(a); a.click(); a.remove(); }
 
 /* ---------- HOME · Centro de Comando: frota, painel lateral, count-up ---------- */
 function iniCavalos(){ return DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').slice(0,5); }
@@ -2974,8 +2998,8 @@ function viewViagens(){
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
     <select class="selectlite" onchange="viagemPlaca=this.value;router()"><option value="todas">Todas as placas</option>
       ${placas.map(p=>`<option value="${esc(p)}" ${viagemPlaca===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
-    <div class="spacer"></div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+    <div class="spacer"></div><div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
+  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl viag-tbl pex-noenh">
     <thead><tr><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th>Status</th><th class="no-print"></th></tr></thead>
     <tbody>${corpo||`<tr><td colspan="10">${emptyState('Nenhuma viagem neste filtro.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
