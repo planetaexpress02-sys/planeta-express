@@ -477,7 +477,6 @@ function pexAfterRender(rota){
          (já têm bloco cyber próprio scoped). Viagens/Descargas também são cyber. */
       var _noCy={inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
     document.body.classList.toggle('pex-home', rota==='inicio'||rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
-    pexMobileNav(rota);   // mobile "app": injeta ☰ (e Voltar) dentro da página, ao lado da logo
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
@@ -3823,30 +3822,6 @@ function navVoltar(){
   } else {                                                  // sem histórico → Início (nunca prende o usuário)
     if((location.hash||'#inicio')!=='#inicio') location.hash='#inicio'; else router();
   }
-}
-/* ---- Mobile "app": sem cabeçalho. Injeta o menu (☰) e o Voltar DENTRO da
-   página — ao lado da logo na Início, ou no banner das demais telas. O CSS
-   esconde isso no desktop (topbar normal). Reinjetado a cada render. ---- */
-function pexMobileNav(rota){
-  try{
-    var view=document.getElementById('view'); if(!view) return;
-    var home=(rota==='inicio'||rota==='dashboard'), secundaria=!home;
-    var menu='<button class="pex-mbtn pex-mbtn-menu" onclick="toggleSidebar()" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>';
-    var voltar='<button class="pex-mbtn" onclick="navVoltar()" aria-label="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>';
-    var btns=menu+(secundaria?voltar:'');
-    var into=home?view.querySelector('.ini-top'):view.querySelector('.banner');
-    if(into){
-      if(into.querySelector('.pex-pagenav')) return;
-      var nav=document.createElement('div'); nav.className='pex-pagenav no-print'; nav.innerHTML=btns;
-      into.insertBefore(nav, into.firstChild);
-    } else {
-      if(view.querySelector('.pex-pagenav')) return;
-      var titulo=(typeof ROTAS!=='undefined' && ROTAS[rota]) ? ROTAS[rota].t : '';
-      var solo=document.createElement('div'); solo.className='pex-pagenav pex-pagenav-solo no-print';
-      solo.innerHTML=btns+(titulo?'<span class="pex-navtitle">'+esc(titulo)+'</span>':'');
-      view.insertBefore(solo, view.firstChild);
-    }
-  }catch(e){}
 }
 /* Recolher menu para "trilho" só-ícones (desktop). Estado salvo no aparelho. */
 function toggleRail(){ const on=!document.body.classList.contains('rail'); document.body.classList.toggle('rail',on);
