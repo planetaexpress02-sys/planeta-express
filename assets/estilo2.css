@@ -1910,3 +1910,38 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(max-width:480px){ .tb-logo{display:none} }         /* telas estreitas: menu + PLANETA EXPRESS (sem o selo do logo) */
 @media(max-width:400px){ .tb-word{font-size:13px;letter-spacing:.4px} }
 @media(prefers-reduced-motion:reduce){ .sidebar,.scrim{transition:none} .topbar .menu-toggle:active::after,.topbar .back-btn:active::after{transition:none} }
+
+/* ==========================================================================
+   APP MOBILE — SEM CABEÇALHO (v6.36)  ·  SÓ ≤860px, desktop 100% intacto.
+   Some com a barra superior: a tela fica numa cor só (como um app). O menu (☰)
+   e o Voltar são injetados DENTRO da página (pexMobileNav) — ao lado da logo na
+   Início, ou no banner das demais telas. Nada de funcionalidade alterada.
+   ========================================================================== */
+.pex-pagenav{display:none}                                  /* desktop: nada (o topbar normal cuida disso) */
+@media(max-width:860px){
+  .topbar{display:none!important}                           /* fim do cabeçalho/barra: tela inteira numa cor */
+  .content{padding-top:env(safe-area-inset-top,0px)}        /* respeita o "notch" do celular */
+  /* Início/Painel ocupam a tela toda sem a emenda do topbar antigo */
+  .ini-cmd{margin:0!important;padding:14px 14px 34px!important;min-height:calc(100vh - env(safe-area-inset-top,0px))}
+  /* menu (☰) + Voltar dentro da página */
+  .pex-pagenav{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto}
+  .pex-pagenav-solo{display:flex;align-items:center;margin:4px 0 16px}
+  .pex-navtitle{font-size:19px;font-weight:800;letter-spacing:-.2px;color:#eaf6ff;margin-left:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pex-mbtn{position:relative;overflow:hidden;width:48px;height:48px;flex:0 0 auto;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;
+    background:rgba(0,20,36,.55);border:1px solid rgba(0,229,255,.16);color:#cfe4f5;
+    transition:transform .12s ease,box-shadow .18s,border-color .18s}
+  .pex-mbtn svg{width:24px;height:24px}
+  .pex-mbtn:hover{border-color:rgba(0,229,255,.4);color:#eaf6ff;box-shadow:0 0 14px rgba(0,229,255,.2)}
+  .pex-mbtn:active{transform:scale(.9)}
+  .pex-mbtn::after{content:"";position:absolute;left:50%;top:50%;width:150%;padding-bottom:150%;
+    transform:translate(-50%,-50%) scale(0);border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.4),transparent 60%);opacity:0;pointer-events:none}
+  .pex-mbtn:active::after{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .45s ease-out,opacity .6s}
+  /* na Início o menu cola na logo; deixa a linha do topo equilibrada */
+  .ini-top{gap:11px;flex-wrap:wrap}
+  .ini-brand{min-width:0}
+  /* nas demais telas o menu entra no banner, antes do ícone/título */
+  .banner{flex-wrap:wrap}
+}
+@media(max-width:860px) and (prefers-reduced-motion:reduce){ .pex-mbtn:active::after{transition:none} }
