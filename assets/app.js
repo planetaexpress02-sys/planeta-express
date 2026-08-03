@@ -450,7 +450,7 @@ function router(){
   else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { pneusFiltro=(arg==='limite')?'limite':'todos'; el.innerHTML=viewPneus(); } }
   else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
   else if(rota==='abastecimento') el.innerHTML=viewAbastecimento();
-  else if(rota==='viagens') el.innerHTML=viewViagens();
+  else if(rota==='viagens'){ el.innerHTML=viewViagens(); if(arg) setTimeout(function(){ if(typeof modalViagem==='function' && DB.viagens.some(x=>x.id===arg)) modalViagem(arg); },30); }
   else if(rota==='descargas') el.innerHTML=viewDescargas();
   else if(rota==='ctes') el.innerHTML=viewCtes();
   else if(rota==='checklist') el.innerHTML=viewChecklist();
@@ -967,6 +967,9 @@ function viewMotorista(id){
     ${info('EAR', esc(m.ear))}
     ${info('Endereço', esc(m.endereco))}
   </div>
+  ${m.problemasSaude?`<div class="card" style="margin-bottom:18px;border-left:3px solid #ff6b6b"><div class="card-b" style="display:flex;gap:12px;align-items:flex-start">
+    <span style="color:#ff6b6b;flex:0 0 auto;display:flex">${svg('stetho')}</span>
+    <div><b style="display:block;color:#ff6b6b;margin-bottom:3px">Problemas de saúde</b><span style="white-space:pre-wrap">${esc(m.problemasSaude)}</span></div></div></div>`:''}
   <div class="grid subgrid">
     <div class="card">
       <div class="card-h">${svg('stetho')}<h3>Vencimentos & exames</h3>
@@ -1810,6 +1813,9 @@ function modalMotorista(id){
       ${fld('Função no sistema','f_func',m.funcao,'text','Ex.: Sócio · Responsável Técnico · Motorista')}
       <label class="chkbox"><input type="checkbox" id="f_socio" ${m.socio?'checked':''}> É sócio da empresa (aparece no Quadro Societário)</label>
 
+      ${msec('Saúde')}
+      <div class="field"><label>Problemas de saúde</label><textarea id="f_saude" rows="2" placeholder="Identifique aqui qualquer problema de saúde: hipertensão, diabetes, alergias, uso de medicação, restrições…">${esc(m.problemasSaude||'')}</textarea></div>
+
       ${msec('Habilitação (CNH)')}
       <div class="field-row">${sel('Categoria','f_cat',m.categoria,['A','B','C','D','E','AB','AC','AD','AE'])}${fld('Número','f_cnhn',m.cnh)}</div>
       <div class="field-row">${fld('Primeira Habilitação','f_prim',m.primeiraHab,'date')}${fld('Data Emissão','f_emis',m.emissaoCnh,'date')}</div>
@@ -1838,7 +1844,7 @@ function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');
   const d={matricula:val('f_mat'),nome:val('f_nome'),nascimento:val('f_nasc'),genero:val('f_gen'),celular:maskFone(val('f_cel')),telefone:maskFone(val('f_tel')),email:val('f_email'),
     ufNat:val('f_ufnat'),municipioNat:val('f_munat'),tipoCondutor:val('f_tipo'),status:val('f_status'),
     cpf:maskCPF(val('f_cpf')),rg:maskRG(val('f_rg')),emissorRg:val('f_emrg'),
-    cargo:val('f_cargo'),admissao:val('f_adm'),ctps:val('f_ctps'),pis:val('f_pis'),funcao:val('f_func'),socio:document.getElementById('f_socio').checked,
+    cargo:val('f_cargo'),admissao:val('f_adm'),ctps:val('f_ctps'),pis:val('f_pis'),funcao:val('f_func'),socio:document.getElementById('f_socio').checked,problemasSaude:val('f_saude'),
     categoria:val('f_cat'),cnh:val('f_cnhn'),primeiraHab:val('f_prim'),emissaoCnh:val('f_emis'),cnhValidade:val('f_cnh'),ear:val('f_ear'),cnhUf:val('f_cnhuf'),cnhMunicipio:val('f_cnhmun'),renach:val('f_renach'),espelho:val('f_esp'),
     rntrc:val('f_rntrc'),rntrcSituacao:val('f_rntrcsit'),rntrcCadastro:val('f_rntrccad'),rntrcValidade:val('f_rntrcval'),
     cep:maskCEP(val('f_cep')),logradouro:val('f_log'),numero:val('f_num'),complemento:val('f_comp'),bairro:val('f_bairro'),ufEnd:val('f_ufend'),municipioEnd:val('f_munend'),foto:val('f_foto')};
@@ -3897,7 +3903,8 @@ function pexSearch(q){
     if(inck(v.placa)||inc(v.marca)||inc(v.modelo)||inc(v.chassi)||inc(v.renavam)) add('Veículo','truck',v.placa,((v.marca||'')+' '+(v.modelo||'')).trim()||'—','#frota/'+v.id); });
   (DB.motoristas||[]).forEach(m=>{ if(inc(m.nome)||inck(m.cpf)||inck(m.rg)) add('Motorista','user',m.nome,m.funcao||'Motorista','#motoristas/'+m.id); });
   (DB.ctes||[]).forEach(c=>{ if(inc(c.numero)||inck(c.chave)||inc(c.cliente)||inc(c.destinatario)||inc(c.origem)||inc(c.destino)) add('CT-e','ctedoc','CT-e '+(c.numero||''),(c.cliente||'')+(c.destino?' → '+c.destino:''),'#ctes'); });
-  (DB.viagens||[]).forEach(v=>{ if(inck(v.placa)||inc(v.motorista)||inc(v.destino)||inc(v.transporte)) add('Viagem','route',(v.placa||'')+(v.destino?' · '+v.destino:''),(v.motorista||'')+(v.data?' · '+fmtD(v.data):''),'#viagens'); });
+  (DB.viagens||[]).forEach(v=>{ if(inck(v.placa)||inc(v.motorista)||inc(v.destino)||inc(v.transporte)||inck(v.transporte)||inc(v.termoPallet)||inck(v.termoPallet))
+    add('Viagem','route',(v.placa||'—')+(v.destino?' · '+v.destino:''),'Transp. '+(v.transporte||'—')+' · Termo '+(v.termoPallet||'—')+(v.data?' · '+fmtD(v.data):''),'#viagens/'+v.id); });
   (DB.servicos||[]).forEach(s=>{ if(inc(s.descricao)||inc(s.oficina)){ const v=veiculo(s.veiculoId); add('Manutenção','wrench',s.descricao||'Serviço',((v?v.placa+' · ':'')+(s.oficina||'')).trim()||'—', v?'#manutencao/'+v.id:'#manutencao'); } });
   (DB.pneus||[]).forEach(p=>{ if(inc(p.marca)||inc(p.medida)||inc(p.posicao)){ const v=veiculo(p.veiculoId); add('Pneu','tire',((p.marca||'Pneu')+' '+(p.medida||'')).trim(),((v?v.placa+' · ':'')+(p.posicao||'')).trim()||'—', v?'#pneus/'+v.id:'#pneus'); } });
   (DB.notas||[]).forEach(n=>{ if(inc(n.obs)||inc(n.inicio)||inc(n.fim)) add('Nota','money','Nota '+fmtD(n.inicio)+'–'+fmtD(n.fim),money(totalNota(n)),'#notas'); });
@@ -3960,7 +3967,7 @@ function pexCmdKey(e){ const n=PEXCMD.items.length;
   if(e.key==='ArrowDown'){ e.preventDefault(); PEXCMD.sel=Math.min(Math.max(0,n-1),PEXCMD.sel+1); pexCmdHi(); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); PEXCMD.sel=Math.max(0,PEXCMD.sel-1); pexCmdHi(); }
   else if(e.key==='Enter'){ e.preventDefault(); pexCmdDo(PEXCMD.sel); }
-  else if(e.key==='Escape'){ e.preventDefault(); pexCmdClose(); } }
+  else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); pexCmdClose(); } }
 function pexCmdDo(i){ const it=PEXCMD.items[i]; if(!it) return; pexCmdClose();
   if(it.hash){ location.hash=it.hash; } else if(it.fn){ try{ it.fn(); }catch(e){} } }
 
@@ -4144,7 +4151,14 @@ async function init(){
   tick(); setInterval(tick,30000);
   window.addEventListener('hashchange',router);
   document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Escape') return;
+    const ov=document.getElementById('overlay');
+    if(ov && ov.classList.contains('show')){ closeModal(); return; }      // modal aberto → fecha
+    if(document.querySelector('#pexCmd.show')) return;                     // paleta Ctrl+K cuida do próprio ESC
+    const nt=document.getElementById('cockNotif'); if(nt && nt.classList.contains('show')){ nt.classList.remove('show'); return; }
+    if(typeof navVoltar==='function') navVoltar();                        // nada aberto → volta uma tela
+  });
   document.addEventListener('input', aplicarMascaraInput);   /* pontuação automática (CPF, RG, telefone…) */
   if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();  /* IA: aparece offline; online só após login */
   const s=document.getElementById('gsearch'); if(s) s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
