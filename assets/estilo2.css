@@ -1923,3 +1923,114 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .viag-tbl .grouprow td{padding:9px 14px;font-size:12px;font-weight:700;position:sticky;top:0;z-index:1}
 .viag-tbl tbody tr td{white-space:nowrap}
 .viag-tbl .btn.sm{padding:4px 7px}
+
+/* ==========================================================================
+   IA PLANETA — EXPERIÊNCIA PREMIUM (v6.40)
+   Esfera tecnológica viva (canto inf. direito) + chat holográfico em vidro
+   escuro. SÓ visual — o "cérebro" (iaResponder, iaCmd, contexto, execução) é o
+   mesmo. Este bloco vem DEPOIS do bloco antigo do assistente e o sobrescreve.
+   ========================================================================== */
+/* ---- Esfera ---- */
+.ia-fab{width:64px;height:64px;padding:0;border:0;border-radius:50%;background:transparent;color:transparent;
+  right:26px;bottom:26px;gap:0;overflow:visible;box-shadow:none;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s ease}
+.ia-fab.hide{opacity:0;pointer-events:none;transform:scale(.35) translateY(12px)}
+.ia-orb{position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(190,240,255,.95), rgba(0,180,255,.4) 32%, rgba(0,90,200,.18) 58%, transparent 72%),
+    radial-gradient(circle at 70% 80%, rgba(0,90,210,.55), transparent 60%),
+    linear-gradient(160deg, rgba(12,44,88,.7), rgba(4,14,32,.85));
+  border:1px solid rgba(120,205,255,.35);
+  box-shadow:inset 0 0 20px rgba(130,215,255,.55), inset 0 -9px 22px rgba(0,60,150,.55),
+    0 0 24px rgba(0,180,255,.5), 0 0 50px rgba(0,120,255,.3), 0 14px 34px rgba(0,20,60,.6);
+  animation:orbBreath 4.2s ease-in-out infinite}
+@keyframes orbBreath{0%,100%{transform:scale(.98)}50%{transform:scale(1.02)}}
+.ia-orb::before{content:"";position:absolute;left:20%;top:15%;width:38%;height:30%;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.95), rgba(205,240,255,.25) 60%, transparent 72%);
+  filter:blur(1px);animation:orbShine 4.2s ease-in-out infinite}
+@keyframes orbShine{0%,100%{opacity:.6;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+.ia-orb::after{content:"";position:absolute;inset:-30%;border-radius:50%;
+  background:conic-gradient(from 0deg, transparent 0 68%, rgba(140,225,255,.85) 82%, rgba(255,255,255,.9) 88%, transparent 96%);
+  mix-blend-mode:screen;opacity:.5;animation:orbSweep 3.8s linear infinite}
+@keyframes orbSweep{to{transform:rotate(360deg)}}
+.ia-fab:hover{transform:scale(1.09)}
+.ia-fab:hover .ia-orb{animation-duration:2.6s;
+  box-shadow:inset 0 0 24px rgba(160,230,255,.7), inset 0 -9px 24px rgba(0,70,170,.6),
+    0 0 34px rgba(0,205,255,.7), 0 0 78px rgba(0,150,255,.42), 0 16px 40px rgba(0,20,60,.66)}
+.ia-fab:hover .ia-orb::after{opacity:.9;animation-duration:2s}
+.ia-tip{position:absolute;right:78px;bottom:19px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;
+  background:rgba(8,20,40,.92);border:1px solid rgba(0,200,255,.28);color:#d6ecff;
+  font-size:12px;font-weight:600;padding:8px 13px;border-radius:11px;
+  box-shadow:0 10px 28px rgba(0,0,0,.5),0 0 18px rgba(0,180,255,.22);
+  opacity:0;transform:translateX(10px);pointer-events:none;transition:opacity .25s ease,transform .25s ease}
+.ia-tip .ia-tipdot{width:7px;height:7px;border-radius:50%;background:#25e88f;box-shadow:0 0 8px #25e88f;animation:iaLive 2s infinite}
+.ia-tip::after{content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%) rotate(45deg);width:10px;height:10px;background:rgba(8,20,40,.92);border-right:1px solid rgba(0,200,255,.28);border-top:1px solid rgba(0,200,255,.28)}
+.ia-fab:hover .ia-tip{opacity:1;transform:translateX(0)}
+
+/* ---- Painel (nasce da esfera) ---- */
+.ia-panel{width:460px;height:700px;right:26px;bottom:26px;border-radius:22px;
+  background:linear-gradient(165deg, rgba(11,26,50,.86), rgba(6,14,30,.94));
+  border:1px solid rgba(0,200,255,.18);
+  backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25);
+  box-shadow:0 0 0 1px rgba(0,150,255,.05), 0 44px 96px rgba(0,8,26,.72), 0 0 60px rgba(0,140,255,.16);
+  transform-origin:bottom right;transform:translateY(28px) scale(.42);filter:blur(14px);opacity:0;
+  transition:opacity .38s ease-out, transform .42s cubic-bezier(.16,1,.3,1), filter .36s ease-out}
+.ia-panel.open{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+
+/* ---- Cabeçalho ---- */
+.ia-head{background:linear-gradient(120deg, rgba(0,120,255,.16), rgba(0,40,90,.08));border-bottom:1px solid rgba(0,200,255,.12);color:#eaf6ff;padding:16px 16px 13px}
+.ia-headorb{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  background:radial-gradient(circle at 35% 30%, rgba(190,240,255,.9), rgba(0,150,255,.4) 55%, rgba(0,70,170,.5));
+  box-shadow:inset 0 0 12px rgba(150,220,255,.6), 0 0 16px rgba(0,180,255,.5);animation:orbBreath 4.2s ease-in-out infinite}
+.ia-headorb svg{width:17px;height:17px;color:#fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.6))}
+.ia-head-txt b{font-size:15px;font-weight:800;letter-spacing:1.6px;color:#eaf6ff}
+.ia-head-txt span{font-size:11px;color:#8fb6d8;letter-spacing:.3px}
+.ia-x{background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.16);color:#9fc4e2;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:background .16s,color .16s,border-color .16s}
+.ia-x svg{width:16px;height:16px}
+.ia-x:hover{background:rgba(0,200,255,.16);color:#eaf6ff;border-color:rgba(0,200,255,.4)}
+.ia-status{display:flex;align-items:center;gap:12px;padding:8px 18px;border-bottom:1px solid rgba(0,200,255,.08);background:rgba(3,10,24,.4)}
+.ia-live{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:#25e88f;text-transform:uppercase;letter-spacing:.9px}
+.ia-live i{width:8px;height:8px;border-radius:50%;background:#25e88f;box-shadow:0 0 9px #25e88f;animation:iaLive 2.2s infinite}
+@keyframes iaLive{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+.ia-sync{font-size:11px;color:#7f9fbd;margin-left:auto}
+
+/* ---- Corpo / mensagens (painéis) ---- */
+.ia-body{background:radial-gradient(700px 460px at 100% -5%, rgba(0,120,255,.07), transparent 60%);padding:18px 16px;gap:14px}
+.ia-av{background:radial-gradient(circle at 35% 30%, rgba(180,235,255,.9), rgba(0,150,255,.45) 60%, rgba(0,70,160,.6));box-shadow:0 0 12px rgba(0,180,255,.4);width:30px;height:30px}
+.ia-av svg{color:#fff;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))}
+.ia-bubble{border-radius:16px;padding:12px 15px;font-size:13.5px;line-height:1.55;max-width:84%}
+.ia-msg.bot .ia-bubble{background:rgba(12,32,60,.62);border:1px solid rgba(0,200,255,.15);color:#dce9f6;border-bottom-left-radius:5px;
+  box-shadow:0 0 20px rgba(0,140,255,.08), 0 10px 26px rgba(0,8,26,.42);backdrop-filter:blur(6px)}
+.ia-msg.user .ia-bubble{background:linear-gradient(135deg, rgba(0,150,255,.92), rgba(0,90,220,.92));color:#fff;border-bottom-right-radius:5px;
+  box-shadow:0 0 22px rgba(0,160,255,.35), 0 8px 22px rgba(0,20,60,.4)}
+.ia-bubble b{color:#eaf6ff}
+#iaBody .ia-msg:last-child{animation:iaMsgIn .34s cubic-bezier(.16,1,.3,1) both}
+@keyframes iaMsgIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ---- Digitação ---- */
+.ia-typing i{width:8px;height:8px;background:#37c8ff;box-shadow:0 0 8px rgba(55,200,255,.7)}
+@keyframes iaBlink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* ---- respostas ricas no escuro ---- */
+.ia-dim{color:#7f9fbd}
+.ia-help li{color:#cfe0ef}
+.ia-undo{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.35);color:#ff8f8f}
+.ia-undo:hover{background:rgba(255,59,48,.2)}
+
+/* ---- Campo + enviar ---- */
+.ia-input{background:rgba(3,10,24,.55);border-top:1px solid rgba(0,200,255,.1);padding:14px}
+.ia-input input{background:rgba(0,16,36,.6);border:1px solid rgba(0,200,255,.18);border-radius:14px;color:#eaf4ff;padding:12px 16px;transition:border-color .2s,box-shadow .2s}
+.ia-input input::placeholder{color:#6f8aa8}
+.ia-input input:focus{border-color:rgba(0,200,255,.6);box-shadow:0 0 0 3px rgba(0,180,255,.14), 0 0 18px rgba(0,160,255,.16)}
+.ia-send{width:46px;height:46px;border-radius:14px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#12b9ff,#0077ff);box-shadow:0 0 18px rgba(0,180,255,.45);transition:transform .12s ease,box-shadow .2s ease}
+.ia-send:hover{box-shadow:0 0 26px rgba(0,200,255,.7)}
+.ia-send:active{transform:scale(.92)}
+.ia-send::after,.ia-x::after{content:"";position:absolute;left:50%;top:50%;width:170%;padding-bottom:170%;transform:translate(-50%,-50%) scale(0);border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.45), transparent 60%);opacity:0;pointer-events:none}
+.ia-send:active::after,.ia-x:active::after{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .45s ease-out, opacity .6s}
+
+@media (max-width:520px){
+  .ia-panel{right:0;left:0;bottom:0;width:100%;max-width:100%;height:86vh;border-radius:22px 22px 0 0;transform-origin:bottom center;transform:translateY(40px) scale(.6)}
+  .ia-panel.open{transform:translateY(0) scale(1)}
+}
+@media (prefers-reduced-motion:reduce){ .ia-orb,.ia-orb::before,.ia-orb::after,.ia-headorb{animation:none} .ia-panel{transition:opacity .2s} }

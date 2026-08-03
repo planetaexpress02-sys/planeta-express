@@ -521,21 +521,24 @@ function iaMontarFab(){
   if(!iaPodeUsar()) return;
   if(document.getElementById('iaFab')) return;
   const fab=document.createElement('button');
-  fab.id='iaFab'; fab.className='ia-fab no-print'; fab.title='Inteligência Artificial da Planeta Express';
-  fab.innerHTML=`${svg('spark')}<span>IA Planeta</span>`; fab.onclick=iaToggle;
+  fab.id='iaFab'; fab.className='ia-fab no-print'; fab.setAttribute('aria-label','IA Planeta — Assistente Operacional');
+  fab.innerHTML=`<span class="ia-orb"></span><span class="ia-tip"><i class="ia-tipdot"></i>Sistema operacional online</span>`;
+  fab.onclick=iaToggle;
   document.body.appendChild(fab);
 
   const panel=document.createElement('div');
   panel.id='iaPanel'; panel.className='ia-panel no-print';
   panel.innerHTML=`
     <div class="ia-head">
-      <div class="ia-head-t">${svg('spark')}<div class="ia-head-txt"><b>Inteligência Artificial</b><span>Planeta Express Transportes</span></div></div>
-      <button class="ia-x" onclick="iaToggle()" title="Fechar">×</button>
+      <div class="ia-head-t"><span class="ia-headorb">${svg('spark')}</span>
+        <div class="ia-head-txt"><b>IA PLANETA</b><span>Assistente Operacional Inteligente</span></div></div>
+      <button class="ia-x" onclick="iaToggle()" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
+    <div class="ia-status"><span class="ia-live"><i></i>Online</span><span class="ia-sync">Sistema sincronizado</span></div>
     <div class="ia-body" id="iaBody"></div>
     <div class="ia-input">
-      <input id="iaInput" placeholder="Digite um comando ou pergunta…" autocomplete="off" onkeydown="if(event.key==='Enter')iaEnviar()">
-      <button class="ia-send" onclick="iaEnviar()" title="Enviar">${svg('send')}</button>
+      <input id="iaInput" placeholder="O que deseja fazer?" autocomplete="off" onkeydown="if(event.key==='Enter')iaEnviar()">
+      <button class="ia-send" onclick="iaEnviar()" aria-label="Enviar">${svg('send')}</button>
     </div>`;
   document.body.appendChild(panel);
 }
