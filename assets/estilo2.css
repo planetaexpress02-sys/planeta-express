@@ -2034,3 +2034,63 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .ia-panel.open{transform:translateY(0) scale(1)}
 }
 @media (prefers-reduced-motion:reduce){ .ia-orb,.ia-orb::before,.ia-orb::after,.ia-headorb{animation:none} .ia-panel{transition:opacity .2s} }
+
+/* ==========================================================================
+   TOPBAR SEM BARRA — CÁPSULAS FLUTUANTES (v6.41)  ·  SÓ desktop (min-width:861px)
+   Acaba a aparência de barra: fundo transparente (mostra o cyber do .main),
+   sem borda nem sombra de faixa. Cada componente vira uma cápsula de vidro
+   suspensa sobre o painel. Mobile (v6.34) e funcionalidades ficam intactos.
+   ========================================================================== */
+/* fundo cyber contínuo por trás do topbar (o .main deixa de mostrar o body claro) */
+.main{background:
+  radial-gradient(1100px 700px at 14% 4%, rgba(0,119,255,.10), transparent 60%),
+  radial-gradient(820px 560px at 92% -6%, rgba(0,229,255,.07), transparent 58%),
+  radial-gradient(circle at 22% 24%, #0a1a2f 0%, #020a14 84%)}
+@media(min-width:861px){
+  /* some a faixa: sem fundo, borda ou sombra */
+  .topbar{background:transparent!important;border-bottom:none!important;box-shadow:none!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    height:auto;min-height:76px;padding:16px 26px;gap:14px;align-items:center}
+  /* cápsula de vidro (base comum a todos os componentes) */
+  .topbar .cock-search,.topbar .cock-ico,.topbar .cock-weather,.topbar .cock-clock,.topbar .cock-status,.topbar .relbtn,.topbar .userbadge{
+    background:rgba(12,20,34,.45)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(0,170,255,.12)!important;border-radius:18px!important;
+    box-shadow:0 0 18px rgba(0,170,255,.08)!important;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease}
+  /* hover: leve elevação + glow + sombra mais intensa */
+  .topbar .cock-search:hover,.topbar .cock-ico:hover,.topbar .cock-weather:hover,.topbar .cock-clock:hover,.topbar .cock-status:hover,.topbar .relbtn:hover,.topbar .userbadge:hover{
+    transform:translateY(-2px);border-color:rgba(0,200,255,.4)!important;
+    box-shadow:0 0 26px rgba(0,180,255,.2), 0 10px 24px rgba(0,8,26,.45)!important}
+  .topbar .cock-search:active,.topbar .cock-ico:active,.topbar .relbtn:active{transform:translateY(0) scale(.97)}
+  /* PESQUISA — peça principal, maior e com foco iluminado */
+  .topbar .cock-search{height:52px;max-width:600px;margin:0;padding:0 18px;flex:1}
+  .topbar .cock-search>svg{color:#7fb0d8}
+  .topbar .cock-search span{font-size:14px;color:#8fb2d0}
+  .topbar .cock-search:focus-visible{outline:none;border-color:rgba(0,200,255,.6)!important;
+    box-shadow:0 0 0 3px rgba(0,180,255,.14), 0 0 22px rgba(0,170,255,.22)!important}
+  /* cluster: respiro igual entre cápsulas */
+  .cock-cluster{gap:12px}
+  .topbar .cock-ico{width:48px;height:48px;border-radius:16px!important;color:#9fc4e2}
+  .topbar .cock-ico:hover{color:#eaf6ff}
+  /* clima — widget limpo */
+  .topbar .cock-weather{height:48px;padding:0 14px}
+  .topbar .cock-weather .wx-tx b{color:#eaf4ff}
+  .topbar .cock-weather .wx-tx small{color:#8fb6d8}
+  /* hora — painel aeronáutico */
+  .topbar .cock-clock{height:48px;padding:0 16px;display:flex;flex-direction:column;justify-content:center;min-width:82px}
+  .topbar .cock-clock b{color:#eaf6ff;text-shadow:0 0 12px rgba(0,180,255,.3)}
+  .topbar .cock-clock span{color:#7fa0bd}
+  /* status */
+  .topbar .cock-status{height:48px;padding:0 15px;display:flex;align-items:center}
+  .topbar .cock-status.on{color:#25e88f}
+  .topbar .cock-status.off{color:#8fa6ba}
+  /* Relatório — cápsula (não botão comum) */
+  .topbar .relbtn{height:48px;padding:0 16px;color:#bfe9ff}
+  .topbar .relbtn svg{color:#7fc5ff}
+  .topbar .relbtn:hover{color:#eaf6ff}
+  /* Perfil */
+  .topbar .userbadge{height:48px;padding:0 15px;color:#7fe0ff}
+  .topbar .userbadge svg{color:#7fe0ff}
+  /* badge da notificação: anel escuro (a barra branca sumiu) */
+  .cock-badge{box-shadow:0 0 0 2px #06101d}
+}
