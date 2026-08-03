@@ -834,6 +834,11 @@ function viewVeiculo(id){
   const cavalo=v.tipo==='Cavalo';
   const p=primaryItem(v); const info=p?manutInfo(p,v):null;
   const info2=(l,val)=>`<div class="it"><div class="l">${l}</div><div class="v">${val||'—'}</div></div>`;
+  const extra = cavalo
+    ? info2('Potência', v.potencia?esc(v.potencia)+' cv':'')+info2('Modelo do motor', esc(v.modeloMotor||''))+info2('Câmbio', esc(v.cambio||''))
+    : info2('Equipamento (refrigeração)', esc(v.modeloEquip||''))+info2('Dimensões internas', esc(v.dimInternas||''))
+      +info2('Divisória c/ ventilador', esc(v.divisoria||''))
+      +info2('Trava-pallets', ((v.travaPalletQtd?esc(v.travaPalletQtd)+'× ':'')+(v.travaPalletModelo?esc(v.travaPalletModelo):'')).trim());
 
   return `
   <button class="btn ghost sm no-print" onclick="history.back()" style="margin-bottom:14px">← Voltar</button>
@@ -863,6 +868,8 @@ function viewVeiculo(id){
     ${info2('Ano/Modelo', esc(v.anoModelo))}
     ${info2('CRLV (exercício)', esc(v.crlvAno))}
     ${info2(cavalo?'KM atual':'Horas atuais', cavalo?num(v.kmAtual):num(v.horaAtual))}
+    ${info2('Cor', esc(v.cor||''))}
+    ${extra}
   </div>
 
   <div class="grid subgrid">
@@ -1843,16 +1850,34 @@ function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');
 }
 function excluirMotorista(id){ if(!confirm('Excluir este motorista e seus vencimentos?'))return; DB.motoristas=DB.motoristas.filter(m=>m.id!==id); DB.vencimentos=DB.vencimentos.filter(v=>!(v.entidade==='motorista'&&v.refId===id)); saveDB(); closeModal(); toast('Motorista excluído.'); location.hash='motoristas'; router(); }
 
+function _vehToggleTipo(){ const reb=/reboque/i.test(val('f_tipo'));
+  const c=document.getElementById('cavaloFields'), r=document.getElementById('carretaFields');
+  if(c) c.style.display=reb?'none':''; if(r) r.style.display=reb?'':'none'; }
 function modalVeiculo(id){
-  const v=id?veiculo(id):{placa:'',tipo:'Cavalo',marca:'',modelo:'',chassi:'',renavam:'',anoModelo:'',crlvAno:'',cor:'',status:'Ativo',kmAtual:'',horaAtual:''};
+  const v=id?veiculo(id):{placa:'',tipo:'Cavalo',marca:'',modelo:'',chassi:'',renavam:'',anoModelo:'',crlvAno:'',cor:'',status:'Ativo',kmAtual:'',horaAtual:'',
+    potencia:'',modeloMotor:'',cambio:'',modeloEquip:'',dimInternas:'',divisoria:'',travaPalletQtd:'',travaPalletModelo:''};
+  const reb=/reboque/i.test(v.tipo);
+  const tipoSel=`<div class="field"><label>Tipo</label><select id="f_tipo" onchange="_vehToggleTipo()">${['Cavalo','Reboque Frigorífico','Reboque','Truck','Utilitário'].map(o=>`<option ${o===v.tipo?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
   openModal(`<div class="m-h">${svg('truck')}<h3>${id?'Editar veículo':'Novo veículo'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      <div class="field-row">${fld('Placa','f_placa',v.placa)}${sel('Tipo','f_tipo',v.tipo,['Cavalo','Reboque Frigorífico','Reboque','Truck','Utilitário'])}</div>
+      <div class="field-row">${fld('Placa','f_placa',v.placa)}${tipoSel}</div>
       <div class="field-row">${fld('Marca','f_marca',v.marca)}${fld('Modelo','f_modelo',v.modelo)}</div>
       <div class="field-row">${fld('Renavam','f_renavam',v.renavam)}${fld('Ano/Modelo','f_ano',v.anoModelo)}</div>
       <div class="field-row">${fld('Chassi','f_chassi',v.chassi)}${fld('CRLV (ano)','f_crlv',v.crlvAno)}</div>
+      <div class="field-row">${fld('Cor','f_cor',v.cor)}${sel('Situação','f_vstatus',v.status,['Ativo','Manutenção','Arquivado','Vendido'])}</div>
       <div class="field-row">${fld('KM atual (cavalo)','f_km',v.kmAtual,'number')}${fld('Horas atuais (carreta)','f_hora',v.horaAtual,'number')}</div>
-      ${sel('Situação','f_vstatus',v.status,['Ativo','Manutenção','Arquivado','Vendido'])}
+      <div id="cavaloFields" style="display:${reb?'none':''}">
+        <div class="sectitulo" style="margin:8px 0 10px">${svg('truck')} Dados do cavalo</div>
+        <div class="field-row">${fld('Potência (cv)','f_pot',v.potencia,'text','Ex.: 440')}${fld('Modelo do motor','f_motor',v.modeloMotor,'text','Ex.: Volvo D13')}</div>
+        ${sel('Câmbio','f_cambio',v.cambio||'',['','Manual','Automatizado','Automático'])}
+      </div>
+      <div id="carretaFields" style="display:${reb?'':'none'}">
+        <div class="sectitulo" style="margin:8px 0 10px">${svg('truck')} Dados da carreta / equipamento</div>
+        ${fld('Modelo do equipamento (refrigeração)','f_equip',v.modeloEquip,'text','Ex.: Thermo King SLXe')}
+        ${fld('Dimensões internas','f_dim',v.dimInternas,'text','Ex.: 13,60 × 2,45 × 2,60 m')}
+        <div class="field-row">${sel('Divisória interna com ventilador','f_divis',v.divisoria||'',['','Não','Sim'])}${fld('Nº de trava-pallets','f_tpqtd',v.travaPalletQtd,'number')}</div>
+        ${fld('Modelo do trava-pallets','f_tpmod',v.travaPalletModelo,'text','Ex.: Marfinite / MacroPlast')}
+      </div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirVeiculo('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -1860,8 +1885,10 @@ function modalVeiculo(id){
 }
 function salvarVeiculo(id){ if(!val('f_placa')){toast('Informe a placa.','err');return;}
   const km=val('f_km'), hora=val('f_hora');
-  const d={placa:val('f_placa').toUpperCase(),tipo:val('f_tipo'),marca:val('f_marca'),modelo:val('f_modelo'),renavam:val('f_renavam'),anoModelo:val('f_ano'),chassi:val('f_chassi').toUpperCase(),crlvAno:val('f_crlv'),status:val('f_vstatus'),kmAtual:km===''?null:+km,horaAtual:hora===''?null:+hora};
-  if(id)Object.assign(veiculo(id),d); else{ d.id=uid('v'); d.cor=''; DB.veiculos.push(d); }
+  const d={placa:val('f_placa').toUpperCase(),tipo:val('f_tipo'),marca:val('f_marca'),modelo:val('f_modelo'),renavam:val('f_renavam'),anoModelo:val('f_ano'),chassi:val('f_chassi').toUpperCase(),crlvAno:val('f_crlv'),cor:val('f_cor'),status:val('f_vstatus'),kmAtual:km===''?null:+km,horaAtual:hora===''?null:+hora,
+    potencia:val('f_pot'),modeloMotor:val('f_motor'),cambio:val('f_cambio'),
+    modeloEquip:val('f_equip'),dimInternas:val('f_dim'),divisoria:val('f_divis'),travaPalletQtd:val('f_tpqtd'),travaPalletModelo:val('f_tpmod')};
+  if(id)Object.assign(veiculo(id),d); else{ d.id=uid('v'); DB.veiculos.push(d); }
   saveDB(); closeModal(); toast('Veículo salvo.'); router();
 }
 function excluirVeiculo(id){ if(!confirm('Excluir este veículo e seus vencimentos/manutenções?'))return; DB.veiculos=DB.veiculos.filter(v=>v.id!==id); DB.vencimentos=DB.vencimentos.filter(v=>!(v.entidade==='veiculo'&&v.refId===id)); DB.manutencoes=DB.manutencoes.filter(m=>m.veiculoId!==id); saveDB(); closeModal(); toast('Veículo excluído.'); location.hash='frota'; router(); }
@@ -2976,10 +3003,9 @@ function viewViagens(){
       <td><span class="st ${bxCls}">${esc(v.baixado||'Pendente')}</span></td>
       <td class="mono">${esc(v.termoPallet||'—')}</td>
       <td><span class="st ${v.termoBaixado==='SIM'?'ok':'warn'}">${v.termoBaixado==='SIM'?'Baixado':'Pendente'}</span></td>
-      <td><span class="tag ${v.status==='Pendente'?'rebo':(v.status==='Concluída'?'cavalo':'')}">${esc(v.status||'—')}</span></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalViagem('${v.id}')">${svg('edit')}</button></td></tr>`; };
   const corpo=Object.keys(grupos).sort().reverse().map(k=>{ const gs=grupos[k];
-    return `<tr class="grouprow"><td colspan="10">${svg('cal')} ${k==='—'?'Sem data':mesLabel(k)} <span class="muted">· ${gs.length} viagem(ns)</span></td></tr>`+
+    return `<tr class="grouprow"><td colspan="9">${svg('cal')} ${k==='—'?'Sem data':mesLabel(k)} <span class="muted">· ${gs.length} viagem(ns)</span></td></tr>`+
       gs.map(linhaViagem).join('');
   }).join('');
   return `
@@ -3000,7 +3026,7 @@ function viewViagens(){
       ${placas.map(p=>`<option value="${esc(p)}" ${viagemPlaca===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
     <div class="spacer"></div><div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl viag-tbl pex-noenh">
-    <thead><tr><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th>Status</th><th class="no-print"></th></tr></thead>
+    <thead><tr><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th class="no-print"></th></tr></thead>
     <tbody>${corpo||`<tr><td colspan="10">${emptyState('Nenhuma viagem neste filtro.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalViagem(id){
