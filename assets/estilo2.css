@@ -2179,6 +2179,11 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   background:color-mix(in srgb, var(--c,#8b9dff) 15%, transparent); }
 #view[data-route="seguros"] table.tbl td{ vertical-align:middle; }
 #view[data-route="seguros"] table.tbl tbody tr:hover{ cursor:pointer; }
+/* Selo do arquivo da apólice na lista */
+.seg-anexo-cell{ margin-top:6px }
+.seg-anexo{ display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap }
+.seg-anexo .st.ok{ font-size:11px }
+.seg-anexo .btn.sm{ padding:3px 6px }
 /* Enviar apólice — zona de upload + fila */
 .apo-drop{ display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
   padding:22px 16px;border:1.5px dashed rgba(0,200,255,.35);border-radius:14px;cursor:pointer;

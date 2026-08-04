@@ -3030,7 +3030,7 @@ function viewSeguros(){
     return `<tr style="cursor:pointer" onclick="modalSeguro('${s.id}')">
       <td><span class="seg-tag" style="--c:${cor}">${esc(ramoLabel(s.ramo))}</span></td>
       <td><b>${esc(s.seguradora)}</b><div class="muted" style="font-size:11.5px">${esc(s.tipo||'')}</div></td>
-      <td class="mono">${esc(s.apolice||'—')}${s.endosso?`<div class="muted" style="font-size:11px">endosso ${esc(s.endosso)}</div>`:''}</td>
+      <td class="mono">${esc(s.apolice||'—')}${s.endosso?`<div class="muted" style="font-size:11px">endosso ${esc(s.endosso)}</div>`:''}<div class="seg-anexo-cell">${_segAnexo(s)}</div></td>
       <td>${esc(s.objeto||'—')}${s.cobertura?`<div class="muted" style="font-size:11px">${esc(s.cobertura)}</div>`:''}</td>
       <td class="mono" style="white-space:nowrap">${fmtD(s.inicio)} <span class="muted">→</span> <b>${fmtD(s.fim)}</b></td>
       <td><span class="st ${st.cls}">${st.label}</span></td>
@@ -3096,7 +3096,7 @@ function modalSeguro(id){
   const s = id? (DB.seguros||[]).find(x=>x.id===id) : {ramo:'auto',tipo:'',seguradora:'',apolice:'',endosso:'',segurado:'',grupo:'empresa',objeto:'',placa:'',inicio:'',fim:'',premio:'',pagamento:'',cobertura:'',status:'Ativo',obs:''};
   if(!s){ toast('Seguro não encontrado.','err'); return; }
   const opt=(v,cur,lab)=>`<option value="${v}" ${cur===v?'selected':''}>${lab}</option>`;
-  const anexo = badgeAnexo('seguro', s.id||'novo', /./, 'Apólice');
+  const anexo = id? _segAnexo(s) : '';
   openModal(`<div class="m-h">${svg('umbrella')}<h3>${id?'Editar seguro':'Novo seguro'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field-row">
@@ -3289,6 +3289,36 @@ async function _apoliceAnexar(){
   try{ for(const f of sel){ await subirUm(f.file,'seguro',f.matchId,'Apólice'); } await reloadFiles(); saveDB(); }
   finally { if(typeof pexBar==='function') pexBar(false); }
   APOLICE_FILA=[]; closeModal(); toast(sel.length+' apólice(s) anexada(s)'+(_online()?' e sincronizada(s).':'.')); location.hash='#seguros'; router();
+}
+/* Selo do arquivo da apólice, direto na lista: verde "Anexado" (ver) + baixar +
+   trocar + remover; ou botão "Anexar" quando ainda não tem arquivo. */
+function _segAnexo(s){
+  const f=anexoTipo('seguro', s.id, /./);
+  if(f){
+    return `<span class="seg-anexo" onclick="event.stopPropagation()">`
+      +`<span class="st ok" title="Ver ${esc(f.name)}" style="cursor:pointer" onclick="verArquivo('${f.id}')">${svg('clip')} Anexado</span>`
+      +`<button class="btn ghost sm no-print" title="Baixar" onclick="baixarArquivo('${f.id}')">${svg('download')}</button>`
+      +`<button class="btn ghost sm no-print" title="Trocar arquivo" onclick="_segTrocarAnexo('${s.id}','${f.id}')">${svg('edit')}</button>`
+      +`<button class="btn ghost sm no-print" title="Remover" onclick="excluirArquivo('${f.id}')">${svg('trash')}</button>`
+    +`</span>`;
+  }
+  return `<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('seguro','${s.id}','Apólice')">${svg('upload')} Anexar apólice</button>`;
+}
+/* Troca (substitui) o arquivo anexado: sobe o novo e apaga o antigo */
+function _segTrocarAnexo(ref, oldId){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf,image/*';
+  inp.onchange=async function(e){ const files=e.target.files; if(!files||!files.length) return;
+    if(typeof pexBar==='function') pexBar(true);
+    try{ await subirUm(files[0],'seguro',ref,'Apólice'); await _removerAnexoSilencioso(oldId); await reloadFiles(); saveDB(); toast('Apólice substituída.'); }
+    catch(err){ toast('Não foi possível trocar: '+((err&&err.message)||''),'err'); }
+    finally{ if(typeof pexBar==='function') pexBar(false); router(); }
+  };
+  inp.click();
+}
+async function _removerAnexoSilencioso(id){
+  const a=(DB.anexos||[]).find(x=>x.id===id);
+  if(a){ if(a.storagePath && typeof nuvemRemoverArquivo==='function'){ try{ await nuvemRemoverArquivo(a.storagePath); }catch(e){} } DB.anexos=DB.anexos.filter(x=>x.id!==id); }
+  try{ await idbDel(id); }catch(e){}
 }
 
 /* ---------- QUADRO SOCIETÁRIO ---------- */
