@@ -2193,4 +2193,10 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .apo-file{ display:flex;align-items:center;gap:6px;min-width:0;font-size:12.5px }
 .apo-file svg{ width:16px;height:16px;flex:0 0 auto;opacity:.7 }
 .apo-file span{ overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
-@media(max-width:640px){ .apo-row{ grid-template-columns:1fr auto auto } .apo-row .selectlite{ grid-column:1/-1 } }
+.apo-file{ flex-wrap:wrap }
+.apo-why{ flex-basis:100%;font-size:10.5px;opacity:.6;padding-left:22px }
+.apo-row.reading{ grid-template-columns:1fr auto }
+.apo-reading{ display:flex;align-items:center;gap:8px;font-size:12px;opacity:.85;white-space:nowrap }
+.apo-spin{ width:14px;height:14px;border-radius:50%;border:2px solid rgba(0,200,255,.25);border-top-color:rgba(0,229,255,.9);display:inline-block;animation:apoSpin .7s linear infinite }
+@keyframes apoSpin{ to{ transform:rotate(360deg) } }
+@media(max-width:640px){ .apo-row{ grid-template-columns:1fr auto auto } .apo-row.reading{ grid-template-columns:1fr } .apo-row .selectlite{ grid-column:1/-1 } }

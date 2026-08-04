@@ -3135,29 +3135,91 @@ function salvarSeguro(id){
 }
 function excluirSeguro(id){ if(!confirm('Excluir esta apólice do controle?'))return; DB.seguros=(DB.seguros||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Apólice excluída.'); router(); }
 
-/* ---------- ENVIAR APÓLICE (detecta o seguro certo e anexa) ---------- */
-/* Descobre a qual seguro o arquivo pertence, casando nº da apólice/endosso,
-   placa, seguradora e palavras do ramo no NOME e no TEXTO do PDF. */
+/* ---------- ENVIAR APÓLICE (lê o arquivo, detecta o seguro certo e anexa) ---------- */
+/* Leitura profissional: pdf.js extrai o texto real (inclui apólices da Tokio/
+   Allianz com object streams que o leitor interno não abre); se a página for
+   escaneada (sem texto), renderiza e passa OCR (Tesseract). Sem as libs (offline),
+   cai no leitor interno pexLerPdfTexto. */
+function _pdfjs(){ return (typeof window!=='undefined' && window.pdfjsLib) ? window.pdfjsLib : null; }
+function _tess(){ return (typeof window!=='undefined' && window.Tesseract) ? window.Tesseract : null; }
+async function _pdfDoc(file){
+  const lib=_pdfjs(); if(!lib) return null;
+  try{ if(lib.GlobalWorkerOptions) lib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; }catch(e){}
+  const buf=await file.arrayBuffer();
+  return await lib.getDocument({data:new Uint8Array(buf), isEvalSupported:false}).promise;
+}
+async function _ocrCanvas(canvas, onProgress){
+  const T=_tess(); if(!T) return '';
+  try{ const r=await T.recognize(canvas,'por',onProgress?{logger:m=>{ if(m.status==='recognizing text') onProgress('OCR '+Math.round((m.progress||0)*100)+'%'); }}:undefined); return (r&&r.data&&r.data.text)||''; }
+  catch(e){ return ''; }
+}
+async function _ocrPagina(page, onProgress){
+  try{
+    const vp=page.getViewport({scale:2.0});
+    const canvas=document.createElement('canvas'); canvas.width=vp.width; canvas.height=vp.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
+    return await _ocrCanvas(canvas, onProgress);
+  }catch(e){ return ''; }
+}
+async function _ocrImagem(file, onProgress){
+  const T=_tess(); if(!T) return '';
+  const url=URL.createObjectURL(file);
+  try{ const r=await T.recognize(url,'por',onProgress?{logger:m=>{ if(m.status==='recognizing text') onProgress('OCR '+Math.round((m.progress||0)*100)+'%'); }}:undefined); return (r&&r.data&&r.data.text)||''; }
+  catch(e){ return ''; } finally{ try{ URL.revokeObjectURL(url); }catch(_){} }
+}
+/* Lê o texto de um arquivo de apólice do jeito mais forte possível */
+async function pexLerApoliceTexto(file, onProgress){
+  const nome=file.name||'';
+  const isPdf=/\.pdf$/i.test(nome) || file.type==='application/pdf';
+  const isImg=/^image\//.test(file.type||'') || /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i.test(nome);
+  let text='';
+  if(isPdf){
+    let doc=null;
+    if(_pdfjs()){ try{ doc=await _pdfDoc(file); }catch(e){ doc=null; } }
+    if(doc){
+      const np=Math.min(doc.numPages,5);
+      for(let p=1;p<=np;p++){
+        try{
+          const page=await doc.getPage(p);
+          const tc=await page.getTextContent();
+          let ptxt=tc.items.map(it=>it.str).join(' ');
+          if(ptxt.replace(/\s/g,'').length<40 && _tess()){ if(onProgress)onProgress('lendo imagem pág. '+p); ptxt+=' '+await _ocrPagina(page,onProgress); }
+          text+=' '+ptxt;
+        }catch(e){}
+      }
+      try{ doc.destroy&&doc.destroy(); }catch(e){}
+    }
+    if(text.replace(/\s/g,'').length<40){ try{ text+=' '+(await pexLerPdfTexto(file)||''); }catch(e){} }  // fallback leitor interno
+  } else if(isImg){
+    if(_tess()){ if(onProgress)onProgress('lendo imagem'); text=await _ocrImagem(file,onProgress); }
+  }
+  return text;
+}
+/* Descobre a qual seguro o arquivo pertence (nº da apólice/endosso, placa,
+   seguradora, titular e tipo/ramo) casando no NOME + TEXTO lido do arquivo. */
 function _apoliceMatch(nome, texto){
-  const hay=((nome||'')+' '+(texto||'')).toLowerCase();
+  const raw=((nome||'')+' \n '+(texto||''));
+  const hay=raw.toLowerCase();
   const haynum=hay.replace(/[^0-9]/g,'');
   const haya=hay.replace(/[^a-z0-9]/g,'');
-  let best='', bestScore=0;
+  let best='', bestScore=0, bestWhy='';
   (DB.seguros||[]).forEach(s=>{
-    let sc=0;
+    let sc=0; const why=[];
     const ap=String(s.apolice||'').replace(/[^0-9]/g,'');
-    if(ap.length>=5 && haynum.indexOf(ap)>=0) sc+=100;
+    if(ap.length>=5 && haynum.indexOf(ap)>=0){ sc+=100; why.push('nº da apólice'); }
     const en=String(s.endosso||'').replace(/[^0-9]/g,'');
-    if(en.length>=5 && haynum.indexOf(en)>=0) sc+=45;
+    if(en.length>=5 && en!==ap && haynum.indexOf(en)>=0){ sc+=45; why.push('endosso'); }
     const pl=String(s.placa||'').replace(/[^a-z0-9]/gi,'').toLowerCase();
-    if(pl.length>=6 && haya.indexOf(pl)>=0) sc+=60;
-    const seg=(s.seguradora||'').toLowerCase().split(/[\s/]+/)[0];
-    if(seg.length>=3 && hay.indexOf(seg)>=0) sc+=15;
-    const kw={carga:['rctr','rcdc','rc-dc','rc dc','carga','desaparecimento'],vida:['vida'],frota:['frota'],auto:['autom','automóvel','automovel','veículo','veiculo']}[s.ramo]||[];
-    kw.forEach(k=>{ if(hay.indexOf(k)>=0) sc+=8; });
-    if(sc>bestScore){ bestScore=sc; best=s.id; }
+    if(pl.length>=6 && haya.indexOf(pl)>=0){ sc+=70; why.push('placa'); }
+    const toks=(s.seguradora||'').toLowerCase().split(/[\s/]+/).filter(t=>t.length>=3);
+    toks.forEach((t,i)=>{ if(hay.indexOf(t)>=0){ sc+=(i===0?18:10); if(i===0)why.push('seguradora'); } });
+    if(s.grupo==='socio' && s.segurado){ const nm=(s.segurado.split(/\s+/)[0]||'').toLowerCase(); if(nm.length>=4 && hay.indexOf(nm)>=0){ sc+=14; why.push('titular'); } }
+    const kwMap={carga:['rctr','rc-dc','rcdc','rc dc','desaparecimento','transportador rodovi','carga'],vida:['vida'],frota:['frota'],auto:['autom','automóvel','automovel']};
+    (kwMap[s.ramo]||[]).forEach(k=>{ if(hay.indexOf(k)>=0) sc+=8; });
+    if(s.ramo==='vida'){ if(s.grupo==='func' && /vida\s+em\s+grupo|em\s+grupo/.test(hay)) sc+=14; if(s.grupo==='socio' && /individual/.test(hay)) sc+=14; }
+    if(sc>bestScore){ bestScore=sc; best=s.id; bestWhy=why.join(', '); }
   });
-  return {id:bestScore>0?best:'', score:bestScore};
+  return {id:bestScore>0?best:'', score:bestScore, reason:bestWhy};
 }
 function modalEnviarApolice(){
   openModal(`<div class="m-h">${svg('upload')}<h3>Enviar apólice</h3><button class="x" onclick="APOLICE_FILA=[];closeModal()">×</button></div>
@@ -3177,10 +3239,16 @@ function modalEnviarApolice(){
 function _apoliceFilaHTML(){
   if(!APOLICE_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum arquivo escolhido ainda.</div>`;
   return `<div class="apo-list">`+APOLICE_FILA.map((f,i)=>{
+    if(f.status==='reading'){
+      return `<div class="apo-row reading">
+        <div class="apo-file">${svg('doc')}<span title="${esc(f.nome)}">${esc(f.nome)}</span></div>
+        <div class="apo-reading"><span class="apo-spin"></span>Lendo${f.hint?' · '+esc(f.hint):'…'}</div>
+      </div>`;
+    }
     const conf = f.matchId? (f.score>=60?'ok':'warn') : 'crit';
     const lab = f.matchId? (f.score>=60?'Detectado':'Confira') : 'Escolha o seguro';
     return `<div class="apo-row">
-      <div class="apo-file">${svg('doc')}<span title="${esc(f.nome)}">${esc(f.nome)}</span></div>
+      <div class="apo-file">${svg('doc')}<span title="${esc(f.nome)}">${esc(f.nome)}</span>${f.matchId&&f.reason?`<small class="apo-why">${esc(f.reason)}</small>`:''}</div>
       <select class="selectlite" onchange="APOLICE_FILA[${i}].matchId=this.value;_apoliceRefresh()">
         <option value="">— Escolha o seguro —</option>
         ${(DB.seguros||[]).map(s=>`<option value="${s.id}" ${f.matchId===s.id?'selected':''}>${esc(ramoLabel(s.ramo))} · ${esc(s.seguradora)} · ${esc(s.apolice)}${s.segurado?' ('+esc((s.segurado||'').split(/\s|—/)[0])+')':''}</option>`).join('')}
@@ -3191,19 +3259,25 @@ function _apoliceFilaHTML(){
   }).join('')+`</div>`;
 }
 function _apoliceRefresh(){ const el=document.getElementById('apoFila'); if(el) el.innerHTML=_apoliceFilaHTML();
-  const b=document.getElementById('apoBtn'); if(b){ const n=APOLICE_FILA.filter(f=>f.matchId).length; b.disabled=!APOLICE_FILA.length; b.innerHTML='Anexar '+(n||'')+' apólice(s)'; } }
+  const b=document.getElementById('apoBtn'); if(b){ const lendo=APOLICE_FILA.some(f=>f.status==='reading'); const n=APOLICE_FILA.filter(f=>f.matchId).length;
+    b.disabled=!APOLICE_FILA.length||lendo; b.innerHTML=lendo?'Lendo arquivos…':('Anexar '+(n||'')+' apólice(s)'); } }
 function _apoliceRemove(i){ APOLICE_FILA.splice(i,1); _apoliceRefresh(); }
 function _apoliceDrop(e){ e.preventDefault(); const el=e.currentTarget; if(el)el.classList.remove('over'); if(e.dataTransfer&&e.dataTransfer.files) _apoliceLer(e.dataTransfer.files); }
 async function _apoliceLer(fileList){
   const files=[].slice.call(fileList||[]); if(!files.length) return;
   if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
+  const start=APOLICE_FILA.length;
+  files.forEach(f=>APOLICE_FILA.push({file:f, nome:f.name, matchId:'', score:0, reason:'', status:'reading', hint:''}));
+  _apoliceRefresh();
   if(typeof pexBar==='function') pexBar(true);
   try{
-    for(const file of files){
-      let texto='';
-      if(/\.pdf$/i.test(file.name) || file.type==='application/pdf'){ try{ texto=await pexLerPdfTexto(file); }catch(e){} }
-      const mt=_apoliceMatch(file.name, texto||'');
-      APOLICE_FILA.push({file, nome:file.name, matchId:mt.id, score:mt.score});
+    for(let k=0;k<files.length;k++){
+      const idx=start+k, file=files[k];
+      const prog=(msg)=>{ if(APOLICE_FILA[idx]){ APOLICE_FILA[idx].hint=msg; _apoliceRefresh(); } };
+      let texto=''; try{ texto=await pexLerApoliceTexto(file, prog)||''; }catch(e){}
+      const mt=_apoliceMatch(file.name, texto);
+      if(APOLICE_FILA[idx]){ Object.assign(APOLICE_FILA[idx], {matchId:mt.id, score:mt.score, reason:mt.reason, status:'done', hint:''}); }
+      _apoliceRefresh();
     }
   } finally { if(typeof pexBar==='function') pexBar(false); }
   _apoliceRefresh();
