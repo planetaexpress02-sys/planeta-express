@@ -118,6 +118,62 @@ const SEED = {
     { id:"b12", data:"2025-10-17", placa:"NTY-8B66", marca:"Bats 110 AH Selada", local:"Rede Única Maringá", valor:389, garantiaMeses:12, garantiaAte:"2026-04-06", telefone:"(44) 98455-3199" },
   ],
 
+  /* -------------------- SEGUROS / APÓLICES --------------------
+     Extraído das apólices reais (Tokio Marine, Allianz, Mitsui, HDI, Porto...).
+     ramo: auto | frota | carga | vida.  grupo: empresa | socio | func.
+     fim = fim da vigência (é o vencimento que dispara o alerta).
+     premio = prêmio total anual em R$ (null = apólice de averbação, prêmio variável).
+  */
+  seguros: [
+    /* ---- EMPRESA — Planeta Express Transportes LTDA ---- */
+    { id:"s1", ramo:"frota", tipo:"Seguro de Frota", seguradora:"Allianz", apolice:"312205367", endosso:"1",
+      segurado:"Planeta Express Transportes LTDA", grupo:"empresa", objeto:"Frota de veículos", placa:"",
+      inicio:"2025-10-11", fim:"2026-10-11", premio:27050.00, pagamento:"10x Boleto",
+      cobertura:"Frota (cascos dos veículos)", status:"Ativo",
+      obs:"Endosso 1 — substituição/inclusão da placa BDP-1B55 (vigência 18/03/2026 a 11/10/2026), prêmio adicional R$ 3.191,05 em 6x Boleto." },
+    { id:"s2", ramo:"carga", tipo:"RCTR-C — Resp. Civil do Transportador (Carga)", seguradora:"Tokio Marine", apolice:"540 00029910", endosso:"",
+      segurado:"Planeta Express Transportes LTDA", grupo:"empresa", objeto:"Carga transportada de terceiros", placa:"",
+      inicio:"2025-12-31", fim:"2026-12-31", premio:null, pagamento:"Averbação mensal (mínimo R$ 500/mês + IOF)",
+      cobertura:"Limite máx. de garantia R$ 1.000.000", status:"Ativo",
+      obs:"Seguro OBRIGATÓRIO do transportador. Prêmio por averbação de CT-e. Processo SUSEP 10.002445/01-88. Coberturas adicionais: Avarias Particulares e Limpeza de Pista (R$ 50.000 cada). Corretora VTECH/APACS — contato Marcelo (42) 99911-2828." },
+    { id:"s3", ramo:"carga", tipo:"RC-DC — Resp. Civil por Desaparecimento de Carga", seguradora:"Tokio Marine", apolice:"550 00015676", endosso:"",
+      segurado:"Planeta Express Transportes LTDA", grupo:"empresa", objeto:"Carga — roubo/desaparecimento", placa:"",
+      inicio:"2025-12-31", fim:"2026-12-31", premio:null, pagamento:"Averbação mensal",
+      cobertura:"Limite máx. de garantia R$ 1.000.000", status:"Ativo",
+      obs:"Complementa a RCTR-C, cobrindo roubo e desaparecimento de carga. Mesma vigência." },
+    { id:"s4", ramo:"vida", tipo:"Seguro de Vida em Grupo", seguradora:"HDI", apolice:"02909820000240", endosso:"",
+      segurado:"Funcionários — Planeta Express", grupo:"func", objeto:"Vida em grupo (funcionários)", placa:"",
+      inicio:"2025-11-06", fim:"2026-11-06", premio:1521.28, pagamento:"12x Boleto",
+      cobertura:"", status:"Ativo", obs:"" },
+    { id:"s5", ramo:"vida", tipo:"Seguro de Vida em Grupo", seguradora:"HDI / Icatu", apolice:"93752384", endosso:"93752384",
+      segurado:"Funcionários — Planeta Express", grupo:"func", objeto:"Vida em grupo (funcionários)", placa:"",
+      inicio:"2025-10-25", fim:"2026-10-25", premio:1530.72, pagamento:"12x Boleto",
+      cobertura:"", status:"Ativo",
+      obs:"Endosso 93752384 (vigência 23/12/2025 a 25/10/2026) — prêmio adicional R$ 127,10 em 1x Boleto." },
+
+    /* ---- SÓCIO — Marcelo Ronsoni Moreira ---- */
+    { id:"s6", ramo:"auto", tipo:"Seguro de Automóvel", seguradora:"Mitsui", apolice:"22497649", endosso:"7807386",
+      segurado:"Marcelo Ronsoni Moreira", grupo:"socio", objeto:"Veículo placa BBJ-2D77", placa:"BBJ-2D77",
+      inicio:"2025-08-17", fim:"2026-08-17", premio:4766.40, pagamento:"10x Cartão",
+      cobertura:"", status:"Ativo",
+      obs:"Endosso 7807386 (vigência 26/11/2025 a 17/08/2026) — R$ 797,84 em 4x Cartão. Cobertura ativa até 17/08/2026." },
+    { id:"s7", ramo:"vida", tipo:"Seguro de Vida Individual", seguradora:"Tokio", apolice:"0001065234", endosso:"",
+      segurado:"Marcelo Ronsoni Moreira", grupo:"socio", objeto:"Vida (individual)", placa:"",
+      inicio:"2026-04-09", fim:"2027-04-09", premio:1151.00, pagamento:"12x Cartão de Crédito",
+      cobertura:"", status:"Ativo", obs:"" },
+    { id:"s8", ramo:"auto", tipo:"Seguro de Automóvel", seguradora:"Tokio", apolice:"35311757", endosso:"",
+      segurado:"Marcelo Ronsoni Moreira", grupo:"socio", objeto:"Veículo placa QHS-0C02", placa:"QHS-0C02",
+      inicio:"2025-11-26", fim:"2026-11-26", premio:5485.66, pagamento:"12x Cartão",
+      cobertura:"", status:"Cancelado",
+      obs:"CANCELADO em 05/05/2026 a pedido do segurado." },
+
+    /* ---- SÓCIO — Uilian Marcelo Moreira ---- */
+    { id:"s9", ramo:"vida", tipo:"Seguro de Vida Individual", seguradora:"Porto Seguro", apolice:"1513912740410", endosso:"",
+      segurado:"Uilian Marcelo Moreira", grupo:"socio", objeto:"Vida (individual)", placa:"",
+      inicio:"2026-01-06", fim:"2027-01-06", premio:992.91, pagamento:"12x Débito",
+      cobertura:"", status:"Ativo", obs:"" },
+  ],
+
   /* -------------------- MANUTENÇÃO / TROCAS DE ÓLEO -------------------- */
   manutencoes: [
     /* Cavalos (km) */

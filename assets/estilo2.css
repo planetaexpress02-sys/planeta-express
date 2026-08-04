@@ -2169,3 +2169,13 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .cc-ctl:active::after{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .45s ease-out,opacity .6s}
 @media(max-width:640px){ .cc-controls{left:10px;bottom:10px} .cc-ctl{width:36px;height:36px} }
 @media(prefers-reduced-motion:reduce){ .cc-flow,.cc-radar,.cc-cring,.cc-core-g,.ini-veh use,.ini-veh .ring{animation:none} .cc-flow{opacity:.7} .cc-radar{opacity:.25;transform:scale(1.6)} }
+
+/* ================================================================== */
+/*  SEGUROS — etiqueta de ramo (v6.43)                                 */
+/* ================================================================== */
+.seg-tag{ display:inline-block; font-size:11px; font-weight:700; letter-spacing:.3px; line-height:1.6;
+  padding:1px 10px; border-radius:999px; white-space:nowrap;
+  color:var(--c,#8b9dff); border:1px solid var(--c,#8b9dff);
+  background:color-mix(in srgb, var(--c,#8b9dff) 15%, transparent); }
+#view[data-route="seguros"] table.tbl td{ vertical-align:middle; }
+#view[data-route="seguros"] table.tbl tbody tr:hover{ cursor:pointer; }

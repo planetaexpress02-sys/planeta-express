@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -212,10 +212,24 @@ function nomeEntidade(v){
   if(v.entidade==='empresa') return DB.empresa.nome;
   if(v.entidade==='motorista'){ const m=motorista(v.refId); return m?m.nome:'—'; }
   if(v.entidade==='veiculo'){ const x=veiculo(v.refId); return x?x.placa:'—'; }
+  if(v.entidade==='seguro'){ const s=(DB.seguros||[]).find(x=>x.id===v.refId); return s?(s.segurado||s.seguradora||'—'):'—'; }
   return '—';
 }
-/* Vencimentos (NÃO inclui garantia de bateria — essa fica só na aba Baterias) */
-function todosVencimentos(){ return DB.vencimentos.slice(); }
+/* Rótulo curto do ramo do seguro */
+function ramoLabel(r){ return {auto:'Automóvel',frota:'Frota',carga:'Carga',vida:'Vida'}[r]||'Seguro'; }
+/* Vencimentos (NÃO inclui garantia de bateria — essa fica só na aba Baterias).
+   Inclui as apólices de seguro ATIVAS: o fim da vigência vira o vencimento, para
+   aparecerem no módulo Vencimentos, no Painel de Controle e nas notificações. */
+function todosVencimentos(){
+  const base = DB.vencimentos.slice();
+  (DB.seguros||[]).forEach(s=>{
+    if(!s || s.status==='Cancelado' || !s.fim) return;
+    base.push({ id:'seg_'+s.id, entidade:'seguro', refId:s.id, tipo:'Seguro — '+ramoLabel(s.ramo),
+      validade:s.fim, emissao:s.inicio||'', numero:s.apolice||'', orgao:s.seguradora||'',
+      nome:(s.segurado||s.seguradora||''), obs:s.tipo||'', _seg:true });
+  });
+  return base;
+}
 
 /* Cálculo de manutenção por KM / Horas */
 function primaryItem(v){
@@ -292,12 +306,14 @@ const IC = {
   search:'<circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m20.5 20.5-4.2-4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
   chevron:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   filter:'<path d="M3 5h18M6 12h12M10 19h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  umbrella:'<path d="M12 2v2M12 21a2 2 0 0 1-4 0M3.5 12a8.5 8.5 0 0 1 17 0c0 .8-.9.3-2 .3s-2 .5-2.5.5S13.5 12 12 12s-1.5.8-3 .8-1.4-.5-2.5-.5-2 .5-3 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 12v7" fill="none" stroke="currentColor" stroke-width="1.7"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
+  if(/^Seguro/i.test(t)) return 'umbrella';
   const m={'CNH':'idcard','Toxicológico':'flask','ASO':'clinic','Tacógrafo':'taco','CRLV':'doc','Vigilância Sanitária':'shield',
     'Opentech Funcionário':'chip','Opentech Veículo':'chip','PCMSO':'clinic','PGR':'shield','Certificado Digital':'chip',
-    'Direção Defensiva':'wheel','Seguro':'shield','Rastreador':'chip'};
+    'Direção Defensiva':'wheel','Seguro':'umbrella','Rastreador':'chip'};
   return m[t]||'bell';
 }
 function svg(name,cls){ return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">${IC[name]||''}</svg>`; }
@@ -420,6 +436,7 @@ const ROTAS = {
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
   notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
+  seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
@@ -457,6 +474,7 @@ function router(){
   else if(rota==='alarmes') el.innerHTML=viewAlarmes();
   else if(rota==='notas') el.innerHTML=viewNotas();
   else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
+  else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -578,7 +596,8 @@ function pexDashMapReveal(){ var s=document.getElementById('pexMapSkel'); if(!s)
 function contadores(){
   let venc=0, crit=0;
   todosVencimentos().forEach(v=>{ const s=situacao(v.validade); if(s.ord===0) venc++; else if(s.ord===1) crit++; });
-  return {venc, crit, total:venc+crit};
+  let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
+  return {venc, crit, total:venc+crit, seg};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -591,7 +610,7 @@ function renderSidebar(rota){
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+
-    `<div class="group">Financeiro</div>`+ item('financeiro')+
+    `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
@@ -634,6 +653,9 @@ function viewDashboard(){
   const cavalos = DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').length;
   const reb = DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado').length;
   const motAtivos = DB.motoristas.filter(m=>m.status==='Ativo').length;
+  const segList = (DB.seguros||[]).filter(s=>s&&s.status!=='Cancelado');
+  const segAv = segList.filter(s=>{ const d=diasAte(s.fim); return d!=null && d<=90; }).length;
+  const segCrit = segList.some(s=>{ const d=diasAte(s.fim); return d!=null && d<=30; });
 
   const prox = vs.filter(x=>x.s.dias!==null && x.s.dias<=90).sort((a,b)=>a.s.dias-b.s.dias).slice(0,8);
 
@@ -684,6 +706,7 @@ function viewDashboard(){
     ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
     ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
     ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
+    ${iniKpiTile('umbrella', segCrit?'crit':'', segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9')}
     ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
     ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
@@ -1127,8 +1150,8 @@ function viewVencimentos(){
     <div class="k-val">${cont[k]}</div><div class="k-label">${d.t.replace('Vence em ','').replace('até ','≤')}</div></a>`; };
 
   const itemRow=(x,cor)=>{ const v=x.v;
-    const alvo=v.entidade==='veiculo'?('frota/'+v.refId):(v.entidade==='motorista'?('motoristas/'+v.refId):'vencimentos');
-    const ent=v.entidade==='veiculo'?'Veículo':(v.entidade==='motorista'?'Motorista':'Empresa');
+    const alvo=v.entidade==='veiculo'?('frota/'+v.refId):(v.entidade==='motorista'?('motoristas/'+v.refId):(v.entidade==='seguro'?'seguros':'vencimentos'));
+    const ent=v.entidade==='veiculo'?'Veículo':(v.entidade==='motorista'?'Motorista':(v.entidade==='seguro'?'Seguro':'Empresa'));
     const anexo=(v.anexoId&&arquivoPorId(v.anexoId));
     const dtxt = x.d<0?('Vencido há '+Math.abs(x.d)+' dia'+(Math.abs(x.d)===1?'':'s')):('Vence em '+x.d+' dia'+(x.d===1?'':'s'));
     return `<div class="venc-row">
@@ -1902,6 +1925,7 @@ function excluirVeiculo(id){ if(!confirm('Excluir este veículo e seus venciment
 
 const TIPOS_VENC=['CNH','Toxicológico','ASO','Direção Defensiva','Tacógrafo','CRLV','Vigilância Sanitária','Opentech Funcionário','Opentech Veículo','PCMSO','PGR','Certificado Digital','Seguro','Rastreador','Outro'];
 function modalVencimento(id, entidadeFix, refFix, tipoFix){
+  if(id && String(id).indexOf('seg_')===0){ return modalSeguro(String(id).slice(4)); }  // apólice de seguro → abre a ficha do seguro
   const v=id?DB.vencimentos.find(x=>x.id===id):{tipo:tipoFix||'Toxicológico',entidade:entidadeFix||'motorista',refId:refFix||'',emissao:'',validade:'',numero:'',orgao:'',obs:'',anexoId:''};
   const optsRef=(ent)=>{ if(ent==='motorista')return DB.motoristas.map(m=>`<option value="${m.id}" ${v.refId===m.id?'selected':''}>${esc(m.nome)}</option>`).join('');
     if(ent==='veiculo')return DB.veiculos.map(x=>`<option value="${x.id}" ${v.refId===x.id?'selected':''}>${esc(x.placa)}</option>`).join('');
@@ -2945,6 +2969,167 @@ function viewInicio(){
   </div>
   </div>`;
 }
+
+/* ================================================================== */
+/*  SEGUROS / APÓLICES                                                 */
+/* ================================================================== */
+let segFiltro='todos';
+const RAMO_COR={carga:'#f2a44e',frota:'#5cc8ff',auto:'#8b9dff',vida:'#4bd6a0'};
+function segCor(r){ return RAMO_COR[r]||'#8b9dff'; }
+/* Prêmio em texto (apólices de averbação não têm prêmio anual fixo) */
+function segPremioTxt(s){ if(s.premio==null||s.premio==='') return 'Averbação'; return money(s.premio); }
+/* Situação da apólice (respeita cancelamento) */
+function segSit(s){ if(s.status==='Cancelado') return {cls:'neutro',label:'Cancelado',dias:null,ord:9}; return situacao(s.fim); }
+
+function viewSeguros(){
+  const all = (DB.seguros||[]).slice();
+  const ativos = all.filter(s=>s.status!=='Cancelado');
+  const cancelados = all.filter(s=>s.status==='Cancelado');
+
+  /* KPIs (sobre as apólices ativas) */
+  const premioAnual = ativos.reduce((t,s)=>t+(Number(s.premio)||0),0);
+  const dias = s=>diasAte(s.fim);
+  const aVencer = ativos.filter(s=>{ const d=dias(s); return d!=null && d>=0 && d<=90; });
+  const vencidas = ativos.filter(s=>{ const d=dias(s); return d!=null && d<0; });
+
+  const kseg=(ico,val,label,sub,cor,filtro,ativoCor)=>{ const on=filtro&&segFiltro===filtro;
+    return `<a class="kpi ${filtro?'link':''} ${on?'ativo':''}" ${filtro?`style="cursor:pointer" onclick="segFiltro='${on?'todos':filtro}';router()"`:''}>
+      <div class="k-top"><div class="k-ico" style="color:${cor};background:${cor}1f">${svg(ico)}</div>${filtro?'<span class="k-go">→</span>':''}</div>
+      <div class="k-val" style="${ativoCor&&val!=='0'?`color:${cor}`:''}">${val}</div><div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`; };
+
+  /* Próximas renovações (ativas que vencem em até 180 dias, das mais próximas) */
+  const renov = ativos.filter(s=>{ const d=dias(s); return d!=null && d<=180; }).sort((a,b)=>dias(a)-dias(b));
+  const renovBox = renov.length? `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h">${svg('bell')}<h3>Próximas renovações</h3><div class="r"><span class="muted" style="font-size:11.5px">clique para abrir a apólice</span></div></div>
+      <div class="card-b p0">
+        ${renov.map(s=>{ const st=situacao(s.fim); const ic=st.ord===0?'i-red':st.ord===1?'i-orange':st.ord===2?'i-amber':'i-green';
+          return `<div class="alert-row" onclick="modalSeguro('${s.id}')">
+            <div class="a-ico ${ic}">${svg('umbrella')}</div>
+            <div class="a-main"><b>${esc(ramoLabel(s.ramo))} — ${esc(s.seguradora)}</b><span>Apólice ${esc(s.apolice)}${s.objeto?' · '+esc(s.objeto):''}</span></div>
+            <div class="a-when"><span class="st ${st.cls}">${st.label}</span><div class="muted" style="font-size:11px;text-align:right">${fmtD(s.fim)}</div></div>
+          </div>`; }).join('')}
+      </div>
+    </div>` : '';
+
+  /* Lista conforme o filtro ativo */
+  let lista = ativos.slice();
+  if(segFiltro==='avencer') lista = aVencer.slice();
+  else if(segFiltro==='vencidos') lista = vencidas.slice();
+  else if(['auto','frota','carga','vida'].indexOf(segFiltro)>=0) lista = ativos.filter(s=>s.ramo===segFiltro);
+  else if(segFiltro==='cancelados') lista = cancelados.slice();
+
+  /* Agrupa por segurado (titular) — ordem: empresa → funcionários → sócios */
+  const rank={empresa:0,func:1,socio:2};
+  const grupos={};
+  lista.forEach(s=>{ const k=s.segurado||s.seguradora||'—'; (grupos[k]=grupos[k]||{nome:k,grupo:s.grupo||'empresa',items:[]}).items.push(s); });
+  const ordem=Object.values(grupos).sort((a,b)=>(rank[a.grupo]??3)-(rank[b.grupo]??3) || a.nome.localeCompare(b.nome,'pt'));
+
+  const row=(s)=>{ const st=segSit(s); const cor=segCor(s.ramo);
+    return `<tr style="cursor:pointer" onclick="modalSeguro('${s.id}')">
+      <td><span class="seg-tag" style="--c:${cor}">${esc(ramoLabel(s.ramo))}</span></td>
+      <td><b>${esc(s.seguradora)}</b><div class="muted" style="font-size:11.5px">${esc(s.tipo||'')}</div></td>
+      <td class="mono">${esc(s.apolice||'—')}${s.endosso?`<div class="muted" style="font-size:11px">endosso ${esc(s.endosso)}</div>`:''}</td>
+      <td>${esc(s.objeto||'—')}${s.cobertura?`<div class="muted" style="font-size:11px">${esc(s.cobertura)}</div>`:''}</td>
+      <td class="mono" style="white-space:nowrap">${fmtD(s.inicio)} <span class="muted">→</span> <b>${fmtD(s.fim)}</b></td>
+      <td><span class="st ${st.cls}">${st.label}</span></td>
+      <td class="ta-r" style="white-space:nowrap"><b class="mono">${segPremioTxt(s)}</b>${s.pagamento?`<div class="muted" style="font-size:11px">${esc(s.pagamento)}</div>`:''}</td>
+    </tr>`; };
+
+  const grupoCard=(g)=>{ const tot=g.items.reduce((t,s)=>t+(Number(s.premio)||0),0);
+    const gico=g.grupo==='socio'?'user':(g.grupo==='func'?'user':'briefcase');
+    return `<div class="card" style="margin-bottom:16px">
+      <div class="card-h">${svg(gico)}<h3>${esc(g.nome)}</h3>
+        <div class="r"><span class="muted" style="font-size:12px">${g.items.length} apólice(s)${tot?' · '+money(tot)+'/ano':''}</span></div></div>
+      <div class="tbl-wrap"><table class="tbl pex-noenh">
+        <thead><tr><th>Ramo</th><th>Seguradora</th><th>Apólice</th><th>Objeto</th><th>Vigência</th><th>Situação</th><th class="ta-r">Prêmio</th></tr></thead>
+        <tbody>${g.items.map(row).join('')}</tbody></table></div>
+    </div>`; };
+
+  const filtroLabel={avencer:'a vencer (90 dias)',vencidos:'vencidas',auto:'Automóvel',frota:'Frota',carga:'Carga',vida:'Vida',cancelados:'canceladas'}[segFiltro];
+
+  return `
+  <div class="banner">${svg('umbrella')}<div><b>Seguros — apólices e vigências</b><span>Controle de todas as apólices da empresa e dos sócios: seguradora, número, vigência, prêmio e avisos de renovação. As apólices ativas também aparecem em Vencimentos e no Painel de Controle.</span></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalSeguro()">${svg('plus')} Novo seguro</button></div>
+
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kseg('umbrella', String(ativos.length), 'Apólices ativas', cancelados.length?cancelados.length+' cancelada(s)':'', '#5c99ff', '')}
+    ${kseg('coins', moneyK(premioAnual), 'Prêmio anual', 'somando as ativas', '#4bd6a0', '')}
+    ${kseg('bell', String(aVencer.length), 'A vencer (90 dias)', 'renovação próxima', '#f2a44e', 'avencer', true)}
+    ${kseg('shield', String(vencidas.length), 'Vencidas', 'renovar já', '#f2686b', 'vencidos', true)}
+  </div>
+
+  ${segFiltro==='todos'? renovBox : ''}
+
+  <div class="toolbar">
+    <select class="selectlite" onchange="segFiltro=this.value;router()">
+      <option value="todos" ${segFiltro==='todos'?'selected':''}>Todos os ramos (ativos)</option>
+      <option value="auto" ${segFiltro==='auto'?'selected':''}>Automóvel</option>
+      <option value="frota" ${segFiltro==='frota'?'selected':''}>Frota</option>
+      <option value="carga" ${segFiltro==='carga'?'selected':''}>Carga (RCTR-C / RC-DC)</option>
+      <option value="vida" ${segFiltro==='vida'?'selected':''}>Vida</option>
+      <option value="avencer" ${segFiltro==='avencer'?'selected':''}>A vencer (90 dias)</option>
+      <option value="vencidos" ${segFiltro==='vencidos'?'selected':''}>Vencidas</option>
+      <option value="cancelados" ${segFiltro==='cancelados'?'selected':''}>Canceladas</option>
+    </select>
+    ${segFiltro!=='todos'?`<button class="btn sm no-print" onclick="segFiltro='todos';router()">${svg('list')} Ver todos</button><span class="muted" style="font-size:12.5px">filtro: ${esc(filtroLabel||'')}</span>`:''}
+    <div class="spacer"></div>
+    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+  </div>
+
+  ${ordem.length? ordem.map(grupoCard).join('') : `<div class="card"><div class="card-b">${emptyState('Nenhuma apólice neste filtro.')}</div></div>`}
+
+  ${(segFiltro==='todos' && cancelados.length)? `
+    <div class="card" style="margin-top:4px;opacity:.85">
+      <div class="card-h">${svg('umbrella')}<h3>Canceladas</h3><div class="r"><span class="muted" style="font-size:12px">${cancelados.length} apólice(s)</span></div></div>
+      <div class="tbl-wrap"><table class="tbl pex-noenh">
+        <thead><tr><th>Ramo</th><th>Seguradora</th><th>Apólice</th><th>Objeto</th><th>Vigência</th><th>Situação</th><th class="ta-r">Prêmio</th></tr></thead>
+        <tbody>${cancelados.map(row).join('')}</tbody></table></div>
+    </div>` : ''}`;
+}
+
+function modalSeguro(id){
+  const s = id? (DB.seguros||[]).find(x=>x.id===id) : {ramo:'auto',tipo:'',seguradora:'',apolice:'',endosso:'',segurado:'',grupo:'empresa',objeto:'',placa:'',inicio:'',fim:'',premio:'',pagamento:'',cobertura:'',status:'Ativo',obs:''};
+  if(!s){ toast('Seguro não encontrado.','err'); return; }
+  const opt=(v,cur,lab)=>`<option value="${v}" ${cur===v?'selected':''}>${lab}</option>`;
+  const anexo = badgeAnexo('seguro', s.id||'novo', /./, 'Apólice');
+  openModal(`<div class="m-h">${svg('umbrella')}<h3>${id?'Editar seguro':'Novo seguro'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">
+        <div class="field"><label>Ramo</label><select id="f_ramo">
+          ${opt('auto',s.ramo,'Automóvel')}${opt('frota',s.ramo,'Frota')}${opt('carga',s.ramo,'Carga (RCTR-C / RC-DC)')}${opt('vida',s.ramo,'Vida')}${opt('outro',s.ramo,'Outro')}
+        </select></div>
+        <div class="field"><label>Grupo / titular</label><select id="f_grupo">
+          ${opt('empresa',s.grupo,'Empresa')}${opt('socio',s.grupo,'Sócio')}${opt('func',s.grupo,'Funcionários')}
+        </select></div>
+      </div>
+      ${fld('Descrição do seguro','f_tipo',s.tipo,'text','Ex.: Seguro de Automóvel, RCTR-C, Vida em Grupo')}
+      <div class="field-row">${fld('Seguradora','f_seg',s.seguradora)}${fld('Nº da apólice','f_apolice',s.apolice)}</div>
+      <div class="field-row">${fld('Endosso (se houver)','f_endosso',s.endosso)}${fld('Segurado / titular','f_segurado',s.segurado)}</div>
+      <div class="field-row">${fld('Objeto (o que cobre)','f_objeto',s.objeto,'text','Placa, "Frota", "Carga", nome…')}${fld('Placa (se veículo)','f_placa',s.placa)}</div>
+      <div class="field-row">${fld('Início da vigência','f_inicio',s.inicio,'date')}${fld('Fim da vigência (vencimento)','f_fim',s.fim,'date')}</div>
+      <div class="field-row">${fldR$('Prêmio total (R$/ano)','f_premio',s.premio)}${fld('Forma de pagamento','f_pgto',s.pagamento,'text','Ex.: 12x Boleto, 10x Cartão')}</div>
+      ${fld('Cobertura / importância segurada','f_cobertura',s.cobertura,'text','Ex.: Limite de garantia R$ 1.000.000')}
+      <div class="field"><label>Status</label><select id="f_status">${opt('Ativo',s.status,'Ativo')}${opt('Cancelado',s.status,'Cancelado')}</select></div>
+      <div class="field"><label>Observação</label><textarea id="f_obs" rows="2">${esc(s.obs||'')}</textarea></div>
+      ${id?`<div class="field"><label>Apólice (PDF / imagem)</label><div>${anexo}</div><div class="hint">Anexe aqui o PDF da apólice para guardar junto do registro.</div></div>`:`<div class="hint">Salve o seguro para poder anexar o PDF da apólice.</div>`}
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirSeguro('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="salvarSeguro('${id||''}')">Salvar</button></div>`);
+}
+function salvarSeguro(id){
+  if(!val('f_seg')){ toast('Informe a seguradora.','err'); return; }
+  const pr=val('f_premio').trim();
+  const d={ ramo:val('f_ramo'), tipo:val('f_tipo'), seguradora:val('f_seg'), apolice:val('f_apolice'), endosso:val('f_endosso'),
+    segurado:val('f_segurado'), grupo:val('f_grupo'), objeto:val('f_objeto'), placa:val('f_placa'),
+    inicio:val('f_inicio'), fim:val('f_fim'), premio: pr? parseBRL(pr) : null, pagamento:val('f_pgto'),
+    cobertura:val('f_cobertura'), status:val('f_status'), obs:val('f_obs') };
+  if(id){ Object.assign((DB.seguros||[]).find(x=>x.id===id), d); }
+  else { d.id=uid('s'); (DB.seguros=DB.seguros||[]).push(d); }
+  saveDB(); closeModal(); toast('Seguro salvo.'); router();
+}
+function excluirSeguro(id){ if(!confirm('Excluir esta apólice do controle?'))return; DB.seguros=(DB.seguros||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Apólice excluída.'); router(); }
 
 /* ---------- QUADRO SOCIETÁRIO ---------- */
 function docsDoMotorista(m){
