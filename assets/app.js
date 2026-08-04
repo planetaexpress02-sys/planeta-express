@@ -2974,6 +2974,7 @@ function viewInicio(){
 /*  SEGUROS / APÓLICES                                                 */
 /* ================================================================== */
 let segFiltro='todos';
+let APOLICE_FILA=[];   // arquivos aguardando anexar (envio de apólice)
 const RAMO_COR={carga:'#f2a44e',frota:'#5cc8ff',auto:'#8b9dff',vida:'#4bd6a0'};
 function segCor(r){ return RAMO_COR[r]||'#8b9dff'; }
 /* Prêmio em texto (apólices de averbação não têm prêmio anual fixo) */
@@ -3050,7 +3051,10 @@ function viewSeguros(){
 
   return `
   <div class="banner">${svg('umbrella')}<div><b>Seguros — apólices e vigências</b><span>Controle de todas as apólices da empresa e dos sócios: seguradora, número, vigência, prêmio e avisos de renovação. As apólices ativas também aparecem em Vencimentos e no Painel de Controle.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalSeguro()">${svg('plus')} Novo seguro</button></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="modalEnviarApolice()">${svg('upload')} Enviar apólice</button>
+      <button class="btn primary" onclick="modalSeguro()">${svg('plus')} Novo seguro</button>
+    </div></div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kseg('umbrella', String(ativos.length), 'Apólices ativas', cancelados.length?cancelados.length+' cancelada(s)':'', '#5c99ff', '')}
@@ -3130,6 +3134,88 @@ function salvarSeguro(id){
   saveDB(); closeModal(); toast('Seguro salvo.'); router();
 }
 function excluirSeguro(id){ if(!confirm('Excluir esta apólice do controle?'))return; DB.seguros=(DB.seguros||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Apólice excluída.'); router(); }
+
+/* ---------- ENVIAR APÓLICE (detecta o seguro certo e anexa) ---------- */
+/* Descobre a qual seguro o arquivo pertence, casando nº da apólice/endosso,
+   placa, seguradora e palavras do ramo no NOME e no TEXTO do PDF. */
+function _apoliceMatch(nome, texto){
+  const hay=((nome||'')+' '+(texto||'')).toLowerCase();
+  const haynum=hay.replace(/[^0-9]/g,'');
+  const haya=hay.replace(/[^a-z0-9]/g,'');
+  let best='', bestScore=0;
+  (DB.seguros||[]).forEach(s=>{
+    let sc=0;
+    const ap=String(s.apolice||'').replace(/[^0-9]/g,'');
+    if(ap.length>=5 && haynum.indexOf(ap)>=0) sc+=100;
+    const en=String(s.endosso||'').replace(/[^0-9]/g,'');
+    if(en.length>=5 && haynum.indexOf(en)>=0) sc+=45;
+    const pl=String(s.placa||'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+    if(pl.length>=6 && haya.indexOf(pl)>=0) sc+=60;
+    const seg=(s.seguradora||'').toLowerCase().split(/[\s/]+/)[0];
+    if(seg.length>=3 && hay.indexOf(seg)>=0) sc+=15;
+    const kw={carga:['rctr','rcdc','rc-dc','rc dc','carga','desaparecimento'],vida:['vida'],frota:['frota'],auto:['autom','automóvel','automovel','veículo','veiculo']}[s.ramo]||[];
+    kw.forEach(k=>{ if(hay.indexOf(k)>=0) sc+=8; });
+    if(sc>bestScore){ bestScore=sc; best=s.id; }
+  });
+  return {id:bestScore>0?best:'', score:bestScore};
+}
+function modalEnviarApolice(){
+  openModal(`<div class="m-h">${svg('upload')}<h3>Enviar apólice</h3><button class="x" onclick="APOLICE_FILA=[];closeModal()">×</button></div>
+    <div class="m-b">
+      <label class="apo-drop" id="apoDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="_apoliceDrop(event)">
+        <input type="file" accept=".pdf,image/*" multiple style="display:none" onchange="_apoliceLer(this.files);this.value=''">
+        ${svg('upload')}<b>Solte os PDFs das apólices aqui ou clique para escolher</b>
+        <span>O sistema lê cada arquivo e descobre sozinho a qual seguro ele pertence. Você confere e confirma.</span>
+      </label>
+      <div id="apoFila">${_apoliceFilaHTML()}</div>
+    </div>
+    <div class="m-f">
+      <button class="btn" onclick="APOLICE_FILA=[];closeModal()">Fechar</button>
+      <button class="btn primary" id="apoBtn" onclick="_apoliceAnexar()" ${APOLICE_FILA.length?'':'disabled'}>Anexar ${APOLICE_FILA.filter(f=>f.matchId).length||''} apólice(s)</button>
+    </div>`, true);
+}
+function _apoliceFilaHTML(){
+  if(!APOLICE_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum arquivo escolhido ainda.</div>`;
+  return `<div class="apo-list">`+APOLICE_FILA.map((f,i)=>{
+    const conf = f.matchId? (f.score>=60?'ok':'warn') : 'crit';
+    const lab = f.matchId? (f.score>=60?'Detectado':'Confira') : 'Escolha o seguro';
+    return `<div class="apo-row">
+      <div class="apo-file">${svg('doc')}<span title="${esc(f.nome)}">${esc(f.nome)}</span></div>
+      <select class="selectlite" onchange="APOLICE_FILA[${i}].matchId=this.value;_apoliceRefresh()">
+        <option value="">— Escolha o seguro —</option>
+        ${(DB.seguros||[]).map(s=>`<option value="${s.id}" ${f.matchId===s.id?'selected':''}>${esc(ramoLabel(s.ramo))} · ${esc(s.seguradora)} · ${esc(s.apolice)}${s.segurado?' ('+esc((s.segurado||'').split(/\s|—/)[0])+')':''}</option>`).join('')}
+      </select>
+      <span class="st ${conf}">${lab}</span>
+      <button class="btn ghost sm" title="Remover" onclick="_apoliceRemove(${i})">${svg('trash')}</button>
+    </div>`;
+  }).join('')+`</div>`;
+}
+function _apoliceRefresh(){ const el=document.getElementById('apoFila'); if(el) el.innerHTML=_apoliceFilaHTML();
+  const b=document.getElementById('apoBtn'); if(b){ const n=APOLICE_FILA.filter(f=>f.matchId).length; b.disabled=!APOLICE_FILA.length; b.innerHTML='Anexar '+(n||'')+' apólice(s)'; } }
+function _apoliceRemove(i){ APOLICE_FILA.splice(i,1); _apoliceRefresh(); }
+function _apoliceDrop(e){ e.preventDefault(); const el=e.currentTarget; if(el)el.classList.remove('over'); if(e.dataTransfer&&e.dataTransfer.files) _apoliceLer(e.dataTransfer.files); }
+async function _apoliceLer(fileList){
+  const files=[].slice.call(fileList||[]); if(!files.length) return;
+  if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
+  if(typeof pexBar==='function') pexBar(true);
+  try{
+    for(const file of files){
+      let texto='';
+      if(/\.pdf$/i.test(file.name) || file.type==='application/pdf'){ try{ texto=await pexLerPdfTexto(file); }catch(e){} }
+      const mt=_apoliceMatch(file.name, texto||'');
+      APOLICE_FILA.push({file, nome:file.name, matchId:mt.id, score:mt.score});
+    }
+  } finally { if(typeof pexBar==='function') pexBar(false); }
+  _apoliceRefresh();
+}
+async function _apoliceAnexar(){
+  const sel=APOLICE_FILA.filter(f=>f.matchId);
+  if(!sel.length){ toast('Escolha a qual seguro pertence cada arquivo.','err'); return; }
+  if(typeof pexBar==='function') pexBar(true);
+  try{ for(const f of sel){ await subirUm(f.file,'seguro',f.matchId,'Apólice'); } await reloadFiles(); saveDB(); }
+  finally { if(typeof pexBar==='function') pexBar(false); }
+  APOLICE_FILA=[]; closeModal(); toast(sel.length+' apólice(s) anexada(s)'+(_online()?' e sincronizada(s).':'.')); location.hash='#seguros'; router();
+}
 
 /* ---------- QUADRO SOCIETÁRIO ---------- */
 function docsDoMotorista(m){

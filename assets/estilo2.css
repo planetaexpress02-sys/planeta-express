@@ -2179,3 +2179,18 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   background:color-mix(in srgb, var(--c,#8b9dff) 15%, transparent); }
 #view[data-route="seguros"] table.tbl td{ vertical-align:middle; }
 #view[data-route="seguros"] table.tbl tbody tr:hover{ cursor:pointer; }
+/* Enviar apólice — zona de upload + fila */
+.apo-drop{ display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  padding:22px 16px;border:1.5px dashed rgba(0,200,255,.35);border-radius:14px;cursor:pointer;
+  background:rgba(0,120,255,.06);transition:.15s ease; }
+.apo-drop:hover,.apo-drop.over{ border-color:rgba(0,229,255,.75);background:rgba(0,150,255,.12); }
+.apo-drop svg{ width:26px;height:26px;opacity:.85 }
+.apo-drop b{ font-size:13.5px }
+.apo-drop span{ font-size:12px;opacity:.72;max-width:440px }
+.apo-list{ margin-top:14px;display:flex;flex-direction:column;gap:8px }
+.apo-row{ display:grid;grid-template-columns:1fr minmax(190px,1.4fr) auto auto;gap:8px;align-items:center;
+  padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07) }
+.apo-file{ display:flex;align-items:center;gap:6px;min-width:0;font-size:12.5px }
+.apo-file svg{ width:16px;height:16px;flex:0 0 auto;opacity:.7 }
+.apo-file span{ overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+@media(max-width:640px){ .apo-row{ grid-template-columns:1fr auto auto } .apo-row .selectlite{ grid-column:1/-1 } }
