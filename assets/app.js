@@ -481,6 +481,7 @@ function pexAfterRender(rota){
       var _noCy={inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
     document.body.classList.toggle('pex-home', rota==='inicio'||rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
+    if(rota==='inicio' && typeof iniBaseWx==='function') iniBaseWx();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
@@ -2835,6 +2836,13 @@ function iniAbrirVeic(placa){ const v=DB.veiculos.find(x=>x.placa===placa); cons
     </div>`;
   p.classList.add('show');
 }
+/* Command Center — zoom do mapa (visual, ao redor da base Londrina) */
+var _ccZoom=1;
+function iniMapZoom(d,reset){ _ccZoom=reset?1:Math.max(1,Math.min(2.4, _ccZoom+d));
+  const g=document.getElementById('ccZoom'); if(g){ g.style.transformOrigin='440px 258px'; g.style.transform='scale('+_ccZoom+')'; } }
+/* clima REAL de Londrina (mesma fonte do cockpit) no chip da base */
+function iniBaseWx(){ const g=document.getElementById('iniBaseWx'); if(!g) return;
+  try{ const c=JSON.parse(localStorage.getItem('pex_weather')||'null'); if(c && c.temp!=null){ const t=g.querySelector('text'); if(t) t.textContent=c.temp+'°'; } }catch(e){} }
 function iniCountUp(){
   const els=document.querySelectorAll('.ini-cmd .num[data-count]');
   const ic=document.getElementById('iniClock'); if(ic){ const d=new Date(); ic.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
@@ -2865,11 +2873,19 @@ function viewInicio(){
   const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
   const cav=iniCavalos();
-  const rotas=['pxr1','pxr1','pxr2','pxr3','pxr3'], durs=[26,26,31,20,20], begs=['0','-13','0','0','-10'];
-  const trucks=cav.map((v,i)=>`<g class="ini-veh" data-tip="${esc(v.placa)}" onclick="iniAbrirVeic('${esc(v.placa)}')"><circle class="ring" r="12"/><use href="#iniTruck"/><animateMotion dur="${durs[i%5]}s" begin="${begs[i%5]}s" rotate="auto" repeatCount="indefinite"><mpath href="#${rotas[i%5]}"/></animateMotion></g>`).join('');
-  const cidades=[['MARINGÁ',185,150],['PAIÇANDU',108,200],['CAMBÉ',330,368]];
-  const cidadesSVG=cidades.map(c=>`<g class="pex-city"><circle class="ini-cityring" cx="${c[1]}" cy="${c[2]}" r="7"/><circle cx="${c[1]}" cy="${c[2]}" r="4.6"/><text x="${c[1]}" y="${c[2]-13}" text-anchor="middle">${c[0]}</text></g>`).join('');
-  const grid=`${[130,260,390].map(y=>`<line x1="0" y1="${y}" x2="640" y2="${y}"/>`).join('')}${[160,320,480].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="520"/>`).join('')}`;
+  const rotas=['pxr1','pxr2','pxr3','pxr4','pxr1'], durs=[24,28,20,26,23], begs=['0','-14','0','-10','-8'];
+  const trucks=cav.map((v,i)=>`<g class="ini-veh" data-tip="${esc(v.placa)}" onclick="iniAbrirVeic('${esc(v.placa)}')"><circle class="ring" r="13"/><use href="#iniTruck"/><animateMotion dur="${durs[i%5]}s" begin="${begs[i%5]}s" rotate="auto" repeatCount="indefinite"><mpath href="#${rotas[i%5]}"/></animateMotion></g>`).join('');
+  const cidades=[['MARINGÁ',185,150],['PAIÇANDU',108,200],['CAMBÉ',330,368],['IBIPORÃ',548,360]];
+  const cidadesSVG=cidades.map(c=>`<g class="cc-city">
+      <circle class="cc-cring" cx="${c[1]}" cy="${c[2]}" r="13"/>
+      <circle class="cc-cglow" cx="${c[1]}" cy="${c[2]}" r="7.5"/>
+      <circle class="cc-cdot" cx="${c[1]}" cy="${c[2]}" r="3.4"/>
+      <text class="cc-cname" x="${c[1]}" y="${c[2]-18}" text-anchor="middle">${esc(c[0])}</text>
+      <g class="cc-csig" transform="translate(${c[1]},${c[2]+21})"><rect x="-23" y="-8" width="46" height="15" rx="7.5"/><circle cx="-14" cy="-.5" r="2.6"/><text x="4" y="3.6" text-anchor="middle">ONLINE</text></g>
+    </g>`).join('');
+  const roads=[['PR-323',300,126],['PR-445',248,214],['PR-369',372,334],['PR-090',500,300]];
+  const roadsSVG=roads.map(r=>`<g class="cc-road" transform="translate(${r[1]},${r[2]})"><rect x="-25" y="-8" width="50" height="16" rx="4"/><text y="3.6" text-anchor="middle">${r[0]}</text></g>`).join('');
+  const gridL=`${[110,220,330,440].map(y=>`<line x1="0" y1="${y}" x2="640" y2="${y}"/>`).join('')}${[130,260,390,520].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="520"/>`).join('')}`;
   return `<div class="ini-cmd">
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>
@@ -2883,31 +2899,45 @@ function viewInicio(){
     </div>
     <div class="ini-stage card">
       <div class="ini-stage-h"><b>Monitoramento</b><div class="r"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-      <div class="pex-map pex-map-hero ini-map ini-map-half" id="pexDashMap">
-        <svg viewBox="0 0 640 520" preserveAspectRatio="xMidYMid meet">
+      <div class="pex-map pex-map-hero ini-map ini-map-half cc-map" id="pexDashMap">
+        <svg viewBox="0 0 640 520" preserveAspectRatio="xMidYMid meet" class="cc-svg">
           <defs>
-            <radialGradient id="pexHubg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(92,200,255,.32)"/><stop offset="1" stop-color="rgba(92,200,255,0)"/></radialGradient>
-            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient>
-            <linearGradient id="pexGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2d488"/><stop offset="1" stop-color="#caa23f"/></linearGradient>
-            <radialGradient id="beamG" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="156"><stop offset="0" stop-color="rgba(0,229,255,.4)"/><stop offset="1" stop-color="rgba(0,229,255,0)"/></radialGradient>
-            <g id="iniTruck"><rect x="-9" y="-4.5" width="13" height="9" rx="2.5" fill="#eaf6ff"/><rect x="4" y="-3.6" width="6.5" height="7.2" rx="1.6" fill="#8ff0ff"/></g>
+            <pattern id="ccHex" width="34" height="30" patternUnits="userSpaceOnUse"><path d="M17 0 L34 8.6 L34 21.4 L17 30 L0 21.4 L0 8.6 Z" fill="none" stroke="rgba(0,190,255,.055)" stroke-width="1"/></pattern>
+            <linearGradient id="pexRg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#40f8ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient>
+            <radialGradient id="beamG" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="156"><stop offset="0" stop-color="rgba(0,229,255,.32)"/><stop offset="1" stop-color="rgba(0,229,255,0)"/></radialGradient>
+            <radialGradient id="ccBaseG" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(0,229,255,.5)"/><stop offset=".5" stop-color="rgba(0,150,255,.16)"/><stop offset="1" stop-color="rgba(0,150,255,0)"/></radialGradient>
+            <g id="iniTruck"><ellipse class="tk-shadow" cx="0" cy="6" rx="10" ry="2.4"/><rect class="tk-body" x="-9" y="-4.6" width="13" height="9.2" rx="2.6"/><rect class="tk-cab" x="4" y="-3.8" width="6.4" height="7.6" rx="1.7"/><rect class="tk-head" x="9.7" y="-2.3" width="1.8" height="4.6" rx=".9"/><rect class="tk-tail" x="-9.8" y="-3" width="1.5" height="6" rx=".75"/></g>
           </defs>
-          <g class="pex-mgrid">${grid}</g>
-          <polyline class="pex-corridor" points="440,258 185,150 108,200"/><polyline class="pex-corridor" points="440,258 330,368"/>
-          <path id="pxr1" class="pex-route" d="M440 258 Q305 175 185 150"/>
-          <path id="pxr2" class="pex-route" d="M440 258 Q255 235 108 200"/>
-          <path id="pxr3" class="pex-route" d="M440 258 Q395 325 330 368"/>
-          <g transform="translate(440 258)"><g class="ini-radar"><path class="ini-beam" d="M0 0 L152 -46 A159 159 0 0 1 152 46 Z" fill="url(#beamG)"/><animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0" to="360" dur="7s" repeatCount="indefinite"/></g></g>
-          <circle cx="440" cy="258" r="72" fill="url(#pexHubg)"/>
-          ${cidadesSVG}
-          <g class="pex-city hub">
-            <circle class="pex-hubring" cx="440" cy="258" r="9"/><circle class="pex-hubring r2" cx="440" cy="258" r="9"/>
-            <circle cx="440" cy="258" r="7.5"/>
-            <text x="440" y="234" text-anchor="middle">LONDRINA</text>
-            <g class="pex-base"><rect x="413" y="270" width="54" height="18" rx="9"/><text x="440" y="283" text-anchor="middle">BASE</text></g>
+          <rect class="cc-hex" x="0" y="0" width="640" height="520" fill="url(#ccHex)"/>
+          <g class="cc-grid">${gridL}</g>
+          <g id="ccZoom" class="cc-zoom">
+            <polyline class="cc-corridor" points="440,258 185,150 108,200"/><polyline class="cc-corridor" points="440,258 330,368"/><polyline class="cc-corridor" points="440,258 548,360"/>
+            <path id="pxr1" class="cc-route" d="M440 258 Q305 175 185 150"/>
+            <path id="pxr2" class="cc-route" d="M440 258 Q255 235 108 200"/>
+            <path id="pxr3" class="cc-route" d="M440 258 Q395 325 330 368"/>
+            <path id="pxr4" class="cc-route" d="M440 258 Q505 300 548 360"/>
+            <use href="#pxr1" class="cc-flow"/><use href="#pxr2" class="cc-flow"/><use href="#pxr3" class="cc-flow"/><use href="#pxr4" class="cc-flow"/>
+            ${roadsSVG}
+            <circle cx="440" cy="258" r="92" fill="url(#ccBaseG)"/>
+            <g class="cc-base" transform="translate(440 258)">
+              <circle class="cc-radar" r="24"/><circle class="cc-radar d1" r="24"/><circle class="cc-radar d2" r="24"/>
+              <g class="cc-beam"><path d="M0 0 L150 -44 A156 156 0 0 1 150 44 Z" fill="url(#beamG)"/><animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0" to="360" dur="7s" repeatCount="indefinite"/></g>
+              <circle class="cc-ring2" r="40"/><circle class="cc-ring2 b" r="58"/>
+              <circle class="cc-core-g" r="20"/><circle class="cc-core" r="8.5"/><circle class="cc-core2" r="4.2"/>
+            </g>
+            <text class="cc-baseName" x="440" y="226" text-anchor="middle">LONDRINA</text>
+            <text class="cc-baseSub" x="440" y="240" text-anchor="middle">BASE OPERACIONAL</text>
+            <g class="cc-wx" id="iniBaseWx" transform="translate(440,292)"><rect x="-27" y="-1" width="54" height="17" rx="8.5"/><text x="0" y="11" text-anchor="middle">--°</text></g>
+            ${cidadesSVG}
+            ${trucks}
           </g>
-          ${trucks}
         </svg>
+        <div class="cc-controls no-print">
+          <button class="cc-ctl" onclick="iniMapZoom(.3)" title="Aproximar" aria-label="Aproximar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="cc-ctl" onclick="iniMapZoom(-.3)" title="Afastar" aria-label="Afastar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+          <button class="cc-ctl" onclick="iniMapZoom(0,true)" title="Centralizar" aria-label="Centralizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+          <button class="cc-ctl" title="Camadas" aria-label="Camadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/></svg></button>
+        </div>
         <div class="pex-skel-ov" id="pexMapSkel"><span>Conectando ao monitoramento…</span></div>
         <aside class="ini-vpanel" id="iniVeicPanel"></aside>
       </div>

@@ -2094,3 +2094,78 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   /* badge da notificação: anel escuro (a barra branca sumiu) */
   .cock-badge{box-shadow:0 0 0 2px #06101d}
 }
+
+/* ==========================================================================
+   COMMAND CENTER — MONITORAMENTO PREMIUM (v6.42)
+   Redesenho visual do mapa da Inicio (mantendo dados/rotas/painel). Paleta
+   cyber (#040B14 a #40F8FF): grade hexagonal, base Londrina com radar, rotas
+   neon com particulas, veiculos tecnologicos, cidades com glow, controles.
+   Nada de logica alterada.
+   ========================================================================== */
+.cc-map{background:
+  radial-gradient(700px 460px at 50% 42%, rgba(0,120,255,.10), transparent 62%),
+  radial-gradient(520px 380px at 12% 96%, rgba(0,229,255,.06), transparent 60%),
+  linear-gradient(160deg,#081a2c 0%,#040b14 78%)!important}
+.cc-map::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 120px rgba(2,7,15,.72)}
+.cc-svg{width:100%;height:100%;display:block}
+.cc-hex{opacity:.9}
+.cc-grid line{stroke:rgba(0,190,255,.05);stroke-width:1}
+.cc-zoom{transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+/* corredores + rotas */
+.cc-corridor{fill:none;stroke:rgba(0,150,255,.14);stroke-width:1.4;stroke-linejoin:round}
+.cc-route{fill:none;stroke:url(#pexRg);stroke-width:2.4;opacity:.55;filter:drop-shadow(0 0 5px rgba(0,180,255,.5))}
+.cc-flow{fill:none;stroke:#40f8ff;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:2 15;opacity:.9;filter:drop-shadow(0 0 5px rgba(0,229,255,.9));animation:ccFlow .9s linear infinite}
+@keyframes ccFlow{to{stroke-dashoffset:-17}}
+/* base Londrina: radar + nucleo energetico */
+.cc-radar{fill:none;stroke:#00e5ff;stroke-width:1.4;opacity:0;transform-box:fill-box;transform-origin:center;animation:ccRadar 3.4s ease-out infinite}
+.cc-radar.d1{animation-delay:1.13s}.cc-radar.d2{animation-delay:2.26s}
+@keyframes ccRadar{0%{transform:scale(.5);opacity:.85}70%{opacity:.12}100%{transform:scale(5.1);opacity:0}}
+.cc-beam{opacity:.6}
+.cc-ring2{fill:none;stroke:rgba(0,200,255,.28);stroke-width:1.1}
+.cc-ring2.b{stroke:rgba(0,180,255,.16);stroke-dasharray:3 6}
+.cc-core-g{fill:rgba(0,229,255,.28);filter:blur(6px);transform-box:fill-box;transform-origin:center;animation:ccCore 3s ease-in-out infinite}
+.cc-core{fill:#eaffff;filter:drop-shadow(0 0 12px rgba(120,240,255,1)) drop-shadow(0 0 26px rgba(0,200,255,.9))}
+.cc-core2{fill:#fff}
+@keyframes ccCore{0%,100%{opacity:.6;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.cc-baseName{fill:#eaf9ff;font-size:15px;font-weight:800;letter-spacing:2px;filter:drop-shadow(0 0 8px rgba(0,200,255,.5))}
+.cc-baseSub{fill:#5fb2d8;font-family:"Consolas",monospace;font-size:8px;letter-spacing:2.4px;text-transform:uppercase}
+.cc-wx rect{fill:rgba(6,20,38,.72);stroke:rgba(0,200,255,.3);stroke-width:1}
+.cc-wx text{fill:#8fe6ff;font-family:"Consolas",monospace;font-size:11px;font-weight:700}
+/* cidades */
+.cc-city{cursor:default}
+.cc-cring{fill:none;stroke:rgba(0,200,255,.4);stroke-width:1.2;transform-box:fill-box;transform-origin:center;animation:ccRadar 3.6s ease-out infinite}
+.cc-cglow{fill:rgba(0,200,255,.16);filter:blur(3px)}
+.cc-cdot{fill:#8fe6ff;filter:drop-shadow(0 0 7px rgba(0,220,255,.95))}
+.cc-city:hover .cc-cdot{fill:#fff;filter:drop-shadow(0 0 11px rgba(120,240,255,1))}
+.cc-cname{fill:#dcedfb;font-size:11px;font-weight:700;letter-spacing:.8px}
+.cc-csig rect{fill:rgba(6,20,38,.6);stroke:rgba(0,200,255,.18);stroke-width:.8}
+.cc-csig circle{fill:#25e88f;filter:drop-shadow(0 0 4px #25e88f)}
+.cc-csig text{fill:#7fbfe0;font-family:"Consolas",monospace;font-size:6.5px;letter-spacing:1px}
+/* rodovias */
+.cc-road rect{fill:rgba(6,18,34,.55);stroke:rgba(120,150,190,.16);stroke-width:.8}
+.cc-road text{fill:#6f90ad;font-family:"Consolas",monospace;font-size:8px;letter-spacing:.6px}
+/* veiculos tecnologicos */
+.ini-veh{cursor:pointer}
+.ini-veh .ring{fill:none;stroke:#00e5ff;stroke-width:1.3;opacity:.55;animation:iniPing 3s ease-out infinite}
+.ini-veh use{filter:drop-shadow(0 0 6px rgba(0,200,255,.85));animation:ccBob 2.6s ease-in-out infinite}
+.ini-veh .tk-shadow{fill:rgba(0,10,25,.5)}
+.ini-veh .tk-body{fill:#eaf6ff}
+.ini-veh .tk-cab{fill:#40f8ff}
+.ini-veh .tk-head{fill:#feffff;filter:drop-shadow(0 0 4px #bff6ff)}
+.ini-veh .tk-tail{fill:#ff5a6e}
+.ini-veh:hover use{filter:drop-shadow(0 0 11px rgba(120,240,255,1))}
+.ini-veh:hover .tk-cab{fill:#8ff6ff}
+@keyframes ccBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.7px)}}
+/* controles (canto inf. esquerdo) */
+.cc-controls{position:absolute;left:16px;bottom:16px;z-index:6;display:flex;flex-direction:column;gap:9px}
+.cc-ctl{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;
+  background:rgba(8,22,40,.6);border:1px solid rgba(0,200,255,.16);color:#9fd4ee;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 0 16px rgba(0,170,255,.08),0 8px 20px rgba(0,8,26,.4);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,color .18s ease}
+.cc-ctl svg{width:19px;height:19px}
+.cc-ctl:hover{transform:translateY(-2px);color:#eaf9ff;border-color:rgba(0,220,255,.45);box-shadow:0 0 24px rgba(0,200,255,.24),0 10px 24px rgba(0,8,26,.5)}
+.cc-ctl:active{transform:scale(.9)}
+.cc-ctl::after{content:"";position:absolute;left:50%;top:50%;width:150%;padding-bottom:150%;transform:translate(-50%,-50%) scale(0);border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.4),transparent 60%);opacity:0;pointer-events:none}
+.cc-ctl:active::after{opacity:1;transform:translate(-50%,-50%) scale(1);transition:transform .45s ease-out,opacity .6s}
+@media(max-width:640px){ .cc-controls{left:10px;bottom:10px} .cc-ctl{width:36px;height:36px} }
+@media(prefers-reduced-motion:reduce){ .cc-flow,.cc-radar,.cc-cring,.cc-core-g,.ini-veh use,.ini-veh .ring{animation:none} .cc-flow{opacity:.7} .cc-radar{opacity:.25;transform:scale(1.6)} }
