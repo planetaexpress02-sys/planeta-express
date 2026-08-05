@@ -158,7 +158,7 @@ function iaResponder(raw){
   return `Não entendi 🤔. Pode pedir um dado (ex.: <i>cpf uilian</i>, <i>chassi IRU-4G62</i>, <i>quando vence a CNH do Reinaldo</i>) ou lançar algo (ex.: <i>troca de óleo IRU hoje 1520000 km</i>). Escreva <b>ajuda</b> para exemplos.`;
 }
 /* Campos consultáveis mesmo sem palavra de pergunta */
-function _iaConsultaCurta(n){ return /\bcpf\b|\brg\b|telefone|celular|contato|\bfone\b|email|e-mail|chassi|renavam|\bcnh\b|habilita|carteira|endereco|\bmora\b|idade|nasciment|aniversar|\bano\b|\bcor\b|categoria|\bficha\b|\bdados?\b|\bquem\b|documento|venciment|\bvence|validade|alarme|media|consumo|\bkm\b|\bhora|ped[aá]gios?|praça|praca|concession|sem\s*parar|vale.?ped/.test(n); }
+function _iaConsultaCurta(n){ return /\bcpf\b|\brg\b|telefone|celular|contato|\bfone\b|email|e-mail|chassi|renavam|\bcnh\b|habilita|carteira|endereco|\bmora\b|idade|nasciment|aniversar|\bano\b|\bcor\b|categoria|\bficha\b|\bdados?\b|\bquem\b|documento|venciment|\bvence|validade|alarme|media|consumo|\bkm\b|\bhora|ped[aá]gios?|praça|praca|concession|sem\s*parar|vale.?ped|\bbr\s*-?\s*\d{3}\b|\bpr\s*-?\s*\d{3}\b/.test(n); }
 
 /* ================================================================== */
 /*  4. COMANDOS QUE LANÇAM DADOS                                       */
@@ -316,7 +316,7 @@ function iaConsulta(t,n){
   }
 
   /* PEDÁGIOS */
-  if(/pedagio|pedágio|pedagios|praça|praca|concession|sem\s*parar|vale.?ped|ped[aá]gios?/.test(n)){
+  if(/pedagio|pedágio|pedagios|praça|praca|concession|sem\s*parar|vale.?ped|ped[aá]gios?|\bbr\s*-?\s*\d{3}\b|\bpr\s*-?\s*\d{3}\b/.test(n)){
     const ped=(DB.pedagios||[]); if(!ped.length) return `Ainda não há pedágios cadastrados.`;
     const soma=arr=>arr.reduce((s,p)=>s+(+p.valor||0),0);
     const inf=(typeof _pedInfo==='function')?_pedInfo:(x=>({rodovia:'',cidade:''}));
