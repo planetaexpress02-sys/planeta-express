@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -307,6 +307,9 @@ const IC = {
   chevron:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   filter:'<path d="M3 5h18M6 12h12M10 19h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
   umbrella:'<path d="M12 2v2M12 21a2 2 0 0 1-4 0M3.5 12a8.5 8.5 0 0 1 17 0c0 .8-.9.3-2 .3s-2 .5-2.5.5S13.5 12 12 12s-1.5.8-3 .8-1.4-.5-2.5-.5-2 .5-3 0z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 12v7" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+  toll:'<path d="M4 21V10l4-6h8l4 6v11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 21h16M9 21v-6h6v6M8 8h8" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  clients:'<path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20a7 7 0 0 1 14 0M16 3.5a3 3 0 0 1 0 5.8M22 20a6.5 6.5 0 0 0-4-6" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
@@ -436,6 +439,7 @@ const ROTAS = {
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
   notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
+  pedagios:{t:'Pedágios', s:'Passagens, custos, praças e concessionárias', ico:'toll'},
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
@@ -474,6 +478,7 @@ function router(){
   else if(rota==='alarmes') el.innerHTML=viewAlarmes();
   else if(rota==='notas') el.innerHTML=viewNotas();
   else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
+  else if(rota==='pedagios'){ if(arg) pedFiltro=arg; el.innerHTML=viewPedagios(); }
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
@@ -501,6 +506,7 @@ function pexAfterRender(rota){
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     if(rota==='inicio' && typeof iniBaseWx==='function') iniBaseWx();
     if(rota==='descargas' && typeof descInit==='function') descInit();
+    if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
 /* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */
@@ -609,7 +615,7 @@ function renderSidebar(rota){
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
-    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('alarmes')+ item('documentos')+
+    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
@@ -3319,6 +3325,333 @@ async function _removerAnexoSilencioso(id){
   const a=(DB.anexos||[]).find(x=>x.id===id);
   if(a){ if(a.storagePath && typeof nuvemRemoverArquivo==='function'){ try{ await nuvemRemoverArquivo(a.storagePath); }catch(e){} } DB.anexos=DB.anexos.filter(x=>x.id!==id); }
   try{ await idbDel(id); }catch(e){}
+}
+
+/* ================================================================== */
+/*  PEDÁGIOS — Centro de Inteligência (extrato Sem Parar)              */
+/* ================================================================== */
+let pedFiltro='todos';      // todos | mes | ano | personalizado
+let pedTipo='todos';        // todos | Pedágio | Vale-pedágio
+let pedDe='', pedAte='';
+const PED_CONC_COR={ 'PRVIAS':'#00e5ff', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e' };
+function _pedConcCor(c){ return PED_CONC_COR[c]||'#5c99ff'; }
+function _pedNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+/* Extrai rodovia/km/sentido/cidade do texto da praça */
+function _pedInfo(praca){
+  const p=String(praca||'');
+  const rm=p.match(/\b(BR|PR)[\s\-]?0?(\d{2,3})\b/i);
+  const rodovia= rm? (rm[1].toUpperCase()+'-'+rm[2]) : '';
+  const km=(p.match(/KM\s*([\d]+(?:\+\d+)?)/i)||[])[1]||'';
+  const sm=(p.match(/\b(NORTE|SUL|LESTE|OESTE)\b/i)||[])[1]||'';
+  const sent=sm? sm.charAt(0)+sm.slice(1).toLowerCase() : '';
+  const parts=p.split(',').map(s=>s.trim()).filter(Boolean);
+  const cidade=parts.length? parts[parts.length-1] : '';
+  return { rodovia, km, sentido:sent, cidade };
+}
+function _pedNaData(p){
+  if(pedFiltro==='todos') return true;
+  const d=parseD(p.data); if(!d) return false; const h=hoje();
+  if(pedFiltro==='mes') return d.getMonth()===h.getMonth() && d.getFullYear()===h.getFullYear();
+  if(pedFiltro==='ano') return d.getFullYear()===h.getFullYear();
+  if(pedFiltro==='personalizado'){ const de=parseD(pedDe), at=parseD(pedAte); if(de&&d<de)return false; if(at&&d>at)return false; return true; }
+  return true;
+}
+function _pedFiltradas(){ return (DB.pedagios||[]).filter(p=> _pedNaData(p) && (pedTipo==='todos'||p.tipo===pedTipo) ); }
+function _pedCidade(p){ return (_pedInfo(p.praca).cidade||'').trim(); }
+/* Alertas inteligentes sobre um conjunto de passagens */
+function _pedAlertas(lista){
+  const al=[];
+  // duplicadas: mesma placa + data + hora + praça
+  const seen={}; lista.forEach(p=>{ const k=p.placa+'|'+p.data+'|'+p.hora+'|'+p.praca+'|'+p.tipo; if(seen[k]) al.push({cls:'crit',t:'Passagem duplicada',s:p.placa+' · '+fmtD(p.data)+' '+p.hora+' · '+_pedCidade(p),id:p.id}); else seen[k]=1; });
+  // TAG divergente: placa com mais de uma TAG
+  const tags={}; lista.forEach(p=>{ (tags[p.placa]=tags[p.placa]||new Set()).add(p.tag||''); });
+  Object.keys(tags).forEach(pl=>{ if(tags[pl].size>1) al.push({cls:'warn',t:'TAG divergente',s:pl+' aparece com '+tags[pl].size+' TAGs diferentes'}); });
+  // categoria (eixos) divergente por veículo
+  const cats={}; lista.forEach(p=>{ (cats[p.placa]=cats[p.placa]||new Set()).add(p.cat); });
+  Object.keys(cats).forEach(pl=>{ if(cats[pl].size>2) al.push({cls:'warn',t:'Categoria divergente',s:pl+' passou em '+cats[pl].size+' categorias diferentes'}); });
+  return al;
+}
+function viewPedagios(){
+  const lista=_pedFiltradas();
+  const total=lista.reduce((s,p)=>s+(+p.valor||0),0);
+  const pago=lista.filter(p=>p.tipo==='Pedágio').reduce((s,p)=>s+(+p.valor||0),0);
+  const vale=lista.filter(p=>p.tipo==='Vale-pedágio').reduce((s,p)=>s+(+p.valor||0),0);
+  const qtd=lista.length;
+  const ticket= qtd? total/qtd : 0;
+  const veics=[...new Set(lista.map(p=>p.placa))];
+  const custoVeic= veics.length? total/veics.length : 0;
+  const pracas=[...new Set(lista.map(_pedCidade).filter(Boolean))];
+  const concs=[...new Set(lista.map(p=>p.conc).filter(Boolean))];
+  const alertas=_pedAlertas(lista);
+
+  const kp=(ico,val,label,sub,cor,money1,href)=>`<a class="kpi ${href?'link':''}" ${href?`onclick="${href}" style="cursor:pointer"`:''}>
+    <div class="k-top"><div class="k-ico" style="color:${cor};background:${cor}1f">${svg(ico)}</div>${href?'<span class="k-go">→</span>':''}</div>
+    <div class="k-val" data-count="${val}" data-money="${money1?1:0}">${money1?'R$ 0':'0'}</div><div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`;
+
+  // ---- gráficos ----
+  const meses={}; lista.forEach(p=>{ const ym=(p.data||'').slice(0,7); if(!ym)return; meses[ym]=(meses[ym]||0)+(+p.valor||0); });
+  const mesData=Object.keys(meses).sort().map(ym=>{ const [y,m]=ym.split('-'); return {label:MESES[+m-1], value:Math.round(meses[ym]), vtxt:moneyK(meses[ym]) }; });
+  const porConc={}; lista.forEach(p=>{ porConc[p.conc]=(porConc[p.conc]||0)+(+p.valor||0); });
+  const concData=Object.keys(porConc).map(c=>({label:c, value:Math.round(porConc[c]), color:_pedConcCor(c)}));
+  const porVeic={}; lista.forEach(p=>{ porVeic[p.placa]=(porVeic[p.placa]||0)+(+p.valor||0); });
+  const veicData=Object.keys(porVeic).sort((a,b)=>porVeic[b]-porVeic[a]).map(pl=>({label:pl, value:Math.round(porVeic[pl]), vtxt:moneyK(porVeic[pl]), js:`pedBuscaPlaca('${pl}')`}));
+  const porPraca={}; lista.forEach(p=>{ const c=_pedCidade(p)||p.praca; porPraca[c]=(porPraca[c]||0)+(+p.valor||0); });
+  const pracaData=Object.keys(porPraca).sort((a,b)=>porPraca[b]-porPraca[a]).slice(0,8).map(c=>({label:c.length>10?c.slice(0,9)+'…':c, value:Math.round(porPraca[c]), vtxt:moneyK(porPraca[c])}));
+
+  // ---- lista ----
+  const linha=(p)=>{ const inf=_pedInfo(p.praca); const cor=_pedConcCor(p.conc);
+    return `<tr style="cursor:pointer" onclick="pedAbrir('${p.id}')">
+      <td class="mono" _pexKey>${fmtD(p.data)}</td><td class="mono">${esc(p.hora||'')}</td>
+      <td>${plate(p.placa,'')}</td>
+      <td>${esc(inf.cidade)}<div class="muted" style="font-size:11px">${esc(inf.rodovia)}${inf.km?' · KM '+esc(inf.km):''}${inf.sentido?' · '+esc(inf.sentido):''}</div></td>
+      <td><span class="ped-tag" style="--c:${cor}">${esc(p.conc)}</span></td>
+      <td class="mono">${p.cat||'—'}</td>
+      <td>${p.tipo==='Vale-pedágio'?`<span class="st warn" title="Reembolsado por ${esc(p.emb||'embarcador')}">Vale (${esc(p.emb||'BRF')})</span>`:'<span class="st ok">Pago</span>'}</td>
+      <td class="mono">${esc(p.viagem||'—')}</td>
+      <td class="ta-r mono"><b>${money(p.valor)}</b></td>
+    </tr>`; };
+
+  const perChip=(k,l)=>`<button class="seg-b ${pedFiltro===k?'on':''}" onclick="pedFiltro='${k}';${k==='personalizado'?'pedPeriodoModal()':'router()'}">${l}</button>`;
+  const tpChip=(k,l)=>`<button class="seg-b ${pedTipo===k?'on':''}" onclick="pedTipo='${k}';router()">${l}</button>`;
+
+  return `
+  <div class="banner">${svg('toll')}<div><b>Pedágios — centro de inteligência</b><span>Todas as passagens de pedágio da frota (extrato Sem Parar), com custos, praças, concessionárias, rotas e integração com viagens e financeiro.</span></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="pedImportarModal()">${svg('upload')} Importar extrato</button>
+      <button class="btn primary" onclick="pedModal()">${svg('plus')} Novo pedágio</button>
+    </div></div>
+
+  <div class="toolbar" style="gap:10px;flex-wrap:wrap">
+    <div class="seg2">${perChip('todos','Todos')}${perChip('mes','Este mês')}${perChip('ano','Este ano')}${perChip('personalizado','Personalizado')}</div>
+    <div class="seg2">${tpChip('todos','Tudo')}${tpChip('Pedágio','Pagos')}${tpChip('Vale-pedágio','Vale-pedágio')}</div>
+    <div class="spacer"></div>
+    <button class="btn no-print" onclick="window.print()">${svg('print')} Relatório</button>
+  </div>
+
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
+    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens', '#00e5ff', 1)}
+    ${kp('wallet', Math.round(pago), 'Pago pela empresa', 'débito direto', '#f2686b', 1, "pedTipo='Pedágio';router()")}
+    ${kp('shield', Math.round(vale), 'Vale-pedágio (BRF)', 'reembolsado', '#4bd6a0', 1, "pedTipo='Vale-pedágio';router()")}
+    ${kp('toll', qtd, 'Passagens', pracas.length+' praças', '#8b9dff', 0)}
+  </div>
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kp('trend', Math.round(ticket), 'Ticket médio', 'por passagem', '#5cc8ff', 1)}
+    ${kp('truck', Math.round(custoVeic), 'Custo médio', 'por veículo', '#e0b354', 1)}
+    ${kp('map', pracas.length, 'Praças distintas', '', '#37e3d0', 0)}
+    ${kp('clients', concs.length, 'Concessionárias', concs.join(' · '), '#8b9dff', 0)}
+  </div>
+
+  <div class="grid two-col">
+    <div class="card"><div class="card-h">${svg('trend')}<h3>Gastos por mês</h3></div>
+      <div class="card-b">${mesData.length?lineChart(mesData,{h:170}):emptyState('Sem passagens no período.')}</div></div>
+    <div class="card"><div class="card-h">${svg('coins')}<h3>Pago × Vale-pedágio</h3></div>
+      <div class="card-b"><div class="donut-wrap">
+        ${donut([{label:'Pago pela empresa',value:Math.round(pago),color:'#f2686b'},{label:'Vale-pedágio (BRF)',value:Math.round(vale),color:'#4bd6a0'}],{center:moneyK(total),sub:'total'})}
+        <div class="legend">
+          <div class="li"><span class="dot" style="background:#f2686b"></span>Pago pela empresa<b>${money(pago)}</b></div>
+          <div class="li"><span class="dot" style="background:#4bd6a0"></span>Vale-pedágio (BRF)<b>${money(vale)}</b></div>
+        </div></div></div></div>
+  </div>
+
+  <div class="grid two-col" style="margin-top:16px">
+    <div class="card"><div class="card-h">${svg('truck')}<h3>Gasto por veículo</h3></div>
+      <div class="card-b">${veicData.length?barChart(veicData,{h:160}):emptyState('Sem dados.')}</div></div>
+    <div class="card"><div class="card-h">${svg('clients')}<h3>Gasto por concessionária</h3></div>
+      <div class="card-b"><div class="donut-wrap">
+        ${donut(concData.map(c=>({label:c.label,value:c.value,color:c.color})),{center:concs.length,sub:'concess.'})}
+        <div class="legend">${concData.sort((a,b)=>b.value-a.value).map(c=>`<div class="li"><span class="dot" style="background:${c.color}"></span>${esc(c.label)}<b>${money(c.value)}</b></div>`).join('')}</div>
+      </div></div></div>
+  </div>
+
+  <div class="grid two-col" style="margin-top:16px">
+    <div class="card"><div class="card-h">${svg('map')}<h3>Top praças por custo</h3></div>
+      <div class="card-b">${pracaData.length?barChart(pracaData,{h:160}):emptyState('Sem dados.')}</div></div>
+    <div class="card"><div class="card-h">${svg('bell')}<h3>Alertas inteligentes</h3><div class="r"><span class="st ${alertas.length?'warn':'ok'}">${alertas.length||'0'}</span></div></div>
+      <div class="card-b p0">${alertas.length? alertas.slice(0,8).map(a=>`<div class="alert-row" ${a.id?`onclick="pedAbrir('${a.id}')"`:''}>
+        <div class="a-ico ${a.cls==='crit'?'i-red':'i-amber'}">${svg('bell')}</div>
+        <div class="a-main"><b>${esc(a.t)}</b><span>${esc(a.s)}</span></div></div>`).join('') : emptyState('Nenhuma inconsistência detectada. 👍')}</div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px"><div class="card-h">${svg('map')}<h3>Mapa de praças</h3><div class="r"><span class="muted" style="font-size:11.5px">clique numa praça</span></div></div>
+    <div class="card-b">${_pedMapa(lista)}</div></div>
+
+  <div class="card" style="margin-top:16px"><div class="card-h">${svg('toll')}<h3>Passagens</h3><div class="r"><span class="muted" style="font-size:12px">${qtd} passagem(ns) · ${money(total)}</span></div></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Data</th><th>Hora</th><th>Veículo</th><th>Praça</th><th>Concessionária</th><th>Cat</th><th>Tipo</th><th>Viagem</th><th class="ta-r">Valor</th></tr></thead>
+      <tbody>${lista.length? lista.slice().sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).map(linha).join('') : `<tr><td colspan="9">${emptyState('Nenhuma passagem neste filtro.')}</td></tr>`}</tbody>
+    </table></div></div>
+
+  <aside class="pn-panel" id="pedPanel"></aside>`;
+}
+/* Mapa estilizado das praças (base Londrina + praças como nós clicáveis) */
+function _pedMapa(lista){
+  const POS={ 'LONDRINA':[300,232],'ROLÂNDIA':[248,206],'ARAPONGAS':[212,190],'MANDAGUARI':[168,174],'MAUÁ DA SERRA':[364,256],'ORTIGUEIRA':[434,238],'IMBAÚ':[484,214],'TIBAGI':[530,198],'WITMARSUM':[602,186],'SÃO LUIZ DO PURUNÃ':[664,206] };
+  const agg={}; lista.forEach(p=>{ const cid=_pedCidade(p).toUpperCase(); if(!cid)return; (agg[cid]=agg[cid]||{cid,n:0,v:0}); agg[cid].n++; agg[cid].v+=(+p.valor||0); });
+  const nodes=Object.values(agg).filter(a=>POS[a.cid]);
+  const maxN=Math.max(1,...nodes.map(a=>a.n)); const base=POS['LONDRINA'];
+  const routes=nodes.filter(a=>a.cid!=='LONDRINA').map(a=>{ const q=POS[a.cid]; return `<line class="pdm-route" x1="${base[0]}" y1="${base[1]}" x2="${q[0]}" y2="${q[1]}"/>`; }).join('');
+  const marks=nodes.map(a=>{ const q=POS[a.cid]; const r=(a.cid==='LONDRINA')?11:(6+(a.n/maxN)*9); const isBase=a.cid==='LONDRINA';
+    return `<g class="pdm-node" onclick="pedPraca('${esc(a.cid).replace(/'/g,'')}')" data-tip="${esc(a.cid)}: ${a.n} passagem(ns) · ${esc(money(a.v))}">
+      <circle cx="${q[0]}" cy="${q[1]}" r="${(r+7).toFixed(1)}" class="pdm-halo ${isBase?'base':''}"></circle>
+      <circle cx="${q[0]}" cy="${q[1]}" r="${r.toFixed(1)}" class="pdm-dot ${isBase?'base':''}"></circle>
+      <text x="${q[0]}" y="${(q[1]-r-7).toFixed(1)}" text-anchor="middle" class="pdm-lbl ${isBase?'base':''}">${isBase?'LONDRINA · BASE':esc(a.cid)}</text>
+    </g>`; }).join('');
+  return `<svg viewBox="0 0 720 360" class="pdm-map" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="pdmr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient></defs>
+    <g class="pdm-routes">${routes}</g>${marks}</svg>`;
+}
+function pedBuscaPlaca(pl){ location.hash='#pedagios'; setTimeout(()=>{ const b=document.querySelector('#view .pex-search input'); if(b){ b.value=pl; b.dispatchEvent(new Event('input',{bubbles:true})); b.scrollIntoView({block:'center'}); } },60); }
+function pedPraca(cid){ const el=document.getElementById('pedPanel'); if(!el)return;
+  const ps=_pedFiltradas().filter(p=>_pedCidade(p).toUpperCase()===cid.toUpperCase());
+  const tot=ps.reduce((s,p)=>s+(+p.valor||0),0); const inf=ps[0]?_pedInfo(ps[0].praca):{};
+  el.innerHTML=`<div class="pn-head"><b>${esc(cid)}</b><button class="pn-x" onclick="pedFechar()">×</button></div>
+    <div class="pn-body">
+      <div class="pn-f"><small>Rodovia</small><b>${esc(inf.rodovia||'—')}</b></div>
+      <div class="pn-f"><small>Passagens</small><b>${ps.length}</b></div>
+      <div class="pn-f"><small>Custo total</small><b>${money(tot)}</b></div>
+      <div class="pn-sec">Passagens nesta praça</div>
+      ${ps.sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).map(p=>`<div class="pn-item" onclick="pedAbrir('${p.id}')"><b>${plate(p.placa,'')} ${money(p.valor)}</b><span>${fmtD(p.data)} ${esc(p.hora)} · ${esc(_pedInfo(p.praca).sentido)}</span></div>`).join('')}
+    </div>`;
+  el.classList.add('show');
+}
+function pedAbrir(id){ const el=document.getElementById('pedPanel'); if(!el)return; const p=(DB.pedagios||[]).find(x=>x.id===id); if(!p)return;
+  const inf=_pedInfo(p.praca); const v=veiculoByPlaca(p.placa);
+  const alertas=_pedAlertas((DB.pedagios||[]).filter(x=>x.placa===p.placa)).filter(a=>!a.id||a.id===id);
+  el.innerHTML=`<div class="pn-head"><b>${esc(p.placa)} · ${money(p.valor)}</b><button class="pn-x" onclick="pedFechar()">×</button></div>
+    <div class="pn-body">
+      <div class="pn-f"><small>Data / hora</small><b>${fmtD(p.data)} · ${esc(p.hora||'—')}</b></div>
+      <div class="pn-f"><small>Veículo</small><b>${esc(p.placa)}${v?' · '+esc(v.marca+' '+v.modelo):''}</b></div>
+      <div class="pn-f"><small>Concessionária</small><b>${esc(p.conc||'—')}</b></div>
+      <div class="pn-f"><small>Praça</small><b>${esc(p.praca||'—')}</b></div>
+      <div class="pn-grid2">
+        <div class="pn-f"><small>Rodovia</small><b>${esc(inf.rodovia||'—')}</b></div>
+        <div class="pn-f"><small>KM</small><b>${esc(inf.km||'—')}</b></div>
+        <div class="pn-f"><small>Sentido</small><b>${esc(inf.sentido||'—')}</b></div>
+        <div class="pn-f"><small>Cidade / UF</small><b>${esc(inf.cidade||'—')} / PR</b></div>
+        <div class="pn-f"><small>Categoria (eixos)</small><b>${p.cat||'—'}</b></div>
+        <div class="pn-f"><small>TAG</small><b>${esc(p.tag||'—')}</b></div>
+      </div>
+      <div class="pn-f"><small>Tipo</small><b>${p.tipo==='Vale-pedágio'?'Vale-pedágio — reembolsado por '+esc(p.emb||'embarcador'):'Pago pela empresa'}</b></div>
+      ${p.viagem?`<div class="pn-f"><small>Viagem</small><b>${esc(p.viagem)}</b></div>`:''}
+      ${p.obs?`<div class="pn-f"><small>Observações</small><b>${esc(p.obs)}</b></div>`:''}
+      ${alertas.length?`<div class="pn-sec" style="color:#ffb020">⚠ Alertas</div>${alertas.map(a=>`<div class="pn-item"><b>${esc(a.t)}</b><span>${esc(a.s)}</span></div>`).join('')}`:''}
+      <div class="pn-sec">Comprovante</div>
+      <div>${badgeAnexo('pedagio', p.id, /./, 'Pedágio')}</div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn sm" onclick="pedModal('${p.id}')">${svg('edit')} Editar</button>
+        <button class="btn ghost sm" onclick="pedExcluir('${p.id}')">${svg('trash')} Excluir</button>
+      </div>
+    </div>`;
+  el.classList.add('show');
+}
+function pedFechar(){ const el=document.getElementById('pedPanel'); if(el) el.classList.remove('show'); }
+function pedModal(id){
+  const p=id?(DB.pedagios||[]).find(x=>x.id===id):{data:'',hora:'',placa:(DB.veiculos[0]||{}).placa||'',conc:'',praca:'',cat:'',valor:'',tipo:'Pedágio',emb:'',viagem:'',tag:'',obs:''};
+  if(!p){ toast('Pedágio não encontrado.','err'); return; }
+  const placas=[...new Set([...(DB.veiculos||[]).map(v=>v.placa), ...(DB.pedagios||[]).map(x=>x.placa)])];
+  if(p.placa && placas.indexOf(p.placa)<0) placas.push(p.placa);
+  const opt=(v,cur,l)=>`<option value="${esc(v)}" ${cur===v?'selected':''}>${esc(l||v)}</option>`;
+  openModal(`<div class="m-h">${svg('toll')}<h3>${id?'Editar pedágio':'Novo pedágio'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fld('Hora','f_hora',p.hora,'text','hh:mm:ss')}</div>
+      <div class="field-row"><div class="field"><label>Veículo (placa)</label><select id="f_placa">${placas.map(pl=>opt(pl,p.placa)).join('')}</select></div>
+        <div class="field"><label>Tipo</label><select id="f_tipo">${opt('Pedágio',p.tipo)}${opt('Vale-pedágio',p.tipo)}</select></div></div>
+      <div class="field-row">${fld('Concessionária','f_conc',p.conc)}${fld('Categoria (eixos)','f_cat',p.cat,'number')}</div>
+      ${fld('Praça (rodovia, KM, sentido, cidade)','f_praca',p.praca,'text','Ex.: BR-376, KM 448+550, NORTE, TIBAGI')}
+      <div class="field-row">${fldR$('Valor (R$)','f_valor',p.valor)}${fld('TAG','f_tag',p.tag)}</div>
+      <div class="field-row">${fld('Embarcador (vale-pedágio)','f_emb',p.emb)}${fld('Viagem','f_viagem',p.viagem)}</div>
+      <div class="field"><label>Observações</label><input id="f_obs" value="${esc(p.obs||'')}"></div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="pedExcluir('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="pedSalvar('${id||''}')">Salvar</button></div>`);
+}
+function pedSalvar(id){
+  if(!val('f_praca')){ toast('Informe a praça.','err'); return; }
+  const d={ data:val('f_data'), hora:val('f_hora'), placa:val('f_placa'), conc:val('f_conc'), praca:val('f_praca'),
+    cat: val('f_cat')? parseInt(val('f_cat')) : '', valor:parseBRL(val('f_valor')), tipo:val('f_tipo'),
+    emb:val('f_emb'), viagem:val('f_viagem'), tag:val('f_tag'), obs:val('f_obs') };
+  if(id){ Object.assign((DB.pedagios||[]).find(x=>x.id===id), d); }
+  else { d.id=uid('pd'); (DB.pedagios=DB.pedagios||[]).push(d); }
+  saveDB(); closeModal(); toast('Pedágio salvo.'); router();
+}
+function pedExcluir(id){ if(!confirm('Excluir esta passagem?'))return; DB.pedagios=(DB.pedagios||[]).filter(x=>x.id!==id); saveDB(); closeModal(); pedFechar(); toast('Passagem excluída.'); router(); }
+function pedPeriodoModal(){
+  openModal(`<div class="m-h">${svg('cal')}<h3>Período personalizado</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b"><div class="field-row">${fld('De','f_de',pedDe,'date')}${fld('Até','f_ate',pedAte,'date')}</div></div>
+    <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="pedDe=val('f_de');pedAte=val('f_ate');pedFiltro='personalizado';closeModal();router()">Aplicar</button></div>`);
+}
+/* ---- Importar extrato (PDF Sem Parar / imagem / CSV) ---- */
+let PED_FILA=[];
+function pedImportarModal(){
+  openModal(`<div class="m-h">${svg('upload')}<h3>Importar extrato de pedágios</h3><button class="x" onclick="PED_FILA=[];closeModal()">×</button></div>
+    <div class="m-b">
+      <label class="apo-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');_pedImportLer(event.dataTransfer.files)">
+        <input type="file" accept=".pdf,.csv,image/*" multiple style="display:none" onchange="_pedImportLer(this.files);this.value=''">
+        ${svg('upload')}<b>Solte o extrato Sem Parar (PDF) aqui ou clique</b>
+        <span>O sistema lê o extrato e extrai as passagens automaticamente (data, hora, praça, concessionária, valor…). Você confere antes de importar.</span>
+      </label>
+      <div id="pedImpFila">${_pedImpFilaHTML()}</div>
+    </div>
+    <div class="m-f"><button class="btn" onclick="PED_FILA=[];closeModal()">Fechar</button>
+      <button class="btn primary" id="pedImpBtn" onclick="_pedImportConfirmar()" ${PED_FILA.length?'':'disabled'}>Importar ${PED_FILA.filter(x=>x._ok).length||''}</button></div>`, true);
+}
+function _pedImpFilaHTML(){
+  if(!PED_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhuma passagem lida ainda.</div>`;
+  const novas=PED_FILA.filter(x=>x._ok).length, dup=PED_FILA.filter(x=>x._dup).length;
+  return `<div class="muted" style="margin:12px 0 8px">Encontradas <b>${PED_FILA.length}</b> passagens · ${novas} novas${dup?' · '+dup+' já existem (ignoradas)':''}</div>
+    <div class="tbl-wrap" style="max-height:320px;overflow:auto"><table class="tbl"><thead><tr><th></th><th>Data</th><th>Placa</th><th>Praça</th><th>Conc.</th><th class="ta-r">Valor</th></tr></thead>
+    <tbody>${PED_FILA.map((x,i)=>`<tr style="${x._dup?'opacity:.5':''}"><td><input type="checkbox" ${x._ok?'checked':''} ${x._dup?'disabled':''} onchange="PED_FILA[${i}]._ok=this.checked;_pedImpRefresh()"></td>
+      <td class="mono">${fmtD(x.data)} ${esc(x.hora||'')}</td><td>${esc(x.placa)}</td><td>${esc(_pedInfo(x.praca).cidade||x.praca)}</td><td>${esc(x.conc)}</td><td class="ta-r mono">${money(x.valor)}${x._dup?' <span class="st neutro">existe</span>':''}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function _pedImpRefresh(){ const el=document.getElementById('pedImpFila'); if(el)el.innerHTML=_pedImpFilaHTML();
+  const b=document.getElementById('pedImpBtn'); if(b){ const n=PED_FILA.filter(x=>x._ok).length; b.disabled=!n; b.innerHTML='Importar '+(n||''); } }
+async function _pedImportLer(fileList){
+  const files=[].slice.call(fileList||[]); if(!files.length) return;
+  if(typeof pexBar==='function') pexBar(true);
+  try{ for(const f of files){ let txt=''; try{ txt=await pexLerApoliceTexto(f); }catch(e){}
+      _pedParseSemParar(txt||'').forEach(r=>PED_FILA.push(r)); } }
+  finally{ if(typeof pexBar==='function') pexBar(false); }
+  // marca duplicados (mesma placa+data+hora+valor já no banco ou na fila)
+  const existe=new Set((DB.pedagios||[]).map(p=>p.placa+'|'+p.data+'|'+p.hora+'|'+p.valor));
+  const naFila=new Set();
+  PED_FILA.forEach(x=>{ const k=x.placa+'|'+x.data+'|'+x.hora+'|'+x.valor; x._dup=existe.has(k)||naFila.has(k); naFila.add(k); x._ok=!x._dup; });
+  _pedImpRefresh();
+}
+/* Extrai passagens de um extrato Sem Parar (texto do PDF) — melhor esforço */
+function _pedParseSemParar(txt){
+  const out=[]; if(!txt) return out;
+  const anoBase='20'+((txt.match(/Data de Emiss[aã]o[:\s]*\d{2}\/\d{2}\/(\d{2})/i)||[])[1]||new Date().getFullYear().toString().slice(2));
+  // placa atual (aparece em "Descritivo: XXX0X00" antes de cada bloco)
+  const re=/([A-Z]{3}\d[A-Z0-9]\d{2})|(\d{2}\/\d{2}\/\d{2})\s+(\d{2}:\d{2}:\d{2})\s+([A-ZÂÁÃÀÉÊÍÓÔÕÚÜÇ.\/\- ]+?)\s+((?:F\.\s*FLOW|BR|PR|RODOVIA)[^\n]*?)\s+(\d)\s+([\d.]+,\d{2})\s*([CD])/gi;
+  let m, placa='', tag='';
+  while((m=re.exec(txt))){
+    if(m[1]){ placa=m[1].replace(/([A-Z]{3})(\d[A-Z0-9]\d{2})/,'$1-$2'); continue; }
+    const data=m[2].split('/').reverse(); const iso='20'+data[0]+'-'+data[1]+'-'+data[2];
+    const conc=(m[4]||'').trim().replace(/\s+/g,' ');
+    const dc=m[8];
+    if(dc==='C') continue;  // crédito/reembolso não é passagem nova
+    out.push({ data:iso, hora:m[3], placa:placa||'', conc:conc, praca:(m[5]||'').trim().replace(/\s+/g,' '),
+      cat:parseInt(m[6])||'', valor:parseFloat(m[7].replace(/\./g,'').replace(',','.'))||0,
+      tipo: /vale|embarcador/i.test(conc)?'Vale-pedágio':'Pedágio', emb:'', viagem:'', tag:tag });
+  }
+  return out;
+}
+function _pedImportConfirmar(){
+  const sel=PED_FILA.filter(x=>x._ok && !x._dup);
+  if(!sel.length){ toast('Nada novo para importar.','err'); return; }
+  sel.forEach(x=>{ const {_ok,_dup,...rec}=x; rec.id=uid('pd'); (DB.pedagios=DB.pedagios||[]).push(rec); });
+  PED_FILA=[]; saveDB(); closeModal(); toast(sel.length+' passagem(ns) importada(s).'); location.hash='#pedagios'; router();
+}
+/* Count-up dos KPIs (roda no pexAfterRender p/ a rota pedagios) */
+function pedCountUp(){
+  document.querySelectorAll('#view[data-route="pedagios"] .k-val[data-count]').forEach(function(el){
+    var alvo=parseFloat(el.getAttribute('data-count'))||0, isM=el.getAttribute('data-money')==='1', t0=null, dur=850;
+    function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3); var v=alvo*e;
+      el.textContent=isM? money(Math.round(v)) : Math.round(v).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  });
 }
 
 /* ---------- QUADRO SOCIETÁRIO ---------- */

@@ -158,7 +158,7 @@ function iaResponder(raw){
   return `Não entendi 🤔. Pode pedir um dado (ex.: <i>cpf uilian</i>, <i>chassi IRU-4G62</i>, <i>quando vence a CNH do Reinaldo</i>) ou lançar algo (ex.: <i>troca de óleo IRU hoje 1520000 km</i>). Escreva <b>ajuda</b> para exemplos.`;
 }
 /* Campos consultáveis mesmo sem palavra de pergunta */
-function _iaConsultaCurta(n){ return /\bcpf\b|\brg\b|telefone|celular|contato|\bfone\b|email|e-mail|chassi|renavam|\bcnh\b|habilita|carteira|endereco|\bmora\b|idade|nasciment|aniversar|\bano\b|\bcor\b|categoria|\bficha\b|\bdados?\b|\bquem\b|documento|venciment|\bvence|validade|alarme|media|consumo|\bkm\b|\bhora/.test(n); }
+function _iaConsultaCurta(n){ return /\bcpf\b|\brg\b|telefone|celular|contato|\bfone\b|email|e-mail|chassi|renavam|\bcnh\b|habilita|carteira|endereco|\bmora\b|idade|nasciment|aniversar|\bano\b|\bcor\b|categoria|\bficha\b|\bdados?\b|\bquem\b|documento|venciment|\bvence|validade|alarme|media|consumo|\bkm\b|\bhora|ped[aá]gios?|praça|praca|concession|sem\s*parar|vale.?ped/.test(n); }
 
 /* ================================================================== */
 /*  4. COMANDOS QUE LANÇAM DADOS                                       */
@@ -313,6 +313,37 @@ function iaConsulta(t,n){
       if(a) return `🔔 <b>Alarme ${esc(a.c)}</b> — ${esc(a.d)}<br>• <b>Significa:</b> ${esc(a.ex||'—')}<br>• <b>O que fazer:</b> ${esc(a.so||'—')}`;
       return `Não encontrei o alarme ${esc(cod)} na lista Thermo King (${arr.length} códigos cadastrados).`; }
     return `Me diga o número do alarme. Ex.: <i>"alarme 128"</i>.`;
+  }
+
+  /* PEDÁGIOS */
+  if(/pedagio|pedágio|pedagios|praça|praca|concession|sem\s*parar|vale.?ped|ped[aá]gios?/.test(n)){
+    const ped=(DB.pedagios||[]); if(!ped.length) return `Ainda não há pedágios cadastrados.`;
+    const soma=arr=>arr.reduce((s,p)=>s+(+p.valor||0),0);
+    const inf=(typeof _pedInfo==='function')?_pedInfo:(x=>({rodovia:'',cidade:''}));
+    /* placa (frota ou qualquer placa do extrato) */
+    let placaF = v? v.placa : '';
+    if(!placaF){ const pm=String(t).toUpperCase().replace(/[^A-Z0-9]/g,'').match(/[A-Z]{3}\d[A-Z0-9]\d{2}/); if(pm){ const h=ped.find(p=>String(p.placa).replace(/[^A-Z0-9]/gi,'')===pm[0]); if(h) placaF=h.placa; } }
+    let lista=placaF? ped.filter(p=>p.placa===placaF):ped;
+    /* "qual veículo/motorista gastou mais" */
+    if(/(qual|quem).*(mais|maior)/.test(n) && /veic|ve[ií]culo|carro|caminh|placa/.test(n)){
+      const by={}; ped.forEach(p=>by[p.placa]=(by[p.placa]||0)+(+p.valor||0));
+      const top=Object.keys(by).sort((a,b)=>by[b]-by[a]).slice(0,3);
+      return `🚚 Veículos que mais gastaram em pedágios:<br>`+top.map((pl,i)=>`${i+1}. <b>${esc(pl)}</b> — ${money(by[pl])}`).join('<br>');
+    }
+    /* por rodovia (BR-376, PR-445...) */
+    const rm=n.match(/\b(br|pr)\s*-?\s*(\d{3})\b/);
+    if(rm){ const rod=rm[1].toUpperCase()+'-'+rm[2]; const arr=lista.filter(p=>inf(p.praca).rodovia===rod);
+      return arr.length? `🛣️ Na <b>${rod}</b>${placaF?' ('+esc(placaF)+')':''}: ${arr.length} passagem(ns) — <b>${money(soma(arr))}</b>.` : `Não achei passagens na ${rod}${placaF?' para '+esc(placaF):''}.`; }
+    /* por concessionária */
+    const cq=(n.match(/prvias|epr|araucar|ccr/)||[])[0];
+    if(cq){ const arr=lista.filter(p=>_pedNorm(p.conc).indexOf(cq)>=0);
+      return arr.length? `🏢 <b>${esc(arr[0].conc)}</b>${placaF?' ('+esc(placaF)+')':''}: ${arr.length} passagem(ns) — <b>${money(soma(arr))}</b>.` : `Não achei passagens da concessionária "${esc(cq)}".`; }
+    /* viagem específica */
+    const vm=n.match(/viagem\s*(\d{4,})/); if(vm){ const arr=ped.filter(p=>String(p.viagem).indexOf(vm[1])>=0);
+      return arr.length? `🧭 Viagem <b>${esc(vm[1])}</b>: ${arr.length} pedágio(s) — <b>${money(soma(arr))}</b>.<br>`+arr.slice(0,8).map(p=>`• ${fmtD(p.data)} ${esc(inf(p.praca).cidade)} — ${money(p.valor)}`).join('<br>') : `Não achei pedágios da viagem ${esc(vm[1])}.`; }
+    /* total geral ou por veículo */
+    const pago=lista.filter(p=>p.tipo==='Pedágio'), vale=lista.filter(p=>p.tipo==='Vale-pedágio');
+    return `🛣️ ${placaF?'<b>'+esc(placaF)+'</b> — ':''}pedágios: <b>${money(soma(lista))}</b> em ${lista.length} passagem(ns).<br>• Pago pela empresa: <b>${money(soma(pago))}</b><br>• Vale-pedágio (reembolsado pelo embarcador): <b>${money(soma(vale))}</b>`;
   }
 
   /* FINANCEIRO é protegido por senha — não exponho pelo chat */

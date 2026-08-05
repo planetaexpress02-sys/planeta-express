@@ -1,7 +1,7 @@
 /* Planeta Express — Service Worker (rede primeiro)
    Sempre busca a versão mais nova quando há internet; usa o cache só offline.
    Isso evita ficar "preso" numa versão antiga. */
-const CACHE = 'planeta-express-v6-46';
+const CACHE = 'planeta-express-v6-47';
 
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 
