@@ -4482,7 +4482,7 @@ function viewFinConteudo(){
 
   <div class="grid two-col">
     <div class="card"><div class="card-h">${svg('money')}<h3>Faturamento</h3>
-      <div class="r no-print"><button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button></div></div>
+      <div class="r no-print" style="gap:6px"><button class="btn sm" onclick="modalImportarFatur()" title="Anexe o relatório do contador (PDF), planilha (Excel/CSV) ou XML das notas — o sistema preenche sozinho">${svg('upload')} Importar do contador</button><button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
         <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento lançado.')}</td></tr>`}</tbody></table></div></div></div>
@@ -4512,6 +4512,113 @@ function modalFaturamento(id){
 function salvarFaturamento(id){ const d={data:val('f_data'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
   if(id)Object.assign(DB.faturamento.find(x=>x.id===id),d); else{ d.id=uid('ft'); DB.faturamento.push(d); } saveDB(); closeModal(); toast('Faturamento salvo.'); router(); }
 function excluirFaturamento(id){ if(!confirm('Excluir este faturamento?'))return; DB.faturamento=DB.faturamento.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+
+/* ---------- IMPORTAR FATURAMENTO DO CONTADOR (PDF / Excel / XML) ---------- */
+let FAT_FILA=[];
+function _capitaliza(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+function _fatCompLabel(comp){ if(!comp)return '—'; const p=String(comp).split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
+function modalImportarFatur(){
+  openModal(`<div class="m-h">${svg('money')}<h3>Importar faturamento do contador</h3><button class="x" onclick="FAT_FILA=[];closeModal()">×</button></div>
+    <div class="m-b">
+      <label class="apo-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');_faturLer(event.dataTransfer.files)">
+        <input type="file" accept=".pdf,.xlsx,.xls,.csv,.xml,image/*" multiple style="display:none" onchange="_faturLer(this.files);this.value=''">
+        ${svg('upload')}<b>Solte aqui o relatório do contador (PDF), a planilha (Excel/CSV) ou os XML das notas</b>
+        <span>O sistema lê o arquivo e extrai o faturamento por mês (Saídas, Serviços e Total) ou por nota. Você confere antes de importar.</span>
+      </label>
+      <div id="fatImpFila">${_faturImpFilaHTML()}</div>
+    </div>
+    <div class="m-f"><button class="btn" onclick="FAT_FILA=[];closeModal()">Fechar</button>
+      <button class="btn primary" id="fatImpBtn" onclick="_faturImportConfirmar()" ${FAT_FILA.length?'':'disabled'}>Importar ${FAT_FILA.filter(x=>x._ok).length||''}</button></div>`, true);
+}
+function _faturImpFilaHTML(){
+  if(!FAT_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum lançamento lido ainda. Solte um arquivo acima.</div>`;
+  const novas=FAT_FILA.filter(x=>x._ok).length, dup=FAT_FILA.filter(x=>x._dup).length;
+  return `<div class="muted" style="margin:12px 0 8px">Encontrados <b>${FAT_FILA.length}</b> lançamento(s) · ${novas} novos${dup?' · '+dup+' já existem (ignorados)':''}</div>
+    <div class="tbl-wrap" style="max-height:340px;overflow:auto"><table class="tbl"><thead><tr><th></th><th>Competência / Data</th><th>Descrição</th><th class="ta-r">Valor</th></tr></thead>
+    <tbody>${FAT_FILA.map((x,i)=>`<tr style="${x._dup?'opacity:.5':''}"><td><input type="checkbox" ${x._ok?'checked':''} ${x._dup?'disabled':''} onchange="FAT_FILA[${i}]._ok=this.checked;_faturImpRefresh()"></td>
+      <td class="mono">${x._tipo==='mensal'?esc(_fatCompLabel(x.competencia)):fmtD(x.data)}</td><td>${esc((x.cliente||x.obs||'').slice(0,64))}</td><td class="ta-r mono"><b>${money(x.valor)}</b>${x._dup?' <span class="st neutro">existe</span>':''}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function _faturImpRefresh(){ const el=document.getElementById('fatImpFila'); if(el)el.innerHTML=_faturImpFilaHTML();
+  const b=document.getElementById('fatImpBtn'); if(b){ const n=FAT_FILA.filter(x=>x._ok).length; b.disabled=!n; b.innerHTML='Importar '+(n||''); } }
+async function _faturLer(fileList){
+  const files=[].slice.call(fileList||[]); if(!files.length) return;
+  if(typeof pexBar==='function') pexBar(true);
+  try{ for(const f of files){ const nome=(f.name||'').toLowerCase(); let regs=[];
+    if(/\.xml$/.test(nome)){ try{ regs=_faturParseXml(await f.text()); }catch(e){} }
+    else if(/\.(xlsx|xls|csv)$/.test(nome)){ try{ if(typeof PEXImport!=='undefined'){ const r=await PEXImport.lerArquivo(f); (r.sheets||[]).forEach(sh=>{ regs=regs.concat(_faturDetectExcel(sh.grid||[])); }); } }catch(e){} }
+    else { try{ const txt=await pexLerApoliceTexto(f); regs=_faturParseRelatorio(txt||''); }catch(e){} }
+    regs.forEach(r=>FAT_FILA.push(r));
+  } }
+  finally{ if(typeof pexBar==='function') pexBar(false); }
+  // marca duplicados: mensal = mesma competência; nota = mesma chave (ou data+valor)
+  const compExiste=new Set((DB.faturamento||[]).map(f=>(f.data||'').slice(0,7)));
+  const chaveExiste=new Set((DB.faturamento||[]).map(f=>f.chave).filter(Boolean));
+  const naFila=new Set();
+  FAT_FILA.forEach(x=>{ let dup=false;
+    if(x._tipo==='mensal'){ const k='M'+x.competencia; dup=compExiste.has(x.competencia)||naFila.has(k); naFila.add(k); }
+    else { const k=x.chave||('D'+x.data+'|'+x.valor); dup=(x.chave&&chaveExiste.has(x.chave))||naFila.has(k); naFila.add(k); }
+    x._dup=dup; x._ok=!dup; });
+  _faturImpRefresh();
+}
+/* Relatório de faturamento do contador (PDF/texto): linhas "Mês Ano Saídas Serviços Outros Total" */
+function _faturParseRelatorio(txt){
+  const out=[]; if(!txt) return out;
+  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0;
+  const re=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})/gi;
+  let m;
+  while((m=re.exec(txt))){ const mes=MES[_pedNorm(m[1])]; if(!mes) continue; const ano=m[2];
+    const saidas=num(m[3]), servicos=num(m[4]), outros=num(m[5]), total=num(m[6]); const comp=ano+'-'+String(mes).padStart(2,'0');
+    out.push({ data:comp+'-01', cliente:'', valor:total,
+      obs:'Faturamento '+_capitaliza(m[1])+'/'+ano+' — Saídas '+money(saidas)+' · Serviços '+money(servicos)+(outros?' · Outros '+money(outros):'')+' (relatório do contador)',
+      competencia:comp, saidas, servicos, outros, fonte:'contador', _tipo:'mensal' }); }
+  return out;
+}
+/* XML de NF-e / CT-e (uma nota por arquivo) */
+function _faturParseXml(txt){
+  const out=[]; let doc; try{ doc=new DOMParser().parseFromString(txt,'text/xml'); }catch(e){ return out; }
+  const tag=(root,name)=>{ const el=(root||doc).getElementsByTagName(name); return el.length?el[el.length-1].textContent.trim():''; };
+  const first=(root,name)=>{ const el=(root||doc).getElementsByTagName(name); return el.length?el[0].textContent.trim():''; };
+  const money2=s=>parseFloat(String(s).replace(/[^\d.]/g,''))||0;
+  const vNF=tag(doc,'vNF');
+  if(vNF){ const dh=first(doc,'dhEmi')||first(doc,'dEmi'); let destNome=''; const dest=doc.getElementsByTagName('dest'); if(dest.length) destNome=first(dest[0],'xNome');
+    out.push({ data:(dh||'').slice(0,10), cliente:destNome, valor:money2(vNF), obs:'NF-e nº '+first(doc,'nNF'), chave:(first(doc,'chNFe')||'').replace(/\D/g,''), fonte:'contador', _tipo:'nota' }); return out; }
+  const vTP=tag(doc,'vTPrest');
+  if(vTP){ const dh=first(doc,'dhEmi'); let nome=''; const rem=doc.getElementsByTagName('rem'); if(rem.length) nome=first(rem[0],'xNome');
+    out.push({ data:(dh||'').slice(0,10), cliente:nome, valor:money2(vTP), obs:'CT-e nº '+first(doc,'nCT'), chave:(first(doc,'chCTe')||'').replace(/\D/g,''), fonte:'contador', _tipo:'nota' }); return out; }
+  const vNFS=tag(doc,'ValorServicos')||tag(doc,'ValorLiquidoNfse')||tag(doc,'vServ');
+  if(vNFS){ const dh=first(doc,'DataEmissao')||first(doc,'dhEmi'); out.push({ data:(dh||'').slice(0,10), cliente:first(doc,'RazaoSocial')||'', valor:money2(vNFS), obs:'NFS-e', chave:'', fonte:'contador', _tipo:'nota' }); return out; }
+  return out;
+}
+/* Planilha Excel/CSV do contador (mensal ou por nota) */
+function _faturDetectExcel(grid){
+  const out=[]; if(!grid||!grid.length) return out;
+  const norm=s=>_pedNorm(String(s==null?'':s));
+  const num=s=>{ s=String(s==null?'':s).replace(/[^\d.,-]/g,''); if(!s)return 0; if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.'); return parseFloat(s)||0; };
+  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  let hIdx=-1; const cols={};
+  for(let i=0;i<Math.min(grid.length,20);i++){ const row=(grid[i]||[]).map(norm);
+    if(row.some(c=>/total|valor/.test(c)) && row.some(c=>/mes|m e s|data|compet|periodo|ano/.test(c))){ hIdx=i;
+      row.forEach((c,j)=>{ if(/^m ?e ?s$|^mes|mês/.test(c)&&cols.mes==null)cols.mes=j; else if(/ano/.test(c))cols.ano=j; else if(/(data|compet|periodo)/.test(c)&&cols.data==null)cols.data=j;
+        else if(/total/.test(c))cols.total=j; else if(/valor/.test(c)&&cols.valor==null)cols.valor=j; else if(/saida/.test(c))cols.saidas=j; else if(/servic/.test(c))cols.servicos=j; else if(/outros/.test(c))cols.outros=j;
+        else if(/cliente|tomador|remet|razao|destinat/.test(c))cols.cliente=j; }); break; } }
+  if(hIdx<0) return out;
+  for(let i=hIdx+1;i<grid.length;i++){ const row=grid[i]||[]; const g=k=>cols[k]!=null?row[cols[k]]:'';
+    const mesRaw=norm(g('mes')); if(/total|totais/.test(mesRaw)) continue;
+    const totalV=num(g('total'))||num(g('valor'));
+    if(cols.mes!=null && MES[mesRaw]){ const mes=MES[mesRaw]; const am=String(g('ano')||'').match(/\d{4}/); const ano=am?am[0]:String(hoje().getFullYear());
+      const comp=ano+'-'+String(mes).padStart(2,'0'); const saidas=num(g('saidas')), servicos=num(g('servicos')), outros=num(g('outros')); const val=totalV||(saidas+servicos+outros); if(!val)continue;
+      out.push({ data:comp+'-01', cliente:'', valor:val, obs:'Faturamento '+_capitaliza(mesRaw)+'/'+ano+((saidas||servicos)?' — Saídas '+money(saidas)+' · Serviços '+money(servicos):'')+' (planilha do contador)', competencia:comp, saidas, servicos, outros, fonte:'contador', _tipo:'mensal' });
+    } else if(cols.data!=null){ const dISO=(typeof _impISO==='function')?_impISO(g('data')):''; if(!dISO||!totalV)continue;
+      out.push({ data:dISO, cliente:String(g('cliente')||'').trim(), valor:totalV, obs:'Importado da planilha do contador', fonte:'contador', _tipo:'nota' }); } }
+  return out;
+}
+function _faturImportConfirmar(){
+  const sel=FAT_FILA.filter(x=>x._ok && !x._dup);
+  if(!sel.length){ toast('Nada novo para importar.','err'); return; }
+  sel.forEach(x=>{ const rec={}; Object.keys(x).forEach(k=>{ if(k[0]!=='_') rec[k]=x[k]; }); rec.id=uid('ft'); (DB.faturamento=DB.faturamento||[]).push(rec); });
+  FAT_FILA=[]; saveDB(); closeModal(); toast(sel.length+' lançamento(s) de faturamento importado(s).'); location.hash='#financeiro'; router();
+}
 function modalVale(id){
   const v=id?DB.vales.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),motoristaId:(DB.motoristas[0]||{}).id,tipo:'Vale',valor:'',obs:''};
   openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar lançamento':'Novo vale / pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
