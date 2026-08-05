@@ -660,8 +660,8 @@ function viewDashboard(){
   const reb = DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado').length;
   const motAtivos = DB.motoristas.filter(m=>m.status==='Ativo').length;
   const segList = (DB.seguros||[]).filter(s=>s&&s.status!=='Cancelado');
-  const segAv = segList.filter(s=>{ const d=diasAte(s.fim); return d!=null && d<=90; }).length;
-  const segCrit = segList.some(s=>{ const d=diasAte(s.fim); return d!=null && d<=30; });
+  const segAv = segList.filter(s=>{ const d=diasAte(s.fim); return d!=null && d>=0 && d<=90; }).length;  // = exatamente o que abre em #seguros/avencer
+  const segCrit = segList.some(s=>{ const d=diasAte(s.fim); return d!=null && d>=0 && d<=30; });
 
   const prox = vs.filter(x=>x.s.dias!==null && x.s.dias<=90).sort((a,b)=>a.s.dias-b.s.dias).slice(0,8);
 
