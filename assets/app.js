@@ -1884,7 +1884,21 @@ function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');
   else{ d.id=uid('m'); DB.motoristas.push(d); if(d.cnhValidade)DB.vencimentos.push({id:uid('c'),tipo:'CNH',entidade:'motorista',refId:d.id,emissao:d.emissaoCnh||'',validade:d.cnhValidade,numero:d.cnh||'',orgao:'',obs:'Categoria '+d.categoria}); }
   saveDB(); closeModal(); toast('Condutor salvo.'); router();
 }
-function excluirMotorista(id){ if(!confirm('Excluir este motorista e seus vencimentos?'))return; DB.motoristas=DB.motoristas.filter(m=>m.id!==id); DB.vencimentos=DB.vencimentos.filter(v=>!(v.entidade==='motorista'&&v.refId===id)); saveDB(); closeModal(); toast('Motorista excluído.'); location.hash='motoristas'; router(); }
+async function excluirMotorista(id){
+  const m=motorista(id);
+  if(!confirm('Excluir '+(m?m.nome:'este motorista')+' e TODOS os documentos dele (CNH, ASO, exames, toxicológico, Opentech, direção defensiva, comprovantes e arquivos anexados)?\n\nEsta ação não pode ser desfeita.')) return;
+  // 1) vencimentos/documentos (CNH, ASO, Toxicológico, Opentech, Direção Defensiva...)
+  DB.vencimentos=DB.vencimentos.filter(v=>!(v.entidade==='motorista'&&v.refId===id));
+  // 2) arquivos ANEXADOS (enviados) — local (IndexedDB) + nuvem (Storage/DB.anexos)
+  try{ const enviados=(typeof todosArquivos==='function'?todosArquivos():[]).filter(f=>f.entidade==='motorista'&&f.refId===id);
+    for(const f of enviados){ try{ await _removerAnexoSilencioso(f.id); }catch(e){} } }catch(e){}
+  // 3) arquivos REGISTRADOS da pasta (DB.arquivos) do motorista
+  DB.arquivos=(DB.arquivos||[]).filter(f=>!(f.entidade==='motorista'&&f.refId===id));
+  // 4) o motorista
+  DB.motoristas=DB.motoristas.filter(x=>x.id!==id);
+  try{ if(typeof reloadFiles==='function') await reloadFiles(); }catch(e){}
+  saveDB(); closeModal(); toast('Motorista e todos os documentos excluídos.'); location.hash='motoristas'; router();
+}
 
 function _vehToggleTipo(){ const reb=/reboque/i.test(val('f_tipo'));
   const c=document.getElementById('cavaloFields'), r=document.getElementById('carretaFields');
@@ -4351,13 +4365,17 @@ async function abastecNfUpload(ev){
 /* ---------- ALARME: detalhe (causa e solução) ---------- */
 function modalAlarme(code){
   const a=(typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]).find(x=>x.c===code); if(!a) return;
+  const cat=(typeof _alarmeCat==='function')?_alarmeCat(a):{label:'Geral',ico:'alarm',cor:'#7fe0ff'};
   openModal(`<div class="m-h">${svg('alarm')}<h3>Alarme ${esc(a.c)}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <div class="alarme-det-code">${esc(a.c)}</div>
-      <div class="alarme-det-title">${esc(a.d)}</div>
-      <div class="alarme-block"><div class="alarme-block-h">${svg('eye')} O que significa</div><p>${esc(a.ex||'')}</p></div>
-      <div class="alarme-block sol"><div class="alarme-block-h">${svg('wrench')} O que fazer</div><p>${esc(a.so||'')}</p></div>
-      <div class="hint" style="margin-top:14px">⚠️ Orientação geral. Para o diagnóstico correto, consulte o manual e o técnico Thermo King.</div>
+    <div class="m-b alarme-modal">
+      <div class="alarme-hero">
+        <div class="alarme-det-code" style="--ac:${cat.cor}">${svg(cat.ico)}<b>${esc(a.c)}</b></div>
+        <div class="alarme-hero-tx"><span class="alarme-cat" style="--ac:${cat.cor}">${svg(cat.ico)} ${esc(cat.label)}</span>
+          <div class="alarme-det-title">${esc(a.d)}</div></div>
+      </div>
+      <div class="alarme-block"><div class="alarme-block-h">${svg('eye')} O que significa</div><p>${esc(a.ex||'—')}</p></div>
+      <div class="alarme-block sol"><div class="alarme-block-h">${svg('wrench')} O que fazer</div><p>${esc(a.so||'—')}</p></div>
+      <div class="alarme-aviso">${svg('bell')} <span>Orientação geral. Para o diagnóstico correto, consulte o manual e o técnico Thermo King.</span></div>
     </div>
     <div class="m-f"><button class="btn primary" onclick="closeModal()">Entendi</button></div>`);
 }

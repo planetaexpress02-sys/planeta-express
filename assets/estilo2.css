@@ -2233,3 +2233,32 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .pn-item b{ display:block;font-size:13px }
 .pn-item span{ display:block;font-size:11.5px;opacity:.7;margin-top:2px }
 .pn-grid2{ display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 }
+
+/* ================================================================== */
+/*  ALARME THERMO KING — modal legível e premium (v6.51)              */
+/*  As caixas ficavam brancas (texto claro em fundo claro = ilegível) */
+/*  pois o override .cyber é do #view e o modal fica no #overlay.      */
+/* ================================================================== */
+#overlay .modal .alarme-hero{ display:flex;gap:14px;align-items:center;margin-bottom:18px }
+#overlay .modal .alarme-det-code{ width:66px;height:66px;flex:0 0 auto;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;margin:0;
+  background:radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--ac,#7fe0ff) 30%, #0f1b2d), #0b1524);
+  border:1px solid color-mix(in srgb, var(--ac,#7fe0ff) 45%, transparent);
+  color:var(--ac,#ffd88a); box-shadow:0 0 22px color-mix(in srgb, var(--ac,#7fe0ff) 28%, transparent) }
+#overlay .modal .alarme-det-code svg{ width:18px;height:18px;opacity:.9 }
+#overlay .modal .alarme-det-code b{ font-size:22px;font-weight:800;font-family:"Consolas",monospace;line-height:1 }
+#overlay .modal .alarme-cat{ display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--ac,#7fe0ff);background:color-mix(in srgb, var(--ac,#7fe0ff) 15%, transparent);border:1px solid color-mix(in srgb, var(--ac,#7fe0ff) 40%, transparent);
+  padding:2px 10px;border-radius:999px;margin-bottom:8px }
+#overlay .modal .alarme-cat svg{ width:13px;height:13px }
+#overlay .modal .alarme-det-title{ font-size:17px;font-weight:700;color:#f2f8ff;line-height:1.3;margin:0 }
+#overlay .modal .alarme-block{ background:rgba(0,20,38,.55);border:1px solid rgba(0,170,255,.18);border-radius:14px;padding:15px 17px 15px 20px;margin-bottom:12px;position:relative;overflow:hidden }
+#overlay .modal .alarme-block::before{ content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#37c6ff }
+#overlay .modal .alarme-block.sol{ background:rgba(0,255,136,.07);border-color:rgba(0,255,136,.24) }
+#overlay .modal .alarme-block.sol::before{ background:#3ff0a0 }
+#overlay .modal .alarme-block-h{ display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#7fe3ff;margin-bottom:8px }
+#overlay .modal .alarme-block.sol .alarme-block-h{ color:#5ff0a8 }
+#overlay .modal .alarme-block-h svg{ width:16px;height:16px;color:currentColor }
+#overlay .modal .alarme-block p{ font-size:14px;line-height:1.6;color:#e8f2fb;margin:0 }
+#overlay .modal .alarme-aviso{ display:flex;gap:9px;align-items:flex-start;margin-top:14px;padding:11px 14px;border-radius:11px;
+  background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.28);color:#ffd79a;font-size:12.5px;line-height:1.5 }
+#overlay .modal .alarme-aviso svg{ width:16px;height:16px;flex:0 0 auto;color:#ffb020;margin-top:1px }
