@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -4425,8 +4425,33 @@ function finTrocarPin(){ if(val('fpa')!==DB.config.finPin){ toast('Senha atual i
   DB.config.finPin=n; saveDB(); closeModal(); toast('Senha alterada.'); }
 
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
+let pagMes='todos';
 function viewFinConteudo(){
   const h=hoje();
+  /* PLANILHA DE PAGAMENTOS (livre — separada dos vales dos motoristas) */
+  const pagAll=DB.pagamentos||[];
+  const pagMeses=[...new Set(pagAll.map(p=>(p.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  let pagLista=pagAll.slice();
+  if(pagMes!=='todos') pagLista=pagLista.filter(p=>(p.data||'').slice(0,7)===pagMes);
+  pagLista.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const pagTotFiltro=pagLista.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const pagMesTot=pagAll.filter(p=>{ const d=parseD(p.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const pagRows=pagLista.map(p=>`<tr class="clickable" onclick="modalPagamento('${p.id}')">
+    <td class="mono">${fmtD(p.data)}</td><td>${esc(p.descricao||'—')}</td>
+    <td>${p.categoria?`<span class="st neutro">${esc(p.categoria)}</span>`:'—'}</td>
+    <td>${esc(p.forma||'—')}</td>
+    <td class="ta-r mono"><b>${money(p.valor)}</b></td>
+    <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPagamento('${p.id}')">${svg('edit')}</button></td></tr>`).join('');
+  const pagCard=`
+  <div class="card" style="margin-top:18px"><div class="card-h">${svg('doc')}<h3>Planilha de Pagamentos</h3>
+    <div class="r no-print" style="gap:8px">
+      <select class="selectlite" onchange="pagMes=this.value;router()"><option value="todos">Todos os meses</option>${pagMeses.map(m=>`<option value="${m}" ${pagMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
+      <button class="btn primary sm" onclick="modalPagamento()">${svg('plus')} Novo pagamento</button></div></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th class="ta-r">Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${pagRows||`<tr><td colspan="6">${emptyState('Nenhum pagamento lançado ainda. Clique em "Novo pagamento" para começar sua planilha.')}</td></tr>`}</tbody>
+      ${pagLista.length?`<tfoot><tr><td colspan="4" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
+    </table></div></div></div>`;
   const fatMes=DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,f)=>s+(Number(f.valor)||0),0);
   const fatTot=DB.faturamento.reduce((s,f)=>s+(Number(f.valor)||0),0);
   const valesAberto=DB.motoristas.reduce((s,m)=>s+Math.max(0,valeSaldo(m.id)),0);
@@ -4446,12 +4471,13 @@ function viewFinConteudo(){
       <div class="mono" style="font-weight:800;font-size:16px;color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
 
   return `
-  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento e vales dos motoristas. Os vales são somados automaticamente por motorista.</span></div></div>
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e a sua planilha de pagamentos. Tudo somado automaticamente.</span></div></div>
 
-  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('money','i-green', money(fatMes), 'Faturamento no mês','')}
     ${kpi('export','i-blue', money(fatTot), 'Faturamento acumulado', DB.faturamento.length+' lançamento(s)')}
     ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
+    ${kpi('doc','i-red', money(pagMesTot), 'Pagamentos no mês', pagAll.length+' na planilha')}
   </div>
 
   <div class="grid two-col">
@@ -4466,6 +4492,8 @@ function viewFinConteudo(){
         <thead><tr><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
         <tbody>${valeRows||`<tr><td colspan="5">${emptyState('Nenhum vale ou pagamento.')}</td></tr>`}</tbody></table></div></div></div>
   </div>
+
+  ${pagCard}
 
   ${saldoCards?`<div class="sectitulo" style="margin-top:20px">${svg('wallet')} Saldo de vales por motorista</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${saldoCards}</div>`:''}`;
@@ -4500,6 +4528,35 @@ function modalVale(id){
 function salvarVale(id){ const d={data:val('f_data'),motoristaId:val('f_mot'),tipo:val('f_tipo'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
   if(id)Object.assign(DB.vales.find(x=>x.id===id),d); else{ d.id=uid('vl'); DB.vales.push(d); } saveDB(); closeModal(); toast('Lançamento salvo.'); router(); }
 function excluirVale(id){ if(!confirm('Excluir este lançamento?'))return; DB.vales=DB.vales.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+
+/* ---------- PLANILHA DE PAGAMENTOS (separada dos vales) ---------- */
+function modalPagamento(id){
+  const p=id?(DB.pagamentos||[]).find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),descricao:'',categoria:'',forma:'',valor:'',obs:''};
+  if(!p){ toast('Pagamento não encontrado.','err'); return; }
+  const cats=['Combustível','Manutenção','Pedágio','Pneus','Peças','Fornecedor','Salário','Imposto/Taxa','Aluguel','Financiamento/Parcela','Seguro','Escritório','Outros'];
+  const formas=['Pix','Dinheiro','Boleto','Cartão','Débito automático','Transferência','Cheque'];
+  openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar pagamento':'Novo pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fldR$('Valor pago (R$)','f_valor',p.valor)}</div>
+      ${fld('Descrição','f_desc',p.descricao,'text','O que foi pago (ex.: Diesel Posto X, Boleto fornecedor...)')}
+      <div class="field-row">
+        <div class="field"><label>Categoria</label><input id="f_cat" list="pagCats" value="${esc(p.categoria||'')}" placeholder="Escolha ou digite"><datalist id="pagCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+        <div class="field"><label>Forma de pagamento</label><input id="f_forma" list="pagFormas" value="${esc(p.forma||'')}" placeholder="Escolha ou digite"><datalist id="pagFormas">${formas.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+      </div>
+      <div class="field"><label>Observações</label><input id="f_obs" value="${esc(p.obs||'')}"></div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirPagamento('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="salvarPagamento('${id||''}')">Salvar</button></div>`);
+}
+function salvarPagamento(id){
+  if(!val('f_desc') && !val('f_valor')){ toast('Informe pelo menos a descrição e o valor.','err'); return; }
+  const d={ data:val('f_data'), descricao:val('f_desc'), categoria:val('f_cat'), forma:val('f_forma'), valor:parseBRL(val('f_valor')), obs:val('f_obs') };
+  if(id){ Object.assign((DB.pagamentos||[]).find(x=>x.id===id), d); }
+  else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); }
+  saveDB(); closeModal(); toast('Pagamento salvo.'); router();
+}
+function excluirPagamento(id){ if(!confirm('Excluir este pagamento da planilha?'))return; DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Pagamento excluído.'); router(); }
 
 /* ================================================================== */
 /*  CT-e (Conhecimento de Transporte Eletrônico)                      */
