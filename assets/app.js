@@ -494,6 +494,61 @@ function router(){
 }
 
 /* ================================================================== */
+/*  APP MOBILE (v6.54) — camada de apresentação (≤860px).              */
+/*  Só comportamentos pós-render: NÃO altera telas/lógica; aplica a     */
+/*  QUALQUER conteúdo, então toda tela nova entra no padrão sozinha.    */
+/* ================================================================== */
+function _pexMob(){ return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(max-width:860px)').matches; }
+function pexMobileInit(rota){
+  if(!_pexMob()){ var c=document.getElementById('mobCtx'); if(c) c.remove(); return; }
+  pexMobileCtx(rota);
+  pexMobileTables();
+  pexMobileGlobals();
+}
+/* Barra de contexto: seta Voltar (sempre no mesmo lugar) + título da tela; some na home */
+function pexMobileCtx(rota){
+  var home = rota==='inicio' || rota==='dashboard';
+  var ctx=document.getElementById('mobCtx');
+  if(home){ if(ctx) ctx.remove(); return; }
+  var pt=document.getElementById('pageTitle');
+  var titulo = pt ? (pt.firstChild ? (pt.firstChild.textContent||'').trim() : pt.textContent.trim()) : '';
+  if(!titulo && typeof ROTAS!=='undefined' && ROTAS[rota]) titulo=ROTAS[rota].t;
+  if(!ctx){ ctx=document.createElement('div'); ctx.id='mobCtx'; ctx.className='mob-ctx no-print';
+    var view=document.getElementById('view'); if(view && view.parentNode) view.parentNode.insertBefore(ctx, view); }
+  ctx.innerHTML='<button class="mob-ctx-back" onclick="navVoltar()" aria-label="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button><div class="mob-ctx-title">'+esc(titulo)+'</div>';
+}
+/* Converte tabelas em cards: injeta data-th (do cabeçalho) em cada célula. Idempotente. */
+function pexMobileTables(){
+  document.querySelectorAll('#view table.tbl').forEach(function(tbl){
+    var head=tbl.tHead && tbl.tHead.rows[0]; if(!head) return;
+    var ths=[].map.call(head.cells, function(c){ return (c.textContent||'').trim(); });
+    if(!ths.some(function(t){ return t; })) return;
+    tbl.classList.add('mob-cards');
+    [].forEach.call(tbl.tBodies, function(tb){ [].forEach.call(tb.rows, function(r){
+      if(r.classList.contains('grouprow')) return;
+      [].forEach.call(r.cells, function(td,i){ if(!td.hasAttribute('data-th')) td.setAttribute('data-th', ths[i]||''); });
+    }); });
+  });
+}
+/* Listeners globais só-uma-vez: ripple nos botões + fechar o menu com gesto (swipe) */
+function pexMobileGlobals(){
+  if(window.__pexMobG) return; window.__pexMobG=true;
+  document.addEventListener('pointerdown', function(e){
+    if(!_pexMob()) return; var b=e.target.closest && e.target.closest('.btn, .mob-ctx-back'); if(!b) return;
+    var rc=b.getBoundingClientRect(); var d=Math.max(rc.width,rc.height);
+    var r=document.createElement('span'); r.className='pex-ripple';
+    r.style.width=r.style.height=d+'px'; r.style.left=(e.clientX-rc.left-d/2)+'px'; r.style.top=(e.clientY-rc.top-d/2)+'px';
+    b.appendChild(r); setTimeout(function(){ if(r.parentNode) r.parentNode.removeChild(r); }, 560);
+  }, {passive:true});
+  var sb=document.querySelector('.sidebar'); if(sb){ var x0=null,y0=null;
+    sb.addEventListener('touchstart', function(e){ if(!sb.classList.contains('open')) return; x0=e.touches[0].clientX; y0=e.touches[0].clientY; }, {passive:true});
+    sb.addEventListener('touchmove', function(e){ if(x0==null) return; var dx=e.touches[0].clientX-x0, dy=e.touches[0].clientY-y0;
+      if(dx<-55 && Math.abs(dx)>Math.abs(dy)){ if(typeof closeSidebar==='function') closeSidebar(); x0=null; } }, {passive:true});
+    sb.addEventListener('touchend', function(){ x0=null; }, {passive:true});
+  }
+}
+
+/* ================================================================== */
 /*  APRIMORAMENTOS DE UX (v6.6) — tabelas, tooltips, mapa, loading      */
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
@@ -507,6 +562,7 @@ function pexAfterRender(rota){
     if(rota==='inicio' && typeof iniBaseWx==='function') iniBaseWx();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
+    if(typeof pexMobileInit==='function') pexMobileInit(rota);
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
 /* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */

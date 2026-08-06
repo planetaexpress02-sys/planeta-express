@@ -2262,3 +2262,119 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 #overlay .modal .alarme-aviso{ display:flex;gap:9px;align-items:flex-start;margin-top:14px;padding:11px 14px;border-radius:11px;
   background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.28);color:#ffd79a;font-size:12.5px;line-height:1.5 }
 #overlay .modal .alarme-aviso svg{ width:16px;height:16px;flex:0 0 auto;color:#ffb020;margin-top:1px }
+
+/* ==========================================================================
+   APP MOBILE — refatoração premium (v6.54). SÓ afeta ≤860px; DESKTOP INTACTO.
+   Uma lógica só: isto é apenas a camada de apresentação mobile. Vem DEPOIS do
+   bloco v6.34 e refina/sobrescreve onde precisa.
+   ========================================================================== */
+@keyframes pexRip{ to{ transform:scale(2.6); opacity:0 } }
+@keyframes mobViewIn{ from{ opacity:0; transform:translateY(12px) } to{ opacity:1; transform:none } }
+.pex-ripple{ position:absolute; border-radius:50%; transform:scale(0); background:rgba(255,255,255,.32); animation:pexRip .55s ease-out; pointer-events:none; z-index:2 }
+@media(max-width:860px){
+  :root{ --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px); --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px); }
+
+  /* ---- BARRA SUPERIOR ENXUTA: ☰ · marca · 🔍 ---- */
+  .topbar{ min-height:56px; height:auto; gap:10px; padding:calc(var(--safe-t) + 7px) calc(12px + var(--safe-r)) 7px calc(12px + var(--safe-l));
+    background:rgba(6,15,27,.9)!important; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-bottom:1px solid rgba(0,170,255,.14)!important; position:sticky; top:0; }
+  .topbar .cock-cluster, .topbar .page-title, .topbar .back-btn{ display:none!important; }
+  .tb-brand{ flex:1 1 auto; justify-content:flex-start; min-width:0; }
+  body:not(.pex-home) .tb-word{ display:inline-block; }         /* nome sempre visível (o Voltar sai da barra) */
+  .topbar .cock-search{ display:flex!important; width:52px; min-width:52px; height:52px; padding:0; margin-left:auto; justify-content:center; border-radius:15px; }
+  .topbar .cock-search span, .topbar .cock-search .cock-kbd{ display:none!important; }
+  .topbar .cock-search svg{ width:23px; height:23px; }
+
+  /* ---- BARRA DE CONTEXTO (Voltar + título) — injetada por JS, some na home ---- */
+  .mob-ctx{ position:sticky; top:calc(56px + var(--safe-t)); z-index:35; display:flex; align-items:center; gap:12px;
+    padding:9px calc(14px + var(--safe-r)) 9px calc(14px + var(--safe-l)); background:rgba(8,18,32,.85);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid rgba(0,170,255,.1); }
+  body.pex-home .mob-ctx{ display:none; }
+  .mob-ctx-back{ width:46px; height:46px; flex:0 0 auto; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,rgba(0,150,255,.22),rgba(0,110,220,.1)); border:1px solid rgba(0,200,255,.28); color:#bfe6ff;
+    position:relative; overflow:hidden; cursor:pointer; box-shadow:0 0 16px rgba(0,170,255,.18); transition:transform .12s, box-shadow .2s; }
+  .mob-ctx-back:active{ transform:scale(.88); }
+  .mob-ctx-back svg{ width:24px; height:24px; }
+  .mob-ctx-title{ font-weight:700; font-size:16.5px; color:#eef6ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* ---- CONTEÚDO: respiro + full-bleed ---- */
+  .content{ padding:16px calc(14px + var(--safe-r)) calc(102px + var(--safe-b)) calc(14px + var(--safe-l)); overflow-x:clip; }
+  #view{ animation:mobViewIn .28s cubic-bezier(.16,1,.3,1); }
+  .card{ border-radius:18px; margin-bottom:14px; }
+  .grid.two-col{ grid-template-columns:1fr!important; gap:12px; }
+  .grid.kpis{ grid-template-columns:repeat(2,1fr)!important; gap:11px; }
+  .banner{ flex-wrap:wrap; border-radius:16px; }
+  .banner .btn, .banner > div[style*="margin-left:auto"]{ margin-left:0!important; }
+  .toolbar{ flex-wrap:wrap; gap:8px; }
+  .sectitulo{ font-size:14px; }
+
+  /* ---- DRAWER PREMIUM (vidro fosco + glow) ---- */
+  .sidebar{ width:86vw; max-width:340px; border-right:0; border-radius:0 26px 26px 0;
+    background:linear-gradient(158deg, rgba(11,28,50,.97), rgba(4,12,26,.99))!important; backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+    box-shadow:0 0 44px rgba(0,150,255,.16), 24px 0 70px rgba(0,8,26,.62); padding-top:calc(var(--safe-t) + 6px); padding-left:var(--safe-l); }
+  .sidebar .brand{ padding:10px 18px 14px; }
+  .sidebar .rail-toggle{ display:none!important; }
+  .sidebar .nav{ padding:6px 10px; }
+  .sidebar .nav .group{ margin:15px 12px 6px; font-size:11px; letter-spacing:1px; }
+  .sidebar .nav a{ padding:14px 14px; border-radius:14px; font-size:15px; margin-bottom:3px; gap:14px; }
+  .sidebar .nav a .ico{ width:23px; height:23px; }
+  .sidebar .nav a .badge{ margin-left:auto; }
+  .sidebar .foot{ padding:16px 18px calc(var(--safe-b) + 16px); }
+
+  /* ---- TABELAS → CARDS ---- */
+  table.tbl.mob-cards, table.tbl.mob-cards tbody, table.tbl.mob-cards tfoot{ display:block; width:100%; background:transparent; }
+  table.tbl.mob-cards thead{ display:none; }
+  table.tbl.mob-cards tr{ display:block; margin:0 0 10px; padding:12px 14px; border-radius:16px;
+    background:rgba(0,20,38,.5); border:1px solid rgba(0,170,255,.14); box-shadow:0 4px 16px rgba(0,8,26,.3); }
+  table.tbl.mob-cards tr.grouprow{ background:rgba(0,120,255,.15); border-color:rgba(0,200,255,.26); }
+  table.tbl.mob-cards tr.grouprow td{ justify-content:flex-start; font-weight:700; }
+  table.tbl.mob-cards tr.grouprow td::before{ display:none; }
+  table.tbl.mob-cards td{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:6px 0; border:0!important; text-align:right; white-space:normal; font-size:14px; }
+  table.tbl.mob-cards td::before{ content:attr(data-th); font-weight:600; color:#89b0d4; text-align:left; flex:0 0 40%;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; }
+  table.tbl.mob-cards td.no-print, table.tbl.mob-cards td:empty{ display:none; }
+  .tbl-wrap{ overflow:visible; }
+  /* barra de busca/paginação das tabelas premium fica ok */
+  .pex-tbar{ flex-wrap:wrap; gap:8px; }
+
+  /* ---- FORMULÁRIOS: campos grandes, sem zoom iOS (16px) ---- */
+  .field input, .field select, .field textarea, .selectlite, .m-b input, .m-b select, .m-b textarea{ min-height:50px; font-size:16px!important; border-radius:13px; }
+  .field label{ font-size:12.5px; margin-bottom:6px; }
+  .field-row{ grid-template-columns:1fr; gap:0; }
+  .field-row .field{ margin-bottom:12px; }
+
+  /* ---- MODAL vira folha (bottom sheet) ---- */
+  #overlay{ align-items:flex-end; padding:0; }
+  #overlay .modal{ width:100%; max-width:100%; max-height:calc(100vh - var(--safe-t) - 20px); border-radius:22px 22px 0 0;
+    display:flex; flex-direction:column; animation:mobViewIn .3s cubic-bezier(.16,1,.3,1); }
+  #overlay .modal .m-b{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  #overlay .modal .m-f{ position:sticky; bottom:0; padding-bottom:calc(14px + var(--safe-b)); background:inherit; flex-wrap:wrap; }
+  #overlay .modal .m-f .btn{ min-height:50px; flex:1 1 40%; }
+
+  /* ---- BOTÕES + toque ---- */
+  .btn{ min-height:46px; position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; }
+  .btn.sm{ min-height:40px; }
+  .btn.primary{ min-height:50px; }
+  .btn:active{ transform:scale(.97); }
+
+  /* ---- SPOTLIGHT (busca em tela cheia) ---- */
+  #pexCmd.cmdk .cmdk-back{ display:none; }
+  #pexCmd.cmdk .cmdk-box{ position:fixed; inset:0; width:100%; max-width:100%; height:100%; max-height:100%; margin:0; border-radius:0;
+    display:flex; flex-direction:column; padding-top:calc(var(--safe-t)); }
+  #pexCmd.cmdk .cmdk-in{ padding:16px calc(16px + var(--safe-r)) 14px calc(16px + var(--safe-l)); }
+  #pexCmd.cmdk .cmdk-in input{ font-size:17px; }
+  #pexCmd.cmdk .cmdk-in kbd{ display:none; }
+  #pexCmd.cmdk .cmdk-list{ flex:1; max-height:none; }
+  #pexCmd.cmdk .cmdk-row{ padding:15px 16px; }
+  #pexCmd.cmdk .cmdk-foot{ padding-bottom:calc(10px + var(--safe-b)); }
+
+  /* ---- IA fab: sempre acessível, safe-area, acima do conteúdo ---- */
+  .ia-fab{ right:calc(16px + var(--safe-r)); bottom:calc(18px + var(--safe-b)); z-index:60; }
+  .ia-panel{ right:calc(10px + var(--safe-r))!important; left:calc(10px + var(--safe-l))!important; width:auto!important; max-width:none!important;
+    bottom:calc(14px + var(--safe-b))!important; max-height:calc(100vh - var(--safe-t) - 20px)!important; }
+
+  /* ---- gráficos: largura total ---- */
+  .barchart, .linechart, .donut, .heatmap, .radar{ max-width:100%; }
+  .donut-wrap{ flex-direction:column; align-items:center; gap:14px; }
+}
+@media(max-width:860px) and (prefers-reduced-motion:reduce){ #view, #overlay .modal{ animation:none } .pex-ripple{ display:none } }
