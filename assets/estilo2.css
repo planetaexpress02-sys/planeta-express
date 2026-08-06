@@ -2206,6 +2206,27 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @keyframes apoSpin{ to{ transform:rotate(360deg) } }
 @media(max-width:640px){ .apo-row{ grid-template-columns:1fr auto auto } .apo-row.reading{ grid-template-columns:1fr } .apo-row .selectlite{ grid-column:1/-1 } }
 
+/* ---- Pipeline de documentos (Faturamento OCR+IA) v6.56 ---- */
+.doc-fila{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+.doc-card{ padding:13px 15px; border-radius:14px; background:rgba(0,20,38,.5); border:1px solid rgba(0,170,255,.15); box-shadow:0 4px 14px rgba(0,8,26,.28); }
+.doc-card.proc{ border-color:rgba(0,200,255,.3); }
+.doc-head{ display:flex; align-items:center; gap:9px; font-size:13.5px; }
+.doc-head svg{ width:18px; height:18px; opacity:.85; flex:0 0 auto; }
+.doc-head b{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.doc-type{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#7fe3ff; background:rgba(0,170,255,.14); border:1px solid rgba(0,200,255,.28); padding:2px 9px; border-radius:999px; flex:0 0 auto; }
+.doc-spin{ width:15px; height:15px; flex:0 0 auto; border-radius:50%; border:2px solid rgba(0,200,255,.25); border-top-color:rgba(0,229,255,.95); animation:apoSpin .7s linear infinite; }
+.doc-steps{ display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+.doc-step{ font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; color:#6d8aa8; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); transition:.2s; }
+.doc-step.now{ color:#001018; background:linear-gradient(180deg,#37e3d0,#00b3ff); border-color:transparent; box-shadow:0 0 12px rgba(0,200,255,.4); }
+.doc-step.ok{ color:#5ff0a8; background:rgba(0,255,136,.08); border-color:rgba(0,255,136,.22); }
+.doc-meta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:9px; font-size:12px; color:#9fc0dd; align-items:center; }
+.doc-conf{ font-weight:700; padding:2px 9px; border-radius:999px; }
+.doc-conf.ok{ color:#5ff0a8; background:rgba(0,255,136,.1); } .doc-conf.warn{ color:#ffcf7a; background:rgba(255,176,32,.12); } .doc-conf.crit{ color:#ff9a9a; background:rgba(255,60,60,.12); }
+.doc-regs{ margin-top:11px; display:flex; flex-direction:column; gap:6px; }
+.doc-reg{ display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:11px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); cursor:pointer; font-size:13px; }
+.doc-reg.dup{ opacity:.5; } .doc-reg span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .doc-reg b{ flex:0 0 auto; }
+.doc-reg input{ width:18px; height:18px; flex:0 0 auto; }
+
 /* ================================================================== */
 /*  PEDÁGIOS (v6.47)                                                   */
 /* ================================================================== */
