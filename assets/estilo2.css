@@ -2378,3 +2378,24 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .donut-wrap{ flex-direction:column; align-items:center; gap:14px; }
 }
 @media(max-width:860px) and (prefers-reduced-motion:reduce){ #view, #overlay .modal{ animation:none } .pex-ripple{ display:none } }
+
+/* ---- BARRA INFERIOR (app nav) v6.55 ---- */
+.mob-nav{ display:none; }
+@media(max-width:860px){
+  .mob-nav{ position:fixed; left:0; right:0; bottom:0; z-index:55; display:flex; justify-content:space-around; align-items:stretch; gap:2px;
+    padding:6px calc(6px + var(--safe-r)) calc(6px + var(--safe-b)) calc(6px + var(--safe-l));
+    background:rgba(6,15,27,.93); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+    border-top:1px solid rgba(0,170,255,.16); box-shadow:0 -10px 34px rgba(0,8,26,.44); }
+  .mob-nav-b{ flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 4px; border:0; background:transparent;
+    color:#7fa6c8; font-size:10.5px; font-weight:600; border-radius:14px; position:relative; overflow:hidden; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; transition:color .18s, transform .1s; }
+  .mob-nav-b svg{ width:23px; height:23px; }
+  .mob-nav-b:active{ transform:scale(.9); }
+  .mob-nav-b.on{ color:#37e3d0; }
+  .mob-nav-b.on::before{ content:""; position:absolute; top:2px; left:50%; transform:translateX(-50%); width:26px; height:3px; border-radius:3px;
+    background:linear-gradient(90deg,#37e3d0,#00b3ff); box-shadow:0 0 10px rgba(0,200,255,.6); }
+  /* conteúdo não fica atrás da barra; IA sobe pra não sobrepor a barra */
+  .content{ padding-bottom:calc(96px + var(--safe-b)); }
+  .ia-fab{ bottom:calc(84px + var(--safe-b))!important; }
+  .ia-panel{ bottom:calc(80px + var(--safe-b))!important; }
+}

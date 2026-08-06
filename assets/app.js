@@ -500,10 +500,23 @@ function router(){
 /* ================================================================== */
 function _pexMob(){ return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(max-width:860px)').matches; }
 function pexMobileInit(rota){
-  if(!_pexMob()){ var c=document.getElementById('mobCtx'); if(c) c.remove(); return; }
+  if(!_pexMob()){ var c=document.getElementById('mobCtx'); if(c) c.remove(); var n=document.getElementById('mobNav'); if(n) n.remove(); return; }
   pexMobileCtx(rota);
   pexMobileTables();
+  pexMobileBottomNav(rota);
   pexMobileGlobals();
+}
+/* Barra de navegação inferior (estilo app): Início · Painel · Buscar · Menu */
+function pexMobileBottomNav(rota){
+  var nav=document.getElementById('mobNav');
+  if(!nav){ nav=document.createElement('nav'); nav.id='mobNav'; nav.className='mob-nav no-print'; document.body.appendChild(nav); }
+  var menuSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  var it=function(on,ico,label,onclk){ return '<button class="mob-nav-b'+(on?' on':'')+'" onclick="'+onclk+'">'+ico+'<span>'+label+'</span></button>'; };
+  nav.innerHTML =
+      it(rota==='inicio',    svg('home'),   'Início', "location.hash='#inicio'")
+    + it(rota==='dashboard', svg('dash'),   'Painel', "location.hash='#dashboard'")
+    + it(false,              svg('search'), 'Buscar', "pexCmdOpen()")
+    + it(false,              menuSvg,       'Menu',   "toggleSidebar()");
 }
 /* Barra de contexto: seta Voltar (sempre no mesmo lugar) + título da tela; some na home */
 function pexMobileCtx(rota){
