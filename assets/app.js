@@ -16,6 +16,7 @@ function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
   ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  if(!DB.antt) DB.antt = clone(SEED.antt);
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -443,6 +444,7 @@ const ROTAS = {
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
+  antt:{t:'Conformidade ANTT', s:'RNTRC e regularidade do transportador', ico:'shield'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
@@ -480,6 +482,7 @@ function router(){
   else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
   else if(rota==='pedagios'){ if(arg) pedFiltro=arg; el.innerHTML=viewPedagios(); }
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
+  else if(rota==='antt') el.innerHTML=viewAntt();
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -686,7 +689,7 @@ function renderSidebar(rota){
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
-    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
+    `<div class="group">Empresa</div>`+ item('socios')+ item('antt')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
 
@@ -777,7 +780,7 @@ function viewDashboard(){
   </div>
 
   <div class="ini-kstrip4">
-    ${iniKpiTile('truck','', cavalos+reb, '', '', 'Veículos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+    ${iniKpiTile('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
     ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
     ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
     ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
@@ -3007,7 +3010,7 @@ function viewInicio(){
 
   <div class="grid ini-mon2">
     <div class="ini-left">
-      ${kt('truck','', cavalos+reb, '', '', 'Veículos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+      ${kt('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
       ${kt('user','', mot, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
     </div>
     <div class="ini-stage card">
@@ -3736,6 +3739,103 @@ function pedCountUp(){
     requestAnimationFrame(step);
   });
 }
+
+/* ================================================================== */
+/*  CONFORMIDADE ANTT / RNTRC                                          */
+/* ================================================================== */
+function _anttRow(l,v){ return `<div class="antt-f"><small>${l}</small><b>${v==null||v===''?'—':esc(v)}</b></div>`; }
+function viewAntt(){
+  const a=DB.antt||{}; const veic=a.veiculos||[];
+  const auto=veic.filter(v=>/automotor/i.test(v.tipo)&&/ativo/i.test(v.situacao)).length;
+  const impl=veic.filter(v=>/implemento/i.test(v.tipo)&&/ativo/i.test(v.situacao)).length;
+  const ativos=veic.filter(v=>/ativo/i.test(v.situacao)).length;
+  const conjuntos=Math.min(auto,impl);
+  const apto=(a.situacao==='Ativo');
+  const rows=veic.slice().sort((x,y)=>(x.seq||0)-(y.seq||0)).map(v=>`<tr class="clickable" onclick="modalAnttVeiculo('${v.id}')">
+    <td class="mono">${v.seq||''}</td><td>${plate(v.placa, /implemento/i.test(v.tipo)?'Reboque':'')} <span class="muted">${esc(v.uf||'')}</span></td>
+    <td>${esc(v.tipo||'')}<div class="muted" style="font-size:11px">${esc(v.descricao||'')}</div></td>
+    <td class="mono">${esc(v.renavam||'')}</td><td>${esc(v.propriedade||'')}</td>
+    <td><span class="st ${/ativo/i.test(v.situacao)?'ok':'vencido'}">${esc(v.situacao||'')}</span></td>
+    <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalAnttVeiculo('${v.id}')">${svg('edit')}</button></td></tr>`).join('');
+  return `
+  <div class="banner">${svg('shield')}<div><b>Conformidade ANTT — RNTRC</b><span>Registro Nacional de Transportadores Rodoviários de Cargas. Dados do extrato oficial — pode editar, incluir e remover.</span></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button>
+      <button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div></div>
+
+  <div class="card" style="margin-bottom:16px;border-left:4px solid ${apto?'#16c98d':'#f2686b'}">
+    <div class="card-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="antt-badge ${apto?'ok':'no'}">${svg('shield')}<b>${apto?'ATIVO':esc(a.situacao||'—')}</b></div>
+      <div style="flex:1;min-width:200px"><b style="font-size:15px">${esc(a.razao||'')}</b>
+        <div class="muted" style="font-size:12.5px">RNTRC <b>${esc(a.rntrc||'—')}</b> · Categoria ${esc(a.categoria||'—')} · CNPJ ${esc(a.cnpj||'')}</div>
+        <div style="color:${apto?'#16c98d':'#f2686b'};font-size:12.5px;font-weight:600;margin-top:4px">${apto?'✓ Apto a realizar o transporte remunerado de cargas.':'⚠ Verificar situação do registro.'}</div></div>
+    </div></div>
+
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    ${kpi('truck','i-blue', ativos, 'Veículos ativos (RNTRC)','')}
+    ${kpi('truck','i-green', auto, 'Automotores','cavalos')}
+    ${kpi('box','i-amber', impl, 'Implementos','reboques')}
+    ${kpi('route','i-blue', conjuntos, 'Conjuntos','cavalo + carreta')}
+  </div>
+
+  <div class="grid two-col" style="margin-bottom:16px">
+    <div class="card"><div class="card-h">${svg('doc')}<h3>Dados do registro</h3><div class="r no-print"><button class="btn sm" onclick="modalAnttDados()">${svg('edit')} Editar</button></div></div>
+      <div class="card-b">
+        ${_anttRow('RNTRC', a.rntrc)}${_anttRow('Situação', a.situacao)}${_anttRow('Categoria', a.categoria)}
+        ${_anttRow('Data de cadastro', fmtD(a.cadastro))}${_anttRow('Data do extrato', fmtD(a.extratoData))}${_anttRow('Endereço', a.endereco)}
+      </div></div>
+    <div class="card"><div class="card-h">${svg('shield')}<h3>Base legal e comprovante</h3></div>
+      <div class="card-b">
+        <p style="font-size:13px;line-height:1.6;color:var(--text-soft)">${esc(a.baseLegal||'')}</p>
+        ${a.obs?`<p class="muted" style="font-size:12.5px;margin-top:8px">${esc(a.obs)}</p>`:''}
+        ${a.consulta?`<a class="btn sm no-print" href="${esc(a.consulta)}" target="_blank" rel="noopener" style="margin-top:10px">${svg('eye')} Consulta pública ANTT</a>`:''}
+        <div style="margin-top:12px">${badgeAnexo('antt','extrato',/./,'Extrato ANTT')}</div>
+      </div></div>
+  </div>
+
+  <div class="card"><div class="card-h">${svg('truck')}<h3>Relação de veículos da frota (RNTRC)</h3><div class="r"><span class="muted" style="font-size:12px">${veic.length} veículo(s)</span></div></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Seq</th><th>Placa / UF</th><th>Tipo</th><th>Renavam</th><th>Propriedade</th><th>Situação</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum veículo no RNTRC. Clique em "Veículo" para incluir.')}</td></tr>`}</tbody></table></div></div>`;
+}
+function modalAnttDados(){
+  const a=DB.antt||{};
+  openModal(`<div class="m-h">${svg('shield')}<h3>Dados do RNTRC / ANTT</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('RNTRC','f_rntrc',a.rntrc)}${fld('Categoria','f_cat',a.categoria,'text','Ex.: ETC, CTC, TAC')}</div>
+      <div class="field-row"><div class="field"><label>Situação</label><select id="f_sit">${['Ativo','Suspenso','Cancelado','Baixado'].map(o=>`<option ${a.situacao===o?'selected':''}>${o}</option>`).join('')}</select></div>${fld('Data de cadastro','f_cad',a.cadastro,'date')}</div>
+      ${fld('Razão social','f_razao',a.razao)}
+      <div class="field-row">${fld('CNPJ','f_cnpj',a.cnpj)}${fld('Data do extrato','f_ext',a.extratoData,'date')}</div>
+      ${fld('Endereço','f_end',a.endereco)}${fld('Base legal','f_base',a.baseLegal)}
+      <div class="field"><label>Observações</label><input id="f_obs" value="${esc(a.obs||'')}"></div>
+    </div>
+    <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarAnttDados()">Salvar</button></div>`);
+}
+function salvarAnttDados(){ const a=DB.antt=DB.antt||{};
+  a.rntrc=val('f_rntrc'); a.categoria=val('f_cat'); a.situacao=val('f_sit'); a.apto=(val('f_sit')==='Ativo');
+  a.cadastro=val('f_cad'); a.razao=val('f_razao'); a.cnpj=val('f_cnpj'); a.extratoData=val('f_ext');
+  a.endereco=val('f_end'); a.baseLegal=val('f_base'); a.obs=val('f_obs');
+  saveDB(); closeModal(); toast('Dados da ANTT salvos.'); router(); }
+function modalAnttVeiculo(id){
+  const a=DB.antt=DB.antt||{}; a.veiculos=a.veiculos||[];
+  const v=id?a.veiculos.find(x=>x.id===id):{seq:(a.veiculos.length+1),placa:'',uf:'PR',tipo:'Automotor',descricao:'Caminhão trator',renavam:'',propriedade:'Próprio',situacao:'Ativo'};
+  if(!v){ toast('Veículo não encontrado.','err'); return; }
+  const sel=(lab,key,arr,cur)=>`<div class="field"><label>${lab}</label><select id="f_${key}">${arr.map(o=>`<option ${cur===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  openModal(`<div class="m-h">${svg('truck')}<h3>${id?'Editar veículo (RNTRC)':'Novo veículo (RNTRC)'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field-row">${fld('Sequência','f_seq',v.seq,'number')}${fld('Placa','f_placa',v.placa)}</div>
+      <div class="field-row">${fld('UF','f_uf',v.uf)}${sel('Tipo','tipo',['Automotor','Implemento'],v.tipo)}</div>
+      <div class="field-row">${fld('Descrição','f_desc',v.descricao,'text','Ex.: Caminhão trator, Semi-reboque')}${fld('Renavam','f_ren',v.renavam)}</div>
+      <div class="field-row">${sel('Propriedade','prop',['Próprio','Arrendado','Leasing','Agregado','Terceiro'],v.propriedade)}${sel('Situação','vsit',['Ativo','Suspenso','Baixado'],v.situacao)}</div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirAnttVeiculo('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarAnttVeiculo('${id||''}')">Salvar</button></div>`);
+}
+function salvarAnttVeiculo(id){ const a=DB.antt=DB.antt||{}; a.veiculos=a.veiculos||[];
+  const d={ seq:parseInt(val('f_seq'))||0, placa:val('f_placa').toUpperCase(), uf:(val('f_uf')||'').toUpperCase(), tipo:val('f_tipo'), descricao:val('f_desc'), renavam:val('f_ren'), propriedade:val('f_prop'), situacao:val('f_vsit') };
+  if(id){ Object.assign(a.veiculos.find(x=>x.id===id), d); } else { d.id=uid('an'); a.veiculos.push(d); }
+  saveDB(); closeModal(); toast('Veículo salvo.'); router(); }
+function excluirAnttVeiculo(id){ if(!confirm('Excluir este veículo do RNTRC?'))return; const a=DB.antt; a.veiculos=(a.veiculos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ---------- QUADRO SOCIETÁRIO ---------- */
 function docsDoMotorista(m){
@@ -4709,13 +4809,19 @@ function _faturParseRelatorio(txt){
   const out=[]; if(!txt) return out;
   const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
   const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0;
-  const re=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})/gi;
-  let m;
-  while((m=re.exec(txt))){ const mes=MES[_pedNorm(m[1])]; if(!mes) continue; const ano=m[2];
-    const saidas=num(m[3]), servicos=num(m[4]), outros=num(m[5]), total=num(m[6]); const comp=ano+'-'+String(mes).padStart(2,'0');
+  const add=function(mesNome,ano,saidas,servicos,outros,total){ const mes=MES[_pedNorm(mesNome)]; if(!mes) return; const comp=ano+'-'+String(mes).padStart(2,'0');
+    if(out.some(function(o){ return o.competencia===comp; })) return;
     out.push({ data:comp+'-01', cliente:'', valor:total,
-      obs:'Faturamento '+_capitaliza(m[1])+'/'+ano+' — Saídas '+money(saidas)+' · Serviços '+money(servicos)+(outros?' · Outros '+money(outros):'')+' (relatório do contador)',
-      competencia:comp, saidas, servicos, outros, fonte:'contador', _tipo:'mensal' }); }
+      obs:'Faturamento '+_capitaliza(mesNome)+'/'+ano+((saidas||servicos)?' — Saídas '+money(saidas)+' · Serviços '+money(servicos):'')+(outros?' · Outros '+money(outros):'')+' (relatório do contador)',
+      competencia:comp, saidas:saidas, servicos:servicos, outros:outros, fonte:'contador', _tipo:'mensal' }); };
+  let m;
+  // 1) formato completo: Mês Ano Saídas Serviços Outros Total
+  const reFull=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})/gi;
+  while((m=reFull.exec(txt))){ add(m[1],m[2],num(m[3]),num(m[4]),num(m[5]),num(m[6])); }
+  // 2) fallback flexível: Mês Ano + 1..6 valores (o ÚLTIMO é o Total) — tolera espaçamento/colunas variáveis do pdf.js
+  if(!out.length){ const reFlex=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})((?:\s+[\d.]+,\d{2}){1,6})/gi;
+    while((m=reFlex.exec(txt))){ const vals=(m[3].match(/[\d.]+,\d{2}/g)||[]).map(num); if(!vals.length) continue;
+      add(m[1], m[2], vals[0]||0, vals.length>=3?vals[1]:0, 0, vals[vals.length-1]); } }
   return out;
 }
 /* XML de NF-e / CT-e (uma nota por arquivo) */

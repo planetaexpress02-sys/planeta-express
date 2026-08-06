@@ -2227,6 +2227,16 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .doc-reg.dup{ opacity:.5; } .doc-reg span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .doc-reg b{ flex:0 0 auto; }
 .doc-reg input{ width:18px; height:18px; flex:0 0 auto; }
 
+/* ---- Conformidade ANTT / RNTRC v6.57 ---- */
+.antt-badge{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-width:100px; padding:15px 18px; border-radius:16px; font-weight:800; font-size:15px; letter-spacing:.5px; }
+.antt-badge svg{ width:26px; height:26px; }
+.antt-badge.ok{ color:#16c98d; background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.3); box-shadow:0 0 22px rgba(0,255,136,.16); }
+.antt-badge.no{ color:#f2686b; background:rgba(255,60,60,.1); border:1px solid rgba(255,60,60,.3); }
+.antt-f{ display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:9px 0; border-bottom:1px solid var(--line); }
+.antt-f:last-child{ border-bottom:0; }
+.antt-f small{ color:var(--text-soft); font-size:12.5px; flex:0 0 auto; }
+.antt-f b{ text-align:right; font-size:13.5px; }
+
 /* ================================================================== */
 /*  PEDÁGIOS (v6.47)                                                   */
 /* ================================================================== */

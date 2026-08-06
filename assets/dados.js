@@ -257,6 +257,31 @@ const SEED = {
     { id:"pv31", data:"2026-07-04", hora:"17:15:37", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
   ],
 
+  /* -------------------- ANTT / RNTRC (extrato do transportador) -------------------- */
+  antt: {
+    rntrc:"050428055", categoria:"ETC", situacao:"Ativo", apto:true,
+    razao:"PLANETA EXPRESS TRANSPORTES LTDA", cnpj:"26.126.673/0001-86",
+    cadastro:"2017-10-04", extratoData:"2026-03-18",
+    endereco:"Av dos Pioneiros, 2495, Sala 09 — Centro, Carambeí/PR, CEP 84145-000",
+    baseLegal:"Lei nº 10.233/2001 · Lei nº 11.442/2007 · Resolução ANTT nº 5.982/2022",
+    consulta:"https://consultapublica.antt.gov.br/site/ConsultaRNTRC.aspx/ConsultPublica/",
+    obs:"Transportador apto a realizar o transporte remunerado de cargas.",
+    veiculos:[
+      { id:"an1",  seq:1,  placa:"MDD-5C62", uf:"PR", tipo:"Implemento", descricao:"Semi-reboque",   renavam:"00800035208", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an2",  seq:2,  placa:"AMB-2928", uf:"PR", tipo:"Implemento", descricao:"Semi-reboque",   renavam:"00836272374", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an3",  seq:3,  placa:"IOW-1141", uf:"PR", tipo:"Implemento", descricao:"Semi-reboque",   renavam:"00971367728", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an4",  seq:4,  placa:"IPD-9036", uf:"RS", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"00984587284", propriedade:"Arrendado", situacao:"Ativo" },
+      { id:"an5",  seq:5,  placa:"IPG-8A91", uf:"RS", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"00989882217", propriedade:"Arrendado", situacao:"Ativo" },
+      { id:"an6",  seq:6,  placa:"EJZ-4I65", uf:"PR", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"00170983129", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an7",  seq:7,  placa:"JSX-4D55", uf:"PR", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"00191637114", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an8",  seq:8,  placa:"NTY-8B66", uf:"PR", tipo:"Implemento", descricao:"Semi-reboque",   renavam:"00274552671", propriedade:"Leasing",  situacao:"Ativo" },
+      { id:"an9",  seq:9,  placa:"IRU-4G62", uf:"PR", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"00316700762", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an10", seq:10, placa:"EOF-5A47", uf:"PR", tipo:"Implemento", descricao:"Semi-reboque",   renavam:"00330076868", propriedade:"Próprio",  situacao:"Ativo" },
+      { id:"an11", seq:11, placa:"QIO-9J07", uf:"PR", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"01128406214", propriedade:"Leasing",  situacao:"Ativo" },
+      { id:"an12", seq:12, placa:"BDP-1B55", uf:"PR", tipo:"Automotor",  descricao:"Caminhão trator", renavam:"01184587890", propriedade:"Arrendado", situacao:"Ativo" },
+    ],
+  },
+
   /* -------------------- MANUTENÇÃO / TROCAS DE ÓLEO -------------------- */
   manutencoes: [
     /* Cavalos (km) */
