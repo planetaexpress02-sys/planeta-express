@@ -15,7 +15,7 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
   importarLicencasSeed();
@@ -474,6 +474,7 @@ const ROTAS = {
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
   licencas:{t:'Licenças e Alvarás', s:'Alvarás, vigilância sanitária, inscrições e certidões', ico:'stamp'},
+  central:{t:'Central de Documentos', s:'Todo documento entra por aqui — leitura e lançamento automáticos', ico:'spark'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
@@ -513,6 +514,7 @@ function router(){
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='antt') el.innerHTML=viewAntt();
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
+  else if(rota==='central'){ if(arg) cpidAba=arg; el.innerHTML=viewCentral(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -609,6 +611,7 @@ function pexAfterRender(rota){
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
+    if(rota==='central' && typeof cpidCountUp==='function') cpidCountUp();
     if(typeof pexMobileInit==='function') pexMobileInit(rota);
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
@@ -707,7 +710,8 @@ function contadores(){
   todosVencimentos().forEach(v=>{ const s=situacao(v.validade); if(s.ord===0) venc++; else if(s.ord===1) crit++; });
   let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
   let lic=0; (DB.licencas||[]).forEach(l=>{ if(l && l.situacao!=='arquivada'){ const d=diasAte(l.validade); if(d!=null && d<=60) lic++; } });
-  return {venc, crit, total:venc+crit, seg, lic};
+  const cpid=(typeof cpidPendentes==='function')? cpidPendentes() : 0;
+  return {venc, crit, total:venc+crit, seg, lic, cpid};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -715,7 +719,7 @@ function renderSidebar(rota){
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
     return `<a href="#${k}" data-label="${esc(m.t)}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
   document.getElementById('nav').innerHTML =
-    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
+    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+ item('central', c.cpid?{n:c.cpid, cls:'warn'}:null)+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
@@ -3183,7 +3187,7 @@ function viewSeguros(){
   return `
   <div class="banner">${svg('umbrella')}<div><b>Seguros — apólices e vigências</b><span>Controle de todas as apólices da empresa e dos sócios: seguradora, número, vigência, prêmio e avisos de renovação. As apólices ativas também aparecem em Vencimentos e no Painel de Controle.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="modalEnviarApolice()">${svg('upload')} Enviar apólice</button>
+      <button class="btn" onclick="cpidEscolher('Seguros')" title="Vai para a Central de Documentos, que lê a apólice e identifica a qual seguro pertence">${svg('upload')} Enviar apólice</button>
       <button class="btn primary" onclick="modalSeguro()">${svg('plus')} Novo seguro</button>
     </div></div>
 
@@ -3542,7 +3546,7 @@ function viewPedagios(){
   return `
   <div class="banner">${svg('toll')}<div><b>Pedágios — centro de inteligência</b><span>Todas as passagens de pedágio da frota (extrato Sem Parar), com custos, praças, concessionárias, rotas e integração com viagens e financeiro.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="pedImportarModal()">${svg('upload')} Importar extrato</button>
+      <button class="btn" onclick="cpidEscolher('Pedágios')" title="Vai para a Central de Documentos, que lê o extrato e lança as passagens">${svg('upload')} Importar extrato</button>
       <button class="btn primary" onclick="pedModal()">${svg('plus')} Novo pedágio</button>
     </div></div>
 
@@ -4093,7 +4097,7 @@ function viewLicencas(){
     <span>Alvarás, vigilância sanitária, inscrições e certidões da empresa, veículos, filiais e parceiros. A situação é calculada sozinha pela validade e os vencimentos aparecem no Painel, nas notificações e na IA.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="licRelatoriosModal()">${svg('print')} Relatórios</button>
-      <button class="btn" onclick="licEnviarModal()">${svg('upload')} Enviar documento</button>
+      <button class="btn" onclick="cpidEscolher('Licenças')" title="Vai para a Central de Documentos, que lê a licença e preenche os campos">${svg('upload')} Enviar documento</button>
       <button class="btn primary" onclick="modalLicenca()">${svg('plus')} Nova licença</button>
     </div></div>
 
@@ -5417,7 +5421,7 @@ function viewFinConteudo(){
 
   <div class="grid two-col">
     <div class="card"><div class="card-h">${svg('money')}<h3>Faturamento</h3>
-      <div class="r no-print" style="gap:6px"><button class="btn sm" onclick="modalImportarFatur()" title="Anexe o relatório do contador (PDF), planilha (Excel/CSV) ou XML das notas — o sistema preenche sozinho">${svg('upload')} Importar do contador</button><button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button></div></div>
+      <div class="r no-print" style="gap:6px"><button class="btn sm" onclick="cpidEscolher('Faturamento')" title="Vai para a Central de Documentos: relatório do contador (PDF), planilha ou XML das notas — o sistema lê e preenche sozinho">${svg('upload')} Importar do contador</button><button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
         <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento lançado.')}</td></tr>`}</tbody></table></div></div></div>

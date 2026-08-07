@@ -330,5 +330,8 @@ window.PEXImport = (function(){
     return out;
   }
 
-  return { lerArquivo, serialToISO, suportaXLSX, detectarVencimentos, canonTipo, _lerXLSX:lerXLSX, _lerCSV:lerCSV };
+  /* unzip/inflate expostos: a Central de Documentos usa para ZIP e DOCX
+     (que também é um ZIP), sem precisar de biblioteca externa. */
+  return { lerArquivo, serialToISO, suportaXLSX, detectarVencimentos, canonTipo,
+           unzip, inflateRaw, decode, _lerXLSX:lerXLSX, _lerCSV:lerCSV };
 })();
