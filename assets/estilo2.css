@@ -2708,3 +2708,12 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){
   .cp-item{ animation:none!important } .cp-et.now i{ animation:none!important }
 }
+
+/* previa do texto lido (quando a extracao nao separa os dados) */
+.cp-previa{ margin-top:9px;border-radius:9px;background:rgba(0,18,32,.55);border:1px solid rgba(0,170,255,.14) }
+.cp-previa summary{ cursor:pointer;padding:9px 12px;font-size:11.5px;color:#8fb6d8;display:flex;align-items:center;gap:7px;list-style:none }
+.cp-previa summary::-webkit-details-marker{ display:none }
+.cp-previa summary svg{ width:14px;height:14px;flex:none }
+.cp-previa summary:hover{ color:#eaf1f9 }
+.cp-previa pre{ margin:0;padding:0 12px 12px;font-size:11px;line-height:1.55;color:#a9c0da;
+  white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto }

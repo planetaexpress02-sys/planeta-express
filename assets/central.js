@@ -82,7 +82,7 @@ async function cpidFormato(file){
    ================================================================== */
 async function cpidLer(file, fmt, onProgresso){
   const p = (m)=>{ if(onProgresso) onProgresso(m); };
-  const out = {texto:'', grid:null, xmlDoc:null, filhos:[], ocr:false};
+  const out = {texto:'', grid:null, xmlDoc:null, filhos:[], ocr:false, linhas:null};
 
   if(fmt.k==='xml'){
     p('lendo XML estruturado');
@@ -123,9 +123,21 @@ async function cpidLer(file, fmt, onProgresso){
     return out;
   }
 
-  /* PDF e imagem: texto nativo primeiro, OCR só se precisar */
-  if(typeof pexLerApoliceTexto==='function'){
+  /* PDF: primeiro a leitura ESTRUTURADA (reconstrói as linhas da tabela
+     pelas coordenadas) — é ela que faz relatórios e extratos funcionarem.
+     Depois o texto corrido, e OCR só se não vier texto nenhum. */
+  if(fmt.k==='pdf'){
+    try{ const est=await cpidPdfLinhas(file, p);
+      if(est && est.linhas.length){ out.linhas=est.linhas; out.texto=est.texto; } }catch(e){}
+  }
+  if(!out.texto && typeof pexLerApoliceTexto==='function'){
     out.texto = await pexLerApoliceTexto(file, function(m){ if(/ocr|imagem/i.test(String(m))) out.ocr=true; p(m); });
+  } else if(fmt.k!=='pdf' && typeof pexLerApoliceTexto==='function'){
+    out.texto = await pexLerApoliceTexto(file, function(m){ if(/ocr|imagem/i.test(String(m))) out.ocr=true; p(m); });
+  }
+  /* PDF digitalizado (sem texto): aí sim vale o OCR */
+  if(fmt.k==='pdf' && (!out.texto || out.texto.replace(/\s/g,'').length<25) && typeof pexLerApoliceTexto==='function'){
+    try{ out.texto = await pexLerApoliceTexto(file, function(m){ if(/ocr|imagem/i.test(String(m))) out.ocr=true; p(m); }); }catch(e){}
   }
   return out;
 }
@@ -336,7 +348,7 @@ async function cpidExtrair(tipo, ct, file, cls){
     case 'nfse_xml': return cpidExtrNfeXml(ct, file);
     case 'abastec':  return cpidExtrAbastecimento(txt, file);
     case 'pedagio':  return cpidExtrPedagio(txt);
-    case 'fatur_rel':return cpidExtrFaturRelatorio(txt);
+    case 'fatur_rel':return cpidExtrFaturRelatorio(txt, ct);
     case 'apolice':  return cpidExtrApolice(txt, file);
     case 'licenca':  return cpidExtrLicenca(txt, file);
     case 'planilha': return cpidExtrPlanilha(ct.grid);
@@ -450,12 +462,47 @@ function cpidExtrPedagio(txt){
 }
 
 /* ---- Relatório de faturamento do contador ---- */
-function cpidExtrFaturRelatorio(txt){
+function cpidExtrFaturRelatorio(txt, ct){
   let regs=[];
-  if(typeof _faturParseRelatorio==='function'){ try{ regs=_faturParseRelatorio(txt)||[]; }catch(e){} }
+  /* 1º as LINHAS reconstruídas (tabela) — é o que funciona no PDF do contador */
+  if(ct && ct.linhas && ct.linhas.length){
+    try{ regs=_faturRelatorioDeLinhas(ct.linhas)||[]; }catch(e){}
+  }
+  /* 2º o parser antigo sobre o texto corrido */
+  if(!regs.length && typeof _faturParseRelatorio==='function'){ try{ regs=_faturParseRelatorio(txt)||[]; }catch(e){} }
+  /* 3º último recurso: qualquer "mês ... valor" no texto todo */
+  if(!regs.length) regs=_faturRelatorioSolto(txt);
   const total=regs.reduce(function(s,r){ return s+(+r.valor||0); },0);
   return {campos:{meses:regs.length, valor:total}, registros:regs, _alvo:'faturamento',
-    resumo: regs.length? regs.length+' mês(es) — '+money(total) : 'Relatório lido, mas sem meses reconhecidos.'};
+    resumo: regs.length? regs.length+' mês(es) — '+money(total)
+                       : 'Reconheci o relatório, mas não consegui separar os meses e valores. Confira a prévia abaixo.'};
+}
+/* Varredura solta: percorre o texto e casa mês+ano com o valor mais próximo */
+function _faturRelatorioSolto(txt){
+  const out=[];
+  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  const t=String(txt||''); const n=_cpNorm(t);
+  const re=/\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/g;
+  /* posições de TODOS os meses: o trecho de cada um termina onde o próximo começa,
+     senão um mês acabaria pegando o valor do mês seguinte */
+  const pos=[]; let mm2;
+  const re2=/\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/g;
+  while((mm2=re2.exec(n))) pos.push(mm2.index);
+  let m;
+  while((m=re.exec(n))){
+    const prox=pos.find(function(p){ return p>m.index; });
+    const fim=Math.min(prox!=null? prox : t.length, m.index+220);
+    const trecho=t.slice(m.index, fim);
+    const ano=(trecho.match(/\b(20\d{2})\b/)||[])[1]; if(!ano) continue;
+    const vals=(trecho.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(function(s){ return parseFloat(s.replace(/\./g,'').replace(',','.'))||0; });
+    if(!vals.length) continue;
+    const comp=ano+'-'+String(MES[m[1]]).padStart(2,'0');
+    if(out.some(function(o){ return o.competencia===comp; })) continue;
+    out.push({ data:comp+'-01', cliente:'', valor:vals[vals.length-1],
+      obs:'Faturamento '+_capitaliza(m[1])+'/'+ano+' (relatório do contador)',
+      competencia:comp, saidas:vals[0]||0, servicos:0, outros:0, fonte:'contador', _tipo:'mensal' });
+  }
+  return out;
 }
 
 /* ---- Nota/fatura/boleto só em texto (fallback) ---- */
@@ -654,6 +701,11 @@ async function cpidProcessar(item, onEtapa){
     const ex=await cpidExtrair(cls.tipo, ct, f, cls);
     if(ex._tipoReal){ item.tipo=ex._tipoReal; item.cls.porque+=' · conteúdo é de '+cpidTipoInfo(ex._tipoReal).n; }
     item.ex=ex; item.alvo=ex._alvo||''; item.resumo=ex.resumo||'';
+    /* guarda uma prévia do que foi lido: se a extração falhar, o usuário VÊ o motivo */
+    item.previa=(ct.linhas&&ct.linhas.length)
+      ? ct.linhas.slice(0,12).map(function(l){ return l.txt; }).join('\n')
+      : String(ct.texto||'').replace(/\s+/g,' ').slice(0,600);
+    item.nLinhas=(ct.linhas||[]).length;
     item.emitente=(ex.campos&&(ex.campos.emitente||ex.campos.posto||ex.campos.seguradora||ex.campos.orgao))||'';
 
     et(4,'');
@@ -696,12 +748,15 @@ async function cpidAplicar(item){
   }
   else if(item.alvo==='faturamento'){
     if(!Array.isArray(DB.faturamento)) DB.faturamento=[];
+    /* não duplica: se a competência (mês) já existe, atualiza em vez de somar de novo */
     if(regs.length){ regs.forEach(function(r){ const lim={};
         Object.keys(r).forEach(function(k){ if(k.charAt(0)!=='_') lim[k]=r[k]; });
-        lim.id=uid('ft'); DB.faturamento.push(lim); salvos++; }); }
+        const jaTem = lim.competencia && DB.faturamento.find(function(x){ return x.competencia===lim.competencia; });
+        if(jaTem){ Object.assign(jaTem, lim); salvos++; }
+        else { lim.id=uid('ft'); DB.faturamento.push(lim); salvos++; } }); }
     else if(c.valor){ DB.faturamento.push({ id:uid('ft'), data:c.data||'', cliente:c.emitente||c.cliente||'',
         valor:+c.valor||0, chave:c.chave||'', obs:'Documento nº '+(c.numero||'') }); salvos=1; }
-    onde.push('Financeiro','Painel');
+    if(salvos) onde.push('Financeiro','Painel');
   }
   else if(item.alvo==='pagamentos'){
     if(!Array.isArray(DB.pagamentos)) DB.pagamentos=[];
@@ -754,13 +809,15 @@ async function cpidAplicar(item){
       else if(item._refSeg){ ent='seguro'; ref=item._refSeg; }
       else if(temVeic){ ent='veiculo'; ref=item.liga.veiculo.id; }
       await subirUm(item.file, ent, ref, cat);
-      item.arquivado=true; onde.push('Documentos');
+      item.arquivado=true; onde.push('Documentos (arquivo guardado)');
     }
   }catch(e){ item.arquivoErro=e.message||''; }
 
   cpidAprender(item);                       /* aprende com este documento */
   cpidLog(item, salvos, onde);              /* log auditável */
-  item.status='aplicado'; item.salvos=salvos; item.onde=onde;
+  /* honestidade: se não gravou nada, NÃO diz que atualizou o módulo */
+  item.status = salvos? 'aplicado' : 'semdados';
+  item.salvos=salvos; item.onde=onde;
   return {salvos:salvos, onde:onde};
 }
 
@@ -905,7 +962,7 @@ function cpidItemHTML(it){
   const ti=cpidTipoInfo(it.tipo||'documento');
   const selo={ lendo:['#8ea3bf','Processando'], revisar:['#16c98d','Reconhecido'], arquivar:['#f2a44e','Só arquivar'],
     ilegivel:['#f2686b','Não deu para ler'], erro:['#f2686b','Erro'], pacote:['#b98cff','Pacote'],
-    aplicado:['#16c98d','Aplicado'] }[it.status]||['#8ea3bf',it.status];
+    aplicado:['#16c98d','Aplicado'], semdados:['#f2a44e','Arquivado, sem lançamento'] }[it.status]||['#8ea3bf',it.status];
   const et=CPID_ETAPAS[it.etapa||0];
 
   let miolo='';
@@ -931,9 +988,14 @@ function cpidItemHTML(it){
       (it.liga&&it.liga.veiculo? '<div class="cp-rel">'+svg('truck')+' Relacionado ao veículo <b>'+esc(it.liga.veiculo.placa)+'</b></div>':'')+
       ((it.liga&&it.liga.avisos&&it.liga.avisos.length)? '<div class="cp-aviso">'+esc(it.liga.avisos.join(' · '))+'</div>':'')+
       (it.pend&&it.pend.length? '<div class="cp-aviso">Conferir: <b>'+esc(it.pend.join(', '))+'</b></div>':'')+
+      /* quando não saiu nenhum lançamento, mostra o que foi lido do documento */
+      ((it.alvo && !(it.ex&&it.ex.registros&&it.ex.registros.length) && it.previa)?
+        '<details class="cp-previa"><summary>'+svg('eye')+' Não consegui separar os dados — ver o que li do documento'+
+        (it.nLinhas?' ('+it.nLinhas+' linhas)':'')+'</summary><pre>'+esc(it.previa)+'</pre></details>':'')+
       (it.alvo? '<div class="cp-destino">'+svg('send')+' Vai atualizar: <b>'+esc(cpidNomeAlvo(it.alvo))+'</b></div>'
               : '<div class="cp-destino">'+svg('folder')+' Será apenas <b>arquivado</b> nos Documentos</div>')+
       (it.status==='aplicado'? '<div class="cp-ok">'+svg('check')+' Aplicado — '+(it.salvos||0)+' lançamento(s) · atualizou: '+esc((it.onde||[]).join(', '))+'</div>'
+        : it.status==='semdados'? '<div class="cp-aviso">Arquivo guardado, mas <b>nenhum lançamento foi gerado</b> — os dados não puderam ser separados. Veja a prévia acima ou lance manualmente.</div>'
         : '<div class="cp-item-acts no-print">'+
             '<label class="cp-chk"><input type="checkbox" '+(it.aplicar!==false?'checked':'')+' onchange="cpidMarcar(\''+it.id+'\',this.checked)"> lançar no sistema</label>'+
             '<select class="cp-sel" onchange="cpidCorrigirTipo(\''+it.id+'\',this.value)">'+
@@ -1035,4 +1097,77 @@ function cpidEscolher(origem){
   const inp=document.createElement('input'); inp.type='file'; inp.multiple=true;
   inp.onchange=function(e){ cpidEnviar(e.target.files, origem); };
   inp.click();
+}
+
+/* ==================================================================
+   LEITURA ESTRUTURADA DE PDF (tabelas)
+   ------------------------------------------------------------------
+   O pdf.js entrega pedaços soltos de texto, cada um com a sua posição
+   na página. Concatenar tudo numa string embaralha as tabelas (o
+   relatório do contador vira "janeiro fevereiro ... 1.234,56 ...").
+   Aqui reconstruímos as LINHAS pela coordenada Y e as COLUNAS pela X,
+   que é o que permite ler qualquer relatório em tabela.
+   ================================================================== */
+async function cpidPdfLinhas(file, onProgresso){
+  const out={linhas:[], texto:''};
+  if(typeof _pdfjs!=='function' || !_pdfjs()) return out;
+  let doc=null;
+  try{ doc=await _pdfDoc(file); }catch(e){ return out; }
+  if(!doc) return out;
+  const np=Math.min(doc.numPages, 20);
+  for(let p=1;p<=np;p++){
+    if(onProgresso) onProgresso('lendo página '+p+'/'+np);
+    let tc=null;
+    try{ const page=await doc.getPage(p); tc=await page.getTextContent(); }catch(e){ continue; }
+    const itens=(tc.items||[]).map(function(it){
+      const tr=it.transform||[1,0,0,1,0,0];
+      return { x:Math.round(tr[4]), y:Math.round(tr[5]), t:String(it.str||'') };
+    }).filter(function(i){ return i.t.trim()!==''; });
+    if(!itens.length) continue;
+    /* agrupa por Y (tolerância de 3pt: a mesma linha nem sempre tem Y idêntico) */
+    const mapa={};
+    itens.forEach(function(i){
+      let chave=null;
+      for(const k in mapa){ if(Math.abs(Number(k)-i.y)<=3){ chave=k; break; } }
+      if(chave===null){ chave=String(i.y); mapa[chave]=[]; }
+      mapa[chave].push(i);
+    });
+    Object.keys(mapa).sort(function(a,b){ return Number(b)-Number(a); })   // topo → base
+      .forEach(function(k){
+        const cels=mapa[k].sort(function(a,b){ return a.x-b.x; });
+        const cols=cels.map(function(c){ return c.t.trim(); }).filter(Boolean);
+        const txt=cols.join(' ').replace(/\s+/g,' ').trim();
+        if(txt) out.linhas.push({pagina:p, y:Number(k), cols:cols, txt:txt});
+      });
+  }
+  out.texto=out.linhas.map(function(l){ return l.txt; }).join('\n');
+  return out;
+}
+
+/* Relatório de faturamento a partir das LINHAS reconstruídas.
+   Aceita a linha inteira ("Janeiro 2026 1.000,00 ... 5.000,00") e
+   também o caso em que mês e ano estão em células separadas. */
+function _faturRelatorioDeLinhas(linhas){
+  const out=[];
+  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  const num=function(s){ return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; };
+  (linhas||[]).forEach(function(l){
+    const txt=l.txt||'';
+    const mm=_cpNorm(txt).match(/\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/);
+    if(!mm) return;
+    const mes=MES[mm[1]]; if(!mes) return;
+    const ano=(txt.match(/\b(20\d{2})\b/)||[])[1];
+    if(!ano) return;
+    /* todos os valores monetários da linha; o ÚLTIMO é o Total */
+    const vals=(txt.match(/\d{1,3}(?:\.\d{3})*,\d{2}/g)||[]).map(num);
+    if(!vals.length) return;
+    const comp=ano+'-'+String(mes).padStart(2,'0');
+    if(out.some(function(o){ return o.competencia===comp; })) return;
+    const total=vals[vals.length-1];
+    out.push({ data:comp+'-01', cliente:'', valor:total,
+      obs:'Faturamento '+_capitaliza(mm[1])+'/'+ano+(vals.length>1? ' — '+vals.slice(0,-1).map(money).join(' · ') : '')+' (relatório do contador)',
+      competencia:comp, saidas:vals[0]||0, servicos:vals.length>=3?vals[1]:0, outros:0,
+      fonte:'contador', _tipo:'mensal' });
+  });
+  return out;
 }
