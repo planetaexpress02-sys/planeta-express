@@ -282,6 +282,75 @@ const SEED = {
     ],
   },
 
+  /* -------------------- LICENÇAS E ALVARÁS (documentos reais 2026) --------------------
+     Extraídos do PDF "Alvará e Vigilâncias Sanitárias 2026" (Município de Carambeí/PR).
+     situacao:"auto" = o sistema calcula pela data de validade.                          */
+  licencas: [
+    { id:"lic1", nome:"Alvará de Licença para Localização e Funcionamento", categoria:"alvara",
+      numero:"26/2026", orgao:"Prefeitura Municipal de Carambeí — Secretaria Municipal de Finanças / Departamento de Tributação",
+      municipio:"Carambeí", estado:"PR", emissao:"", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Inscrição Municipal 32885 · CNPJ 26.126.673/0001-86 · Área utilizada 15,00 m² · Início da atividade 27/09/2016. Atividades: transporte rodoviário de carga (municipal, intermunicipal, interestadual e internacional). Deve ficar em local visível, sem dobras ou rasuras.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2027-01-19", hora:"00:00", evento:"Validade do alvará", detalhe:"Conforme documento do Município de Carambeí", por:"Documento"} ] },
+
+    { id:"lic2", nome:"Alvará Sanitário — Matriz", categoria:"sanitaria",
+      numero:"13/2026", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária do estabelecimento. Inscrição Municipal 32885 · Área 15,00 m² · Horário: Seg/Sex 8h-22h, Sáb 8h-20h, Dom/Feriado 8h-12h. Autoridade sanitária: Alan César de Assis — Inspetor Sanitário VISA (RG 3.985.045-1).",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Expedida pela Vigilância Sanitária de Carambeí", por:"Documento"} ] },
+
+    { id:"lic3", nome:"Licença Sanitária de Veículo — IOW-1141", categoria:"sanitaria",
+      numero:"", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"veiculo", refId:"v7", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária para veículo transportador de alimentos — Resolução SESA nº 465/2013. Frota C.FRIA · Chassi 9A9CM28238CEF2024 · Semirreboque fechado · Modelo/Marca SR/THERMOSARA SR FG.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Veículo transportador de alimentos (SESA 465/2013)", por:"Documento"} ] },
+
+    { id:"lic4", nome:"Licença Sanitária de Veículo — EOF-5A47", categoria:"sanitaria",
+      numero:"", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"veiculo", refId:"v11", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária para veículo transportador de alimentos — Resolução SESA nº 465/2013. Frota C.FRIA · Chassi 9A9CP3033BCEF2450 · Semirreboque · Modelo/Marca SR/THERMOSARA SR FG.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Veículo transportador de alimentos (SESA 465/2013)", por:"Documento"} ] },
+
+    { id:"lic6", nome:"Licença Sanitária de Veículo — MDD-5C62", categoria:"sanitaria",
+      numero:"", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"veiculo", refId:"v8", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária para veículo transportador de alimentos — Resolução SESA nº 465/2013. Frota C.FRIA · Chassi 9ADF147333M185707 · Semirreboque fechado · Modelo/Marca SR/RANDON SR FG.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Veículo transportador de alimentos (SESA 465/2013)", por:"Documento"} ] },
+
+    { id:"lic7", nome:"Licença Sanitária de Veículo — AMB-2928", categoria:"sanitaria",
+      numero:"", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"veiculo", refId:"v9", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária para veículo transportador de alimentos — Resolução SESA nº 465/2013. Frota C.FRIA · Chassi 9ADF147345M207891 · Semirreboque fechado · Modelo/Marca SR/RANDON SR FG.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Veículo transportador de alimentos (SESA 465/2013)", por:"Documento"} ] },
+
+    { id:"lic8", nome:"Licença Sanitária de Veículo — NTY-8B66", categoria:"sanitaria",
+      numero:"", orgao:"Secretaria Municipal de Saúde — Departamento de Vigilância Sanitária de Carambeí",
+      municipio:"Carambeí", estado:"PR", emissao:"2026-01-27", validade:"2027-01-19", responsavel:"Uilian",
+      situacao:"auto", escopo:"veiculo", refId:"v10", titular:"", protocolo:"", hash:"",
+      obs:"Licença sanitária para veículo transportador de alimentos — Resolução SESA nº 465/2013. Frota C.FRIA · Chassi 9ADF1473ABM323262 · Semirreboque · Modelo/Marca SR/RANDON SR FG.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2026-01-27", hora:"00:00", evento:"Licença emitida", detalhe:"Veículo transportador de alimentos (SESA 465/2013)", por:"Documento"} ] },
+
+    { id:"lic5", nome:"Inscrição Municipal — Carambeí", categoria:"municipal",
+      numero:"32885", orgao:"Prefeitura Municipal de Carambeí — Departamento de Tributação",
+      municipio:"Carambeí", estado:"PR", emissao:"2016-09-27", validade:"", responsavel:"Uilian",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Cadastro mobiliário do município (não tem data de validade). Número confirmado no alvará de funcionamento e nas 6 licenças sanitárias de 2026.",
+      versoes:[], renov:{aberta:false},
+      historico:[ {data:"2016-09-27", hora:"00:00", evento:"Início da atividade", detalhe:"Conforme alvará municipal", por:"Documento"} ] },
+  ],
+
   /* -------------------- MANUTENÇÃO / TROCAS DE ÓLEO -------------------- */
   manutencoes: [
     /* Cavalos (km) */

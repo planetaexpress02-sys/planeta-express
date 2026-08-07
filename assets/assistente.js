@@ -140,6 +140,10 @@ function iaResponder(raw){
   if(/^(ajuda|help|\?|menu|comandos|o que voce faz|o que vc faz|o que voce sabe)/.test(n)) return iaAjuda();
   if(/^(oi+|ola|opa|bom dia|boa tarde|boa noite|e ai|eai|tudo bem|ei)\b/.test(n) && n.length<20) return iaSaudacao();
 
+  /* Licenças e alvarás são só consulta pelo chat (não há comando de lançamento
+     com essas palavras), então não dependem do detector de pergunta. */
+  if(/alvar|licenc|vigilanc|sanitar|certid|avcb|bombeiro|conformidade/.test(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+
   /* Perguntas explícitas → consulta */
   if(_iaEhPergunta(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
 
@@ -344,6 +348,75 @@ function iaConsulta(t,n){
     /* total geral ou por veículo */
     const pago=lista.filter(p=>p.tipo==='Pedágio'), vale=lista.filter(p=>p.tipo==='Vale-pedágio');
     return `🛣️ ${placaF?'<b>'+esc(placaF)+'</b> — ':''}pedágios: <b>${money(soma(lista))}</b> em ${lista.length} passagem(ns).<br>• Pago pela empresa: <b>${money(soma(pago))}</b><br>• Vale-pedágio (reembolsado pelo embarcador): <b>${money(soma(vale))}</b>`;
+  }
+
+  /* LICENÇAS E ALVARÁS (conformidade) */
+  if(/alvar[aá]|licen[cç]a|licen[cç]as|vigil[aâ]ncia|sanitar|certid[aã]o|certidoes|certid[oõ]es|inscri[cç][aã]o (estadual|municipal)|ambienta|bombeiro|avcb|conformidade/.test(n)){
+    const lic=(DB.licencas||[]); if(!lic.length) return `Ainda não há licenças cadastradas. Abra a aba <b>Licenças e Alvarás</b> e use "Enviar documento" — eu leio o PDF e preencho sozinho.`;
+    const vivas=lic.filter(l=>l.situacao!=='arquivada');
+    const sit=(typeof licSit==='function')?licSit:(()=>({k:'',n:''}));
+    const cat=(typeof licCatInfo==='function')?licCatInfo:(k=>({n:k||'Licença'}));
+    const tit=(typeof licTitular==='function')?licTitular:(l=>l.titular||'Empresa');
+    const linha=l=>`• <b>${esc(l.nome||cat(l.categoria).n)}</b>${l.numero?' (nº '+esc(l.numero)+')':''} — ${esc(tit(l))}${l.municipio?' · '+esc(l.municipio):''}${l.estado?'/'+esc(l.estado):''} — vence <b>${fmtD(l.validade)}</b> ${_iaVencBadge({validade:l.validade})}`;
+
+    /* sem arquivo anexado */
+    if(/n[aã]o (possuem|tem|t[eê]m|ha|h[aá])|sem (arquivo|anexo|documento)|falta.*(anexo|arquivo)|anexad/.test(n) && /anex|arquiv/.test(n)){
+      const sem=vivas.filter(l=>!(typeof anexoTipo==='function' && anexoTipo('licenca',l.id,/./)));
+      return sem.length? `📎 <b>${sem.length}</b> licença(s) ainda <b>sem arquivo anexado</b>:<br>`+sem.map(linha).join('<br>')
+                       : `✅ Todas as ${vivas.length} licenças já têm o documento anexado.`;
+    }
+    /* filtro por categoria citada */
+    let alvo=vivas, rotulo='licenças';
+    if(/vigil[aâ]ncia|sanitar/.test(n)){ alvo=vivas.filter(l=>l.categoria==='sanitaria'); rotulo='vigilâncias sanitárias'; }
+    else if(/ambienta/.test(n)){ alvo=vivas.filter(l=>l.categoria==='ambiental'); rotulo='licenças ambientais'; }
+    else if(/bombeiro|avcb/.test(n)){ alvo=vivas.filter(l=>l.categoria==='bombeiros'); rotulo='licenças do corpo de bombeiros'; }
+    else if(/certid/.test(n)){ alvo=vivas.filter(l=>l.categoria==='certidao'); rotulo='certidões'; }
+    else if(/inscri[cç][aã]o estadual/.test(n)){ alvo=vivas.filter(l=>l.categoria==='estadual'); rotulo='inscrições estaduais'; }
+    else if(/inscri[cç][aã]o municipal/.test(n)){ alvo=vivas.filter(l=>l.categoria==='municipal'); rotulo='inscrições municipais'; }
+    else if(/alvar/.test(n)){ alvo=vivas.filter(l=>l.categoria==='alvara'); rotulo='alvarás'; }
+
+    /* vencidas */
+    if(/vencid|venceu|atrasad|irregular/.test(n)){
+      const vd=alvo.filter(l=>sit(l).k==='vencida');
+      return vd.length? `🔴 <b>${vd.length}</b> ${rotulo} <b>vencida(s)</b>:<br>`+vd.map(linha).join('<br>')
+                      : `✅ Não há ${rotulo} vencidas. Está tudo regular.`;
+    }
+    /* vencem este mês */
+    if(/est[ée] m[eê]s|neste m[eê]s|do m[eê]s|nesse m[eê]s/.test(n)){
+      const h=new Date(), ym=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+      const mes=alvo.filter(l=>String(l.validade||'').slice(0,7)===ym).sort((a,b)=>String(a.validade).localeCompare(String(b.validade)));
+      return mes.length? `📅 <b>${mes.length}</b> ${rotulo} vencem <b>este mês</b>:<br>`+mes.map(linha).join('<br>')
+                       : `✅ Não há ${rotulo} vencendo este mês.`;
+    }
+    /* vencendo / a vencer */
+    if(/vencendo|a vencer|pr[oó]xim|renova/.test(n)){
+      const av=alvo.filter(l=>{ const d=diasAte(l.validade); return d!=null && d>=0 && d<=90; }).sort((a,b)=>diasAte(a.validade)-diasAte(b.validade));
+      return av.length? `🟡 <b>${av.length}</b> ${rotulo} vencem nos próximos 90 dias:<br>`+av.map(linha).join('<br>')
+                      : `✅ Não há ${rotulo} vencendo nos próximos 90 dias.`;
+    }
+    /* "quando vence o alvará da matriz/de Londrina..." */
+    if(/quando vence|vencimento d|validade d|at[ée] quando/.test(n)){
+      let esp=alvo.slice();
+      const mm=String(t).match(/(?:da|de|do|em)\s+([A-Za-zÀ-ÿ]{3,})/i);
+      if(mm && !/matriz|empresa/i.test(mm[1])){ const k=mm[1].toLowerCase();
+        const f=esp.filter(l=>((l.municipio||'')+' '+(l.nome||'')+' '+tit(l)).toLowerCase().indexOf(k)>=0); if(f.length) esp=f; }
+      esp=esp.filter(l=>l.validade).sort((a,b)=>String(a.validade).localeCompare(String(b.validade)));
+      if(!esp.length) return `Não achei ${rotulo} com data de validade cadastrada.`;
+      if(esp.length===1){ const l=esp[0];
+        return `📄 <b>${esc(l.nome||cat(l.categoria).n)}</b>${l.numero?' (nº '+esc(l.numero)+')':''}<br>• Órgão: ${esc(l.orgao||'—')}<br>• Local: ${esc(l.municipio||'—')}${l.estado?'/'+esc(l.estado):''}<br>• Emissão: ${fmtD(l.emissao)}<br>• <b>Vence em ${fmtD(l.validade)}</b> ${_iaVencBadge({validade:l.validade})}<br>• Responsável: ${esc(l.responsavel||'—')}`; }
+      return `📄 ${esc(String(rotulo).charAt(0).toUpperCase()+String(rotulo).slice(1))} cadastradas:<br>`+esp.map(linha).join('<br>');
+    }
+    /* protocolos / renovações em andamento */
+    if(/protocolo|andamento|em an[aá]lise|tramit/.test(n)){
+      const r=vivas.filter(l=>l.renov&&l.renov.aberta);
+      const et=(typeof LIC_ETAPAS!=='undefined')?LIC_ETAPAS:[];
+      return r.length? `🔵 <b>${r.length}</b> renovação(ões) em andamento:<br>`+r.map(l=>`• <b>${esc(l.nome||cat(l.categoria).n)}</b> — etapa <b>${esc((et.find(e=>e.k===(l.renov.etapa||''))||{}).n||'Em preparação')}</b>${l.renov.protocolo?' · protocolo '+esc(l.renov.protocolo):''}`).join('<br>')
+                     : `Não há renovações em andamento no momento.`;
+    }
+    /* listagem geral da categoria pedida */
+    if(!alvo.length) return `Não achei ${rotulo} cadastradas.`;
+    const ord=alvo.slice().sort((a,b)=>(diasAte(a.validade)??9e9)-(diasAte(b.validade)??9e9));
+    return `📋 <b>${ord.length}</b> ${rotulo} cadastradas:<br>`+ord.slice(0,15).map(linha).join('<br>')+(ord.length>15?`<br><i>…e mais ${ord.length-15}.</i>`:'');
   }
 
   /* FINANCEIRO é protegido por senha — não exponho pelo chat */

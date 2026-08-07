@@ -15,8 +15,11 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.antt) DB.antt = clone(SEED.antt);
+  if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
+  importarLicencasSeed();
+  try{ if(typeof licAutoRenovacao==='function') licAutoRenovacao(); }catch(e){}
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
@@ -24,6 +27,16 @@ function ensureCollections(){
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
+}
+/* Importa (uma vez) as licenças/alvarás reais da semente. Não duplica: cada uma
+   tem id fixo (lic1, lic2...). Assim os documentos chegam mesmo em aparelhos que
+   já tinham a coleção criada vazia numa versão anterior. */
+function importarLicencasSeed(){
+  if(!SEED || !Array.isArray(SEED.licencas)) return;
+  if(!Array.isArray(DB.licencas)) DB.licencas=[];
+  const ids=new Set(DB.licencas.map(l=>l.id));
+  const apagadas=new Set(DB.licencasRemovidas||[]);   // respeita o que o usuário apagou de propósito
+  SEED.licencas.forEach(l=>{ if(!ids.has(l.id) && !apagadas.has(l.id)) DB.licencas.push(clone(l)); });
 }
 /* Importa (uma vez) os CT-e vindos dos XML. Não duplica (id = cte_<chave>). */
 function importarCtesSeed(){
@@ -214,6 +227,7 @@ function nomeEntidade(v){
   if(v.entidade==='motorista'){ const m=motorista(v.refId); return m?m.nome:'—'; }
   if(v.entidade==='veiculo'){ const x=veiculo(v.refId); return x?x.placa:'—'; }
   if(v.entidade==='seguro'){ const s=(DB.seguros||[]).find(x=>x.id===v.refId); return s?(s.segurado||s.seguradora||'—'):'—'; }
+  if(v.entidade==='licenca'){ const l=(DB.licencas||[]).find(x=>x.id===v.refId); return l?(typeof licTitular==='function'? licTitular(l) : (l.nome||'—')):'—'; }
   return '—';
 }
 /* Rótulo curto do ramo do seguro */
@@ -228,6 +242,15 @@ function todosVencimentos(){
     base.push({ id:'seg_'+s.id, entidade:'seguro', refId:s.id, tipo:'Seguro — '+ramoLabel(s.ramo),
       validade:s.fim, emissao:s.inicio||'', numero:s.apolice||'', orgao:s.seguradora||'',
       nome:(s.segurado||s.seguradora||''), obs:s.tipo||'', _seg:true });
+  });
+  /* Licenças e alvarás: a validade vira vencimento, então o Painel, as
+     notificações, o calendário e a IA acompanham tudo sem trabalho manual. */
+  (DB.licencas||[]).forEach(l=>{
+    if(!l || l.situacao==='arquivada' || !l.validade) return;
+    base.push({ id:'lic_'+l.id, entidade:'licenca', refId:l.id,
+      tipo:(typeof licCatInfo==='function'? licCatInfo(l.categoria).n : 'Licença'),
+      validade:l.validade, emissao:l.emissao||'', numero:l.numero||'', orgao:l.orgao||'',
+      nome:(l.nome||''), obs:[l.municipio,l.estado].filter(Boolean).join('/'), _lic:true });
   });
   return base;
 }
@@ -311,10 +334,15 @@ const IC = {
   toll:'<path d="M4 21V10l4-6h8l4 6v11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 21h16M9 21v-6h6v6M8 8h8" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   clients:'<path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20a7 7 0 0 1 14 0M16 3.5a3 3 0 0 1 0 5.8M22 20a6.5 6.5 0 0 0-4-6" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  stamp:'<path d="M6 21h12M8 18h8a1 1 0 0 0 1-1v-1H7v1a1 1 0 0 0 1 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 16V9.5a2.5 2.5 0 0 1 5 0V16" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="6" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  clock:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5.2l3.4 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
   if(/^Seguro/i.test(t)) return 'umbrella';
+  if(/alvar[áa]/i.test(t)) return 'stamp';
+  if(/vigil[âa]ncia sanit[áa]ria/i.test(t)) return 'clinic';
+  if(/certid[ãa]o|inscri[çc][ãa]o|bombeiros|ambiental/i.test(t)) return 'shield';
   const m={'CNH':'idcard','Toxicológico':'flask','ASO':'clinic','Tacógrafo':'taco','CRLV':'doc','Vigilância Sanitária':'shield',
     'Opentech Funcionário':'chip','Opentech Veículo':'chip','PCMSO':'clinic','PGR':'shield','Certificado Digital':'chip',
     'Direção Defensiva':'wheel','Seguro':'umbrella','Rastreador':'chip'};
@@ -444,7 +472,8 @@ const ROTAS = {
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
-  antt:{t:'Conformidade ANTT', s:'RNTRC e regularidade do transportador', ico:'shield'},
+  antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
+  licencas:{t:'Licenças e Alvarás', s:'Alvarás, vigilância sanitária, inscrições e certidões', ico:'stamp'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
@@ -483,6 +512,7 @@ function router(){
   else if(rota==='pedagios'){ if(arg) pedFiltro=arg; el.innerHTML=viewPedagios(); }
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='antt') el.innerHTML=viewAntt();
+  else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -578,6 +608,7 @@ function pexAfterRender(rota){
     if(rota==='inicio' && typeof iniBaseWx==='function') iniBaseWx();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
+    if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
     if(typeof pexMobileInit==='function') pexMobileInit(rota);
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
@@ -675,7 +706,8 @@ function contadores(){
   let venc=0, crit=0;
   todosVencimentos().forEach(v=>{ const s=situacao(v.validade); if(s.ord===0) venc++; else if(s.ord===1) crit++; });
   let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
-  return {venc, crit, total:venc+crit, seg};
+  let lic=0; (DB.licencas||[]).forEach(l=>{ if(l && l.situacao!=='arquivada'){ const d=diasAte(l.validade); if(d!=null && d<=60) lic++; } });
+  return {venc, crit, total:venc+crit, seg, lic};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -685,11 +717,11 @@ function renderSidebar(rota){
   document.getElementById('nav').innerHTML =
     `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
-    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+
+    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
-    `<div class="group">Empresa</div>`+ item('socios')+ item('antt')+ item('etica')+
+    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
 
@@ -734,6 +766,10 @@ function viewDashboard(){
   const segList = (DB.seguros||[]).filter(s=>s&&s.status!=='Cancelado');
   const segAv = segList.filter(s=>{ const d=diasAte(s.fim); return d!=null && d>=0 && d<=90; }).length;  // = exatamente o que abre em #seguros/avencer
   const segCrit = segList.some(s=>{ const d=diasAte(s.fim); return d!=null && d>=0 && d<=30; });
+  /* Licenças: as contagens usam o MESMO cálculo do módulo, para o card abrir exatamente o que mostra */
+  const licList = (DB.licencas||[]).filter(l=>l&&l.situacao!=='arquivada');
+  const licVenc = licList.filter(l=>licSit(l).k==='breve').length;      // = o que abre em #licencas/vencendo
+  const licVencidas = licList.filter(l=>licSit(l).k==='vencida').length; // = o que abre em #licencas/vencidas
 
   const prox = vs.filter(x=>x.s.dias!==null && x.s.dias<=90).sort((a,b)=>a.s.dias-b.s.dias).slice(0,8);
 
@@ -785,6 +821,7 @@ function viewDashboard(){
     ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
     ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
     ${iniKpiTile('umbrella', segCrit?'crit':'', segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9')}
+    ${iniKpiTile('stamp', licVencidas?'crit':'', licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#5cc8ff', '0,15 16,13 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
     ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
@@ -1228,8 +1265,8 @@ function viewVencimentos(){
     <div class="k-val">${cont[k]}</div><div class="k-label">${d.t.replace('Vence em ','').replace('até ','≤')}</div></a>`; };
 
   const itemRow=(x,cor)=>{ const v=x.v;
-    const alvo=v.entidade==='veiculo'?('frota/'+v.refId):(v.entidade==='motorista'?('motoristas/'+v.refId):(v.entidade==='seguro'?'seguros':'vencimentos'));
-    const ent=v.entidade==='veiculo'?'Veículo':(v.entidade==='motorista'?'Motorista':(v.entidade==='seguro'?'Seguro':'Empresa'));
+    const alvo=v.entidade==='veiculo'?('frota/'+v.refId):(v.entidade==='motorista'?('motoristas/'+v.refId):(v.entidade==='seguro'?'seguros':(v.entidade==='licenca'?'licencas':'vencimentos')));
+    const ent=v.entidade==='veiculo'?'Veículo':(v.entidade==='motorista'?'Motorista':(v.entidade==='seguro'?'Seguro':(v.entidade==='licenca'?'Licença':'Empresa')));
     const anexo=(v.anexoId&&arquivoPorId(v.anexoId));
     const dtxt = x.d<0?('Vencido há '+Math.abs(x.d)+' dia'+(Math.abs(x.d)===1?'':'s')):('Vence em '+x.d+' dia'+(x.d===1?'':'s'));
     return `<div class="venc-row">
@@ -2018,6 +2055,8 @@ function excluirVeiculo(id){ if(!confirm('Excluir este veículo e seus venciment
 const TIPOS_VENC=['CNH','Toxicológico','ASO','Direção Defensiva','Tacógrafo','CRLV','Vigilância Sanitária','Opentech Funcionário','Opentech Veículo','PCMSO','PGR','Certificado Digital','Seguro','Rastreador','Outro'];
 function modalVencimento(id, entidadeFix, refFix, tipoFix){
   if(id && String(id).indexOf('seg_')===0){ return modalSeguro(String(id).slice(4)); }  // apólice de seguro → abre a ficha do seguro
+  if(id && String(id).indexOf('lic_')===0){ const lid=String(id).slice(4);              // licença/alvará → abre a ficha da licença
+    location.hash='#licencas'; setTimeout(()=>{ if(typeof licAbrir==='function') licAbrir(lid); },60); return; }
   const v=id?DB.vencimentos.find(x=>x.id===id):{tipo:tipoFix||'Toxicológico',entidade:entidadeFix||'motorista',refId:refFix||'',emissao:'',validade:'',numero:'',orgao:'',obs:'',anexoId:''};
   const optsRef=(ent)=>{ if(ent==='motorista')return DB.motoristas.map(m=>`<option value="${m.id}" ${v.refId===m.id?'selected':''}>${esc(m.nome)}</option>`).join('');
     if(ent==='veiculo')return DB.veiculos.map(x=>`<option value="${x.id}" ${v.refId===x.id?'selected':''}>${esc(x.placa)}</option>`).join('');
@@ -3837,6 +3876,733 @@ function salvarAnttVeiculo(id){ const a=DB.antt=DB.antt||{}; a.veiculos=a.veicul
   saveDB(); closeModal(); toast('Veículo salvo.'); router(); }
 function excluirAnttVeiculo(id){ if(!confirm('Excluir este veículo do RNTRC?'))return; const a=DB.antt; a.veiculos=(a.veiculos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
+/* ================================================================== */
+/*  LICENÇAS E ALVARÁS — CENTRO DE GESTÃO DE CONFORMIDADE              */
+/*  Alvarás, vigilância sanitária, inscrições, certidões e demais       */
+/*  licenças da empresa, veículos, filiais e parceiros.                 */
+/*  A situação é calculada pela validade (com estados manuais para      */
+/*  renovação/protocolo/arquivo); cada licença guarda histórico e       */
+/*  vira tarefa de renovação sozinha. Integra com Vencimentos, o        */
+/*  Painel, as notificações e a IA por meio de todosVencimentos.        */
+/* ================================================================== */
+let licFiltro='todos', licCat='todas', licBusca='';
+
+/* Categorias — a área cresce só adicionando uma linha aqui */
+const LIC_CATS=[
+  {k:'alvara',    n:'Alvará de Funcionamento', ico:'stamp',  c:'#4c8dff'},
+  {k:'sanitaria', n:'Vigilância Sanitária',    ico:'clinic', c:'#16c98d'},
+  {k:'estadual',  n:'Inscrição Estadual',      ico:'doc',    c:'#f2a44e'},
+  {k:'municipal', n:'Inscrição Municipal',     ico:'doc',    c:'#b98cff'},
+  {k:'certidao',  n:'Certidões',               ico:'shield', c:'#37e3d0'},
+  {k:'cadastro',  n:'Cadastro',                ico:'idcard', c:'#8ea3bf'},
+  {k:'ambiental', n:'Licença Ambiental',       ico:'shield', c:'#4bd6a0'},
+  {k:'bombeiros', n:'Bombeiros (AVCB)',        ico:'shield', c:'#f2686b'},
+];
+function licCatInfo(k){ return LIC_CATS.find(c=>c.k===k) || {k:k||'outros', n:k||'Outros', ico:'doc', c:'#8ea3bf'}; }
+/* A quem a licença se aplica */
+const LIC_ESCOPOS=[{k:'empresa',n:'Empresa'},{k:'filial',n:'Filial'},{k:'veiculo',n:'Veículo'},{k:'parceiro',n:'Parceiro'}];
+
+/* Situação visual de cada licença */
+const LIC_SIT={
+  vigente:    {n:'Vigente',                c:'#16c98d', dot:'🟢', cls:'ok'},
+  breve:      {n:'Vence em breve',         c:'#f2c14e', dot:'🟡', cls:'warn'},
+  renovacao:  {n:'Renovação em andamento', c:'#f2a44e', dot:'🟠', cls:'warn'},
+  vencida:    {n:'Vencida',                c:'#f2686b', dot:'🔴', cls:'vencido'},
+  protocolada:{n:'Protocolada',            c:'#4c8dff', dot:'🔵', cls:'crit'},
+  arquivada:  {n:'Arquivada',              c:'#8ea3bf', dot:'⚪', cls:'neutro'},
+  semdata:    {n:'Sem validade',           c:'#8ea3bf', dot:'⚪', cls:'neutro'},
+};
+/* Estados que o usuário marca à mão; os demais saem da data de validade */
+const LIC_MANUAIS=['renovacao','protocolada','arquivada'];
+function licSit(l){
+  const man=l.situacao||'auto', d=diasAte(l.validade);
+  const mk=k=>Object.assign({k, dias:d}, LIC_SIT[k]);
+  if(LIC_MANUAIS.indexOf(man)>=0) return mk(man);
+  if(d==null) return mk('semdata');
+  if(d<0) return mk('vencida');
+  if(d<=(DB.config.alertaLicenca||60)) return mk('breve');
+  return mk('vigente');
+}
+function licSitBadge(l){ const s=licSit(l);
+  return `<span class="lic-st" style="--c:${s.c}"><i></i>${esc(s.n)}${s.dias!=null&&(s.k==='breve'||s.k==='vencida')?` · ${s.dias<0?Math.abs(s.dias)+'d atrás':s.dias+'d'}`:''}</span>`; }
+
+/* Etapas do Painel de Renovação Inteligente */
+const LIC_ETAPAS=[
+  {k:'preparacao', n:'Em preparação'},
+  {k:'protocolado',n:'Protocolado'},
+  {k:'analise',    n:'Em análise'},
+  {k:'aprovado',   n:'Aprovado'},
+  {k:'renovado',   n:'Renovado'},
+];
+/* Documentos normalmente exigidos para renovar cada tipo de licença */
+const LIC_DOCS_NEC={
+  alvara:['Contrato social atualizado','Cartão CNPJ','IPTU do imóvel','Alvará anterior','Taxa municipal paga'],
+  sanitaria:['Alvará de funcionamento vigente','Responsável técnico','Laudo de controle de pragas','Vigilância anterior','Taxa sanitária paga'],
+  estadual:['Contrato social','Cartão CNPJ','Comprovante de endereço'],
+  municipal:['Contrato social','Cartão CNPJ','IPTU do imóvel'],
+  certidao:['Cartão CNPJ','Certidão anterior'],
+  cadastro:['Documentos do responsável','Cadastro anterior'],
+  ambiental:['Licença anterior','Laudo técnico','Taxa ambiental paga'],
+  bombeiros:['Projeto técnico aprovado','Extintores em dia','Laudo elétrico','AVCB anterior'],
+};
+function licDocsNecessarios(l){ return LIC_DOCS_NEC[l.categoria] || ['Documento anterior','Cartão CNPJ']; }
+
+function licencas(){ return Array.isArray(DB.licencas)? DB.licencas : (DB.licencas=[]); }
+function licenca(id){ return licencas().find(l=>l.id===id); }
+function licTitular(l){
+  if(l.escopo==='veiculo'){ const v=veiculo(l.refId); return v? v.placa : (l.titular||'Veículo'); }
+  return l.titular || (DB.empresa? DB.empresa.nome : 'Empresa');
+}
+function licLocal(l){ return [l.municipio, l.estado].filter(Boolean).join('/'); }
+/* Registra um evento no histórico da licença (linha do tempo + auditoria) */
+function licLog(l, evento, detalhe){
+  if(!Array.isArray(l.historico)) l.historico=[];
+  const d=new Date();
+  l.historico.push({ data:d.toISOString().slice(0,10), hora:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),
+    evento:evento, detalhe:detalhe||'', por:(typeof nuvemNome==='function'? nuvemNome():'') || (DB.config&&DB.config.responsavelPadrao) || 'Uilian' });
+  if(l.historico.length>200) l.historico=l.historico.slice(-200);
+}
+/* Hash curto do documento — prova de integridade do arquivo anexado */
+function licHash(txt){ let h=0x811c9dc5; const s=String(txt||'');
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h*0x01000193)>>>0; }
+  return h.toString(16).toUpperCase().padStart(8,'0'); }
+
+/* ---- Alertas automáticos: 60 / 30 / 15 dias e vencida ---- */
+const LIC_AVISOS=[60,30,15];
+function licAlertas(){
+  const out=[];
+  licencas().forEach(l=>{
+    if(l.situacao==='arquivada') return;
+    const d=diasAte(l.validade); if(d==null) return;
+    if(d<0){ out.push({l, nivel:'vencida', dias:d, txt:'Vencida há '+Math.abs(d)+' dia(s)'}); return; }
+    const faixa=LIC_AVISOS.filter(f=>d<=f).sort((a,b)=>a-b)[0];
+    if(faixa!=null) out.push({l, nivel:'aviso', faixa, dias:d, txt:'Vence em '+d+' dia(s) (alerta de '+faixa+' dias)'});
+  });
+  return out.sort((a,b)=>a.dias-b.dias);
+}
+/* Abre sozinho a tarefa de renovação quando a licença entra na faixa de alerta */
+function licAutoRenovacao(){
+  let mudou=false;
+  licencas().forEach(l=>{
+    if(l.situacao==='arquivada' || (l.renov && l.renov.aberta)) return;
+    const d=diasAte(l.validade); if(d==null || d>60) return;
+    l.renov={ aberta:true, etapa:'preparacao', protocolo:'', obs:'', abertoEm:new Date().toISOString().slice(0,10),
+      responsavel:l.responsavel||'Uilian', docs:licDocsNecessarios(l).map(n=>({n, ok:false})) };
+    licLog(l,'Renovação aberta automaticamente', d<0? 'Licença vencida há '+Math.abs(d)+' dia(s)' : 'Faltam '+d+' dia(s) para vencer');
+    mudou=true;
+  });
+  return mudou;
+}
+function licRenovAbertas(){ return licencas().filter(l=>l.renov && l.renov.aberta); }
+
+/* ================== TELA PRINCIPAL ================== */
+function viewLicencas(){
+  const todas=licencas();
+  const vivas=todas.filter(l=>l.situacao!=='arquivada');
+  const cont=k=>vivas.filter(l=>licSit(l).k===k).length;
+  const alvarasAtivos=vivas.filter(l=>l.categoria==='alvara' && ['vigente','breve','renovacao','protocolada'].indexOf(licSit(l).k)>=0).length;
+  const sanitarias=vivas.filter(l=>l.categoria==='sanitaria' && ['vigente','breve','renovacao','protocolada'].indexOf(licSit(l).k)>=0).length;
+  const vencendo=cont('breve'), vencidas=cont('vencida');
+  const protocolos=licRenovAbertas().length;
+  const anexados=todosArquivos().filter(f=>f.entidade==='licenca').length;
+
+  const kp=(ico,cor,valor,label,sub,filtro)=>{ const on=filtro&&licFiltro===filtro;
+    return `<a class="kpi ${filtro?'link':''} ${on?'ativo':''}" ${filtro?`style="cursor:pointer" onclick="licSetFiltro('${on?'todos':filtro}')"`:''}>
+      <div class="k-top"><div class="k-ico" style="color:${cor};background:${cor}1f">${svg(ico)}</div>${filtro?'<span class="k-go">→</span>':''}</div>
+      <div class="k-val" data-count="${valor}" style="${valor?`color:${cor}`:''}">0</div>
+      <div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`; };
+
+  /* ---- filtro + busca ---- */
+  let lista=todas.slice();
+  if(licFiltro==='alvaras') lista=lista.filter(l=>l.categoria==='alvara' && l.situacao!=='arquivada');
+  else if(licFiltro==='sanitarias') lista=lista.filter(l=>l.categoria==='sanitaria' && l.situacao!=='arquivada');
+  else if(licFiltro==='vencendo') lista=lista.filter(l=>licSit(l).k==='breve');
+  else if(licFiltro==='vencidas') lista=lista.filter(l=>licSit(l).k==='vencida');
+  else if(licFiltro==='protocolos') lista=lista.filter(l=>l.renov && l.renov.aberta);
+  else if(licFiltro==='anexados') lista=lista.filter(l=>anexoTipo('licenca',l.id,/./));
+  else if(licFiltro==='arquivadas') lista=lista.filter(l=>l.situacao==='arquivada');
+  else lista=lista.filter(l=>l.situacao!=='arquivada');
+  if(licCat!=='todas') lista=lista.filter(l=>l.categoria===licCat);
+  if(licBusca) lista=lista.filter(l=>_licCasa(l, licBusca));
+
+  /* ---- Painel de Renovação Inteligente ---- */
+  const renovs=licRenovAbertas();
+  const renovBox = renovs.length? `
+    <div class="card lic-renov" style="margin-bottom:16px">
+      <div class="card-h">${svg('clock')}<h3>Painel de Renovação Inteligente</h3>
+        <div class="r"><span class="muted" style="font-size:11.5px">${renovs.length} renovação(ões) em andamento</span></div></div>
+      <div class="card-b p0">
+        ${renovs.sort((a,b)=>(diasAte(a.validade)??9e9)-(diasAte(b.validade)??9e9)).map(l=>{
+          const et=l.renov.etapa||'preparacao', idx=LIC_ETAPAS.findIndex(e=>e.k===et);
+          const ok=(l.renov.docs||[]).filter(d=>d.ok).length, tot=(l.renov.docs||[]).length;
+          const ci=licCatInfo(l.categoria);
+          return `<div class="lic-rnv" onclick="licAbrir('${l.id}')">
+            <div class="lic-rnv-h"><span class="lic-cat" style="--c:${ci.c}">${svg(ci.ico)} ${esc(ci.n)}</span>
+              <b>${esc(l.nome||ci.n)}</b><span class="muted">${esc(licTitular(l))}${licLocal(l)?' · '+esc(licLocal(l)):''}</span>
+              <span style="margin-left:auto">${licSitBadge(l)}</span></div>
+            <div class="lic-steps">${LIC_ETAPAS.map((e,i)=>`<span class="lic-step ${i<idx?'done':''} ${i===idx?'now':''}"><i></i>${esc(e.n)}</span>`).join('')}</div>
+            <div class="lic-rnv-f"><span class="muted">Responsável: <b>${esc(l.renov.responsavel||l.responsavel||'Uilian')}</b></span>
+              <span class="muted">Documentos: <b>${ok}/${tot}</b></span>
+              ${l.renov.protocolo?`<span class="muted">Protocolo: <b class="mono">${esc(l.renov.protocolo)}</b></span>`:''}
+              <span class="muted" style="margin-left:auto">Validade atual: <b>${fmtD(l.validade)}</b></span></div>
+          </div>`; }).join('')}
+      </div>
+    </div>`:'';
+
+  /* ---- chips de categoria ---- */
+  const chips=`<div class="lic-chips no-print">
+    <button class="lic-chip ${licCat==='todas'?'on':''}" onclick="licSetCat('todas')">Todas <b>${todas.filter(l=>l.situacao!=='arquivada').length}</b></button>
+    ${LIC_CATS.map(c=>{ const n=todas.filter(l=>l.categoria===c.k && l.situacao!=='arquivada').length; if(!n && licCat!==c.k) return '';
+      return `<button class="lic-chip ${licCat===c.k?'on':''}" style="--c:${c.c}" onclick="licSetCat('${c.k}')">${svg(c.ico)} ${esc(c.n)} <b>${n}</b></button>`; }).join('')}
+  </div>`;
+
+  /* ---- cards agrupados por titular (empresa, filiais, veículos, parceiros) ---- */
+  const grupos={};
+  lista.forEach(l=>{ const k=licTitular(l); (grupos[k]=grupos[k]||{nome:k, escopo:l.escopo||'empresa', items:[]}).items.push(l); });
+  const rankE={empresa:0, filial:1, veiculo:2, parceiro:3};
+  const ordem=Object.values(grupos).sort((a,b)=>(rankE[a.escopo]??9)-(rankE[b.escopo]??9) || a.nome.localeCompare(b.nome,'pt'));
+
+  const cardLic=(l)=>{ const ci=licCatInfo(l.categoria), s=licSit(l), anx=anexoTipo('licenca',l.id,/./);
+    return `<div class="lic-card" style="--c:${ci.c}" onclick="licAbrir('${l.id}')">
+      <div class="lic-card-t"><span class="lic-cat" style="--c:${ci.c}">${svg(ci.ico)} ${esc(ci.n)}</span>${licSitBadge(l)}</div>
+      <b class="lic-nome">${esc(l.nome||ci.n)}</b>
+      <div class="lic-meta">
+        <span><small>Número</small><b class="mono">${esc(l.numero||'—')}</b></span>
+        <span><small>Validade</small><b>${fmtD(l.validade)}</b></span>
+        <span><small>Órgão</small><b>${esc(l.orgao||'—')}</b></span>
+        <span><small>Município</small><b>${esc(licLocal(l)||'—')}</b></span>
+      </div>
+      <div class="lic-card-f">
+        <span class="muted">${svg('user')} ${esc(l.responsavel||'—')}</span>
+        ${anx?`<span class="st ok" style="cursor:pointer" onclick="event.stopPropagation();verArquivo('${anx.id}')">${svg('clip')} Anexado</span>`
+             :`<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('licenca','${l.id}','Licença')">${svg('upload')} Anexar</button>`}
+      </div></div>`; };
+
+  const grupoCard=(g)=>{ const ico=g.escopo==='veiculo'?'truck':(g.escopo==='parceiro'?'clients':(g.escopo==='filial'?'home':'briefcase'));
+    return `<div class="card" style="margin-bottom:16px">
+      <div class="card-h">${svg(ico)}<h3>${esc(g.nome)}</h3>
+        <div class="r"><span class="muted" style="font-size:12px">${g.items.length} licença(s)</span></div></div>
+      <div class="card-b"><div class="lic-grid">${g.items.sort((a,b)=>(diasAte(a.validade)??9e9)-(diasAte(b.validade)??9e9)).map(cardLic).join('')}</div></div>
+    </div>`; };
+
+  const filtroTxt={alvaras:'alvarás ativos', sanitarias:'vigilâncias sanitárias', vencendo:'vencendo', vencidas:'vencidas',
+    protocolos:'em renovação', anexados:'com documento anexado', arquivadas:'arquivadas'}[licFiltro];
+
+  return `
+  <div class="banner">${svg('stamp')}<div><b>Licenças e Alvarás — Centro de Gestão de Conformidade</b>
+    <span>Alvarás, vigilância sanitária, inscrições e certidões da empresa, veículos, filiais e parceiros. A situação é calculada sozinha pela validade e os vencimentos aparecem no Painel, nas notificações e na IA.</span></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="licRelatoriosModal()">${svg('print')} Relatórios</button>
+      <button class="btn" onclick="licEnviarModal()">${svg('upload')} Enviar documento</button>
+      <button class="btn primary" onclick="modalLicenca()">${svg('plus')} Nova licença</button>
+    </div></div>
+
+  <div class="grid kpis lic-kpis" style="margin-bottom:16px">
+    ${kp('stamp',  '#4c8dff', alvarasAtivos, 'Alvarás ativos', 'funcionamento', 'alvaras')}
+    ${kp('clinic', '#16c98d', sanitarias,   'Vigilâncias Sanitárias', 'licenças sanitárias', 'sanitarias')}
+    ${kp('bell',   '#f2c14e', vencendo,     'Licenças vencendo', 'próximos 60 dias', 'vencendo')}
+    ${kp('alarm',  '#f2686b', vencidas,     'Vencidas', 'regularizar já', 'vencidas')}
+    ${kp('clock',  '#f2a44e', protocolos,   'Protocolos em andamento', 'renovações abertas', 'protocolos')}
+    ${kp('clip',   '#37e3d0', anexados,     'Documentos anexados', 'arquivos guardados', 'anexados')}
+  </div>
+
+  ${renovBox}
+
+  <div class="pex-tbar lic-bar no-print">
+    <div class="lic-search">${svg('search')}<input id="licBusca" type="search" placeholder="Pesquisar por número, nome, órgão, município, estado, responsável, validade…" value="${esc(licBusca)}" oninput="licSetBusca(this.value)"></div>
+    ${licFiltro!=='todos'?`<button class="btn ghost sm" onclick="licSetFiltro('todos')">${svg('filter')} Mostrando ${esc(filtroTxt||'')} · limpar</button>`:''}
+    <button class="btn ghost sm" onclick="licSetFiltro('${licFiltro==='arquivadas'?'todos':'arquivadas'}')">${svg('folder')} ${licFiltro==='arquivadas'?'Ver ativas':'Ver arquivadas'}</button>
+  </div>
+  ${chips}
+
+  ${ordem.length? ordem.map(grupoCard).join('')
+    : `<div class="card"><div class="card-b">${emptyState(todas.length?'Nenhuma licença encontrada com esse filtro. Limpe a busca ou troque a categoria.':'Nenhuma licença cadastrada ainda. Use "Enviar documento" para o sistema ler o PDF e preencher sozinho, ou "Nova licença".')}</div></div>`}
+
+  <div class="pn-panel" id="licPanel"></div>`;
+}
+function licSetFiltro(f){ licFiltro=f; router(); }
+function licSetCat(c){ licCat=c; router(); }
+function licSetBusca(v){ licBusca=v;
+  /* redesenha só a lista para não perder o foco do campo */
+  const el=document.getElementById('view'); if(!el) return;
+  const foco=document.activeElement && document.activeElement.id==='licBusca';
+  const pos=foco? document.activeElement.selectionStart : null;
+  el.innerHTML=viewLicencas(); if(typeof pexAfterRender==='function') pexAfterRender('licencas');
+  if(foco){ const n=document.getElementById('licBusca'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } }
+}
+/* Pesquisa global do módulo: casa qualquer campo, sem acento e sem caso */
+function _licNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),''); }
+function _licCasa(l, q){
+  const t=_licNorm(q).trim(); if(!t) return true;
+  const ci=licCatInfo(l.categoria);
+  const alvo=[l.nome, l.numero, l.orgao, l.municipio, l.estado, l.responsavel, l.protocolo, l.obs, l.hash,
+    ci.n, licTitular(l), licSit(l).n, fmtD(l.validade), fmtD(l.emissao), l.validade, l.emissao].map(_licNorm).join(' ');
+  return t.split(/\s+/).every(p=>alvo.indexOf(p)>=0);
+}
+function licCountUp(){
+  document.querySelectorAll('#view[data-route="licencas"] .k-val[data-count]').forEach(function(el){
+    var alvo=parseFloat(el.getAttribute('data-count'))||0, t0=null, dur=850;
+    function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3);
+      el.textContent=Math.round(alvo*e).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  });
+}
+
+/* ================== PAINEL LATERAL + LINHA DO TEMPO ================== */
+function licAbrir(id){
+  const el=document.getElementById('licPanel'); const l=licenca(id); if(!el||!l) return;
+  const ci=licCatInfo(l.categoria), s=licSit(l), anx=anexoTipo('licenca',l.id,/./);
+  const f=(lab,v,mono)=>`<div class="pn-f"><small>${lab}</small><b class="${mono?'mono':''}">${v==null||v===''?'—':esc(v)}</b></div>`;
+  const r=l.renov&&l.renov.aberta? l.renov : null;
+  const idx=r? LIC_ETAPAS.findIndex(e=>e.k===(r.etapa||'preparacao')) : -1;
+
+  el.innerHTML=`<div class="pn-head"><b>${svg(ci.ico)} ${esc(l.nome||ci.n)}</b><button class="pn-x" onclick="licFechar()">×</button></div>
+    <div class="pn-body">
+      <div class="lic-pan-top"><span class="lic-cat" style="--c:${ci.c}">${svg(ci.ico)} ${esc(ci.n)}</span>${licSitBadge(l)}</div>
+      ${f('Titular', licTitular(l))}
+      <div class="pn-grid2">
+        ${f('Número', l.numero, true)}${f('Protocolo', l.protocolo, true)}
+        ${f('Órgão emissor', l.orgao)}${f('Responsável', l.responsavel)}
+        ${f('Município', l.municipio)}${f('Estado', l.estado)}
+        ${f('Data de emissão', fmtD(l.emissao))}${f('Data de validade', fmtD(l.validade))}
+      </div>
+      ${l.obs?f('Observações', l.obs):''}
+      ${l.hash?f('Hash do documento', l.hash, true):''}
+      <div class="pn-f"><small>Arquivo</small><div style="margin-top:4px">${badgeAnexo('licenca',l.id,/./,'Licença')}</div></div>
+
+      ${r?`<div class="lic-pan-sec">${svg('clock')} Renovação em andamento</div>
+        <div class="lic-steps col">${LIC_ETAPAS.map((e,i)=>`<button class="lic-step ${i<idx?'done':''} ${i===idx?'now':''}" onclick="licEtapa('${l.id}','${e.k}')"><i></i>${esc(e.n)}</button>`).join('')}</div>
+        <div class="lic-docs">${(r.docs||[]).map((d,i)=>`<label class="lic-doc ${d.ok?'ok':''}"><input type="checkbox" ${d.ok?'checked':''} onchange="licDoc('${l.id}',${i},this.checked)"><span>${esc(d.n)}</span></label>`).join('')||'<span class="muted">Sem lista de documentos.</span>'}</div>
+        <div class="lic-rnv-acts">
+          <button class="btn sm" onclick="licProtocolo('${l.id}')">${svg('edit')} Protocolo</button>
+          <button class="btn sm" onclick="uploadPara('licenca','${l.id}','Protocolo de renovação')">${svg('upload')} Anexar protocolo</button>
+          <button class="btn sm primary" onclick="licConcluirRenovacao('${l.id}')">${svg('check')} Concluir renovação</button>
+        </div>`
+      :`<div class="lic-rnv-acts"><button class="btn sm" onclick="licAbrirRenovacao('${l.id}')">${svg('clock')} Abrir renovação</button></div>`}
+
+      <div class="lic-pan-sec">${svg('cal')} Linha do tempo</div>
+      ${licTimeline(l)}
+
+      <div class="pn-acts">
+        <button class="btn sm" onclick="modalLicenca('${l.id}')">${svg('edit')} Editar</button>
+        <button class="btn sm danger" onclick="excluirLicenca('${l.id}')">${svg('trash')} Excluir</button>
+      </div>
+    </div>`;
+  el.classList.add('show');
+}
+function licFechar(){ const el=document.getElementById('licPanel'); if(el) el.classList.remove('show'); }
+function licTimeline(l){
+  const h=(l.historico||[]).slice().reverse();
+  if(!h.length) return '<div class="muted" style="font-size:12.5px">Sem histórico ainda.</div>';
+  return `<div class="lic-tl">${h.map(e=>`<div class="lic-tl-i">
+    <div class="lic-tl-d"><b>${fmtD(e.data)}</b><small>${esc(e.hora||'')}</small></div>
+    <div class="lic-tl-c"><b>${esc(e.evento)}</b>${e.detalhe?`<span>${esc(e.detalhe)}</span>`:''}${e.por?`<small>por ${esc(e.por)}</small>`:''}</div>
+  </div>`).join('')}</div>`;
+}
+
+/* ---- ações da renovação ---- */
+function licAbrirRenovacao(id){ const l=licenca(id); if(!l) return;
+  l.renov={ aberta:true, etapa:'preparacao', protocolo:'', obs:'', abertoEm:new Date().toISOString().slice(0,10),
+    responsavel:l.responsavel||'Uilian', docs:licDocsNecessarios(l).map(n=>({n, ok:false})) };
+  l.situacao='renovacao';
+  licLog(l,'Renovação solicitada','Abertura manual da tarefa de renovação');
+  saveDB(); toast('Renovação aberta.'); router(); setTimeout(()=>licAbrir(id),30);
+}
+function licEtapa(id, etapa){ const l=licenca(id); if(!l||!l.renov) return;
+  const nome=(LIC_ETAPAS.find(e=>e.k===etapa)||{}).n||etapa;
+  l.renov.etapa=etapa;
+  l.situacao = etapa==='protocolado'? 'protocolada' : (etapa==='renovado'? 'auto' : 'renovacao');
+  licLog(l,'Renovação: '+nome,'');
+  if(etapa==='renovado'){ licConcluirRenovacao(id); return; }
+  saveDB(); router(); setTimeout(()=>licAbrir(id),30);
+}
+function licDoc(id, i, ok){ const l=licenca(id); if(!l||!l.renov||!l.renov.docs[i]) return;
+  l.renov.docs[i].ok=!!ok; licLog(l,(ok?'Documento pronto: ':'Documento pendente: ')+l.renov.docs[i].n,'');
+  saveDB(); setTimeout(()=>licAbrir(id),10);
+}
+function licProtocolo(id){ const l=licenca(id); if(!l||!l.renov) return;
+  const p=prompt('Número do protocolo da renovação:', l.renov.protocolo||''); if(p==null) return;
+  l.renov.protocolo=p.trim(); l.protocolo=p.trim();
+  if(p.trim()){ l.renov.etapa='protocolado'; l.situacao='protocolada'; licLog(l,'Protocolo registrado', p.trim()); }
+  saveDB(); toast('Protocolo salvo.'); router(); setTimeout(()=>licAbrir(id),30);
+}
+/* Conclui: guarda a versão anterior no histórico e grava a nova validade */
+function licConcluirRenovacao(id){ const l=licenca(id); if(!l) return;
+  const nova=prompt('Nova data de validade (dd/mm/aaaa):',''); if(nova==null) return;
+  const iso=_impISO(nova);
+  if(!iso){ toast('Data inválida. Use dd/mm/aaaa.','err'); return; }
+  const numero=prompt('Novo número da licença (deixe em branco para manter o atual):', l.numero||'');
+  if(!Array.isArray(l.versoes)) l.versoes=[];
+  l.versoes.push({ numero:l.numero, emissao:l.emissao, validade:l.validade, arquivadoEm:new Date().toISOString().slice(0,10) });
+  const antiga=l.validade;
+  if(numero!=null && numero.trim()) l.numero=numero.trim();
+  l.emissao=new Date().toISOString().slice(0,10);
+  l.validade=iso; l.situacao='auto'; l.renov={aberta:false};
+  licLog(l,'Renovada','Validade '+fmtD(antiga)+' → '+fmtD(iso)+(numero&&numero.trim()?' · novo número '+numero.trim():''));
+  saveDB(); toast('Licença renovada até '+fmtD(iso)+'.'); router(); setTimeout(()=>licAbrir(id),30);
+}
+
+/* ================== CADASTRO (CRUD) ================== */
+function modalLicenca(id, pre){
+  const l = id? licenca(id) : Object.assign({ nome:'', categoria:'alvara', numero:'', orgao:'', municipio:'Londrina', estado:'PR',
+    emissao:'', validade:'', responsavel:'Uilian', situacao:'auto', obs:'', protocolo:'', hash:'', escopo:'empresa', refId:'', titular:'' }, pre||{});
+  if(id && !l){ toast('Licença não encontrada.','err'); return; }
+  const sel=(lab,idc,arr,cur)=>`<div class="field"><label>${lab}</label><select id="${idc}">${arr.map(o=>`<option value="${esc(o.k)}" ${cur===o.k?'selected':''}>${esc(o.n)}</option>`).join('')}</select></div>`;
+  const sits=[{k:'auto',n:'Automática (pela validade)'}].concat(LIC_MANUAIS.map(k=>({k, n:LIC_SIT[k].dot+' '+LIC_SIT[k].n})));
+  const veics=(DB.veiculos||[]).map(v=>({k:v.id, n:v.placa+' — '+v.marca+' '+v.modelo}));
+  openModal(`<div class="m-h">${svg('stamp')}<h3>${id?'Editar licença':'Nova licença'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      ${msec('Identificação')}
+      ${fld('Nome da licença','f_nome',l.nome,'text','Ex.: Alvará de Funcionamento — Matriz')}
+      <div class="field-row">${sel('Categoria','f_cat',LIC_CATS,l.categoria)}${fld('Número','f_num',l.numero)}</div>
+      <div class="field-row">${fld('Órgão emissor','f_orgao',l.orgao,'text','Ex.: Prefeitura Municipal de Londrina')}${fld('Responsável','f_resp',l.responsavel||'Uilian')}</div>
+      ${msec('Vínculo')}
+      <div class="field-row">${sel('Aplica-se a','f_escopo',LIC_ESCOPOS,l.escopo||'empresa')}
+        <div class="field"><label>Veículo (se for do veículo)</label><select id="f_ref"><option value="">—</option>${veics.map(v=>`<option value="${esc(v.k)}" ${l.refId===v.k?'selected':''}>${esc(v.n)}</option>`).join('')}</select></div></div>
+      ${fld('Titular / filial / parceiro','f_titular',l.titular,'text','Deixe em branco para usar a empresa')}
+      ${msec('Localização e datas')}
+      <div class="field-row">${fld('Município','f_mun',l.municipio)}${fld('Estado (UF)','f_uf',l.estado)}</div>
+      <div class="field-row">${fld('Data de emissão','f_emi',l.emissao,'date')}${fld('Data de validade','f_val',l.validade,'date')}</div>
+      ${msec('Situação e observações')}
+      <div class="field-row">${sel('Situação','f_sit',sits,l.situacao||'auto')}${fld('Protocolo','f_prot',l.protocolo)}</div>
+      <div class="field"><label>Observações</label><textarea id="f_obs" rows="3">${esc(l.obs||'')}</textarea></div>
+      ${id?`<div class="hint">${svg('clip')} O arquivo (PDF ou imagem) é anexado pelo painel da licença, com backup e histórico.</div>`:''}
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirLicenca('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="salvarLicenca('${id||''}')">Salvar</button></div>`, true);
+}
+function salvarLicenca(id){
+  const d={ nome:val('f_nome'), categoria:val('f_cat'), numero:val('f_num'), orgao:val('f_orgao'), responsavel:val('f_resp')||'Uilian',
+    escopo:val('f_escopo'), refId:val('f_ref'), titular:val('f_titular'), municipio:val('f_mun'), estado:(val('f_uf')||'').toUpperCase(),
+    emissao:val('f_emi'), validade:val('f_val'), situacao:val('f_sit'), protocolo:val('f_prot'), obs:val('f_obs') };
+  if(!d.nome) d.nome=licCatInfo(d.categoria).n;
+  const lic=licencas();
+  if(id){ const l=licenca(id); if(!l) return;
+    const antes={validade:l.validade, numero:l.numero, situacao:l.situacao};
+    Object.assign(l,d);
+    if(antes.validade!==l.validade) licLog(l,'Validade alterada', fmtD(antes.validade)+' → '+fmtD(l.validade));
+    else if(antes.numero!==l.numero) licLog(l,'Número alterado', (antes.numero||'—')+' → '+(l.numero||'—'));
+    else licLog(l,'Cadastro atualizado','');
+  } else {
+    d.id=uid('lic'); d.historico=[]; d.versoes=[]; d.renov={aberta:false};
+    licLog(d,'Criada', d.numero? 'Número '+d.numero : '');
+    lic.push(d); id=d.id;
+  }
+  saveDB(); closeModal(); toast('Licença salva.'); router(); setTimeout(()=>licAbrir(id),30);
+}
+function excluirLicenca(id){ const l=licenca(id); if(!l) return;
+  if(!confirm('Excluir a licença "'+(l.nome||'')+'"?\n\nO histórico e os arquivos anexados também serão perdidos.')) return;
+  DB.licencas=licencas().filter(x=>x.id!==id);
+  /* se era uma licença da semente, marca para não voltar no próximo carregamento */
+  if(typeof SEED!=='undefined' && Array.isArray(SEED.licencas) && SEED.licencas.some(s=>s.id===id)){
+    if(!Array.isArray(DB.licencasRemovidas)) DB.licencasRemovidas=[];
+    if(DB.licencasRemovidas.indexOf(id)<0) DB.licencasRemovidas.push(id);
+  }
+  saveDB(); closeModal(); licFechar(); toast('Licença excluída.'); router();
+}
+
+/* ================================================================== */
+/*  UPLOAD INTELIGENTE — o sistema lê o PDF e preenche a licença       */
+/*  Usa o mesmo motor das apólices (pdf.js + OCR Tesseract).           */
+/* ================================================================== */
+let LIC_FILA=[];
+const LIC_UFS={acre:'AC',alagoas:'AL',amapa:'AP',amazonas:'AM',bahia:'BA',ceara:'CE','distrito federal':'DF',
+  'espirito santo':'ES',goias:'GO',maranhao:'MA','mato grosso':'MT','mato grosso do sul':'MS','minas gerais':'MG',
+  para:'PA',paraiba:'PB',parana:'PR',pernambuco:'PE',piaui:'PI','rio de janeiro':'RJ','rio grande do norte':'RN',
+  'rio grande do sul':'RS',rondonia:'RO',roraima:'RR','santa catarina':'SC','sao paulo':'SP',sergipe:'SE',tocantins:'TO'};
+
+/* Descobre categoria, número, órgão, município, UF, datas e responsável no texto do documento */
+function _licExtrair(txt, nome){
+  const t=' '+String(txt||'').replace(/\s+/g,' ')+' ';
+  const n=_licNorm(t), nn=_licNorm(nome||'');
+  const alvo=n+' '+nn;
+  const r={ categoria:'', numero:'', orgao:'', municipio:'', estado:'', emissao:'', validade:'', responsavel:'', achou:[] };
+
+  /* categoria — do padrão mais específico para o mais genérico, porque um
+     alvará de funcionamento também cita "inscrição municipal" no corpo */
+  const catRe=[
+    ['sanitaria', /(vigilancia sanitaria|licenca sanitaria|alvara sanitario)/],
+    ['bombeiros', /(corpo de bombeiros|avcb|vistoria do corpo)/],
+    ['ambiental', /(licenca ambiental|instituto ambiental)/],
+    ['alvara',    /(alvara de licenca|alvara de funcionamento|alvara de localizacao|licenca para localizacao|licenca de funcionamento)/],
+    ['estadual',  /(inscricao estadual)/],
+    ['certidao',  /(certidao)/],
+    ['municipal', /(inscricao municipal|cadastro mobiliario)/],
+    ['alvara',    /(alvara)/],
+  ];
+  for(const [k,re] of catRe){ if(re.test(alvo)){ r.categoria=k; r.achou.push('categoria'); break; } }
+
+  /* datas — validade e emissão */
+  const dtBR=/(\d{2})\/(\d{2})\/(\d{4})/g;
+  const iso=(d)=>d[3]+'-'+d[2]+'-'+d[1];
+  /* nestes formulários o rótulo "Data de Validade" fica longe da data (a coluna
+     do meio entra no texto), então a janela de busca precisa ser generosa */
+  let m=t.match(/(?:data\s+de\s+validade|validade|v[aá]lid[oa]\s+at[eé]|vencimento|expira\s+em|vigente\s+at[eé])\D{0,90}?(\d{2}\/\d{2}\/\d{4})/i);
+  if(m){ const p=m[1].split('/'); r.validade=p[2]+'-'+p[1]+'-'+p[0]; r.achou.push('validade'); }
+  m=t.match(/(?:data\s+de\s+expedi[cç][aã]o|data\s+da\s+emiss[aã]o|emiss[aã]o|emitido\s+em|expedi[cç][aã]o|expedido\s+em)\D{0,60}?(\d{2}\/\d{2}\/\d{4})/i);
+  if(m){ const p=m[1].split('/'); r.emissao=p[2]+'-'+p[1]+'-'+p[0]; r.achou.push('emissão'); }
+  /* sem rótulo: a data mais distante no futuro é a validade; a mais antiga, a emissão */
+  const todas=[]; let d; while((d=dtBR.exec(t))) todas.push(iso(d));
+  const u=[...new Set(todas)].sort();
+  if(u.length){
+    if(!r.validade){ const fut=u.filter(x=>x>new Date().toISOString().slice(0,10));
+      if(fut.length){ r.validade=fut[fut.length-1]; r.achou.push('validade (data futura)'); }
+      else if(u.length>1){ r.validade=u[u.length-1]; r.achou.push('validade (última data)'); } }
+    if(!r.emissao){ const ant=u.filter(x=>x!==r.validade);
+      if(ant.length){ r.emissao=ant[0]; r.achou.push('emissão (data do documento)'); } }
+  }
+  /* número da licença: "Nº 123", "ALVARÁ SANITÁRIO 13/2026" ou um 00/AAAA solto.
+     Antes, tira as citações de lei/resolução (ex.: "RESOLUÇÃO SESA Nº 465/2013"),
+     senão o número da norma seria confundido com o número da licença. */
+  const tNum=t.replace(/(resolu[cç][aã]o|lei|portaria|decreto|norma|instru[cç][aã]o normativa|rdc)\s*(sesa|anvisa|federal|municipal|estadual)?\s*n?[ºo°.]?\s*[\d][\d.\/\-]*/gi,' ');
+  m=tNum.match(/(?:alvar[aá]|licen[cç]a|certid[aã]o|inscri[cç][aã]o|protocolo|documento)\s*(?:n[ºo°.]?|numero|n[uú]mero)\s*[:\-]?\s*([\d][\d.\/\-]{3,25})/i)
+   || tNum.match(/n[ºo°]\s*[:\-]?\s*([\d][\d.\/\-]{5,25})/i)
+   || tNum.match(/(?:alvar[aá]|licen[cç]a)\s+(?:sanit[aá]ri[oa]|de\s+funcionamento)?\s*(\d{1,5}\/\d{4})\b/i);
+  if(m){ r.numero=m[1].replace(/[.\-\/]$/,''); r.achou.push('número'); }
+  if(!r.numero){ /* 00/AAAA que não faça parte de uma data dd/mm/aaaa */
+    const re=/(\d{1,4})\/(\d{4})/g; let g;
+    while((g=re.exec(tNum))){ const antes=tNum.charAt(g.index-1);
+      if(antes==='/'||/\d/.test(antes)) continue;
+      const ano=+g[2]; if(ano<2000||ano>2100) continue;
+      r.numero=g[1]+'/'+g[2]; r.achou.push('número'); break; }
+  }
+  /* município e UF */
+  m=t.match(/(?:cidade|prefeitura municipal de|munic[ií]pio de|munic[ií]pio)\s*[:\-]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\s]{2,35}?)(?=\s*(?:[-–,\/]|estado|secretaria|vigil|cnpj|uf|$))/i);
+  if(m){ r.municipio=_licTitulo(_licCorta(m[1])); r.achou.push('município'); }
+  m=t.match(/\b(?:estado do|estado de|estado da)\s+([A-Za-zÀ-ÿ\s]{3,25}?)(?=\s*(?:[-–,\/]|secretaria|prefeitura|$))/i);
+  if(m){ const uf=LIC_UFS[_licNorm(m[1]).trim()]; if(uf){ r.estado=uf; r.achou.push('estado'); } }
+  const UF='AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO';
+  if(!r.estado){ m=t.match(new RegExp('\\bUF\\s*[:\\-]?\\s*('+UF+')\\b','i'));       // "UF: PR"
+    if(m){ r.estado=m[1].toUpperCase(); r.achou.push('estado'); } }
+  if(!r.estado){ m=t.match(new RegExp('[\\/\\-]\\s*('+UF+')\\b'));                    // "Carambeí/PR"
+    if(m){ r.estado=m[1]; r.achou.push('estado'); } }
+  if(!r.estado && r.municipio){                                                       // "Carambeí PR" (formulário em colunas)
+    m=t.match(new RegExp(r.municipio.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s+('+UF+')\\b','i'));
+    if(m){ r.estado=m[1].toUpperCase(); r.achou.push('estado'); } }
+  /* órgão emissor — corta antes das palavras que começam o próximo campo do formulário */
+  m=t.match(/(secretaria municipal de|secretaria de estado de|secretaria de|prefeitura municipal de|departamento de vigil[aâ]ncia sanit[aá]ria|vigil[aâ]ncia sanit[aá]ria|corpo de bombeiros)([^\n]{0,45})/i);
+  if(m){ r.orgao=_licTitulo(_licCorta(m[1]+m[2])); r.achou.push('órgão'); }
+  /* responsável */
+  m=t.match(/(?:respons[aá]vel(?:\s+legal|\s+t[eé]cnico)?)\s*[:\-]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\s]{4,40}?)(?=\s*(?:[-–,;\/]|cpf|rg|$))/i);
+  if(m) { r.responsavel=_licTitulo(m[1]); r.achou.push('responsável'); }
+  return r;
+}
+/* Corta o texto quando começa o próximo campo do formulário (evita colar tudo junto) */
+function _licCorta(s){
+  const bound=/\b(data|departamento|inscri[cç][aã]o|cnpj|cpf|nome|raz[aã]o|endere[cç]o|bairro|cidade|munic[ií]pio|uf|[aá]rea|atividade|observa[cç][aã]o|hor[aá]rio|respons[aá]vel|o munic[ií]pio|concede|conforme|cep)\b/i;
+  let x=String(s||'').replace(/\s+/g,' ').trim();
+  const mm=x.match(bound);
+  if(mm && mm.index>3) x=x.slice(0, mm.index);
+  return x.replace(/[\s\-–:,;]+$/,'').trim();
+}
+function _licTitulo(s){ return String(s||'').trim().replace(/\s+/g,' ').toLowerCase()
+  .replace(/(^|\s|')([a-zà-ÿ])/g,(x,a,b)=>a+b.toUpperCase())
+  .replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase()); }
+
+function licEnviarModal(){
+  LIC_FILA=[];
+  openModal(`<div class="m-h">${svg('upload')}<h3>Enviar documento de licença</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="banner" style="margin-bottom:12px">${svg('spark')}<div><b>Leitura automática</b>
+        <span>Solte os PDFs ou fotos das licenças. O sistema lê cada documento e preenche número, órgão, município, estado, datas e tipo — você só confere e confirma.</span></div></div>
+      <div class="apo-drop lic-drop" id="licDrop"
+        ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+        ondrop="event.preventDefault();this.classList.remove('over');licLer(event.dataTransfer.files)"
+        onclick="document.getElementById('licFile').click()">
+        ${svg('upload')}<b>Arraste os documentos aqui</b><span>ou clique para escolher — PDF, JPG ou PNG</span>
+      </div>
+      <input type="file" id="licFile" multiple accept=".pdf,image/*" style="display:none" onchange="licLer(this.files);this.value=''">
+      <div id="licFilaBox"></div>
+    </div>
+    <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" id="licBtnOk" disabled onclick="licConfirmar()">Cadastrar licenças</button></div>`, true);
+}
+async function licLer(files){
+  if(!files||!files.length) return;
+  for(const f of files){
+    const item={ id:uid('lf'), file:f, nome:f.name, status:'lendo', etapa:'Lendo o documento…', dados:null, alvo:'novo' };
+    LIC_FILA.push(item); _licFilaRender();
+    try{
+      let txt='';
+      if(typeof pexLerApoliceTexto==='function'){
+        txt=await pexLerApoliceTexto(f, e=>{ item.etapa=String(e); _licFilaRender(); });
+      }
+      item.dados=_licExtrair(txt, f.name);
+      item.dados.hash=licHash((txt||'').slice(0,20000)+'|'+f.name+'|'+f.size);
+      item.status = item.dados.achou.length>=3 ? 'ok' : (item.dados.achou.length? 'confira' : 'manual');
+      item.etapa = item.dados.achou.length? 'Encontrado: '+item.dados.achou.join(', ') : 'Não deu para ler — preencha à mão';
+    }catch(e){ item.status='manual'; item.etapa='Falha ao ler: '+(e.message||''); item.dados=_licExtrair('', f.name); }
+    _licFilaRender();
+  }
+}
+function _licFilaRender(){
+  const box=document.getElementById('licFilaBox'); if(!box) return;
+  const btn=document.getElementById('licBtnOk');
+  const prontos=LIC_FILA.filter(i=>i.status!=='lendo').length;
+  if(btn) btn.disabled = !prontos;
+  const existentes=licencas();
+  box.innerHTML = LIC_FILA.length? `<div class="lic-fila">${LIC_FILA.map(i=>{
+    const d=i.dados||{}; const ci=licCatInfo(d.categoria);
+    const selo={lendo:['#8ea3bf','Lendo…'], ok:['#16c98d','Detectado'], confira:['#f2a44e','Confira'], manual:['#f2686b','Preencher']}[i.status];
+    return `<div class="lic-fila-i">
+      <div class="lic-fila-h">${i.status==='lendo'?'<span class="apo-spin"></span>':svg(ci.ico)}
+        <b>${esc(i.nome)}</b><span class="lic-selo" style="--c:${selo[0]}">${selo[1]}</span></div>
+      <div class="muted" style="font-size:11.5px;margin:2px 0 8px">${esc(i.etapa||'')}</div>
+      ${i.status==='lendo'?'':`
+      <div class="lic-fila-g">
+        <label>Ação<select onchange="_licSet('${i.id}','alvo',this.value)">
+          <option value="novo">Cadastrar nova licença</option>
+          ${existentes.map(l=>`<option value="${l.id}" ${i.alvo===l.id?'selected':''}>Atualizar: ${esc(l.nome||licCatInfo(l.categoria).n)}</option>`).join('')}
+        </select></label>
+        <label>Categoria<select onchange="_licSet('${i.id}','categoria',this.value)">
+          ${LIC_CATS.map(c=>`<option value="${c.k}" ${d.categoria===c.k?'selected':''}>${esc(c.n)}</option>`).join('')}
+        </select></label>
+        <label>Número<input value="${esc(d.numero||'')}" oninput="_licSet('${i.id}','numero',this.value)"></label>
+        <label>Órgão emissor<input value="${esc(d.orgao||'')}" oninput="_licSet('${i.id}','orgao',this.value)"></label>
+        <label>Município<input value="${esc(d.municipio||'')}" oninput="_licSet('${i.id}','municipio',this.value)"></label>
+        <label>UF<input value="${esc(d.estado||'')}" maxlength="2" oninput="_licSet('${i.id}','estado',this.value)"></label>
+        <label>Emissão<input type="date" value="${esc(d.emissao||'')}" onchange="_licSet('${i.id}','emissao',this.value)"></label>
+        <label>Validade<input type="date" value="${esc(d.validade||'')}" onchange="_licSet('${i.id}','validade',this.value)"></label>
+        <label>Responsável<input value="${esc(d.responsavel||'Uilian')}" oninput="_licSet('${i.id}','responsavel',this.value)"></label>
+      </div>
+      <button class="btn ghost sm" onclick="_licRemover('${i.id}')">${svg('trash')} Remover da lista</button>`}
+    </div>`; }).join('')}</div>` : '';
+}
+function _licSet(id, campo, v){ const i=LIC_FILA.find(x=>x.id===id); if(!i) return;
+  if(campo==='alvo'){ i.alvo=v; return; }
+  i.dados=i.dados||{}; i.dados[campo]=(campo==='estado')? String(v||'').toUpperCase() : v; }
+function _licRemover(id){ LIC_FILA=LIC_FILA.filter(x=>x.id!==id); _licFilaRender(); }
+async function licConfirmar(){
+  const itens=LIC_FILA.filter(i=>i.status!=='lendo'); if(!itens.length) return;
+  if(typeof pexBar==='function') pexBar(true);
+  let novas=0, atualizadas=0;
+  try{
+    for(const i of itens){
+      const d=i.dados||{};
+      let l;
+      if(i.alvo && i.alvo!=='novo'){
+        l=licenca(i.alvo); if(!l) continue;
+        const antes=l.validade;
+        ['numero','orgao','municipio','estado','emissao','validade'].forEach(k=>{ if(d[k]) l[k]=d[k]; });
+        if(d.hash) l.hash=d.hash;
+        licLog(l,'Documento anexado e dados atualizados', antes!==l.validade? 'Validade '+fmtD(antes)+' → '+fmtD(l.validade) : i.nome);
+        atualizadas++;
+      } else {
+        const ci=licCatInfo(d.categoria||'alvara');
+        l={ id:uid('lic'), nome:ci.n+(d.municipio?' — '+d.municipio:''), categoria:d.categoria||'alvara',
+          numero:d.numero||'', orgao:d.orgao||'', municipio:d.municipio||'', estado:d.estado||'',
+          emissao:d.emissao||'', validade:d.validade||'', responsavel:d.responsavel||'Uilian',
+          situacao:'auto', obs:'Cadastrada pela leitura automática de '+i.nome, protocolo:'', hash:d.hash||'',
+          escopo:'empresa', refId:'', titular:'', historico:[], versoes:[], renov:{aberta:false} };
+        licLog(l,'Criada pela leitura do documento', i.nome);
+        licencas().push(l); novas++;
+      }
+      try{ await subirUm(i.file,'licenca',l.id,'Licença'); licLog(l,'Documento anexado', i.nome); }catch(e){}
+    }
+    await reloadFiles(); licAutoRenovacao(); saveDB();
+    toast(novas+' licença(s) cadastrada(s)'+(atualizadas?' e '+atualizadas+' atualizada(s)':'')+'.');
+  } finally { if(typeof pexBar==='function') pexBar(false); }
+  LIC_FILA=[]; closeModal(); router();
+}
+
+/* ================================================================== */
+/*  RELATÓRIOS — vigentes, vencidas, vencendo, por local, renovações   */
+/*  Exporta em PDF (impressão), Excel e CSV.                           */
+/* ================================================================== */
+const LIC_RELS=[
+  {k:'vigentes',  n:'Licenças vigentes',        d:'Todas as licenças dentro da validade'},
+  {k:'vencendo',  n:'Licenças vencendo',        d:'Nos próximos 60 dias'},
+  {k:'vencidas',  n:'Licenças vencidas',        d:'Precisam de regularização'},
+  {k:'empresa',   n:'Por empresa / titular',    d:'Agrupado por titular'},
+  {k:'filial',    n:'Por filial',               d:'Somente licenças de filiais'},
+  {k:'estado',    n:'Por estado',               d:'Agrupado por UF'},
+  {k:'municipio', n:'Por município',            d:'Agrupado por município'},
+  {k:'renovacoes',n:'Histórico de renovações',  d:'Versões anteriores de cada licença'},
+  {k:'todas',     n:'Todas as licenças',        d:'Base completa'},
+];
+function licRelatoriosModal(){
+  openModal(`<div class="m-h">${svg('print')}<h3>Relatórios de conformidade</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b"><div class="lic-rels">
+      ${LIC_RELS.map(r=>{ const ds=licDataset(r.k);
+        return `<div class="lic-rel">
+          <div><b>${esc(r.n)}</b><span class="muted">${esc(r.d)} · ${ds.linhas.length} registro(s)</span></div>
+          <div class="lic-rel-b">
+            <button class="btn ghost sm" onclick="licExportar('${r.k}','pdf')">${svg('print')} PDF</button>
+            <button class="btn ghost sm" onclick="licExportar('${r.k}','xls')">${svg('export')} Excel</button>
+            <button class="btn ghost sm" onclick="licExportar('${r.k}','csv')">${svg('doc')} CSV</button>
+          </div></div>`; }).join('')}
+    </div></div>
+    <div class="m-f"><button class="btn" onclick="closeModal()">Fechar</button></div>`, true);
+}
+/* Monta os dados de cada relatório: cabeçalho + linhas prontas para exportar */
+function licDataset(tipo){
+  const todas=licencas();
+  const COLS=['Categoria','Nome','Número','Órgão emissor','Titular','Município','Estado','Emissão','Validade','Responsável','Situação'];
+  const lin=l=>[licCatInfo(l.categoria).n, l.nome||'', l.numero||'', l.orgao||'', licTitular(l), l.municipio||'', l.estado||'',
+    fmtD(l.emissao), fmtD(l.validade), l.responsavel||'', licSit(l).n];
+  let sel=todas.filter(l=>l.situacao!=='arquivada'), titulo=(LIC_RELS.find(r=>r.k===tipo)||{}).n||'Licenças';
+  if(tipo==='vigentes') sel=sel.filter(l=>licSit(l).k==='vigente');
+  else if(tipo==='vencendo') sel=sel.filter(l=>licSit(l).k==='breve');
+  else if(tipo==='vencidas') sel=sel.filter(l=>licSit(l).k==='vencida');
+  else if(tipo==='filial') sel=sel.filter(l=>l.escopo==='filial');
+  else if(tipo==='todas') sel=todas.slice();
+  if(tipo==='renovacoes'){
+    const linhas=[];
+    todas.forEach(l=>{ (l.versoes||[]).forEach(v=>linhas.push([licCatInfo(l.categoria).n, l.nome||'', v.numero||'', licTitular(l),
+      fmtD(v.emissao), fmtD(v.validade), fmtD(v.arquivadoEm), l.responsavel||''])); });
+    return {titulo, colunas:['Categoria','Nome','Número anterior','Titular','Emissão anterior','Validade anterior','Renovada em','Responsável'], linhas};
+  }
+  if(tipo==='estado') sel=sel.slice().sort((a,b)=>String(a.estado||'').localeCompare(String(b.estado||''),'pt')||String(a.municipio||'').localeCompare(String(b.municipio||''),'pt'));
+  else if(tipo==='municipio') sel=sel.slice().sort((a,b)=>String(a.municipio||'').localeCompare(String(b.municipio||''),'pt'));
+  else if(tipo==='empresa') sel=sel.slice().sort((a,b)=>licTitular(a).localeCompare(licTitular(b),'pt'));
+  else sel=sel.slice().sort((a,b)=>(diasAte(a.validade)??9e9)-(diasAte(b.validade)??9e9));
+  return {titulo, colunas:COLS, linhas:sel.map(lin)};
+}
+function licExportar(tipo, fmt){
+  const ds=licDataset(tipo);
+  if(!ds.linhas.length){ toast('Esse relatório não tem registros.','err'); return; }
+  const emp=(DB.empresa&&DB.empresa.nome)||'Planeta Express Transportes';
+  const hoje=fmtD(new Date().toISOString().slice(0,10));
+  const arq='Licencas - '+ds.titulo.replace(/[^\w\s-]/g,'')+' - '+hoje.replace(/\//g,'-');
+  if(fmt==='csv'){
+    const sep=';';
+    const linhas=[ds.colunas.join(sep)].concat(ds.linhas.map(r=>r.map(c=>{
+      const s=String(c==null?'':c); return /[";\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s; }).join(sep)));
+    _licBaixar(arq+'.csv', '﻿'+linhas.join('\r\n'), 'text/csv;charset=utf-8');
+    return;
+  }
+  if(fmt==='xls'){
+    const html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>'
+      +'<table border="1"><thead><tr>'+ds.colunas.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'
+      +ds.linhas.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')
+      +'</tbody></table></body></html>';
+    _licBaixar(arq+'.xls', html, 'application/vnd.ms-excel;charset=utf-8');
+    return;
+  }
+  /* PDF: monta uma folha limpa e manda imprimir (o usuário escolhe "Salvar como PDF") */
+  let area=document.getElementById('licPrintArea');
+  if(!area){ area=document.createElement('div'); area.id='licPrintArea'; document.body.appendChild(area); }
+  area.innerHTML=`<div class="lic-print-h"><h1>${esc(emp)}</h1>
+      <div>${esc(ds.titulo)} — emitido em ${esc(hoje)} · ${ds.linhas.length} registro(s)</div></div>
+    <table><thead><tr>${ds.colunas.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${ds.linhas.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    <div class="lic-print-f">Planeta Express — Centro de Gestão de Conformidade</div>`;
+  document.body.classList.add('lic-printing');
+  const limpar=()=>{ document.body.classList.remove('lic-printing'); window.removeEventListener('afterprint',limpar); };
+  window.addEventListener('afterprint', limpar);
+  setTimeout(()=>{ window.print(); setTimeout(limpar,1500); }, 60);
+}
+function _licBaixar(nome, conteudo, mime){
+  try{
+    const blob=new Blob([conteudo],{type:mime||'text/plain;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch(e){} a.remove(); }, 800);
+    toast('Arquivo gerado: '+nome);
+  }catch(e){ toast('Não foi possível baixar: '+(e.message||''),'err'); }
+}
+
 /* ---------- QUADRO SOCIETÁRIO ---------- */
 function docsDoMotorista(m){
   const reais=(DB.arquivos||[]).filter(f=>f.entidade==='motorista'&&f.refId===m.id).map(f=>({tipo:'real',nome:f.nome,cat:f.categoria,path:f.path}));
@@ -5087,6 +5853,10 @@ function pexSearch(q){
   (DB.servicos||[]).forEach(s=>{ if(inc(s.descricao)||inc(s.oficina)){ const v=veiculo(s.veiculoId); add('Manutenção','wrench',s.descricao||'Serviço',((v?v.placa+' · ':'')+(s.oficina||'')).trim()||'—', v?'#manutencao/'+v.id:'#manutencao'); } });
   (DB.pneus||[]).forEach(p=>{ if(inc(p.marca)||inc(p.medida)||inc(p.posicao)){ const v=veiculo(p.veiculoId); add('Pneu','tire',((p.marca||'Pneu')+' '+(p.medida||'')).trim(),((v?v.placa+' · ':'')+(p.posicao||'')).trim()||'—', v?'#pneus/'+v.id:'#pneus'); } });
   (DB.notas||[]).forEach(n=>{ if(inc(n.obs)||inc(n.inicio)||inc(n.fim)) add('Nota','money','Nota '+fmtD(n.inicio)+'–'+fmtD(n.fim),money(totalNota(n)),'#notas'); });
+  /* licenças: busca sem acento (Carambeí = carambei) e por qualquer campo */
+  (DB.licencas||[]).forEach(l=>{ if((typeof _licCasa==='function' && _licCasa(l,q)) || inck(l.numero) || inck(l.protocolo)){
+    const ci=(typeof licCatInfo==='function')?licCatInfo(l.categoria):{n:'Licença',ico:'stamp'};
+    add('Licença', ci.ico, l.nome||ci.n, (l.numero?'Nº '+l.numero+' · ':'')+[l.municipio,l.estado].filter(Boolean).join('/')+(l.validade?' · vence '+fmtD(l.validade):''), '#licencas'); } });
   try{ (typeof todosArquivos==='function'?todosArquivos():[]).forEach(f=>{ const nome=f.name||f.nome||''; if(inc(nome)) add('Documento','doc',nome,f.categoria||'Arquivo','#documentos'); }); }catch(e){}
   return R.slice(0,40);
 }
