@@ -236,11 +236,40 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
-### ⚠️⚠️ PRIMEIRA COISA A FAZER NO CHAT NOVO (05/08/2026)
-**O GitHub Pages (site ONLINE) está com a FILA DE PUBLICAÇÃO TRAVADA em v6.55.** Os commits **v6.56** (pipeline de faturamento) e **v6.57** (aba ANTT + conjuntos + leitor robusto) **já estão no GitHub** (pushados: topo `1675f41`), MAS o Pages não publicou — o online ainda serve `app.js?v=116`/rodapé v6.55. **Era ESSE o "não funcionou" do cliente: as versões novas nunca chegaram nele.**
-- **Verificar:** abrir `https://planetaexpress02-sys.github.io/planeta-express/` e conferir o rodapé. Se ainda for **< v6.57**, a fila continua travada → re-disparar: `git commit --allow-empty -m "redeploy" && git push origin main` e aguardar (às vezes leva minutos a ~1h; já tem `.nojekyll`). Se preciso, checar Settings→Pages / Actions no GitHub.
-- **Enquanto travado:** a **pasta OFFLINE local** (`Sistema Planeta Express/index.html`, já em `?v=118`/v6.57) e o **celular** (`Planeta Express - CELULAR.html`, regenerado) JÁ têm TUDO — o cliente pode usar offline.
-- **Depois que subir (v118):** validar ao vivo: aba **#antt** (RNTRC 050428055, 12 veículos, CRUD), **Conjuntos ativos** na Início/Painel, e o **Importar documentos** do Faturamento (pipeline+etapas) com um PDF real do relatório do contador.
+### ✅ ESTADO EM 10/08/2026 — TUDO PUBLICADO E SINCRONIZADO
+
+**Nada pendente.** Árvore do git limpa, `main` igual ao `origin/main`, GitHub Pages no ar em **v6.71**, pasta offline e celular (`Planeta Express - CELULAR.html`, 3,36 MB) na mesma versão. Não há deploy travado (o problema de fila da v6.55 foi resolvido há muito tempo — `.nojekyll` no repo).
+
+**Como retomar:** abra o sistema em https://planetaexpress02-sys.github.io/planeta-express/ (ou dê duplo clique no `index.html` da pasta) e siga pedindo. Se o cliente disser que "não mudou nada", é **cache** — bump de `?v=` + F5 (ver lição da v6.50).
+
+**Arquivos do sistema (todos em `Sistema Planeta Express/assets/`):**
+| arquivo | o que é |
+|---|---|
+| `app.js` (~6.200 linhas) | motor: rotas, views, modais, componentes |
+| `dados.js` | SEED com os dados reais da empresa |
+| `central.js` | Central de Processamento de Documentos (v6.59) |
+| `monitoramento.js` | mapa da tela Início (v6.60→6.68) |
+| `contabilidade.js` | Contabilidade (v6.71) |
+| `assistente.js` | IA Planeta |
+| `importar.js` | leitor de xlsx/csv + unzip |
+| `estilo.css` + `estilo2.css` | visual (o tema cyber vive no fim do estilo2) |
+
+**Ao lançar versão nova SEMPRE:** subir o `?v=NN` de TODOS os assets no `index.html`, trocar o rodapé `<b>vX.YZ</b>`, trocar o nome do cache no `service-worker.js`, rodar `bash build_celular.sh` (com `export T="<scratchpad>"`) e `git add/commit/push`.
+
+**⚠️ REGRAS QUE O CLIENTE COBROU (não quebrar):**
+1. **Nunca inventar dado.** Se não dá para saber, mostrar o que falta e pedir. (Ex.: o mapa não associa motorista a placa; a IA avisa quando falta lançamento; tributos são lançados pelo contador, o sistema não apura.)
+2. **Nunca duplicar informação.** Cadastro numa tela só; os outros módulos leem. A Contabilidade e a Central seguem isso.
+3. **Não criar leitor de documento por tela** — registrar na Central (`central.js`).
+4. **Falar em português**, linguagem simples, passo a passo.
+5. **Funcionar offline.** O que depende de internet (OCR, SheetJS, clima) degrada sem quebrar.
+6. **Mobile é só CSS + pós-render**, nunca duplicar lógica.
+
+**Próximos passos possíveis (o cliente decide):**
+- Conciliação bancária (OFX) — só a estrutura está preparada, falta implementar
+- Registrar KM por competência, para o custo/km da Contabilidade ficar exato (hoje usa o odômetro atual, e a tela avisa)
+- Cadastrar ativo imobilizado e financiamentos (as telas existem, estão vazias)
+- Automação real de e-mail/OCR entrando sozinho — precisa de backend (Supabase Edge Function)
+- Rastreador GPS de verdade no mapa (a camada `MonProvider` já está pronta para trocar)
 
 **Versão atual: v6.71 (validada ao vivo e publicada; celular regenerado; assets em `?v=154`, cache SW `planeta-express-v6-71`).** v6.71 = **nova aba CONTABILIDADE** (`assets/contabilidade.js`, arquivo novo, ~1.230 linhas). **PRINCÍPIO: a informação é cadastrada UMA VEZ, no módulo dela — a Contabilidade LÊ e traduz em lançamento na hora da consulta; NADA é copiado.** `contabLancamentos()` deriva de ctes, faturamento, abastecimentos, pedagios, servicos, manutencoes(óleo), pneus, baterias, descargas, pagamentos, vales, notas, seguros (prêmio rateado em 12), tributos, depreciação e juros de financiamento. Cada lançamento tem **id estável** (`fonte:idDoRegistro`) e carrega a ORIGEM. **Vale-pedágio não entra como custo** (é reembolsado). `DB.contabClass` guarda **só a reclassificação** do usuário, sem duplicar o registro. Estruturas próprias: plano de contas editável (44 contas/6 grupos), centros de custo (áreas + um por veículo, automático), lançamentos manuais, ativo imobilizado com depreciação linear, financiamentos com parcelas e juros, tributos, fechamento por competência e auditoria. **11 abas**: Painel (10 KPIs + comparação com período anterior), DRE (% e variação), por veículo (custo/km, receita/km, margem), lançamentos (busca + reclassificação), ativos, financiamentos, tributos, fechamento com pendências, auditoria, relatórios (10 tipos em PDF/Excel/CSV) e plano de contas. IA responde faturamento/lucro/gastos/veículo de maior custo **e avisa quando falta dado**. Importação **reusa a Central de Documentos** (não foi recriada). **VALIDADO:** totais batem com as fontes (CT-e R$166.205,35 · manutenção R$350.357,65 · pedágio pago R$819,17 · descargas R$6.674,00), sem ids duplicados, chamar 2× não dobra, reclassificar não cria registro nem altera o CT-e; **teste ponta a ponta** (abastecimento+CT-e+manutenção+pedágio inseridos nos módulos) fez os 4 aparecerem na conta/centro certos com resultado do veículo calculado, e ao remover voltou ao original; mobile sem overflow; 7 telas antigas intactas; zero erro. Commit `3c6f7ba`. ⚠️ **Ainda dependem de configuração/uso:** conciliação bancária (OFX) é só estrutura preparada; km rodado por período não existe no sistema, então custo/km usa o odômetro atual (avisado na tela); tributos são lançados pelo contador (o sistema não apura).
 
