@@ -48,9 +48,9 @@ function monLocal(id){ return MON_LOCAIS.find(function(l){ return l.id===id; });
    (lista de lat/lon) sem mexer no resto do componente.
    ================================================================== */
 const MON_ROTAS = [
-  { id:'r-cambe',    de:'londrina', para:'cambe',    curva:-16, status:'online',  rodovia:'PR-445' },
-  { id:'r-maringa',  de:'londrina', para:'maringa',  curva: 34, status:'online',  rodovia:'BR-376' },
-  { id:'r-paicandu', de:'londrina', para:'paicandu', curva: 62, status:'atencao', rodovia:'PR-323' },
+  { id:'r-cambe',    de:'londrina', para:'cambe',    curva:-18, status:'online',  rodovia:'PR-445' },
+  { id:'r-maringa',  de:'londrina', para:'maringa',  curva: 18, status:'online',  rodovia:'BR-376' },
+  { id:'r-paicandu', de:'londrina', para:'paicandu', curva: 76, status:'atencao', rodovia:'PR-323' },
   /* futuro: { id:'...', de:'londrina', para:'ibipora', polyline:[[lat,lon],[lat,lon],...] } */
 ];
 
@@ -62,7 +62,7 @@ const MON_ROTAS = [
    para a região caber legível no espaço do card. Quando entrar o mapa
    real, só esta função muda.
    ================================================================== */
-const MON_VB = { w:640, h:520, x0:96, x1:500, y0:150, y1:392 };
+const MON_VB = { w:640, h:520, x0:92, x1:486, y0:146, y1:398 };
 function monProjetar(loc){
   const lons=MON_LOCAIS.map(function(l){ return l.lon; }), lats=MON_LOCAIS.map(function(l){ return l.lat; });
   const loMin=Math.min.apply(null,lons), loMax=Math.max.apply(null,lons);
@@ -198,16 +198,22 @@ function monMapaHTML(){
   }).join('');
 
   /* ---- camada 5: cidades (destinos) ---- */
+  /* O rótulo é colocado do lado OPOSTO à base: assim cidades vizinhas
+     (Cambé fica a 13 km de Londrina) nunca sobrepõem o nome da base. */
   const cidadesSVG = monDestinos().map(function(c){
     const p=monProjetar(c);
-    const acima = p.y > 250;                       /* rótulo acima ou abaixo, p/ não colidir */
-    const ly = acima? -22 : 26;
+    let vx=p.x-bp.x, vy=p.y-bp.y; const d=Math.hypot(vx,vy)||1;
+    vx/=d; vy/=d;
+    let lx=Math.round(vx*17), ly=Math.round(vy*17)+(vy<0? -8 : 14);
+    /* não deixa o texto escapar da área visível */
+    if(p.y+ly<26) ly=26-p.y; if(p.y+ly>MON_VB.h-14) ly=MON_VB.h-14-p.y;
+    const anc = lx<-6? 'end' : (lx>6? 'start' : 'middle');
     return '<g class="mon-cidade" data-local="'+c.id+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')" tabindex="0">'
       +'<circle class="mon-c-hit" r="26"/>'
       +'<circle class="mon-c-pulso" r="11"/>'
       +'<circle class="mon-c-halo" r="8"/>'
       +'<circle class="mon-c-dot" r="3.6"/>'
-      +'<text class="mon-c-nome" y="'+ly+'" text-anchor="middle">'+esc(c.nome.toUpperCase())+'</text>'
+      +'<text class="mon-c-nome" x="'+lx+'" y="'+ly+'" text-anchor="'+anc+'">'+esc(c.nome.toUpperCase())+'</text>'
       +'</g>';
   }).join('');
 
