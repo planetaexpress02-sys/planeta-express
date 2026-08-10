@@ -2933,3 +2933,10 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){
   .mon-varre,.mon-cidade{ animation:none!important }
 }
+
+/* ---- ANTT: acoes no proprio card de situacao (banner removido, v6.63) ---- */
+.antt-acoes{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+@media(max-width:860px){
+  .antt-acoes{ margin-left:0; width:100%; }
+  .antt-acoes .btn{ flex:1; justify-content:center }
+}

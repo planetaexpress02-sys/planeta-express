@@ -3759,17 +3759,15 @@ function viewAntt(){
     <td><span class="st ${/ativo/i.test(v.situacao)?'ok':'vencido'}">${esc(v.situacao||'')}</span></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalAnttVeiculo('${v.id}')">${svg('edit')}</button></td></tr>`).join('');
   return `
-  <div class="banner">${svg('shield')}<div><b>Conformidade ANTT — RNTRC</b><span>Registro Nacional de Transportadores Rodoviários de Cargas. Dados do extrato oficial — pode editar, incluir e remover.</span></div>
-    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button>
-      <button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div></div>
-
-  <div class="card" style="margin-bottom:16px;border-left:4px solid ${apto?'#16c98d':'#f2686b'}">
+  <div class="card antt-topo" style="margin-bottom:16px;border-left:4px solid ${apto?'#16c98d':'#f2686b'}">
     <div class="card-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div class="antt-badge ${apto?'ok':'no'}">${svg('shield')}<b>${apto?'ATIVO':esc(a.situacao||'—')}</b></div>
       <div style="flex:1;min-width:200px"><b style="font-size:15px">${esc(a.razao||'')}</b>
         <div class="muted" style="font-size:12.5px">RNTRC <b>${esc(a.rntrc||'—')}</b> · Categoria ${esc(a.categoria||'—')} · CNPJ ${esc(a.cnpj||'')}</div>
         <div style="color:${apto?'#16c98d':'#f2686b'};font-size:12.5px;font-weight:600;margin-top:4px">${apto?'✓ Apto a realizar o transporte remunerado de cargas.':'⚠ Verificar situação do registro.'}</div></div>
+      <div class="antt-acoes no-print">
+        <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button>
+        <button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div>
     </div></div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
