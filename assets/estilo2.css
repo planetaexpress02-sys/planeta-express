@@ -3284,3 +3284,55 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
   .ia-orb,.ia-orb::before,.ia-orb::after,.ia-fab::before{ animation:none!important; opacity:0 }
   .ia-orb{ opacity:1!important }
 }
+/* ================================================================== */
+/*  IA PLANETA — NÚCLEO DE DADOS (v6.70)                              */
+/*  Referência do cliente: núcleo brilhante com anéis de partículas.  */
+/*  Feito só com CSS (sem tocar no JS da IA). Os anéis são bordas     */
+/*  pontilhadas girando devagar — leem como partículas em órbita —    */
+/*  e o núcleo pulsa. Nada de cone varrendo (aquilo virava radar).    */
+/* ================================================================== */
+.ia-fab{ width:44px; height:44px; right:20px; bottom:20px; opacity:.85; overflow:visible }
+
+/* ---- núcleo ---- */
+.ia-orb{ overflow:visible; border:0;
+  background:
+    radial-gradient(circle at 50% 50%, #ffffff 0%, #cdf3ff 12%, #4fd2ff 26%, rgba(20,150,235,.55) 44%, rgba(6,60,130,.30) 62%, transparent 74%);
+  box-shadow:
+    0 0 10px rgba(120,225,255,.85),
+    0 0 24px rgba(40,180,255,.55),
+    0 0 46px rgba(20,130,235,.32);
+  animation:iaCorePulse 3s ease-in-out infinite }
+@keyframes iaCorePulse{
+  0%,100%{ transform:scale(.94); filter:brightness(1) }
+  50%    { transform:scale(1.06); filter:brightness(1.28) } }
+
+/* clarão central, como o ponto branco da referência */
+.ia-orb::before{ content:""; position:absolute; left:50%; top:50%; width:34%; height:34%;
+  margin:-17% 0 0 -17%; border-radius:50%; background:#fff; filter:blur(2.5px);
+  animation:iaCoreFlash 3s ease-in-out infinite }
+@keyframes iaCoreFlash{ 0%,100%{ opacity:.55; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.15) } }
+
+/* ---- anéis de partículas (bordas pontilhadas girando) ---- */
+.ia-orb::after{ content:""; position:absolute; inset:-13%; border-radius:50%;
+  background:none; mix-blend-mode:normal; filter:none; opacity:1;
+  border:2px dotted rgba(150,235,255,.9);
+  animation:iaSpinA 9s linear infinite }
+.ia-fab::before{ content:""; position:absolute; inset:-26%; border-radius:50%; pointer-events:none;
+  border:1.8px dotted rgba(110,215,255,.5);
+  animation:iaSpinB 14s linear infinite; opacity:1 }
+.ia-fab::after{ content:""; position:absolute; inset:-40%; border-radius:50%; pointer-events:none;
+  border:1.5px dotted rgba(80,190,250,.26);
+  animation:iaSpinA 22s linear infinite }
+@keyframes iaSpinA{ to{ transform:rotate(360deg) } }
+@keyframes iaSpinB{ to{ transform:rotate(-360deg) } }
+
+.ia-fab:hover,.ia-fab:focus-visible{ transform:scale(1.14); opacity:1 }
+.ia-fab:hover .ia-orb{ animation-duration:1.8s;
+  box-shadow:0 0 14px rgba(150,240,255,.95), 0 0 34px rgba(60,200,255,.7), 0 0 66px rgba(20,140,240,.42) }
+.ia-fab:hover .ia-orb::after{ animation-duration:4.5s; border-color:rgba(190,245,255,1) }
+.ia-fab:hover::before{ animation-duration:7s }
+
+@media(max-width:860px){ .ia-fab{ width:42px; height:42px; opacity:.8 } }
+@media(prefers-reduced-motion:reduce){
+  .ia-orb,.ia-orb::before,.ia-orb::after,.ia-fab::before,.ia-fab::after{ animation:none!important }
+  .ia-orb{ transform:none!important } }
