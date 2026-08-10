@@ -483,7 +483,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1};
 function router(){
   const h = (location.hash||'#inicio').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -582,9 +582,14 @@ function pexMobileCtx(rota){
 /* Converte tabelas em cards: injeta data-th (do cabeçalho) em cada célula. Idempotente. */
 function pexMobileTables(){
   document.querySelectorAll('#view table.tbl').forEach(function(tbl){
-    var head=tbl.tHead && tbl.tHead.rows[0]; if(!head) return;
-    var ths=[].map.call(head.cells, function(c){ return (c.textContent||'').trim(); });
-    if(!ths.some(function(t){ return t; })) return;
+    /* Tabela que NÃO vira card (sem cabeçalho aproveitável, como a de
+       Documentos) precisa continuar rolando de lado — senão fica mais larga
+       que a tela e o conteúdo some, porque no celular a .tbl-wrap é visible. */
+    var wrap=tbl.closest && tbl.closest('.tbl-wrap');
+    var head=tbl.tHead && tbl.tHead.rows[0];
+    var ths=head? [].map.call(head.cells, function(c){ return (c.textContent||'').trim(); }) : [];
+    if(!head || !ths.some(function(t){ return t; })){ if(wrap) wrap.classList.add('tbl-rola'); return; }
+    if(wrap) wrap.classList.remove('tbl-rola');
     tbl.classList.add('mob-cards');
     [].forEach.call(tbl.tBodies, function(tb){ [].forEach.call(tb.rows, function(r){
       if(r.classList.contains('grouprow')) return;
@@ -3018,10 +3023,33 @@ function iniMapZoom(d,reset){ _ccZoom=reset?1:Math.max(1,Math.min(2.4, _ccZoom+d
 /* clima REAL de Londrina (mesma fonte do cockpit) no chip da base */
 function iniBaseWx(){ const g=document.getElementById('iniBaseWx'); if(!g) return;
   try{ const c=JSON.parse(localStorage.getItem('pex_weather')||'null'); if(c && c.temp!=null){ const t=g.querySelector('text'); if(t) t.textContent=c.temp+'°'; } }catch(e){} }
+/* ------------------------------------------------------------------
+   Números que sobem animados (KPIs). A animação usa requestAnimationFrame,
+   e o navegador NÃO entrega quadros para uma aba em segundo plano — se a
+   tela for montada assim (aba aberta atrás, sessão restaurada, recarga do
+   service worker), o número ficaria parado no ZERO para sempre.
+   Por isso: aba escondida = escreve o valor final direto; e quando a aba
+   volta a aparecer, conferimos todos os contadores de novo.
+   ------------------------------------------------------------------ */
+function _pexSemAnimacao(){
+  return document.hidden || (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+}
+function _pexEscreverContador(el){
+  const alvo=parseFloat(el.getAttribute('data-count'))||0;
+  const pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
+  el.textContent = el.getAttribute('data-money')==='1' ? money(Math.round(alvo))
+                 : pre+Math.round(alvo).toLocaleString('pt-BR')+suf;
+}
+/* Fecha qualquer contador que tenha ficado para trás (chamado ao reexibir a aba) */
+function pexFinalizarContadores(){
+  try{ document.querySelectorAll('.num[data-count], .k-val[data-count]').forEach(_pexEscreverContador); }catch(e){}
+}
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) pexFinalizarContadores(); });
+
 function iniCountUp(){
   const els=document.querySelectorAll('.ini-cmd .num[data-count]');
   const ic=document.getElementById('iniClock'); if(ic){ const d=new Date(); ic.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
-  const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const reduce=_pexSemAnimacao();
   els.forEach(function(el){ const target=+el.getAttribute('data-count')||0, pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
     if(reduce){ el.textContent=pre+target.toLocaleString('pt-BR')+suf; return; }
     let start=null; const dur=900;
@@ -3738,6 +3766,7 @@ function _pedImportConfirmar(){
 /* Count-up dos KPIs (roda no pexAfterRender p/ a rota pedagios) */
 function pedCountUp(){
   document.querySelectorAll('#view[data-route="pedagios"] .k-val[data-count]').forEach(function(el){
+    if(_pexSemAnimacao()){ _pexEscreverContador(el); return; }
     var alvo=parseFloat(el.getAttribute('data-count'))||0, isM=el.getAttribute('data-money')==='1', t0=null, dur=850;
     function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3); var v=alvo*e;
       el.textContent=isM? money(Math.round(v)) : Math.round(v).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }
@@ -4105,6 +4134,7 @@ function _licCasa(l, q){
 }
 function licCountUp(){
   document.querySelectorAll('#view[data-route="licencas"] .k-val[data-count]').forEach(function(el){
+    if(_pexSemAnimacao()){ _pexEscreverContador(el); return; }
     var alvo=parseFloat(el.getAttribute('data-count'))||0, t0=null, dur=850;
     function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3);
       el.textContent=Math.round(alvo*e).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }

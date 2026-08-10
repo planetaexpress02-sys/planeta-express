@@ -521,6 +521,9 @@ function viewContabilidade(){
   const abas=[['painel','Painel'],['dre','DRE'],['veiculos','Por veículo'],['lanc','Lançamentos'],
     ['ativos','Ativos'],['financ','Financiamentos'],['tributos','Tributos'],
     ['fech','Fechamento'],['audit','Auditoria'],['rel','Relatórios'],['plano','Plano de contas']];
+  /* Aba desconhecida (endereço antigo, link salvo, erro de digitação) cairia
+     em nenhum dos ifs abaixo e a tela abriria vazia — volta para o Painel. */
+  if(!abas.some(function(a){ return a[0]===contabAba; })) contabAba='painel';
   const abaHTML='<div class="cb-abas no-print">'+abas.map(function(a){
     return '<button class="cb-aba'+(contabAba===a[0]?' on':'')+'" onclick="contabSetAba(\''+a[0]+'\')">'+a[1]+'</button>'; }).join('')+'</div>';
 

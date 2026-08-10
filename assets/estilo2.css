@@ -2334,6 +2334,16 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .card{ border-radius:18px; margin-bottom:14px; }
   .grid.two-col{ grid-template-columns:1fr!important; gap:12px; }
   .grid.kpis{ grid-template-columns:repeat(2,1fr)!important; gap:11px; }
+  /* Grades de conteúdo: UMA coluna no celular. Várias telas trazem o número
+     de colunas no próprio style= da tag (repeat(3,1fr), minmax(460px,1fr)…) e
+     estilo em linha ganha do CSS — daí o !important. Sem isto a coluna nasce
+     mais larga que a tela e o .content (overflow-x:clip) CORTA o conteúdo:
+     era o que acontecia em Exames, Documentos, Quadro Societário,
+     Financeiro e Configurações. As faixas de KPI (.kpis) seguem com 2. */
+  .grid:not(.kpis){ grid-template-columns:1fr!important; }
+  /* 1fr não encolhe abaixo do conteúdo mínimo do filho; liberando o encolhimento,
+     o que é largo (tabela) passa a rolar dentro do próprio card. */
+  .grid > *, .card, .kpi{ min-width:0; }
   .banner{ flex-wrap:wrap; border-radius:16px; }
   .banner .btn, .banner > div[style*="margin-left:auto"]{ margin-left:0!important; }
   .toolbar{ flex-wrap:wrap; gap:8px; }
@@ -2365,8 +2375,28 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
     font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; }
   table.tbl.mob-cards td.no-print, table.tbl.mob-cards td:empty{ display:none; }
   .tbl-wrap{ overflow:visible; }
+  /* ...mas a tabela que não virou card (marcada em pexMobileTables) volta a
+     rolar de lado, senão o que passa da largura da tela é cortado. */
+  .tbl-wrap.tbl-rola{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   /* barra de busca/paginação das tabelas premium fica ok */
   .pex-tbar{ flex-wrap:wrap; gap:8px; }
+
+  /* ---- FAIXAS E BOTÕES QUE PASSAVAM DA TELA ---- */
+  /* Filtros em cápsula (CT-e, Notas…): rolam de lado em vez de sumir */
+  .seg{ display:flex; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .seg::-webkit-scrollbar{ display:none; }
+  .seg button{ flex:0 0 auto; }
+  /* Grupo de botões do cabeçalho do card (Financeiro, Ética…): quebra linha */
+  .card .card-h{ flex-wrap:wrap; }
+  .card .card-h .r{ margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+  /* Célula de anexo dos Seguros: pode quebrar em vez de esticar a linha */
+  .seg-anexo-cell{ flex-wrap:wrap; justify-content:flex-end; min-width:0; }
+  /* Numa tabela-cartão, conteúdo largo (botões de anexo, textos longos) cai
+     para a linha de baixo em vez de empurrar a célula para fora da tela. */
+  table.tbl.mob-cards td{ flex-wrap:wrap; }
+  /* Cabeçalho do Código de Ética: os botões descem em vez de sair da tela */
+  .etica-head{ flex-wrap:wrap; gap:10px; }
+  .etica-head .no-print{ margin-left:0; }
 
   /* ---- FORMULÁRIOS: campos grandes, sem zoom iOS (16px) ---- */
   .field input, .field select, .field textarea, .selectlite, .m-b input, .m-b select, .m-b textarea{ min-height:50px; font-size:16px!important; border-radius:13px; }

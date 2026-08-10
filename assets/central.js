@@ -1072,6 +1072,7 @@ function cpidPendentes(){ return CPID_FILA.filter(function(i){ return i.status==
 /* contagem animada dos KPIs da Central */
 function cpidCountUp(){
   document.querySelectorAll('#view[data-route="central"] .k-val[data-count]').forEach(function(el){
+    if(typeof _pexSemAnimacao==='function' && _pexSemAnimacao()){ _pexEscreverContador(el); return; }
     var alvo=parseFloat(el.getAttribute('data-count'))||0, t0=null, dur=850;
     function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3);
       el.textContent=Math.round(alvo*e).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }

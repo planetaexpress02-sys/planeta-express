@@ -109,7 +109,18 @@ function iaExec(intent, raw){
 /* ================================================================== */
 /*  3. INTERPRETADOR PRINCIPAL                                         */
 /* ================================================================== */
-function _iaEhPergunta(n){ return /\?|\b(quant|qual|quais|quando|onde|cade|me diga|me fala|me informa|me mostr|mostr|list|resumo|status|situacao|vence|venc|validade|quanto tem|tem quantos|dado|dados|informac|ficha|sobre|detalhe|consulta|buscar|procur|pesquis|encontr|alarme|quem|gast|despes|custo|corretiv|preventiv)\b/.test(n); }
+/* É pergunta (consulta) ou é comando de lançamento?
+   ATENÇÃO: os radicais abaixo são PREFIXOS — não podem ser fechados com \b no
+   final, senão "quant" deixa de casar com "quanto"/"quantos" e "gast" com
+   "gastei". Era esse o defeito: "quanto gastei com manutenção" não era
+   reconhecido como pergunta, caía no detector de comandos, batia em /manuten/
+   e o sistema CRIAVA um serviço com a frase do usuário como descrição.
+   Palavras que precisam casar inteiras ficam no segundo grupo. */
+function _iaEhPergunta(n){
+  return /\?/.test(n)
+    || /\b(quant|mostr|list|venc|validade|informac|detalhe|consult|busca|buscar|procur|pesquis|encontr|gast|despes|custo|corretiv|preventiv|resum|situac|relatori|total)/.test(n)
+    || /\b(qual|quais|quando|onde|cade|quem|status|ficha|dado|dados|alarme|sobre|me diga|me fala|me informa)\b/.test(n);
+}
 function _iaIntent(n){
   if(/pneu|\bpne\b/.test(n)) return 'pneu';
   if(/oleo|filtr|lubrific/.test(n)) return 'oleo';
@@ -127,6 +138,13 @@ function iaResponder(raw){
   /* Estou esperando uma resposta que faltava */
   if(IA.pending){
     if(/^(cancel|deixa|esquec|para\b|nada|nao\b|nenhum)/.test(n)){ IA.pending=null; return 'Beleza, cancelei. 👍 Pode mandar outro comando.'; }
+    /* Se o usuário mudou de assunto em vez de responder, não engole a frase
+       nova: sem isso a IA repetia "de qual veículo?" para toda pergunta
+       seguinte, e só saía dali digitando "cancelar". */
+    if(_iaEhPergunta(n) && !_iaVeiculo(t) && !_iaMotoristas(t).length && !/^[\d.,\s]+$/.test(t)){
+      IA.pending=null;
+      return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+    }
     let ans=t; const need=IA.pending.need;
     if(need==='valor') ans='valor '+ans;
     else if(need==='km') ans=ans+' km';
@@ -264,8 +282,11 @@ function iaCmdServico(t,n){
     .replace(/oficina\s+[^,;]+/ig,' ').replace(/\bcom\s+[\d.]+\s*(?:km|h)\b/ig,' ')
     .replace(/\b(dia|hoje|ontem|anteontem|no|na|em|do|da)\b/ig,' ').replace(/\s{2,}/g,' ').trim();
   if(desc.length<3) return _iaFalta('descricao','Qual foi o serviço/reparo? Ex.: "troca de lonas de freio".');
+  /* Serviço sem veículo não serve para nada: não aparece no relatório da placa
+     nem tem centro de custo na Contabilidade. Pergunta, como os outros comandos. */
+  if(!v) return _iaFalta('veiculo','Certo! Em qual veículo foi esse serviço? Me diga a placa (ex.: IRU-4G62). 🚚');
   return _iaFazer(()=>{
-    DB.servicos.push({id:uid('sv'),data:data,veiculoId:v?v.id:'',descricao:desc,oficina:ofi,km:(km!=null?km:''),valor:valor||0,obs:''});
+    DB.servicos.push({id:uid('sv'),data:data,veiculoId:v.id,descricao:desc,oficina:ofi,km:(km!=null?km:''),valor:valor||0,obs:''});
     return {ok:true, msg:`✅ Registrei o serviço "<b>${esc(desc)}</b>"${v?' no <b>'+esc(v.placa)+'</b>':''} em ${fmtD(data)}${valor?' — '+money(valor):''}${ofi?' (oficina '+esc(ofi)+')':''}.`};
   });
 }
