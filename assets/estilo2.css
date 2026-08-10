@@ -3220,3 +3220,14 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .mon-stats .mon-stats-prox,.mon-stats .mon-stats-rede{ display:none }
   .mon-v-placa{ font-size:9.5px }
 }
+/* ---- v6.67: muitas cidades e rodovias — nomes menores e legiveis ---- */
+.mon-r-nome{ fill:rgba(198,226,244,.72); font-size:8.5px; font-weight:600; letter-spacing:.2px;
+  paint-order:stroke; stroke:rgba(4,12,22,.8); stroke-width:2.4px; stroke-linejoin:round }
+.mon-r-dot{ fill:rgba(200,230,248,.8) }
+.mon-rod rect{ fill:rgba(5,16,28,.92) }
+.mon-rod text{ font-size:9px; letter-spacing:1px }
+.mon-malha path{ stroke:rgba(150,205,240,.26); stroke-width:2.8 }
+@media(max-width:860px){
+  .mon-r-nome{ display:none }       /* no celular ficam só os pontos */
+  .mon-rod{ display:none }
+}

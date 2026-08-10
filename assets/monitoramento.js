@@ -48,7 +48,36 @@ const MON_LOCAIS = [
   { id:'primeiromaio', nome:'Primeiro de Maio', tipo:'referencia', uf:'PR', lat:-22.8525, lon:-51.0300 },
   { id:'assai',     nome:'Assaí',      tipo:'referencia', uf:'PR', lat:-23.3733, lon:-50.8419 },
   { id:'tamarana',  nome:'Tamarana',   tipo:'referencia', uf:'PR', lat:-23.7231, lon:-51.1006 },
-  { id:'califórnia',nome:'Califórnia', tipo:'referencia', uf:'PR', lat:-23.6558, lon:-51.3536 },
+  { id:'california',nome:'Califórnia', tipo:'referencia', uf:'PR', lat:-23.6558, lon:-51.3536 },
+  /* norte / vale do Paranapanema */
+  { id:'porecatu',  nome:'Porecatu',   tipo:'referencia', uf:'PR', lat:-22.7550, lon:-51.3792 },
+  { id:'alvorada',  nome:'Alvorada do Sul', tipo:'referencia', uf:'PR', lat:-22.7797, lon:-51.2264 },
+  { id:'centenario',nome:'Centenário do Sul', tipo:'referencia', uf:'PR', lat:-22.8203, lon:-51.5967 },
+  { id:'lupionopolis',nome:'Lupionópolis', tipo:'referencia', uf:'PR', lat:-22.7508, lon:-51.6631 },
+  { id:'pradoferreira',nome:'Prado Ferreira', tipo:'referencia', uf:'PR', lat:-23.0086, lon:-51.4436 },
+  { id:'miraselva', nome:'Miraselva',  tipo:'referencia', uf:'PR', lat:-22.9761, lon:-51.4989 },
+  { id:'guaraci',   nome:'Guaraci',    tipo:'referencia', uf:'PR', lat:-22.9694, lon:-51.6522 },
+  /* oeste / região de Maringá */
+  { id:'colorado',  nome:'Colorado',   tipo:'referencia', uf:'PR', lat:-22.8375, lon:-51.9739 },
+  { id:'iguaracu',  nome:'Iguaraçu',   tipo:'referencia', uf:'PR', lat:-23.1911, lon:-51.8264 },
+  { id:'angulo',    nome:'Ângulo',     tipo:'referencia', uf:'PR', lat:-23.1839, lon:-51.9114 },
+  { id:'florida',   nome:'Flórida',    tipo:'referencia', uf:'PR', lat:-23.0872, lon:-51.9542 },
+  { id:'munhoz',    nome:'Munhoz de Melo', tipo:'referencia', uf:'PR', lat:-23.1447, lon:-51.7736 },
+  { id:'novaesperanca',nome:'Nova Esperança', tipo:'referencia', uf:'PR', lat:-23.1836, lon:-52.2028 },
+  /* leste / região de Cornélio */
+  { id:'urai',      nome:'Uraí',       tipo:'referencia', uf:'PR', lat:-23.2003, lon:-50.7936 },
+  { id:'leopolis',  nome:'Leópolis',   tipo:'referencia', uf:'PR', lat:-23.0864, lon:-50.7492 },
+  { id:'sertaneja', nome:'Sertaneja',  tipo:'referencia', uf:'PR', lat:-23.0400, lon:-50.8347 },
+  { id:'ranchoalegre',nome:'Rancho Alegre', tipo:'referencia', uf:'PR', lat:-23.0703, lon:-50.9214 },
+  { id:'cornelio',  nome:'Cornélio Procópio', tipo:'referencia', uf:'PR', lat:-23.1811, lon:-50.6464 },
+  { id:'santamariana',nome:'Santa Mariana', tipo:'referencia', uf:'PR', lat:-23.1467, lon:-50.5169 },
+  /* sul / região de Apucarana */
+  { id:'sabaudia',  nome:'Sabáudia',   tipo:'referencia', uf:'PR', lat:-23.3006, lon:-51.5539 },
+  { id:'pitangueiras',nome:'Pitangueiras', tipo:'referencia', uf:'PR', lat:-23.2264, lon:-51.5900 },
+  { id:'cambira',   nome:'Cambira',    tipo:'referencia', uf:'PR', lat:-23.5928, lon:-51.5794 },
+  { id:'marumbi',   nome:'Marumbi',    tipo:'referencia', uf:'PR', lat:-23.7069, lon:-51.6403 },
+  { id:'riobom',    nome:'Rio Bom',    tipo:'referencia', uf:'PR', lat:-23.7561, lon:-51.4189 },
+  { id:'bomsucesso',nome:'Bom Sucesso',tipo:'referencia', uf:'PR', lat:-23.7078, lon:-51.7669 },
 ];
 function monBase(){ return MON_LOCAIS.find(function(l){ return l.tipo==='base'; }) || MON_LOCAIS[0]; }
 function monDestinos(){ return MON_LOCAIS.filter(function(l){ return l.tipo==='destino'; }); }
@@ -71,12 +100,27 @@ const MON_VIAS = [
   { id:'br369-l', nome:'BR-369', cidades:['londrina','ibipora','jataizinho'] },
   { id:'pr170',   nome:'PR-170', cidades:['londrina','belavista','florestopolis'] },
   { id:'pr218',   nome:'PR-218', cidades:['ibipora','sertanopolis','primeiromaio'] },
-  { id:'pr457',   nome:'PR-457', cidades:['londrina','tamarana'] },
-  { id:'pr090',   nome:'PR-090', cidades:['jataizinho','assai'] },
-  { id:'pr218b',  nome:'PR-218', cidades:['jaguapita','astorga','mandaguari'] },
-  { id:'pr444',   nome:'PR-444', cidades:['arapongas','jaguapita'] },
-  { id:'br376',   nome:'BR-376', cidades:['maringa','mandaguacu'] },
-  { id:'pr445',   nome:'PR-445', cidades:['londrina','califórnia'] },
+  { id:'pr090',   nome:'PR-090', cidades:['londrina','tamarana'] },
+  { id:'pr218b',  nome:'PR-218', cidades:['jaguapita','astorga','iguaracu','angulo','florida','colorado'] },
+  { id:'pr444',   nome:'PR-444', cidades:['arapongas','sabaudia','pitangueiras','jaguapita'] },
+  { id:'br376',   nome:'BR-376', cidades:['maringa','mandaguacu','novaesperanca'] },
+  { id:'pr445',   nome:'PR-445', cidades:['londrina','california','riobom'] },
+  /* leste — sentido Cornélio Procópio */
+  { id:'br369e',  nome:'BR-369', cidades:['jataizinho','urai','cornelio','santamariana'] },
+  { id:'pr160',   nome:'PR-160', cidades:['assai','urai'] },
+  { id:'pr436',   nome:'PR-436', cidades:['sertanopolis','ranchoalegre','sertaneja','leopolis'] },
+  /* norte — vale do Paranapanema */
+  { id:'pr170n',  nome:'PR-170', cidades:['florestopolis','porecatu'] },
+  { id:'pr538',   nome:'PR-538', cidades:['belavista','alvorada','porecatu'] },
+  { id:'pr340',   nome:'PR-340', cidades:['centenario','lupionopolis','guaraci'] },
+  { id:'pr457n',  nome:'PR-457', cidades:['pradoferreira','miraselva','centenario'] },
+  { id:'pr218n',  nome:'PR-218', cidades:['jaguapita','pradoferreira'] },
+  { id:'pr317',   nome:'PR-317', cidades:['maringa','iguaracu','munhoz','astorga'] },
+  { id:'pr323n',  nome:'PR-323', cidades:['colorado','centenario'] },
+  /* sul — região de Apucarana */
+  { id:'br369s',  nome:'BR-369', cidades:['apucarana','cambira','marumbi'] },
+  { id:'pr082',   nome:'PR-082', cidades:['jandaia','bomsucesso'] },
+  { id:'pr466',   nome:'PR-466', cidades:['california','riobom','marumbi'] },
 ];
 const MON_ROTAS = [
   { id:'r-cambe',    de:'londrina', para:'cambe', caminho:['londrina','cambe'], rodovia:'BR-369', status:'online' },
@@ -198,7 +242,7 @@ const MonSim = {
     });
   },
   passo: function(dt){
-    const escala=0.00011;      /* ritmo calmo: a rota inteira leva ~2,5 min */
+    const escala=0.0009;       /* ritmo original, mais ágil */
     this.veiculos.forEach(function(m){
       if(m.parado>0){ m.parado-=dt;
         if(m.parado<=0){ m.parado=0; m.sentido=-m.sentido; m.status=m.sentido>0?'transito':'retornando'; }
@@ -467,11 +511,17 @@ function monMapaHTML(){
     +'</g></g>';
 
   /* cidades de referência */
+  /* com muitas cidades os nomes se encavalam: quem estiver perto de outra
+     já colocada joga o nome para baixo, alternando */
+  const _refPost=[];
   const refSVG=monReferencias().map(function(c){
     const p=monProjetar(c);
+    let acima=true;
+    _refPost.forEach(function(q){ if(Math.abs(p.x-q.x)<58 && Math.abs(p.y-q.y)<16 && q.acima) acima=false; });
+    _refPost.push({x:p.x, y:p.y, acima:acima});
     return '<g class="mon-ref" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
-      +'<circle class="mon-r-dot" r="1.9"/>'
-      +'<text class="mon-r-nome" y="-6" text-anchor="middle">'+esc(c.nome)+'</text></g>';
+      +'<circle class="mon-r-dot" r="2.1"/>'
+      +'<text class="mon-r-nome" y="'+(acima? -6.5 : 11)+'" text-anchor="middle">'+esc(c.nome)+'</text></g>';
   }).join('');
 
   /* veículos */
