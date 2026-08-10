@@ -2940,3 +2940,190 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .antt-acoes{ margin-left:0; width:100%; }
   .antt-acoes .btn{ flex:1; justify-content:center }
 }
+/* ================================================================== */
+/*  MONITORAMENTO — MAPA CHEIO (v6.64)                                */
+/*  Substitui o visual anterior: o mapa preenche o card inteiro.      */
+/* ================================================================== */
+.mon-wrap{ position:relative; height:452px; overflow:hidden; border-radius:0 0 18px 18px; background:#050d17 }
+.mon-svg{ position:absolute; inset:0; width:100%; height:100%; display:block }
+
+/* ---- fundo do mapa ---- */
+.mon-relevo ellipse{ fill:rgba(38,92,132,.16) }
+.mon-bg-vias path{ fill:none; stroke:rgba(128,178,215,.10); stroke-width:1 }
+.mon-bg-urb line{ stroke:rgba(128,178,215,.085); stroke-width:.8 }
+.mon-hex{ opacity:.85; transition:opacity .3s ease }
+.mon-vinheta{ pointer-events:none }
+.mon-svg.sem-textura .mon-hex,
+.mon-svg.sem-textura .mon-bg-vias,
+.mon-svg.sem-textura .mon-bg-urb,
+.mon-svg.sem-textura .mon-relevo{ opacity:0; transition:opacity .3s ease }
+.mon-zoom{ transition:transform .45s cubic-bezier(.22,1,.36,1) }
+
+/* anéis de distância + malha viária principal */
+.mon-anel{ fill:none; stroke:rgba(96,170,215,.12); stroke-width:1; stroke-dasharray:2 8 }
+.mon-malha path{ fill:none; stroke:rgba(120,180,220,.20); stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round }
+.mon-svg.sem-ref .mon-ref,.mon-svg.sem-ref .mon-malha,
+.mon-svg.sem-ref .mon-anel,.mon-svg.sem-ref .mon-rod{ opacity:0; transition:opacity .3s ease }
+
+/* rótulos de rodovia */
+.mon-rod rect{ fill:rgba(7,20,34,.82); stroke:rgba(120,180,220,.22) }
+.mon-rod text{ fill:rgba(168,200,226,.62); font-size:9px; font-weight:700; letter-spacing:1.1px }
+
+/* ---- rotas pontilhadas com brilho ---- */
+.mon-via-glow{ fill:none; stroke:rgba(60,190,235,.20); stroke-width:9; stroke-linecap:round; filter:blur(5px) }
+.mon-via{ fill:none; stroke:#39c4f5; stroke-width:2.6; stroke-linecap:round;
+  stroke-dasharray:.1 9; opacity:.95 }
+.mon-via-fluxo{ fill:none; stroke:#bff0ff; stroke-width:3; stroke-linecap:round;
+  stroke-dasharray:.1 9; animation:monFluxo 2.4s linear infinite }
+@keyframes monFluxo{ from{ stroke-dashoffset:0 } to{ stroke-dashoffset:-9 } }
+.mon-rota.mon-st-atencao .mon-via{ stroke:#7ee08a }
+.mon-rota.mon-st-atencao .mon-via-glow{ stroke:rgba(126,224,138,.20) }
+.mon-rota.mon-st-atencao .mon-via-fluxo{ stroke:#d8ffdd }
+
+/* ---- destinos: anéis concêntricos ---- */
+.mon-cidade{ cursor:pointer; animation:monEntra .55s cubic-bezier(.22,1,.36,1) both; animation-delay:calc(var(--i,0)*.1s) }
+@keyframes monEntra{ from{ opacity:0 } to{ opacity:1 } }
+.mon-c-hit{ fill:transparent }
+.mon-c-r1,.mon-c-r2,.mon-c-r3{ fill:none; stroke:rgba(70,200,245,.30); stroke-width:1 }
+.mon-c-r2{ stroke:rgba(70,200,245,.20) } .mon-c-r3{ stroke:rgba(70,200,245,.12) }
+.mon-c-glow{ fill:rgba(80,210,250,.30); filter:url(#monSoft) }
+.mon-c-dot{ fill:#eaffff; filter:url(#monSoft) }
+.mon-c-nome{ fill:#eaf6ff; font-size:14px; font-weight:700; letter-spacing:1.7px }
+.mon-c-lbl{ pointer-events:none }
+.mon-c-badge rect{ fill:rgba(7,22,38,.86); stroke:rgba(110,190,230,.28) }
+.mon-c-badge text{ fill:rgba(190,225,245,.9); font-size:9px; font-weight:700; letter-spacing:1.2px }
+.mon-cidade:hover .mon-c-glow,.mon-cidade:focus .mon-c-glow{ fill:rgba(120,235,255,.5) }
+.mon-cidade:focus{ outline:none }
+
+/* ---- base: anéis grandes ---- */
+.mon-base{ cursor:pointer }
+.mon-b-hit{ fill:transparent }
+.mon-b-r2,.mon-b-r3,.mon-b-r4,.mon-b-r5{ fill:none; stroke:rgba(70,200,245,.30); stroke-width:1.1 }
+.mon-b-r3{ stroke:rgba(70,200,245,.22) } .mon-b-r4{ stroke:rgba(70,200,245,.15) }
+.mon-b-r5{ stroke:rgba(70,200,245,.09) }
+.mon-b-r2{ animation:monRad 4.6s ease-out infinite; transform-box:fill-box; transform-origin:center }
+@keyframes monRad{ 0%{ transform:scale(.5); opacity:.75 } 70%{ transform:scale(2.4); opacity:0 } 100%{ opacity:0 } }
+.mon-b-halo{ fill:rgba(90,220,255,.30); filter:url(#monSoft) }
+.mon-b-nucleo{ fill:#fbffff; filter:url(#monSoft) }
+.mon-b-lbl{ pointer-events:none }
+.mon-b-nome{ fill:#f2fbff; font-size:19px; font-weight:800; letter-spacing:3px }
+.mon-b-sub{ fill:rgba(150,210,235,.85); font-size:9.5px; font-weight:700; letter-spacing:2.6px }
+.mon-base:focus{ outline:none }
+
+/* ---- temperatura (dado real; sem internet não aparece) ---- */
+.mon-wx-t{ fill:#eaf6ff; font-size:17px; font-weight:600; letter-spacing:.5px }
+.wx-nuv{ fill:rgba(205,230,245,.9) }
+.wx-sol{ fill:#ffd98a }
+.wx-chuva{ stroke:rgba(150,205,240,.9); stroke-width:1.4; stroke-linecap:round; fill:none }
+
+/* ---- cidades de referência ---- */
+.mon-r-dot{ fill:rgba(160,200,228,.42) }
+.mon-r-nome{ fill:rgba(165,202,230,.42); font-size:8.5px; font-weight:600; letter-spacing:.4px; pointer-events:none }
+
+/* ---- veículos ---- */
+.mon-veic{ cursor:pointer }
+.mon-v-halo{ fill:rgba(70,205,245,.16) }
+.mon-v-body{ fill:#cfe9fa } .mon-v-cab{ fill:#63c8ee } .mon-v-far{ fill:#fff0bd }
+.mon-v-ico{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)) }
+.mon-v-placa{ fill:#eaf6ff; font-size:9px; font-weight:700; letter-spacing:.6px; pointer-events:none;
+  paint-order:stroke; stroke:rgba(3,12,22,.9); stroke-width:3px; stroke-linejoin:round }
+.mon-veic:hover .mon-v-halo,.mon-veic:focus .mon-v-halo{ fill:rgba(120,240,255,.3) }
+.mon-veic.parado .mon-v-cab{ fill:#e0b054 }
+.mon-veic:focus{ outline:none }
+
+/* ---- escala ---- */
+.mon-escala line{ stroke:rgba(160,200,225,.4); stroke-width:1.2 }
+.mon-escala text{ fill:rgba(165,205,230,.55); font-size:8.5px; font-weight:600; letter-spacing:.5px }
+
+/* ---- controles à esquerda (como na referência) ---- */
+.mon-ctrls{ position:absolute; left:14px; right:auto; bottom:auto; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; gap:7px; z-index:3 }
+.mon-ctl{ width:36px; height:36px; display:grid; place-items:center; cursor:pointer; padding:0;
+  border-radius:10px; color:rgba(200,228,245,.85); background:rgba(9,22,38,.72);
+  border:1px solid rgba(110,180,220,.18); backdrop-filter:blur(8px); transition:all .16s ease }
+.mon-ctl svg{ width:16px; height:16px }
+.mon-ctl:hover{ color:#eaf6ff; border-color:rgba(90,210,245,.5); background:rgba(16,48,72,.85);
+  box-shadow:0 0 16px rgba(60,190,235,.22) }
+.mon-ctl:active{ transform:scale(.94) }
+
+/* ---- painéis flutuantes ---- */
+.mon-stats{ position:absolute; right:14px; left:auto; top:12px; display:flex; flex-direction:column; gap:5px;
+  padding:10px 13px; border-radius:11px; pointer-events:none; z-index:3;
+  background:rgba(7,20,34,.55); border:1px solid rgba(110,180,220,.14); backdrop-filter:blur(8px) }
+.mon-stats span{ display:flex; align-items:baseline; gap:6px; font-size:10.5px;
+  color:rgba(180,212,235,.75); letter-spacing:.3px; white-space:nowrap }
+.mon-stats b{ font-size:14px; color:#eaf6ff; font-weight:700; min-width:16px }
+.mon-stats-km b{ color:#7fe3d4 !important }
+
+.mon-legenda{ position:absolute; left:64px; right:auto; top:12px; display:flex; gap:12px; flex-wrap:wrap;
+  padding:7px 12px; border-radius:999px; pointer-events:none; z-index:3;
+  background:rgba(7,20,34,.55); border:1px solid rgba(110,180,220,.14); backdrop-filter:blur(8px) }
+.mon-legenda span{ display:inline-flex; align-items:center; gap:6px; font-size:10px;
+  color:rgba(180,212,235,.78); letter-spacing:.3px; white-space:nowrap }
+.mon-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none }
+.mon-dot.ok{ background:#4fd6a8; box-shadow:0 0 6px rgba(79,214,168,.7) }
+.mon-dot.go{ background:#57c8e0; box-shadow:0 0 6px rgba(87,200,224,.7) }
+.mon-dot.wa{ background:#e0b054; box-shadow:0 0 6px rgba(224,176,84,.6) }
+
+.mon-sync{ position:absolute; right:14px; left:auto; bottom:12px; display:flex; align-items:center; gap:7px;
+  padding:7px 13px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:1px; z-index:3;
+  color:rgba(165,208,230,.8); background:rgba(7,20,34,.55);
+  border:1px solid rgba(110,180,220,.14); backdrop-filter:blur(8px); pointer-events:none }
+.mon-sync i{ width:6px; height:6px; border-radius:50%; background:#4fd6a8; flex:none;
+  animation:monBip 2.6s ease-in-out infinite }
+@keyframes monBip{ 0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(79,214,168,.5) }
+  50%{ opacity:.55; box-shadow:0 0 0 4px rgba(79,214,168,0) } }
+.mon-sync b{ color:#d6e9f6; letter-spacing:.6px }
+.mon-fonte{ margin-left:4px; padding-left:9px; border-left:1px solid rgba(140,180,215,.22);
+  font-weight:600; letter-spacing:.2px; color:rgba(150,190,215,.6); text-transform:none; pointer-events:auto }
+
+/* ---- tooltip ---- */
+.mon-tip{ position:absolute; z-index:14; min-width:186px; max-width:252px; padding:11px 13px;
+  border-radius:12px; pointer-events:none; opacity:0; transform:translateY(4px);
+  transition:opacity .16s ease, transform .16s ease;
+  background:linear-gradient(165deg,rgba(10,30,50,.97),rgba(6,18,32,.97));
+  border:1px solid rgba(100,190,225,.26); box-shadow:0 12px 34px rgba(0,0,0,.55) }
+.mon-tip.show{ opacity:1; transform:none }
+.mon-tip-h{ display:flex; align-items:center; gap:8px; margin-bottom:3px }
+.mon-tip-h b{ font-size:12.5px; color:#eaf6ff; letter-spacing:.4px }
+.mon-tip-plate{ margin-left:auto; font-size:9px; font-weight:700; letter-spacing:.8px;
+  padding:2px 7px; border-radius:5px; color:#9fe6da;
+  background:rgba(80,210,200,.13); border:1px solid rgba(80,210,200,.3) }
+.mon-tip-sub{ font-size:10px; color:rgba(165,202,228,.65); margin-bottom:7px }
+.mon-tip-g{ display:grid; grid-template-columns:1fr 1fr; gap:7px 10px; margin:7px 0 8px }
+.mon-tip-g span{ display:flex; flex-direction:column; gap:1px; min-width:0 }
+.mon-tip-g small{ font-size:8.5px; text-transform:uppercase; letter-spacing:.6px; color:rgba(160,198,222,.55) }
+.mon-tip-g b{ font-size:11.5px; color:#dbeaf5; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.mon-tip-bar{ height:3px; border-radius:2px; background:rgba(120,180,215,.18); overflow:hidden; margin:2px 0 7px }
+.mon-tip-bar i{ display:block; height:100%; border-radius:2px; background:linear-gradient(90deg,#39c4f5,#2f7fd8) }
+.mon-tip-rota{ font-size:9px; color:rgba(160,198,222,.58); letter-spacing:.3px; margin-bottom:6px }
+.mon-tip-f{ display:flex; align-items:center; gap:6px; padding-top:7px; font-size:9.5px; font-weight:700;
+  letter-spacing:.7px; color:rgba(178,216,236,.8); border-top:1px solid rgba(120,180,215,.14) }
+.mon-tip-sim{ margin-left:auto; font-weight:600; letter-spacing:.2px; font-size:8.5px;
+  color:rgba(150,188,212,.5); text-transform:none }
+
+/* ---- "AO VIVO" com pulso discreto ---- */
+.ini-stage-h .pex-live{ display:inline-flex; align-items:center; gap:6px }
+.ini-stage-h .pex-live::before{ content:''; width:6px; height:6px; border-radius:50%; background:#4fd6a8;
+  animation:monBip 2.6s ease-in-out infinite }
+
+/* ---- celular ---- */
+@media(max-width:860px){
+  .mon-wrap{ height:380px }
+  .mon-r-nome{ display:none }
+  .mon-stats{ right:10px; top:10px; padding:8px 11px; gap:3px }
+  .mon-stats span{ font-size:9.5px } .mon-stats b{ font-size:12.5px }
+  .mon-stats .mon-stats-km{ display:none }
+  .mon-legenda{ display:none }
+  .mon-sync{ right:10px; bottom:10px; font-size:9px; padding:6px 10px }
+  .mon-fonte{ display:none }
+  .mon-ctrls{ left:10px; right:auto; gap:6px }
+  .mon-ctl{ width:40px; height:40px }
+  .mon-b-nome{ font-size:16px } .mon-c-nome{ font-size:12px }
+  .mon-wx-t{ font-size:14px }
+  .mon-tip{ min-width:168px; max-width:216px }
+}
+@media(prefers-reduced-motion:reduce){
+  .mon-via-fluxo,.mon-b-r2,.mon-cidade,.mon-sync i,.ini-stage-h .pex-live::before{ animation:none!important }
+  .mon-zoom{ transition:none }
+}
