@@ -41,6 +41,14 @@ const MON_LOCAIS = [
   { id:'jataizinho',nome:'Jataizinho', tipo:'referencia', uf:'PR', lat:-23.2553, lon:-50.9750 },
   { id:'sertanopolis',nome:'Sertanópolis', tipo:'referencia', uf:'PR', lat:-23.0578, lon:-51.0378 },
   { id:'belavista', nome:'Bela Vista do Paraíso', tipo:'referencia', uf:'PR', lat:-22.9944, lon:-51.1936 },
+  { id:'astorga',   nome:'Astorga',    tipo:'referencia', uf:'PR', lat:-23.2325, lon:-51.6656 },
+  { id:'jaguapita', nome:'Jaguapitã',  tipo:'referencia', uf:'PR', lat:-23.1128, lon:-51.5347 },
+  { id:'mandaguacu',nome:'Mandaguaçu', tipo:'referencia', uf:'PR', lat:-23.3475, lon:-52.0947 },
+  { id:'florestopolis',nome:'Florestópolis', tipo:'referencia', uf:'PR', lat:-22.8578, lon:-51.3872 },
+  { id:'primeiromaio', nome:'Primeiro de Maio', tipo:'referencia', uf:'PR', lat:-22.8525, lon:-51.0300 },
+  { id:'assai',     nome:'Assaí',      tipo:'referencia', uf:'PR', lat:-23.3733, lon:-50.8419 },
+  { id:'tamarana',  nome:'Tamarana',   tipo:'referencia', uf:'PR', lat:-23.7231, lon:-51.1006 },
+  { id:'califórnia',nome:'Califórnia', tipo:'referencia', uf:'PR', lat:-23.6558, lon:-51.3536 },
 ];
 function monBase(){ return MON_LOCAIS.find(function(l){ return l.tipo==='base'; }) || MON_LOCAIS[0]; }
 function monDestinos(){ return MON_LOCAIS.filter(function(l){ return l.tipo==='destino'; }); }
@@ -61,8 +69,14 @@ const MON_VIAS = [
   { id:'br369-o', nome:'BR-369', cidades:['londrina','cambe','rolandia','arapongas','apucarana','jandaia','mandaguari','marialva','sarandi','maringa'] },
   { id:'pr323',   nome:'PR-323', cidades:['maringa','paicandu'] },
   { id:'br369-l', nome:'BR-369', cidades:['londrina','ibipora','jataizinho'] },
-  { id:'pr170',   nome:'PR-170', cidades:['londrina','belavista'] },
-  { id:'pr218',   nome:'PR-218', cidades:['ibipora','sertanopolis'] },
+  { id:'pr170',   nome:'PR-170', cidades:['londrina','belavista','florestopolis'] },
+  { id:'pr218',   nome:'PR-218', cidades:['ibipora','sertanopolis','primeiromaio'] },
+  { id:'pr457',   nome:'PR-457', cidades:['londrina','tamarana'] },
+  { id:'pr090',   nome:'PR-090', cidades:['jataizinho','assai'] },
+  { id:'pr218b',  nome:'PR-218', cidades:['jaguapita','astorga','mandaguari'] },
+  { id:'pr444',   nome:'PR-444', cidades:['arapongas','jaguapita'] },
+  { id:'br376',   nome:'BR-376', cidades:['maringa','mandaguacu'] },
+  { id:'pr445',   nome:'PR-445', cidades:['londrina','califórnia'] },
 ];
 const MON_ROTAS = [
   { id:'r-cambe',    de:'londrina', para:'cambe', caminho:['londrina','cambe'], rodovia:'BR-369', status:'online' },
@@ -120,10 +134,33 @@ function monProjetar(loc){
   return { x: p.cx + (loc.lon-p.loMed)*p.k*p.esc, y: p.cy - (loc.lat-p.laMed)*p.esc };
 }
 function monPxPorKm(){ return (_monProj||monCalcProjecao()).esc/111.32; }
+/* Rodovia não é reta entre duas cidades: acrescenta pontos intermediários
+   com um desvio lateral suave (determinístico) para o traçado serpentear
+   como uma via de verdade. */
+function _monSinuoso(pts){
+  if(pts.length<2) return pts;
+  const out=[pts[0]];
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i], b=pts[i+1];
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy);
+    if(len>52){
+      const nx=-dy/len, ny=dx/len;                       /* perpendicular */
+      const n=Math.max(1, Math.round(len/70));           /* 1 curva a cada ~70px */
+      for(let k=1;k<=n;k++){
+        const t=k/(n+1);
+        /* semente estável: depende da posição, então não muda a cada quadro */
+        const s=Math.sin((a.x+a.y)*0.07 + k*2.3) * Math.min(16, len*0.10);
+        out.push({ x:a.x+dx*t+nx*s, y:a.y+dy*t+ny*s });
+      }
+    }
+    out.push(b);
+  }
+  return out;
+}
 function monCaminhoDe(ids){
-  const pts=ids.map(function(id){ return monProjetar(monLocal(id)); });
+  let pts=ids.map(function(id){ return monProjetar(monLocal(id)); });
   if(pts.length<2) return '';
-  if(pts.length===2) return 'M'+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1)+' L'+pts[1].x.toFixed(1)+' '+pts[1].y.toFixed(1);
+  pts=_monSinuoso(pts);
   let d='M'+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1);
   for(let i=0;i<pts.length-1;i++){
     const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||pts[i+1];
@@ -161,7 +198,7 @@ const MonSim = {
     });
   },
   passo: function(dt){
-    const escala=0.0009;
+    const escala=0.00011;      /* ritmo calmo: a rota inteira leva ~2,5 min */
     this.veiculos.forEach(function(m){
       if(m.parado>0){ m.parado-=dt;
         if(m.parado<=0){ m.parado=0; m.sentido=-m.sentido; m.status=m.sentido>0?'transito':'retornando'; }
@@ -439,14 +476,20 @@ function monMapaHTML(){
 
   /* veículos */
   const veicSVG=MonProvider.listar().map(function(m){
+    /* caminhão maior e mais detalhado: carreta + cavalo + rodas */
     return '<g class="mon-veic" id="mv-'+m.id+'" data-veic="'+m.id+'" tabindex="0">'
-      +'<circle class="mon-v-halo" r="13"/>'
+      +'<circle class="mon-v-halo" r="19"/>'
       +'<g class="mon-v-ico">'
-        +'<rect class="mon-v-body" x="-8" y="-4.2" width="11.6" height="8.4" rx="2.2"/>'
-        +'<rect class="mon-v-cab" x="3.5" y="-3.5" width="5.6" height="7" rx="1.6"/>'
-        +'<rect class="mon-v-far" x="8.9" y="-2" width="1.6" height="4" rx=".8"/>'
+        +'<rect class="mon-v-sombra" x="-13" y="4.5" width="25" height="3.4" rx="1.7"/>'
+        +'<rect class="mon-v-body" x="-12.5" y="-6.4" width="17" height="12.8" rx="2.6"/>'
+        +'<rect class="mon-v-linha" x="-10.5" y="-3.6" width="12.5" height="1.5" rx=".75"/>'
+        +'<rect class="mon-v-cab" x="4.8" y="-5.6" width="8.4" height="11.2" rx="2.2"/>'
+        +'<rect class="mon-v-vidro" x="9.6" y="-4.1" width="3.2" height="4.2" rx="1"/>'
+        +'<rect class="mon-v-far" x="13" y="-3" width="2.4" height="6" rx="1.1"/>'
+        +'<circle class="mon-v-roda" cx="-8" cy="6.6" r="2"/><circle class="mon-v-roda" cx="-3.4" cy="6.6" r="2"/>'
+        +'<circle class="mon-v-roda" cx="9.4" cy="6.6" r="2"/>'
       +'</g>'
-      +'<text class="mon-v-placa" y="-17" text-anchor="middle">'+esc(m.placa)+'</text>'
+      +'<text class="mon-v-placa" y="-23" text-anchor="middle">'+esc(m.placa)+'</text>'
       +'</g>';
   }).join('');
 
@@ -563,6 +606,14 @@ function monPintarInfo(){
   set('monKvC', vs.filter(function(m){ return m.status==='parado'; }).length);
   set('monKvD', monDestinos().length);
   set('monKvE', Math.round(vs.reduce(function(s,m){ return s+MonSim.restanteKm(m); },0))+' km');
+  /* velocidade média e próxima chegada (só de quem está rodando) */
+  const rodando=vs.filter(function(m){ return m.status!=='parado'; });
+  set('monKvF', rodando.length? Math.round(rodando.reduce(function(s,m){ return s+m.velocidade; },0)/rodando.length)+' km/h' : '—');
+  let prox=null;
+  rodando.forEach(function(m){ const km=MonSim.restanteKm(m);
+    if(!prox || km<prox.km) prox={km:km, m:m}; });
+  set('monKvG', prox? MonSim.eta(prox.m)+' · '+monLocal(prox.m.sentido>0? prox.m.destino : 'londrina').nome : '—');
+  set('monKvH', MON_ROTAS.length+' rotas · '+MON_LOCAIS.length+' cidades');
   const d=new Date();
   set('monSync', String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'));
 }
@@ -679,6 +730,9 @@ function monComponenteHTML(){
       +'<span><b id="monKvC">0</b>em pátio</span>'
       +'<span><b id="monKvD">0</b>destinos</span>'
       +'<span class="mon-stats-km"><b id="monKvE">0 km</b>a percorrer</span>'
+      +'<span class="mon-stats-km"><b id="monKvF">—</b>velocidade média</span>'
+      +'<span class="mon-stats-km mon-stats-prox"><b id="monKvG">—</b>próxima chegada</span>'
+      +'<span class="mon-stats-km mon-stats-rede"><b id="monKvH">—</b>na malha</span>'
     +'</div>'
     +'<div class="mon-legenda">'
       +'<span><i class="mon-dot ok"></i>Base</span>'

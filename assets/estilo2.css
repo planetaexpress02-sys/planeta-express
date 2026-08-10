@@ -3198,3 +3198,25 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .mon-v-body{ fill:#eaf7ff } .mon-v-cab{ fill:#54cdf5 } .mon-v-far{ fill:#fff4c4 }
 .mon-v-ico{ filter:drop-shadow(0 0 7px rgba(70,205,250,.6)) drop-shadow(0 2px 4px rgba(0,0,0,.7)) }
 .mon-v-placa{ font-size:9.5px; stroke-width:3.4px }
+
+/* ---- v6.66: veiculos maiores, rotas melhores, mais informacao ---- */
+.mon-v-sombra{ fill:rgba(0,0,0,.45) }
+.mon-v-body{ fill:#eef8ff }
+.mon-v-linha{ fill:rgba(70,150,190,.5) }
+.mon-v-cab{ fill:#3fc4ef }
+.mon-v-vidro{ fill:rgba(12,44,70,.85) }
+.mon-v-far{ fill:#fff3c0 }
+.mon-v-roda{ fill:#0d2233; stroke:rgba(150,205,235,.55); stroke-width:.8 }
+.mon-v-halo{ fill:rgba(80,215,255,.20) }
+.mon-veic:hover .mon-v-halo,.mon-veic:focus .mon-v-halo{ fill:rgba(120,240,255,.34) }
+.mon-veic.parado .mon-v-cab{ fill:#e8b455 }
+.mon-v-placa{ font-size:10.5px; letter-spacing:.8px }
+.mon-v-ico{ filter:drop-shadow(0 0 9px rgba(70,205,250,.55)) drop-shadow(0 3px 5px rgba(0,0,0,.75)) }
+
+/* informacao extra do painel */
+.mon-stats-prox b{ color:#8fe0ff !important }
+.mon-stats-rede b{ color:rgba(190,220,242,.85) !important; font-size:11px !important }
+@media(max-width:860px){
+  .mon-stats .mon-stats-prox,.mon-stats .mon-stats-rede{ display:none }
+  .mon-v-placa{ font-size:9.5px }
+}
