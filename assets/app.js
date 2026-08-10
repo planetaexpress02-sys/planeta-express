@@ -784,7 +784,10 @@ function viewDashboard(){
   const fD10 =_vd.filter(x=>x.d!=null&&x.d>=0&&x.d<=10);
   const fD20 =_vd.filter(x=>x.d!=null&&x.d>10&&x.d<=20);
   const fD30 =_vd.filter(x=>x.d!=null&&x.d>20&&x.d<=30);
+  /* Tudo o que está em dia (mais de 30 dias) — a fatia verde do card. */
+  const fEmDia=_vd.filter(x=>x.d!=null&&x.d>30);
   const fTotal=fVenc.length+fD10.length+fD20.length+fD30.length;
+  const fGeral=fEmDia.length+fTotal;
   const cavalos = DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').length;
   const reb = DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado').length;
   const motAtivos = DB.motoristas.filter(m=>m.status==='Ativo').length;
@@ -856,16 +859,18 @@ function viewDashboard(){
 
   <div class="grid two-col">
     <div class="card">
-      <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3><div class="r"><span class="muted" style="font-size:11.5px">faixa de atenção · clique para abrir</span></div></div>
+      <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3><div class="r"><span class="muted" style="font-size:11.5px">situação geral · clique para abrir</span></div></div>
       <div class="card-b">
         <div class="donut-wrap">
           ${donut([
+            {label:'Em dia',value:fEmDia.length,color:'#22c55e'},
             {label:'Vencidos',value:fVenc.length,color:'#dc2626'},
             {label:'≤10 dias',value:fD10.length,color:'#f97316'},
             {label:'11–20 dias',value:fD20.length,color:'#eab308'},
             {label:'21–30 dias',value:fD30.length,color:'#3b82f6'},
-          ],{center:fTotal,sub:'na faixa'})}
+          ],{center:fGeral,sub:'documentos'})}
           <div class="legend">
+            <div class="li clk" onclick="location.hash='vencimentos/emdia'"><span class="dot" style="background:#22c55e"></span>Em dia<b>${fEmDia.length}</b></div>
             <div class="li clk" onclick="location.hash='vencimentos/venc'"><span class="dot" style="background:#dc2626"></span>Vencidos<b>${fVenc.length}</b></div>
             <div class="li clk" onclick="location.hash='vencimentos/d10'"><span class="dot" style="background:#f97316"></span>Vence em ≤10 dias<b>${fD10.length}</b></div>
             <div class="li clk" onclick="location.hash='vencimentos/d20'"><span class="dot" style="background:#eab308"></span>Vence em 11–20 dias<b>${fD20.length}</b></div>
@@ -1271,7 +1276,10 @@ const VENC_SEC={
   venc:{t:'Vencidos',ico:'alarm',cor:'#ff4d4d',sub:'ação imediata',kico:'i-red'},
   d10:{t:'Vence em até 10 dias',ico:'bell',cor:'#ff8c1a',sub:'urgente',kico:'i-orange'},
   d20:{t:'Vence em 11 a 20 dias',ico:'bell',cor:'#ffb020',sub:'atenção',kico:'i-amber'},
-  d30:{t:'Vence em 21 a 30 dias',ico:'cal',cor:'#2f8fff',sub:'programar',kico:'i-blue'}
+  d30:{t:'Vence em 21 a 30 dias',ico:'cal',cor:'#2f8fff',sub:'programar',kico:'i-blue'},
+  /* "Em dia" (mais de 30 dias) fica FORA da faixa: só aparece quando o usuário
+     pede, clicando na fatia verde do Painel ou no KPI verde desta tela. */
+  emdia:{t:'Em dia',ico:'check',cor:'#22c55e',sub:'mais de 30 dias — nada a fazer agora',kico:'i-green'}
 };
 function _vencBucket(d){ return d<0?'venc':(d<=10?'d10':(d<=20?'d20':'d30')); }
 function viewVencimentos(){
@@ -1280,11 +1288,13 @@ function viewVencimentos(){
   if(vencTipo!=='todos') all=all.filter(x=>x.v.tipo===vencTipo);
   const semData=all.filter(x=>x.d==null).length;
   const faixa=all.filter(x=>x.d!=null && x.d<=30);   /* só a faixa: vencidos + próximos 30 dias */
-  const groups={venc:[],d10:[],d20:[],d30:[]};
+  const groups={venc:[],d10:[],d20:[],d30:[],emdia:[]};
   faixa.forEach(x=>groups[_vencBucket(x.d)].push(x));
+  groups.emdia=all.filter(x=>x.d!=null && x.d>30);   /* em dia — fora da faixa, sob demanda */
   Object.keys(groups).forEach(k=>groups[k].sort((a,b)=>a.d-b.d));
-  const cont={venc:groups.venc.length,d10:groups.d10.length,d20:groups.d20.length,d30:groups.d30.length};
+  const cont={venc:groups.venc.length,d10:groups.d10.length,d20:groups.d20.length,d30:groups.d30.length,emdia:groups.emdia.length};
   const total=faixa.length;
+  const vendoEmDia = vencFiltro==='emdia';
 
   const kpiV=(k)=>{ const d=VENC_SEC[k]; return `<a class="kpi link ${vencFiltro===k?'ativo':''}" style="cursor:pointer" onclick="vencFiltro='${vencFiltro===k?'todos':k}';router()">
     <div class="k-top"><div class="k-ico ${d.kico}">${svg(d.ico)}</div><span class="k-go">→</span></div>
@@ -1303,17 +1313,21 @@ function viewVencimentos(){
       <div class="venc-act no-print">${anexo?`<button class="btn ghost sm" title="Baixar anexo" onclick="baixarArquivo('${anexo.id}')">${svg('download')}</button>`:''}<button class="btn ghost sm" title="Editar" onclick="modalVencimento('${v.id}')">${svg('edit')}</button></div>
     </div>`; };
 
-  const section=(k)=>{ const g=groups[k]; if(!g.length) return ''; if(vencFiltro!=='todos' && vencFiltro!==k) return ''; const d=VENC_SEC[k];
+  const section=(k)=>{ const g=groups[k]; if(!g.length) return ''; if(vencFiltro!=='todos' && vencFiltro!==k) return '';
+    if(k==='emdia' && !vendoEmDia) return '';        /* em dia só quando pedido */
+    const d=VENC_SEC[k];
     return `<div class="card venc-sec" style="border-left:3px solid ${d.cor}">
       <div class="venc-sec-h"><span class="venc-sec-dot" style="background:${d.cor};box-shadow:0 0 10px ${d.cor}"></span>
         <div><b>${d.t}</b><small>${d.sub}</small></div><span class="venc-sec-n" style="color:${d.cor};background:${d.cor}22">${g.length}</span></div>
       <div class="venc-list">${g.map(x=>itemRow(x,d.cor)).join('')}</div></div>`; };
 
   return `
-  <div class="banner">${svg('bell')}<div><b>Vencimentos — faixa de atenção</b><span>Mostra apenas o que está vencido ou vence nos próximos 30 dias, agrupado por prazo. O que está em dia (mais de 30 dias) fica oculto.</span></div>
+  <div class="banner">${svg('bell')}<div><b>Vencimentos — ${vendoEmDia?'em dia':'faixa de atenção'}</b><span>${vendoEmDia
+      ?'Tudo o que está em dia: validade acima de 30 dias, nada a fazer agora. Use os cartões acima para voltar à faixa de atenção.'
+      :'Mostra apenas o que está vencido ou vence nos próximos 30 dias, agrupado por prazo. O que está em dia (mais de 30 dias) aparece no cartão verde.'}</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
-    ${kpiV('venc')}${kpiV('d10')}${kpiV('d20')}${kpiV('d30')}
+  <div class="grid kpis" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+    ${kpiV('emdia')}${kpiV('venc')}${kpiV('d10')}${kpiV('d20')}${kpiV('d30')}
   </div>
   <div class="toolbar">
     <select class="selectlite" onchange="vencTipo=this.value;router()">
@@ -1321,12 +1335,15 @@ function viewVencimentos(){
       ${tipos.map(t=>`<option value="${esc(t)}" ${vencTipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
     ${vencFiltro!=='todos'?`<button class="btn sm no-print" onclick="vencFiltro='todos';router()">${svg('list')} Ver todas as faixas</button>`:''}
     <div class="spacer"></div>
-    <div class="muted no-print" style="font-size:12.5px">${total} vencimento(s) na faixa</div>
+    <div class="muted no-print" style="font-size:12.5px">${vendoEmDia? cont.emdia+' documento(s) em dia' : total+' vencimento(s) na faixa'}</div>
     <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
     <button class="btn no-print" onclick="modalImportar()" title="Importe uma planilha (Excel ou CSV) e o sistema puxa as validades sozinho">${svg('upload')} Importar planilha</button>
   </div>
-  ${total? `<div class="grid" style="gap:14px">${section('venc')}${section('d10')}${section('d20')}${section('d30')}</div>`
-    : `<div class="card"><div class="card-b">${emptyState('Nada vencido e nada vence nos próximos 30 dias. Tudo em dia! 👍')}</div></div>`}
+  ${vendoEmDia
+    ? (cont.emdia? `<div class="grid" style="gap:14px">${section('emdia')}</div>`
+                 : `<div class="card"><div class="card-b">${emptyState('Nenhum documento com validade acima de 30 dias.')}</div></div>`)
+    : (total? `<div class="grid" style="gap:14px">${section('venc')}${section('d10')}${section('d20')}${section('d30')}</div>`
+    : `<div class="card"><div class="card-b">${emptyState('Nada vencido e nada vence nos próximos 30 dias. Tudo em dia! 👍')}</div></div>`)}
   ${semData?`<div class="muted no-print" style="font-size:12.5px;margin-top:14px">${svg('bell')} ${semData} documento(s) sem data de validade cadastrada — cadastre a validade para acompanhá-los aqui.</div>`:''}`;
 }
 
