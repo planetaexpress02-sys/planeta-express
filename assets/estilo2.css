@@ -3127,3 +3127,74 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .mon-via-fluxo,.mon-b-r2,.mon-cidade,.mon-sync i,.ini-stage-h .pex-live::before{ animation:none!important }
   .mon-zoom{ transition:none }
 }
+
+/* ================================================================== */
+/*  MONITORAMENTO — CARTA TOPOGRÁFICA (v6.65)                         */
+/*  Mais densidade e contraste: a versão anterior ficou apagada.      */
+/* ================================================================== */
+.mon-wrap{ background:#040b14 }
+
+/* fundo: relevo, curvas de nível, rios, vias, malha urbana */
+.mon-relevo ellipse{ fill:rgba(42,104,146,.22) }
+.mon-topo path{ fill:none; stroke:rgba(96,168,212,.11); stroke-width:1 }
+.mon-rios path{ fill:none; stroke:rgba(56,150,205,.30); stroke-width:1.7; stroke-linecap:round }
+.mon-bg-vias path{ fill:none; stroke:rgba(138,190,225,.18); stroke-width:1 }
+.mon-urb-area{ fill:rgba(120,185,225,.075); stroke:rgba(140,200,235,.14); stroke-width:.8 }
+.mon-urb-grade line{ stroke:rgba(150,205,240,.16); stroke-width:.8 }
+.mon-hex{ opacity:1 }
+.mon-svg.sem-textura .mon-topo,
+.mon-svg.sem-textura .mon-rios,
+.mon-svg.sem-textura .mon-bg-vias,
+.mon-svg.sem-textura .mon-bg-urb,
+.mon-svg.sem-textura .mon-hex,
+.mon-svg.sem-textura .mon-relevo{ opacity:0; transition:opacity .3s ease }
+
+/* malha principal e anéis mais presentes */
+.mon-malha path{ stroke:rgba(150,205,240,.34); stroke-width:3.6 }
+.mon-anel{ stroke:rgba(110,190,235,.20); stroke-dasharray:3 9 }
+
+/* rodovias */
+.mon-rod rect{ fill:rgba(5,16,28,.9); stroke:rgba(130,195,235,.34) }
+.mon-rod text{ fill:rgba(190,220,242,.8); font-size:9.5px; letter-spacing:1.2px }
+
+/* ROTAS bem mais marcadas */
+.mon-via-glow{ stroke:rgba(56,200,245,.34); stroke-width:13; filter:blur(7px) }
+.mon-via{ stroke:#4fd2ff; stroke-width:3.4; stroke-dasharray:.1 10; opacity:1 }
+.mon-via-fluxo{ stroke:#eafcff; stroke-width:3.8; stroke-dasharray:.1 10 }
+.mon-rota.mon-st-atencao .mon-via{ stroke:#8df09a }
+.mon-rota.mon-st-atencao .mon-via-glow{ stroke:rgba(141,240,154,.32) }
+
+/* DESTINOS com anéis visíveis */
+.mon-c-r1,.mon-c-r2,.mon-c-r3{ stroke:rgba(90,215,255,.52) }
+.mon-c-r2{ stroke:rgba(90,215,255,.34) } .mon-c-r3{ stroke:rgba(90,215,255,.20) }
+.mon-c-glow{ fill:rgba(95,220,255,.5) }
+.mon-c-dot{ fill:#fbffff }
+.mon-c-nome{ fill:#f4fcff; font-size:15px; letter-spacing:2px;
+  paint-order:stroke; stroke:rgba(3,11,20,.75); stroke-width:3px; stroke-linejoin:round }
+.mon-c-badge rect{ fill:rgba(5,18,32,.92); stroke:rgba(120,205,240,.42) }
+.mon-c-badge text{ fill:#cfeaf9; font-size:9.5px }
+
+/* BASE com radar forte */
+.mon-b-r2,.mon-b-r3,.mon-b-r4,.mon-b-r5{ stroke:rgba(90,215,255,.5); stroke-width:1.3 }
+.mon-b-r3{ stroke:rgba(90,215,255,.36) } .mon-b-r4{ stroke:rgba(90,215,255,.25) }
+.mon-b-r5{ stroke:rgba(90,215,255,.15) }
+.mon-b-halo{ fill:rgba(105,225,255,.46) }
+.mon-b-nucleo{ fill:#ffffff }
+.mon-b-nome{ fill:#ffffff; font-size:21px; letter-spacing:3.6px;
+  paint-order:stroke; stroke:rgba(3,11,20,.8); stroke-width:4px; stroke-linejoin:round }
+.mon-b-sub{ fill:rgba(170,225,248,.95); font-size:10px; letter-spacing:3px;
+  paint-order:stroke; stroke:rgba(3,11,20,.7); stroke-width:3px; stroke-linejoin:round }
+
+/* temperatura */
+.mon-wx-t{ fill:#f4fcff; font-size:18px;
+  paint-order:stroke; stroke:rgba(3,11,20,.7); stroke-width:3px; stroke-linejoin:round }
+
+/* cidades de referência */
+.mon-r-dot{ fill:rgba(180,218,240,.62) }
+.mon-r-nome{ fill:rgba(185,218,240,.6); font-size:9px }
+
+/* veículos maiores */
+.mon-v-halo{ fill:rgba(80,215,255,.26) }
+.mon-v-body{ fill:#eaf7ff } .mon-v-cab{ fill:#54cdf5 } .mon-v-far{ fill:#fff4c4 }
+.mon-v-ico{ filter:drop-shadow(0 0 7px rgba(70,205,250,.6)) drop-shadow(0 2px 4px rgba(0,0,0,.7)) }
+.mon-v-placa{ font-size:9.5px; stroke-width:3.4px }

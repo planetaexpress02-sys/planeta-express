@@ -233,71 +233,128 @@ function monPintarClima(){
 }
 
 /* ==================================================================
-   8) FUNDO DO MAPA — gerado por código, sempre igual (semente fixa),
-   sem imagem e sem internet. Dá o aspecto de carta escura: relevo,
-   malha de vias secundárias e manchas urbanas junto das cidades.
+   FUNDO DO MAPA — carta topográfica escura, gerada por código.
+   Semente fixa: sai sempre igual, sem imagem e sem internet.
+   Camadas: relevo -> curvas de nível -> hidrografia -> vias
+            -> manchas urbanas -> hexágonos
    ================================================================== */
 function _monRnd(s){ let x=s>>>0; return function(){ x^=x<<13; x>>>=0; x^=x>>17; x^=x<<5; x>>>=0; return x/4294967296; }; }
 
-/* vias secundárias: linhas finas irregulares por todo o mapa */
-function monFundoVias(){
-  const r=_monRnd(20260807), W=MON_VB.w, H=MON_VB.h, out=[];
-  for(let i=0;i<86;i++){
-    let x=r()*W, y=r()*H;
-    let ang=r()*Math.PI*2;
+/* ruído suave 1D (para contornos orgânicos) */
+function _monRuido(r, n){ const a=[]; for(let i=0;i<n;i++) a.push(r());
+  return function(t){ const i=Math.floor(t)%n, j=(i+1)%n, f=t-Math.floor(t), s=f*f*(3-2*f);
+    return a[i]*(1-s)+a[j]*s; }; }
+
+/* CURVAS DE NÍVEL — o que dá cara de carta topográfica */
+function monFundoTopo(){
+  const r=_monRnd(90210), out=[];
+  const morros=9;
+  for(let m=0;m<morros;m++){
+    const cx=r()*MON_VB.w, cy=r()*MON_VB.h;
+    const nz=_monRuido(r, 12);
+    const fase=r()*10;
+    const voltas=4+Math.floor(r()*4);
+    const passo=13+r()*12;
+    for(let v=1;v<=voltas;v++){
+      const base=passo*v;
+      let d='';
+      for(let a=0;a<=36;a++){
+        const ang=a/36*Math.PI*2;
+        const rr=base*(0.72+nz(fase+a/36*8)*0.62);
+        const x=cx+Math.cos(ang)*rr, y=cy+Math.sin(ang)*rr*0.68;
+        d+=(a===0?'M':'L')+x.toFixed(1)+' '+y.toFixed(1);
+      }
+      out.push('<path d="'+d+'Z"/>');
+    }
+  }
+  return out.join('');
+}
+/* HIDROGRAFIA — rios sinuosos, levemente mais azuis */
+function monFundoRios(){
+  const r=_monRnd(31337), out=[];
+  for(let i=0;i<7;i++){
+    let x=r()*MON_VB.w, y=r()<0.5? -20 : MON_VB.h+20;
+    let ang=(y<0? Math.PI/2 : -Math.PI/2)+(r()-0.5)*1.1;
     let d='M'+x.toFixed(0)+' '+y.toFixed(0);
-    const segs=3+Math.floor(r()*5);
+    const segs=9+Math.floor(r()*8);
     for(let s=0;s<segs;s++){
-      ang += (r()-0.5)*0.9;
-      const len=26+r()*72;
-      x+=Math.cos(ang)*len; y+=Math.sin(ang)*len;
-      d+=' L'+x.toFixed(0)+' '+y.toFixed(0);
-      if(x<-40||x>W+40||y<-40||y>H+40) break;
+      ang+=(r()-0.5)*0.85;
+      const len=30+r()*54;
+      const nx=x+Math.cos(ang)*len, ny=y+Math.sin(ang)*len;
+      d+=' Q'+(x+Math.cos(ang+0.5)*len*0.5).toFixed(1)+' '+(y+Math.sin(ang+0.5)*len*0.5).toFixed(1)
+        +' '+nx.toFixed(1)+' '+ny.toFixed(1);
+      x=nx; y=ny;
+      if(x<-60||x>MON_VB.w+60||y<-60||y>MON_VB.h+60) break;
     }
     out.push('<path d="'+d+'"/>');
   }
   return out.join('');
 }
-/* manchas urbanas: pequenas grades inclinadas junto de cada cidade */
+/* MALHA SECUNDÁRIA — densa, como estradas vicinais */
+function monFundoVias(){
+  const r=_monRnd(20260807), out=[];
+  for(let i=0;i<150;i++){
+    let x=r()*MON_VB.w, y=r()*MON_VB.h;
+    let ang=r()*Math.PI*2;
+    let d='M'+x.toFixed(0)+' '+y.toFixed(0);
+    const segs=3+Math.floor(r()*6);
+    for(let s=0;s<segs;s++){
+      ang+=(r()-0.5)*0.8;
+      const len=22+r()*66;
+      x+=Math.cos(ang)*len; y+=Math.sin(ang)*len;
+      d+=' L'+x.toFixed(0)+' '+y.toFixed(0);
+      if(x<-40||x>MON_VB.w+40||y<-40||y>MON_VB.h+40) break;
+    }
+    out.push('<path d="'+d+'"/>');
+  }
+  return out.join('');
+}
+/* MANCHAS URBANAS — área preenchida + quadras, junto de cada cidade */
 function monFundoUrbano(){
   const out=[];
   MON_LOCAIS.forEach(function(l, idx){
     const p=monProjetar(l);
     const r=_monRnd(1000+idx*77);
-    const base=l.tipo==='base'? 30 : (l.tipo==='destino'? 20 : 13);
+    const grande=l.tipo==='base'? 46 : (l.tipo==='destino'? 30 : 18);
+    /* mancha preenchida, irregular */
+    let d='';
+    for(let a=0;a<=14;a++){
+      const ang=a/14*Math.PI*2, rr=grande*(0.62+r()*0.55);
+      d+=(a===0?'M':'L')+(p.x+Math.cos(ang)*rr).toFixed(1)+' '+(p.y+Math.sin(ang)*rr*0.74).toFixed(1);
+    }
+    out.push('<path class="mon-urb-area" d="'+d+'Z"/>');
+    /* quadras */
     const rot=(r()*60-30).toFixed(1);
-    let g='<g transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+') rotate('+rot+')">';
-    const n=l.tipo==='referencia'? 4 : 7;
+    let g='<g class="mon-urb-grade" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+') rotate('+rot+')">';
+    const n=l.tipo==='referencia'? 5 : 9;
     for(let i=0;i<n;i++){
-      const off=(i-n/2)*(base/n*1.7);
-      g+='<line x1="'+(-base).toFixed(0)+'" y1="'+off.toFixed(1)+'" x2="'+base.toFixed(0)+'" y2="'+off.toFixed(1)+'"/>';
-      g+='<line x1="'+off.toFixed(1)+'" y1="'+(-base).toFixed(0)+'" x2="'+off.toFixed(1)+'" y2="'+base.toFixed(0)+'"/>';
+      const off=(i-n/2)*(grande/n*1.75);
+      g+='<line x1="'+(-grande).toFixed(0)+'" y1="'+off.toFixed(1)+'" x2="'+grande.toFixed(0)+'" y2="'+off.toFixed(1)+'"/>'
+        +'<line x1="'+off.toFixed(1)+'" y1="'+(-grande).toFixed(0)+'" x2="'+off.toFixed(1)+'" y2="'+grande.toFixed(0)+'"/>';
     }
     out.push(g+'</g>');
   });
   return out.join('');
 }
-/* relevo: manchas suaves e desfocadas, para o fundo não ficar chapado */
 function monFundoRelevo(){
   const r=_monRnd(778899), out=[];
-  for(let i=0;i<16;i++){
-    const cx=r()*MON_VB.w, cy=r()*MON_VB.h, rx=70+r()*190, ry=50+r()*120;
+  for(let i=0;i<20;i++){
+    const cx=r()*MON_VB.w, cy=r()*MON_VB.h, rx=80+r()*210, ry=56+r()*140;
     out.push('<ellipse cx="'+cx.toFixed(0)+'" cy="'+cy.toFixed(0)+'" rx="'+rx.toFixed(0)+'" ry="'+ry.toFixed(0)+'" transform="rotate('+(r()*180).toFixed(0)+' '+cx.toFixed(0)+' '+cy.toFixed(0)+')"/>');
   }
   return out.join('');
 }
-/* rótulos de rodovia espalhados ao longo das vias, como no mapa real */
 function monRodoviaPills(){
-  const out=[]; const r=_monRnd(4242);
+  const out=[], r=_monRnd(4242);
   MON_VIAS.forEach(function(v){
     const pts=v.cidades.map(function(id){ return monProjetar(monLocal(id)); });
     for(let i=0;i<pts.length-1;i+=2){
       const a=pts[i], b=pts[i+1]||pts[i];
       const t=0.35+r()*0.3;
-      const x=a.x+(b.x-a.x)*t, y=a.y+(b.y-a.y)*t-16;
+      const x=a.x+(b.x-a.x)*t, y=a.y+(b.y-a.y)*t-17;
       out.push('<g class="mon-rod" transform="translate('+x.toFixed(1)+','+y.toFixed(1)+')">'
-        +'<rect x="-25" y="-8" width="50" height="16" rx="4"/>'
-        +'<text y="3.7" text-anchor="middle">'+esc(v.nome)+'</text></g>');
+        +'<rect x="-26" y="-8.5" width="52" height="17" rx="4"/>'
+        +'<text y="4" text-anchor="middle">'+esc(v.nome)+'</text></g>');
     }
   });
   return out.join('');
@@ -323,15 +380,17 @@ function monMapaHTML(){
   /* destinos: anéis concêntricos + nome + temperatura + nº de veículos */
   /* cidades vizinhas (Maringá e Paiçandu ficam a 12 km) teriam os rótulos
      um sobre o outro — a de baixo desce um pouco para não colidir */
-  const _jaPostos=[];
+  /* a BASE também entra na conta: o rótulo dela fica acima do ponto e
+     Cambé, a 12 km de Londrina, batia no "BASE OPERACIONAL" */
+  const _jaPostos=[{x:bp.x, y:bp.y-46, r:118}];
   const cidadesSVG=monDestinos().map(function(c,i){
     const p=monProjetar(c);
     const n=MonSim.porDestino(c.id);
     let dy=0;
     _jaPostos.forEach(function(q){
-      if(Math.hypot(p.x-q.x, p.y-q.y) < 90) dy = (p.y>=q.y? 70 : -70);   /* altura do bloco nome+temp+selo */
+      if(Math.hypot(p.x-q.x, p.y-q.y) < (q.r||90)) dy = (p.y>=q.y? 74 : -74);   /* altura do bloco nome+temp+selo */
     });
-    _jaPostos.push({x:p.x, y:p.y});
+    _jaPostos.push({x:p.x, y:p.y+dy});
     const txtBadge=n+(n===1?' VEÍCULO':' VEÍCULOS');
     const wBadge=Math.round(txtBadge.length*6.4+22);
     const wNome=Math.round(c.nome.length*10);
@@ -349,9 +408,9 @@ function monMapaHTML(){
       +'<circle class="mon-c-r3" r="21"/><circle class="mon-c-r2" r="15"/><circle class="mon-c-r1" r="9.5"/>'
       +'<circle class="mon-c-glow" r="7"/><circle class="mon-c-dot" r="3.2"/>'
       +'<g class="mon-c-lbl" transform="translate('+lx+','+dy+')" text-anchor="'+anc+'">'
-        +'<text class="mon-c-nome" y="-12">'+esc(c.nome.toUpperCase())+'</text>'
+        +'<text class="mon-c-nome" y="-18">'+esc(c.nome.toUpperCase())+'</text>'
         +'<g class="mon-wx" id="wx-'+c.id+'" transform="translate('+(esquerda?0:-46)+',10)"></g>'
-        +'<g class="mon-c-badge" transform="translate('+(esquerda?0:-wBadge)+',22)">'
+        +'<g class="mon-c-badge" transform="translate('+(esquerda?0:-wBadge)+',24)">'
           +'<rect x="0" y="0" width="'+wBadge+'" height="19" rx="9.5"/>'
           +'<text x="'+(wBadge/2)+'" y="13" text-anchor="middle">'+txtBadge+'</text></g>'
       +'</g></g>';
@@ -412,6 +471,8 @@ function monMapaHTML(){
   /* fundo */
   +'<rect class="mon-fundo" x="0" y="0" width="'+MON_VB.w+'" height="'+MON_VB.h+'" fill="url(#monCentro)"/>'
   +'<g class="mon-relevo" filter="url(#monBlur)">'+monFundoRelevo()+'</g>'
+  +'<g class="mon-topo">'+monFundoTopo()+'</g>'
+  +'<g class="mon-rios">'+monFundoRios()+'</g>'
   +'<g class="mon-bg-vias">'+monFundoVias()+'</g>'
   +'<g class="mon-bg-urb">'+monFundoUrbano()+'</g>'
   +'<rect class="mon-hex" x="0" y="0" width="'+MON_VB.w+'" height="'+MON_VB.h+'" fill="url(#monHex)"/>'
