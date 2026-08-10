@@ -2717,3 +2717,166 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .cp-previa summary:hover{ color:#eaf1f9 }
 .cp-previa pre{ margin:0;padding:0 12px 12px;font-size:11px;line-height:1.55;color:#a9c0da;
   white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto }
+/* ================================================================== */
+/*  MONITORAMENTO OPERACIONAL (v6.60)                                 */
+/*  Mesmo tamanho e posição de antes (452px / 380px no celular).      */
+/*  Paleta contida: azul petróleo, ciano suave, verde operacional.    */
+/* ================================================================== */
+.mon-wrap{ position:relative; height:452px; overflow:hidden; border-radius:0 0 18px 18px;
+  background:
+    radial-gradient(120% 90% at 78% 34%, rgba(28,86,120,.34), transparent 62%),
+    radial-gradient(90% 80% at 12% 84%, rgba(22,64,104,.30), transparent 60%),
+    linear-gradient(160deg,#0a1826 0%,#081320 58%,#060f1a 100%); }
+.mon-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+/* ---- camadas de fundo ---- */
+.mon-fundo{ fill:transparent }
+.mon-grid line{ stroke:rgba(130,180,220,.055); stroke-width:1 }
+.mon-hex{ opacity:.9; transition:opacity .3s ease }
+.mon-svg.sem-textura .mon-hex,
+.mon-svg.sem-textura .mon-grid{ opacity:0 }
+.mon-zoom{ transition:transform .45s cubic-bezier(.22,1,.36,1) }
+
+/* ---- rotas ---- */
+.mon-via-base{ fill:none; stroke:rgba(120,175,215,.16); stroke-width:7; stroke-linecap:round }
+.mon-via{ fill:none; stroke:url(#monVia); stroke-width:2.1; stroke-linecap:round; opacity:.85 }
+.mon-via-fluxo{ fill:none; stroke:rgba(150,240,255,.75); stroke-width:2.1; stroke-linecap:round;
+  stroke-dasharray:3 116; filter:url(#monSoft); animation:monFluxo 7s linear infinite }
+@keyframes monFluxo{ from{ stroke-dashoffset:119 } to{ stroke-dashoffset:0 } }
+.mon-rota.mon-st-atencao .mon-via{ stroke:#e0a642; opacity:.8 }
+.mon-rota.mon-st-atencao .mon-via-fluxo{ stroke:rgba(240,200,120,.7) }
+.mon-rota.mon-st-atraso .mon-via{ stroke:#d9714f }
+
+/* rótulo de rodovia */
+.mon-rod rect{ fill:rgba(9,24,38,.72); stroke:rgba(120,180,220,.18) }
+.mon-rod text{ fill:rgba(175,205,230,.66); font-size:9px; font-weight:700; letter-spacing:.6px }
+
+/* ---- cidades ---- */
+.mon-cidade{ cursor:pointer }
+.mon-c-hit{ fill:transparent }
+.mon-c-pulso{ fill:none; stroke:rgba(90,220,210,.4); stroke-width:1.2; opacity:0;
+  animation:monPulso 4.2s ease-out infinite; transform-box:fill-box; transform-origin:center }
+@keyframes monPulso{ 0%{ transform:scale(.55); opacity:.5 } 70%{ transform:scale(1.25); opacity:0 } 100%{ opacity:0 } }
+.mon-c-halo{ fill:rgba(60,190,200,.14) }
+.mon-c-dot{ fill:#5fe3d6; filter:url(#monSoft) }
+.mon-c-nome{ fill:#cfe4f2; font-size:12px; font-weight:700; letter-spacing:1.1px; pointer-events:none }
+.mon-cidade:hover .mon-c-halo,.mon-cidade:focus .mon-c-halo{ fill:rgba(90,220,210,.26) }
+.mon-cidade:hover .mon-c-nome,.mon-cidade:focus .mon-c-nome{ fill:#eaf6ff }
+.mon-cidade:focus{ outline:none }
+
+/* ---- base (Londrina): presença, sem radar ---- */
+.mon-base{ cursor:pointer }
+.mon-b-hit{ fill:transparent }
+.mon-b-aura{ fill:url(#monBaseAura) }
+.mon-b-anel{ fill:none; stroke:rgba(120,215,225,.34); stroke-width:1.2; stroke-dasharray:3 5;
+  transform-box:fill-box; transform-origin:center; animation:monGira 44s linear infinite }
+@keyframes monGira{ to{ transform:rotate(360deg) } }
+.mon-b-marca{ fill:rgba(14,40,58,.9); stroke:#63e0d2; stroke-width:1.7; stroke-linejoin:round }
+.mon-b-nucleo{ fill:#7ef0e0; filter:url(#monSoft) }
+.mon-b-nome{ fill:#eaf6ff; font-size:14px; font-weight:800; letter-spacing:1.6px; pointer-events:none }
+.mon-b-sub{ fill:rgba(150,225,215,.8); font-size:9.5px; font-weight:700; letter-spacing:1.9px; pointer-events:none }
+.mon-base:hover .mon-b-marca,.mon-base:focus .mon-b-marca{ stroke:#8ff2e4 }
+.mon-base:focus{ outline:none }
+
+/* ---- veículos ---- */
+.mon-veic{ cursor:pointer }
+.mon-v-halo{ fill:rgba(95,225,215,.10) }
+.mon-v-body{ fill:#dbeaf5 }
+.mon-v-cab{ fill:#8fd6e8 }
+.mon-v-far{ fill:#fff2c2 }
+.mon-v-ico{ filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)) }
+.mon-veic:hover .mon-v-halo,.mon-veic:focus .mon-v-halo{ fill:rgba(120,240,225,.24) }
+.mon-veic:focus{ outline:none }
+
+/* ---- informações contextuais ---- */
+.mon-stats{ position:absolute; left:14px; top:12px; display:flex; flex-direction:column; gap:5px;
+  padding:10px 13px; border-radius:11px; pointer-events:none;
+  background:rgba(8,20,32,.5); border:1px solid rgba(120,180,220,.12); backdrop-filter:blur(7px) }
+.mon-stats span{ display:flex; align-items:baseline; gap:6px; font-size:10.5px; color:rgba(180,208,230,.75);
+  letter-spacing:.3px; white-space:nowrap }
+.mon-stats b{ font-size:14px; color:#eaf6ff; font-weight:700; min-width:16px }
+
+/* ---- legenda ---- */
+.mon-legenda{ position:absolute; right:14px; top:12px; display:flex; gap:12px; flex-wrap:wrap;
+  padding:7px 12px; border-radius:999px; pointer-events:none;
+  background:rgba(8,20,32,.5); border:1px solid rgba(120,180,220,.12); backdrop-filter:blur(7px) }
+.mon-legenda span{ display:inline-flex; align-items:center; gap:6px; font-size:10px;
+  color:rgba(180,208,230,.78); letter-spacing:.3px; white-space:nowrap }
+.mon-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; flex:none }
+.mon-dot.ok{ background:#4fd6a8; box-shadow:0 0 6px rgba(79,214,168,.7) }
+.mon-dot.go{ background:#57c8e0; box-shadow:0 0 6px rgba(87,200,224,.7) }
+.mon-dot.wa{ background:#e0b054; box-shadow:0 0 6px rgba(224,176,84,.6) }
+
+/* ---- sensor de atividade ---- */
+.mon-sync{ position:absolute; left:14px; bottom:12px; display:flex; align-items:center; gap:7px;
+  padding:7px 13px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:1px;
+  color:rgba(160,205,225,.8); background:rgba(8,20,32,.5);
+  border:1px solid rgba(120,180,220,.12); backdrop-filter:blur(7px); pointer-events:none }
+.mon-sync i{ width:6px; height:6px; border-radius:50%; background:#4fd6a8; flex:none;
+  animation:monBip 2.6s ease-in-out infinite }
+@keyframes monBip{ 0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(79,214,168,.5) }
+  50%{ opacity:.55; box-shadow:0 0 0 4px rgba(79,214,168,0) } }
+.mon-sync b{ color:#d6e9f6; font-weight:700; letter-spacing:.6px }
+.mon-fonte{ margin-left:4px; padding-left:9px; border-left:1px solid rgba(140,180,215,.22);
+  font-weight:600; letter-spacing:.2px; color:rgba(150,190,215,.6); text-transform:none; pointer-events:auto }
+
+/* ---- controles ---- */
+.mon-ctrls{ position:absolute; right:14px; bottom:12px; display:flex; flex-direction:column; gap:6px }
+.mon-ctl{ width:33px; height:33px; display:grid; place-items:center; cursor:pointer; padding:0;
+  border-radius:9px; color:rgba(190,220,240,.85); background:rgba(8,20,32,.62);
+  border:1px solid rgba(120,180,220,.16); backdrop-filter:blur(7px); transition:all .16s ease }
+.mon-ctl svg{ width:15px; height:15px }
+.mon-ctl:hover{ color:#eaf6ff; border-color:rgba(110,225,215,.45); background:rgba(16,44,64,.75);
+  box-shadow:0 0 14px rgba(70,200,210,.18) }
+.mon-ctl:active{ transform:scale(.94) }
+
+/* ---- tooltip flutuante ---- */
+.mon-tip{ position:absolute; z-index:14; min-width:184px; max-width:250px; padding:11px 13px;
+  border-radius:12px; pointer-events:none; opacity:0; transform:translateY(4px);
+  transition:opacity .16s ease, transform .16s ease;
+  background:linear-gradient(165deg,rgba(12,32,50,.97),rgba(8,20,34,.97));
+  border:1px solid rgba(110,190,215,.24); box-shadow:0 12px 34px rgba(0,0,0,.5) }
+.mon-tip.show{ opacity:1; transform:none }
+.mon-tip-h{ display:flex; align-items:center; gap:8px; margin-bottom:3px }
+.mon-tip-h b{ font-size:12.5px; color:#eaf6ff; letter-spacing:.2px }
+.mon-tip-plate{ margin-left:auto; font-size:9.5px; font-weight:700; letter-spacing:.8px;
+  padding:2px 7px; border-radius:5px; color:#9fe6da;
+  background:rgba(80,210,200,.13); border:1px solid rgba(80,210,200,.3) }
+.mon-tip-sub{ font-size:10px; color:rgba(165,200,225,.65); margin-bottom:7px; letter-spacing:.3px }
+.mon-tip-g{ display:grid; grid-template-columns:1fr 1fr; gap:7px 10px; margin:7px 0 8px }
+.mon-tip-g span{ display:flex; flex-direction:column; gap:1px; min-width:0 }
+.mon-tip-g small{ font-size:8.5px; text-transform:uppercase; letter-spacing:.6px; color:rgba(160,195,220,.55) }
+.mon-tip-g b{ font-size:11.5px; color:#dbeaf5; font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.mon-tip-f{ display:flex; align-items:center; gap:6px; padding-top:7px; font-size:9.5px; font-weight:700;
+  letter-spacing:.7px; color:rgba(175,215,235,.8); border-top:1px solid rgba(120,180,215,.14) }
+.mon-tip-sim{ margin-left:auto; font-weight:600; letter-spacing:.2px; font-size:8.5px;
+  color:rgba(150,185,210,.5); text-transform:none }
+
+/* ---- "AO VIVO" com pulso discreto ---- */
+.ini-stage-h .pex-live{ display:inline-flex; align-items:center; gap:6px }
+.ini-stage-h .pex-live::before{ content:''; width:6px; height:6px; border-radius:50%; background:#4fd6a8;
+  animation:monBip 2.6s ease-in-out infinite }
+
+/* ---- celular: mesma altura de antes; secundários simplificados ---- */
+@media(max-width:860px){
+  .mon-wrap{ height:380px }
+  .mon-stats{ left:10px; top:10px; padding:8px 11px; gap:3px }
+  .mon-stats span{ font-size:9.5px } .mon-stats b{ font-size:12.5px }
+  .mon-legenda{ right:10px; top:10px; gap:9px; padding:6px 10px }
+  .mon-legenda span{ font-size:9px }
+  .mon-sync{ left:10px; bottom:10px; font-size:9px; padding:6px 10px }
+  .mon-fonte{ display:none }                     /* secundário: some no celular */
+  .mon-ctrls{ right:10px; bottom:10px }
+  .mon-ctl{ width:38px; height:38px }            /* alvo de toque maior */
+  .mon-b-nome{ font-size:13px } .mon-c-nome{ font-size:11px }
+  .mon-tip{ min-width:168px; max-width:216px }
+}
+@media(prefers-reduced-motion:reduce){
+  .mon-via-fluxo,.mon-c-pulso,.mon-b-anel,.mon-sync i,.ini-stage-h .pex-live::before{ animation:none!important }
+  .mon-zoom{ transition:none }
+}
+
+/* veiculo parado no patio (carga/descarga) */
+.mon-veic.parado .mon-v-halo{ fill:rgba(224,176,84,.20) }
+.mon-veic.parado .mon-v-cab{ fill:#e0b054 }
