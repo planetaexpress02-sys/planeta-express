@@ -3231,3 +3231,56 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .mon-r-nome{ display:none }       /* no celular ficam só os pontos */
   .mon-rod{ display:none }
 }
+/* ================================================================== */
+/*  IA PLANETA — ESFERA MENOR E PULSANDO (v6.69)                      */
+/*  Sai o cone girando (parecia radar); entra um pulso discreto.      */
+/*  Menor e mais apagada em repouso, para nunca atrapalhar a leitura. */
+/* ================================================================== */
+.ia-fab{ width:46px; height:46px; right:20px; bottom:20px; opacity:.82;
+  transition:transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s ease }
+.ia-fab:hover,.ia-fab:focus-visible{ transform:scale(1.12); opacity:1 }
+
+.ia-orb{
+  background:
+    radial-gradient(circle at 36% 30%, rgba(218,248,255,.95), rgba(40,180,255,.55) 38%, rgba(10,86,190,.26) 64%, transparent 76%),
+    linear-gradient(158deg, rgba(16,60,116,.88), rgba(5,16,36,.94));
+  border:1px solid rgba(120,205,255,.4);
+  box-shadow:inset 0 0 13px rgba(140,220,255,.45), inset 0 -6px 13px rgba(0,60,150,.45),
+    0 0 12px rgba(0,175,255,.34), 0 5px 16px rgba(0,16,44,.5);
+  animation:iaOrbPulse 2.9s ease-in-out infinite }
+@keyframes iaOrbPulse{ 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.055) } }
+
+/* brilho especular parado (antes girava) */
+.ia-orb::before{ left:23%; top:17%; width:32%; height:25%;
+  animation:iaOrbShine 2.9s ease-in-out infinite }
+@keyframes iaOrbShine{ 0%,100%{ opacity:.6; transform:scale(.95) } 50%{ opacity:1; transform:scale(1.04) } }
+
+/* anel que pulsa para fora — no lugar do radar */
+.ia-orb::after{ content:""; position:absolute; inset:0; border-radius:50%;
+  background:none; mix-blend-mode:normal; filter:none;
+  border:1.5px solid rgba(125,220,255,.5); opacity:0;
+  animation:iaOrbRing 2.9s ease-out infinite }
+.ia-fab::before{ content:""; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+  border:1.5px solid rgba(125,220,255,.34); opacity:0;
+  animation:iaOrbRing 2.9s ease-out infinite; animation-delay:1.45s }
+@keyframes iaOrbRing{ 0%{ transform:scale(1); opacity:.5 } 70%{ transform:scale(1.9); opacity:0 } 100%{ opacity:0 } }
+.ia-fab:hover .ia-orb{ animation-duration:2s;
+  box-shadow:inset 0 0 16px rgba(160,232,255,.6), inset 0 -6px 15px rgba(0,70,170,.5),
+    0 0 20px rgba(0,205,255,.55), 0 6px 20px rgba(0,16,44,.6) }
+
+/* balãozinho de dica acompanha o tamanho novo */
+.ia-tip{ right:60px; bottom:12px; font-size:11.5px; padding:7px 11px }
+
+/* nunca por cima do que o usuário está lendo:
+   some com modal aberto, com a paleta Ctrl+K e ao imprimir */
+body:has(#overlay.show) .ia-fab,
+body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(.85) }
+
+@media(max-width:860px){
+  .ia-fab{ width:44px; height:44px; right:calc(14px + var(--safe-r)); opacity:.8 }
+  .ia-tip{ display:none }
+}
+@media(prefers-reduced-motion:reduce){
+  .ia-orb,.ia-orb::before,.ia-orb::after,.ia-fab::before{ animation:none!important; opacity:0 }
+  .ia-orb{ opacity:1!important }
+}
