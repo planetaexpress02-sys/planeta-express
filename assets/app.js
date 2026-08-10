@@ -479,6 +479,8 @@ const ROTAS = {
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
 function go(h){ location.hash=h; }
+/* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1};
 function router(){
   const h = (location.hash||'#inicio').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -497,10 +499,10 @@ function router(){
   else if(rota==='direcao') el.innerHTML=viewDirecao();
   else if(rota==='tacografos') el.innerHTML=viewTacografos();
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
-  else if(rota==='km'){ kmFiltro=arg||'todos'; el.innerHTML=viewKM(); }
+  else if(rota==='km'){ if(arg) kmFiltro=arg; el.innerHTML=viewKM(); }
   else if(rota==='oleo') el.innerHTML=viewOleo();
   else if(rota==='manutencao'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Relatório de Manutenção'; } el.innerHTML=viewManutencaoVeiculo(arg); } else el.innerHTML=viewManutencao(); }
-  else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { pneusFiltro=(arg==='limite')?'limite':'todos'; el.innerHTML=viewPneus(); } }
+  else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { if(arg==='limite') pneusFiltro='limite'; el.innerHTML=viewPneus(); } }
   else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
   else if(rota==='abastecimento') el.innerHTML=viewAbastecimento();
   else if(rota==='viagens'){ el.innerHTML=viewViagens(); if(arg) setTimeout(function(){ if(typeof modalViagem==='function' && DB.viagens.some(x=>x.id===arg)) modalViagem(arg); },30); }
@@ -522,6 +524,14 @@ function router(){
   else if(rota==='config') el.innerHTML=viewConfig();
   else if(rota==='dashboard') el.innerHTML=viewDashboard();
   else el.innerHTML=viewInicio();
+
+  /* Nestas rotas o argumento do endereço é um FILTRO (e não o id de um
+     registro). Depois de aplicado, ele SAI do endereço — senão, ao clicar
+     em outro filtro dentro da própria tela, o router leria o hash antigo
+     e desfaria o clique, e a tela só mudaria saindo e entrando de novo. */
+  if(arg && (_ROTA_FILTRO[rota] || (rota==='pneus' && arg==='limite'))){
+    try{ history.replaceState(null, '', '#'+rota); }catch(e){}
+  }
 
   document.getElementById('pageTitle').innerHTML = esc(titulo)+'<small>'+esc(sub)+'</small>';
   window.scrollTo(0,0); closeSidebar(); if(typeof updateUserBadge==='function') updateUserBadge();
