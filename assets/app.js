@@ -3033,7 +3033,7 @@ function viewInicio(){
   const cteK=Math.round(cteSum/1000);
   const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
-  /* O mapa de monitoramento vive em assets/monitoramento.js (dados, simulação e desenho separados) */
+  /* O mapa de monitoramento vive no arquivo monitoramento.js (dados, simulação e desenho separados) */
   return `<div class="ini-cmd">
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>

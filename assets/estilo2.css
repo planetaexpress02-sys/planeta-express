@@ -2880,3 +2880,56 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 /* veiculo parado no patio (carga/descarga) */
 .mon-veic.parado .mon-v-halo{ fill:rgba(224,176,84,.20) }
 .mon-veic.parado .mon-v-cab{ fill:#e0b054 }
+/* ---- Monitoramento v6.61: mapa geográfico com mais detalhe ---- */
+.mon-varre{ animation:monVarre 11s linear infinite }
+@keyframes monVarre{ from{ transform:translateX(0) } to{ transform:translateX(900px) } }
+
+/* anéis de distância a partir da base */
+.mon-anel circle{ fill:none; stroke:rgba(110,180,215,.13); stroke-width:1; stroke-dasharray:2 7 }
+.mon-anel text{ fill:rgba(150,190,215,.42); font-size:8.5px; font-weight:600; letter-spacing:.5px }
+
+/* malha viária de fundo */
+.mon-malha{ fill:none; stroke:rgba(125,175,210,.17); stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round }
+
+/* cidades de referência */
+.mon-r-dot{ fill:rgba(165,205,230,.5) }
+.mon-r-nome{ fill:rgba(170,205,230,.5); font-size:8.5px; font-weight:600; letter-spacing:.3px; pointer-events:none }
+.mon-svg.sem-ref .mon-ref,
+.mon-svg.sem-ref .mon-malha,
+.mon-svg.sem-ref .mon-anel{ opacity:0; transition:opacity .3s ease }
+
+/* distância sob o nome do destino */
+.mon-c-km{ fill:rgba(120,215,205,.66); font-size:8.5px; font-weight:600; letter-spacing:.4px; pointer-events:none }
+
+/* destinos entram em cascata */
+.mon-cidade{ animation:monEntra .5s cubic-bezier(.22,1,.36,1) both; animation-delay:calc(var(--i,0)*.12s) }
+@keyframes monEntra{ from{ opacity:0 } to{ opacity:1 } }
+
+/* placa acompanhando o veículo */
+.mon-v-placa{ fill:#dff1fb; font-size:8.5px; font-weight:700; letter-spacing:.5px; pointer-events:none;
+  paint-order:stroke; stroke:rgba(4,14,24,.85); stroke-width:2.6px; stroke-linejoin:round }
+.mon-veic.parado .mon-v-placa{ fill:#f2d59a }
+
+/* escala e bússola */
+.mon-escala line{ stroke:rgba(160,200,225,.45); stroke-width:1.2 }
+.mon-escala text{ fill:rgba(165,205,230,.6); font-size:8.5px; font-weight:600; letter-spacing:.5px }
+.mon-bussola circle{ fill:rgba(8,20,32,.45); stroke:rgba(120,180,220,.2) }
+.mon-bussola path{ fill:rgba(120,215,205,.75) }
+.mon-bussola text{ fill:rgba(170,210,232,.7); font-size:9px; font-weight:700 }
+
+/* barra de progresso e rodapé de rota no tooltip */
+.mon-tip-bar{ height:3px; border-radius:2px; background:rgba(120,180,215,.18); overflow:hidden; margin:2px 0 7px }
+.mon-tip-bar i{ display:block; height:100%; border-radius:2px;
+  background:linear-gradient(90deg,#2fd8d0,#2f7fd8); transition:width .4s ease }
+.mon-tip-rota{ font-size:9px; color:rgba(160,198,222,.58); letter-spacing:.3px; margin-bottom:6px }
+.mon-stats-km b{ color:#7fe3d4 !important }
+
+@media(max-width:860px){
+  .mon-r-nome{ display:none }                 /* no celular só os pontos de referência */
+  .mon-c-km{ font-size:8px }
+  .mon-stats .mon-stats-km{ display:none }
+  .mon-bussola{ display:none }
+}
+@media(prefers-reduced-motion:reduce){
+  .mon-varre,.mon-cidade{ animation:none!important }
+}
