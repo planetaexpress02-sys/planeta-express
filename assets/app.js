@@ -812,7 +812,8 @@ function viewDashboard(){
   // Indicadores complementares
   const notasOrd = DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
   const ultNota = notasOrd[0]; const ultNotaTotal = ultNota? totalNota(ultNota):0;
-  const pneusAlerta = DB.pneus.filter(_pneuNoLimite).length;
+  const _pneus = pneusResumo();                 // fonte única — ver pneusResumo()
+  const pneusAlerta = _pneus.noLimite;          // pneus no limite (somando qtd, não linhas)
   const chkMes = DB.checklists.filter(c=>{ const d=parseD(c.data),h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
   const chkUlt = DB.checklists.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).slice(0,5);
   const tipos={Cavalos:cavalos,Reboques:reb};
@@ -895,7 +896,7 @@ function viewDashboard(){
         <div class="legend">
           <div class="li clk" onclick="frotaFiltro='cavalo';location.hash='frota'"><span class="dot" style="background:#2563eb"></span>Cavalos<b>${cavalos}</b></div>
           <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Reboques<b>${reb}</b></div>
-          <div class="li"><span class="dot" style="background:#94a3b8"></span>Pneus cadastrados<b>${DB.pneus.length}</b></div>
+          <div class="li clk" onclick="location.hash='pneus'"><span class="dot" style="background:#94a3b8"></span>Pneus no total<b>${_pneus.total}</b></div>
         </div>
       </div></div>
     </div>
@@ -2518,10 +2519,30 @@ function pneuQtd(p){ return parseInt(p&&p.qtd)||1; }
 function pneuTotal(list){ return (list||DB.pneus).reduce((s,p)=>s+pneuQtd(p),0); }
 /* um pneu está "no limite" quando precisa de troca (condição crítica ou próxima da troca) */
 function _pneuNoLimite(p){ const c=pneuCondicao(p); return !!c && (c.key==='crit'||c.key==='troca'); }
+/* ------------------------------------------------------------------
+   FONTE ÚNICA da contagem de pneus. TODO lugar que mostra número de
+   pneu (Painel, tela de Pneus, IA, relatórios, telas novas) tem que
+   sair daqui — nunca de `DB.pneus.length`.
+   Motivo: um registro pode valer VÁRIOS pneus (campo `qtd`), então
+   contar registros dá um número menor que o real. Era exatamente isso
+   que fazia o Painel mostrar "38 pneus cadastrados" enquanto a tela de
+   Pneus mostrava "80 pneus no total" — o mesmo dado com duas contas.
+   ------------------------------------------------------------------ */
+function pneusResumo(){
+  const inst=DB.pneus||[], est=DB.estoquePneus||[];
+  return {
+    total:     pneuTotal(inst),                                          // pneus instalados na frota
+    registros: inst.length,                                              // linhas cadastradas (NÃO é o nº de pneus)
+    noLimite:  pneuTotal(inst.filter(_pneuNoLimite)),                    // pneus que precisam de troca
+    estoque:   pneuTotal(est),                                           // pneus de reserva
+    veiculos:  [...new Set(inst.map(p=>p.veiculoId).filter(Boolean))].length
+  };
+}
 let pneusFiltro='todos';
 function viewPneus(){
   if(pneusFiltro==='limite') return viewPneusLimite();
-  const total=pneuTotal();
+  const R=pneusResumo();                        // fonte única — o Painel lê a mesma coisa
+  const total=R.total;
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comPneus=veics.filter(v=>DB.pneus.some(p=>p.veiculoId===v.id)).length;
   const foot=(v)=>{ const ps=DB.pneus.filter(p=>p.veiculoId===v.id); const t=pneuTotal(ps);
@@ -2533,7 +2554,7 @@ function viewPneus(){
     ${kpi('tire','i-blue',total,'Pneus no total','instalados na frota')}
     ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
     <a class="kpi link" onclick="pneuIrEstoque()"><div class="k-top"><div class="k-ico i-green">${svg('tire')}</div><span class="k-go">→</span></div>
-      <div class="k-val">${pneuTotal(DB.estoquePneus)}</div><div class="k-label">Pneus em estoque</div><div class="k-sub">clique para abrir</div></a>
+      <div class="k-val">${R.estoque}</div><div class="k-label">Pneus em estoque</div><div class="k-sub">clique para abrir</div></a>
   </div>
   <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver e cadastrar os pneus daquele veículo.</div><div class="spacer"></div></div>
   ${vcardsSecoes('pneus', foot)}
@@ -2546,10 +2567,13 @@ function viewPneusLimite(){
     DB.pneus.filter(p=>p.veiculoId===v.id && _pneuNoLimite(p)).forEach(p=>alertas.push({v,p}));
   });
   alertas.sort((a,b)=>{ const ka=pneuCondicao(a.p).key==='crit'?0:1, kb=pneuCondicao(b.p).key==='crit'?0:1; return ka-kb; });
-  const rows=alertas.map(({v,p})=>{ const c=pneuCondicao(p); const crit=c.key==='crit';
+  /* O KPI soma a QUANTIDADE de cada registro (um registro pode valer vários
+     pneus), para bater exatamente com o card "Pneus no limite" do Painel. */
+  const totalLimite=pneuTotal(alertas.map(a=>a.p));
+  const rows=alertas.map(({v,p})=>{ const c=pneuCondicao(p); const crit=c.key==='crit'; const q=pneuQtd(p);
     return `<div class="alert-row" onclick="location.hash='pneus/${v.id}'">
       <div class="a-ico ${crit?'i-red':'i-orange'}">${svg('tire')}</div>
-      <div class="a-main"><b>${plate(v.placa,v.tipo)} — ${esc(p.posicao||p.slot||'Pneu')}</b>
+      <div class="a-main"><b>${plate(v.placa,v.tipo)} — ${esc(p.posicao||p.slot||'Pneu')}${q>1?` <span class="qtd-badge">${q}</span>`:''}</b>
         <span>${esc(p.marca||'—')}${p.modelo?' '+esc(p.modelo):''} · Sulco: ${(p.sulco!=null&&p.sulco!=='')?esc(p.sulco)+' mm':'—'}</span></div>
       <div class="a-when"><span class="st ${crit?'crit':'warn'}">${esc(c.label||'Trocar')}</span></div></div>`;
   }).join('');
@@ -2557,7 +2581,7 @@ function viewPneusLimite(){
   <div class="banner">${svg('tire')}<div><b>Pneus no limite</b><span>Somente os pneus em condição crítica ou próximos da troca (sulco ≤ ${DB.config.sulcoMinimo} mm). Clique num pneu para abrir o veículo e ver o diagrama.</span></div>
     <a class="btn no-print" style="margin-left:auto" href="#pneus">${svg('tire')} Ver todos os pneus</a></div>
   <div class="grid kpis" style="grid-template-columns:1fr;margin-bottom:16px">
-    ${kpi('tire', alertas.length?'i-red':'i-green', alertas.length, 'Pneus para trocar', 'condição crítica ou próxima da troca')}
+    ${kpi('tire', totalLimite?'i-red':'i-green', totalLimite, 'Pneus para trocar', 'condição crítica ou próxima da troca'+(alertas.length!==totalLimite?` · ${alertas.length} registro(s)`:''))}
   </div>
   <div class="card"><div class="card-b p0">
     ${alertas.length? rows : emptyState('Nenhum pneu no limite. Todos com sulco acima do mínimo. 👍')}
