@@ -15,7 +15,9 @@ let _applyingRemote=false, _nuvemSaveTimer=null;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
-  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs',
+   'contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
   importarLicencasSeed();
@@ -476,6 +478,7 @@ const ROTAS = {
   licencas:{t:'Licenças e Alvarás', s:'Alvarás, vigilância sanitária, inscrições e certidões', ico:'stamp'},
   central:{t:'Central de Documentos', s:'Todo documento entra por aqui — leitura e lançamento automáticos', ico:'spark'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
+  contabilidade:{t:'Contabilidade', s:'DRE, custos por veículo, tributos e resultado', ico:'coins'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
 function go(h){ location.hash=h; }
@@ -517,6 +520,7 @@ function router(){
   else if(rota==='antt') el.innerHTML=viewAntt();
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
   else if(rota==='central'){ if(arg) cpidAba=arg; el.innerHTML=viewCentral(); }
+  else if(rota==='contabilidade'){ if(arg) contabAba=arg; el.innerHTML=viewContabilidade(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -736,7 +740,7 @@ function renderSidebar(rota){
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
-    `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
+    `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }

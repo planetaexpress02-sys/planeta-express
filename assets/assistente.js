@@ -143,6 +143,8 @@ function iaResponder(raw){
   /* Licenças e alvarás são só consulta pelo chat (não há comando de lançamento
      com essas palavras), então não dependem do detector de pergunta. */
   if(/alvar|licenc|vigilanc|sanitar|certid|avcb|bombeiro|conformidade/.test(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
+  /* Contabilidade também é só consulta (não há comando de lançamento por voz) */
+  if(/faturamos|lucro|preju[ií]zo|resultado d|dre\b|margem|ebitda|contabil|tribut/.test(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
 
   /* Perguntas explícitas → consulta */
   if(_iaEhPergunta(n)) return iaFinaliza(iaConsulta(t,n), 'consulta', t);
@@ -417,6 +419,74 @@ function iaConsulta(t,n){
     if(!alvo.length) return `Não achei ${rotulo} cadastradas.`;
     const ord=alvo.slice().sort((a,b)=>(diasAte(a.validade)??9e9)-(diasAte(b.validade)??9e9));
     return `📋 <b>${ord.length}</b> ${rotulo} cadastradas:<br>`+ord.slice(0,15).map(linha).join('<br>')+(ord.length>15?`<br><i>…e mais ${ord.length-15}.</i>`:'');
+  }
+
+  /* CONTABILIDADE — responde com os números reais dos módulos */
+  if(typeof contabLancamentos==='function' &&
+     /faturamos|faturamento|lucro|prejuizo|preju[ií]zo|resultado|dre|margem|ebitda|contabil|custo total|quanto gastamos|maior custo|imposto|tributo|receita/.test(n)){
+    const todos=contabLancamentos();
+    if(!todos.length) return `Ainda não há valores lançados nos módulos. Assim que entrar um CT-e, um abastecimento ou o relatório do contador, eu já calculo.`;
+    /* período pedido */
+    const h=new Date(); let iv, rot;
+    const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+    const mm=n.match(/\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/);
+    if(mm){ const ano=(t.match(/\b(20\d{2})\b/)||[])[1]||h.getFullYear();
+      const m2=String(MES[mm[1]]).padStart(2,'0');
+      iv={ini:ano+'-'+m2+'-01', fim:ano+'-'+m2+'-31'}; rot=_capitaliza(mm[1])+'/'+ano; }
+    else if(/este ano|no ano|do ano/.test(n)){ iv=contabIntervalo('ano'); rot='este ano'; }
+    else if(/tudo|total|geral|hist[oó]rico/.test(n)){ iv={ini:'',fim:''}; rot='todo o período'; }
+    else { iv=contabIntervalo('mes'); rot='este mês'; }
+    const lanc=contabPeriodo(todos, iv.ini, iv.fim);
+    const d=contabDRE(lanc);
+
+    /* quanto gastamos com X */
+    const alvo=[['diesel',/diesel|combust/],['pedagio',/pedagio|pedágio/],['pneus',/pneu/],
+      ['manutencao',/manuten|oficina/],['seguros',/seguro/],['motorista',/motorista|salario/]];
+    for(const [k,re] of alvo){
+      if(re.test(n) && /quanto|gast|custo|total/.test(n)){
+        const cs=contabPorConta(lanc).filter(function(c){ return _iaNorm(contabContaNome(c.conta)).indexOf(k.slice(0,6))>=0
+          || (k==='manutencao'&&c.conta==='c.manutencao') || (k==='diesel'&&c.conta==='c.diesel')
+          || (k==='pedagio'&&c.conta==='c.pedagio') || (k==='pneus'&&c.conta==='c.pneus')
+          || (k==='seguros'&&c.conta==='c.seguros') || (k==='motorista'&&c.conta==='c.motorista'); });
+        const tot=cs.reduce(function(s,c){ return s+c.valor; },0);
+        if(!tot) return `Não há gasto com ${k} lançado em ${rot}.`;
+        return `💰 Gasto com <b>${esc(cs[0]?contabContaNome(cs[0].conta):k)}</b> em ${rot}: <b>${money(tot)}</b> (${cs.reduce(function(s,c){ return s+c.n; },0)} lançamento(s)).`;
+      }
+    }
+    /* qual veículo teve maior custo */
+    if(/(qual|quem).*(maior|mais).*(custo|gast)|veiculo que mais/.test(n)){
+      const arr=contabPorVeiculo(lanc).filter(function(m){ return m.custo; }).slice(0,3);
+      if(!arr.length) return `Não há custos ligados a veículo em ${rot}.`;
+      return `🚚 Veículos com maior custo em ${rot}:<br>`+arr.map(function(m,i){
+        return `${i+1}. <b>${esc(m.veiculo.placa)}</b> — ${money(m.custo)}`+(m.receita?` (receita ${money(m.receita)}, resultado ${money(m.resultado)})`:''); }).join('<br>');
+    }
+    /* impostos pendentes */
+    if(/imposto|tribut/.test(n)){
+      const ab=(DB.contabTributos||[]).filter(function(x){ return !x.pago; });
+      const tot=ab.reduce(function(s,x){ return s+(+x.valor||0); },0);
+      if(!ab.length) return `Não há tributos em aberto cadastrados. (Os valores são lançados por você/pelo contador na aba Contabilidade → Tributos.)`;
+      return `🧾 <b>${ab.length}</b> tributo(s) em aberto — total <b>${money(tot)}</b>:<br>`+ab.slice(0,8).map(function(x){
+        return `• ${esc(contabContaNome(x.conta))} ${esc(x.competencia||'')} — ${money(x.valor)}`+(x.vencimento?` (vence ${fmtD(x.vencimento)})`:''); }).join('<br>');
+    }
+    /* faturamento / receita */
+    if(/faturamos|faturamento|receita/.test(n) && !/lucro|resultado|margem/.test(n)){
+      if(!d.receita) return `Não há receita lançada em ${rot}. As receitas vêm dos CT-e e do faturamento do contador.`;
+      return `📈 Receita de ${rot}: <b>${money(d.receita)}</b>.`+(d.liquida!==d.receita?`<br>Receita líquida: <b>${money(d.liquida)}</b>.`:'');
+    }
+    /* resultado / lucro — com aviso honesto quando falta receita */
+    const falta=[];
+    if(!d.receita) falta.push('nenhuma receita lançada');
+    const semCentro=lanc.filter(function(l){ return !l.centro; }).length;
+    if(semCentro) falta.push(semCentro+' lançamento(s) sem centro de custo');
+    let txt=`📊 <b>${esc(String(rot).charAt(0).toUpperCase()+String(rot).slice(1))}</b><br>`
+      +`• Receita: <b>${money(d.receita)}</b><br>`
+      +`• Custos operacionais: <b>${money(d.custo)}</b><br>`
+      +`• Despesas: <b>${money(d.despesa)}</b><br>`
+      +`• Resultado: <b style="color:${d.resultado>=0?'#4bd6a0':'#f2686b'}">${money(d.resultado)}</b>`
+      +(d.liquida? ` (margem ${d.margem.toFixed(1)}%)`:'')
+      +`<br>• EBITDA: <b>${money(d.ebitda)}</b>`;
+    if(falta.length) txt+=`<br><br>⚠️ Consigo calcular, mas <b>${falta.join(' e ')}</b> — o número pode não refletir a realidade. Quer que eu liste?`;
+    return txt;
   }
 
   /* FINANCEIRO é protegido por senha — não exponho pelo chat */

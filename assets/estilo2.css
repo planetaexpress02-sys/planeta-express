@@ -3336,3 +3336,117 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
 @media(prefers-reduced-motion:reduce){
   .ia-orb,.ia-orb::before,.ia-orb::after,.ia-fab::before,.ia-fab::after{ animation:none!important }
   .ia-orb{ transform:none!important } }
+/* ================================================================== */
+/*  CONTABILIDADE (v6.71) — mesmo padrão cyber do resto do sistema    */
+/* ================================================================== */
+#view[data-route="contabilidade"] .cb-per{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:14px }
+.cb-p{ font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; padding:7px 13px; border-radius:999px;
+  color:#cfe0f5; background:rgba(0,26,47,.5); border:1px solid rgba(0,170,255,.16); transition:all .16s ease }
+.cb-p:hover{ border-color:rgba(0,229,255,.4); transform:translateY(-1px) }
+.cb-p.on{ color:#eaf6ff; border-color:rgba(0,229,255,.55); background:rgba(0,120,220,.22); box-shadow:0 0 14px rgba(0,170,255,.22) }
+.cb-perlbl{ font-size:11px; color:rgba(170,205,232,.7); margin-left:4px }
+
+.cb-abas{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px }
+.cb-aba{ font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:8px 15px; border-radius:10px;
+  color:#bcd4ea; background:rgba(0,20,38,.5); border:1px solid rgba(0,170,255,.14); transition:all .16s ease }
+.cb-aba:hover{ border-color:rgba(0,229,255,.38); color:#eaf6ff }
+.cb-aba.on{ color:#eaf6ff; border-color:rgba(0,229,255,.6); background:rgba(0,120,220,.25);
+  box-shadow:0 0 16px rgba(0,170,255,.25) }
+
+/* KPIs */
+.cb-kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px }
+@media(max-width:1400px){ .cb-kpis{ grid-template-columns:repeat(3,1fr) } }
+@media(max-width:760px){ .cb-kpis{ grid-template-columns:repeat(2,1fr) } }
+.cb-kpi{ display:flex; flex-direction:column; gap:3px; padding:14px 16px; border-radius:13px;
+  background:linear-gradient(160deg,rgba(0,30,54,.6),rgba(0,16,30,.7));
+  border:1px solid rgba(0,170,255,.16); box-shadow:0 4px 16px rgba(0,0,0,.26) }
+.cb-k-rot{ font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; color:rgba(170,205,232,.7) }
+.cb-k-val{ font-size:19px; font-weight:700; letter-spacing:.2px }
+.cb-k-sub{ font-size:10.5px; color:rgba(160,196,222,.6); display:flex; align-items:center; gap:6px }
+.cb-var{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px }
+.cb-var.up{ color:#4bd6a0; background:rgba(75,214,160,.13) }
+.cb-var.down{ color:#f2686b; background:rgba(242,104,107,.13) }
+
+/* DRE */
+.cb-dre td{ font-size:12.5px }
+.cb-dre .cb-forte td{ font-weight:700; color:#eaf6ff }
+.cb-dre .cb-sub td{ font-weight:700; background:rgba(0,120,220,.08) }
+.cb-dre .cb-total td{ font-weight:800; font-size:13.5px; background:rgba(0,150,255,.14); color:#eaf6ff }
+.cb-ant{ color:rgba(160,196,222,.6) }
+
+/* gráfico */
+.cb-graf{ width:100%; height:auto; display:block }
+.cb-g-r{ fill:#4bd6a0 } .cb-g-c{ fill:#f2686b }
+.cb-g-eixo{ stroke:rgba(140,180,215,.25) }
+.cb-g-x{ fill:rgba(165,200,226,.6); font-size:9px }
+.cb-leg{ display:flex; gap:14px; justify-content:center; margin-top:6px }
+.cb-leg span{ display:inline-flex; align-items:center; gap:6px; font-size:11px; color:rgba(175,208,232,.75) }
+.cb-leg i{ width:9px; height:9px; border-radius:2px }
+
+/* barras "para onde foi o dinheiro" */
+.cb-barras{ display:flex; flex-direction:column; gap:8px }
+.cb-barra{ display:grid; grid-template-columns:130px 1fr 96px; align-items:center; gap:10px; font-size:11.5px }
+.cb-b-rot{ color:rgba(180,212,235,.85); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.cb-b-tr{ height:8px; border-radius:4px; background:rgba(120,180,215,.14); overflow:hidden }
+.cb-b-tr i{ display:block; height:100%; border-radius:4px; transition:width .5s ease }
+.cb-b-val{ text-align:right; color:#dbeaf5; font-weight:600; font-variant-numeric:tabular-nums }
+
+/* por veículo */
+.cb-veics{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px }
+.cb-vgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px }
+.cb-vgrid div{ display:flex; flex-direction:column; gap:2px }
+.cb-vgrid small{ font-size:10px; text-transform:uppercase; letter-spacing:.5px; opacity:.55 }
+.cb-vgrid b{ font-size:14.5px }
+.cb-vkm{ display:flex; gap:14px; flex-wrap:wrap; padding:9px 11px; border-radius:9px; margin-bottom:9px;
+  background:rgba(0,18,32,.5); border:1px solid rgba(0,170,255,.1); font-size:11px; color:rgba(175,208,232,.8) }
+.cb-vkm b{ color:#7fe3d4 }
+.cb-vnota{ flex-basis:100%; font-style:normal; font-size:9.5px; color:rgba(160,196,222,.5) }
+.cb-vcontas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(105px,1fr)); gap:7px }
+.cb-vcontas span{ display:flex; flex-direction:column; gap:1px }
+.cb-vcontas small{ font-size:9.5px; opacity:.55 }
+.cb-vcontas b{ font-size:11.5px; color:#dbeaf5 }
+
+/* lançamentos */
+.cb-chips{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px }
+.cb-chip{ font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; padding:6px 12px; border-radius:999px;
+  color:#cfe0f5; background:rgba(0,26,47,.5); border:1px solid rgba(0,170,255,.14) }
+.cb-chip b{ opacity:.65; font-size:10.5px }
+.cb-chip.on{ color:#eaf6ff; border-color:rgba(0,229,255,.5); background:rgba(0,120,220,.2) }
+.cb-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px }
+.cb-tag{ display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px;
+  color:var(--c); background:color-mix(in srgb,var(--c) 15%,transparent); border:1px solid color-mix(in srgb,var(--c) 32%,transparent) }
+.cb-origem{ font-size:10.5px; color:rgba(165,200,226,.7) }
+.cb-recl{ color:#f2a44e; margin-left:5px; font-weight:700 }
+
+/* detalhe do lançamento */
+.cb-det{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px }
+.cb-det span{ display:flex; flex-direction:column; gap:2px }
+.cb-det small{ font-size:9.5px; text-transform:uppercase; letter-spacing:.5px; opacity:.55 }
+.cb-det b{ font-size:13px; color:#eaf6ff }
+.cb-desc{ font-size:13px; color:#dbeaf5; padding:9px 12px; border-radius:9px; margin-bottom:8px;
+  background:rgba(0,18,32,.55); border:1px solid rgba(0,170,255,.12) }
+.cb-det2{ font-size:11.5px; color:rgba(175,208,232,.8); margin-bottom:4px }
+.cb-det2 b{ color:#eaf6ff }
+@media(max-width:700px){ .cb-det{ grid-template-columns:1fr 1fr } }
+
+/* fechamento */
+.cb-fechs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px }
+.cb-fech.ok{ border-color:rgba(75,214,160,.35) }
+.cb-fgrid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:9px }
+.cb-fgrid span{ display:flex; flex-direction:column; gap:2px }
+.cb-fgrid small{ font-size:9.5px; text-transform:uppercase; letter-spacing:.5px; opacity:.55 }
+.cb-fgrid b{ font-size:13.5px }
+.cb-pend{ margin:0; padding-left:17px; font-size:11.5px; color:#f2a44e }
+.cb-pend li{ margin-bottom:2px }
+.cb-fnota{ display:flex; align-items:center; gap:8px; margin-top:9px; font-size:11px; color:rgba(120,215,175,.9) }
+.cb-fnota svg{ width:13px; height:13px }
+.cb-fnota .btn{ margin-left:auto }
+
+/* plano de contas */
+.cb-pgrupo{ margin-bottom:14px }
+.cb-pgrupo>b{ font-size:11.5px; text-transform:uppercase; letter-spacing:1px }
+.cb-pcontas{ display:flex; gap:7px; flex-wrap:wrap; margin-top:7px }
+.cb-pconta{ cursor:pointer; font-size:11.5px; padding:5px 11px; border-radius:8px; color:#cfe0f5;
+  background:rgba(0,20,38,.55); border:1px solid rgba(0,170,255,.14); transition:all .15s ease }
+.cb-pconta:hover{ border-color:rgba(0,229,255,.45); color:#eaf6ff }
+.cb-pconta.off{ opacity:.4; text-decoration:line-through }

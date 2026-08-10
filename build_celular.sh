@@ -33,7 +33,7 @@ awk '
 
 # ---------- 3. CSS e JS concatenados ----------
 cat assets/estilo.css assets/estilo2.css > "$TMP/all.css"
-cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/monitoramento.js assets/assistente.js > "$TMP/all.js"
+cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/monitoramento.js assets/contabilidade.js assets/assistente.js > "$TMP/all.js"
 
 # ---------- 4. monta o arquivo do CELULAR (com <head>/<body>) ----------
 {
