@@ -16,7 +16,9 @@ function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
   ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs',
-   'contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+   'aniversarios','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+  /* Prazos de aviso de aniversário — o usuário edita na própria tela */
+  if(!Array.isArray(DB.config.anivAvisos) || !DB.config.anivAvisos.length) DB.config.anivAvisos=[30,10];
   if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
@@ -338,6 +340,9 @@ const IC = {
   map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   stamp:'<path d="M6 21h12M8 18h8a1 1 0 0 0 1-1v-1H7v1a1 1 0 0 0 1 1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 16V9.5a2.5 2.5 0 0 1 5 0V16" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="6" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   clock:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5.2l3.4 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  /* bolo de aniversário */
+  cake:'<path d="M4 21h16v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 17c1.6 0 1.6-1.4 3.2-1.4S8.8 17 10.4 17s1.6-1.4 3.2-1.4S15.2 17 16.8 17s1.6-1.4 3.2-1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 13V9.5M12 13V9.5M16 13V9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 7.6c0-.9.9-1.2.9-2.1 0 .9.9 1.2.9 2.1a.9.9 0 0 1-1.8 0zM11.1 7.6c0-.9.9-1.2.9-2.1 0 .9.9 1.2.9 2.1a.9.9 0 0 1-1.8 0zM15.2 7.6c0-.9.9-1.2.9-2.1 0 .9.9 1.2.9 2.1a.9.9 0 0 1-1.8 0z" fill="currentColor"/>',
+  users:'<path d="M8.5 11a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM2 20a6.5 6.5 0 0 1 13 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16.5 4.9a3.2 3.2 0 0 1 0 6.2M22 20a6.2 6.2 0 0 0-4-5.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
 };
 /* Ícone por tipo de documento/vencimento */
 function tipoIcone(t){
@@ -472,6 +477,7 @@ const ROTAS = {
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
   pedagios:{t:'Pedágios', s:'Passagens, custos, praças e concessionárias', ico:'toll'},
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
+  aniversarios:{t:'Aniversários', s:'Quem faz aniversário e quando avisar', ico:'cake'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
@@ -483,7 +489,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1, aniversarios:1};
 function router(){
   const h = (location.hash||'#inicio').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -521,6 +527,7 @@ function router(){
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
   else if(rota==='central'){ if(arg) cpidAba=arg; el.innerHTML=viewCentral(); }
   else if(rota==='contabilidade'){ if(arg) contabAba=arg; el.innerHTML=viewContabilidade(); }
+  else if(rota==='aniversarios'){ if(arg) anivFiltro=arg; el.innerHTML=viewAniversarios(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -732,7 +739,8 @@ function contadores(){
   let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
   let lic=0; (DB.licencas||[]).forEach(l=>{ if(l && l.situacao!=='arquivada'){ const d=diasAte(l.validade); if(d!=null && d<=60) lic++; } });
   const cpid=(typeof cpidPendentes==='function')? cpidPendentes() : 0;
-  return {venc, crit, total:venc+crit, seg, lic, cpid};
+  const aniv=(typeof anivPendentes==='function')? anivPendentes() : 0;
+  return {venc, crit, total:venc+crit, seg, lic, cpid, aniv};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -746,7 +754,7 @@ function renderSidebar(rota){
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
-    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
+    `<div class="group">Empresa</div>`+ item('socios')+ item('aniversarios', c.aniv?{n:c.aniv, cls:'warn'}:null)+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
 
@@ -5966,6 +5974,8 @@ function pexNotifData(){ const crit=[],avi=[],info=[];
   info.push({t:'Backup automático', s:'Programado para 03:00', when:''});
   const pend=(DB.viagens||[]).filter(function(v){ return v.status==='Pendente'; }).length;
   if(pend) info.push({t:pend+' viagem(ns) pendente(s)', s:'Aguardando baixa', when:'', hash:'#viagens'});
+  /* Aniversários: quem faz hoje vira aviso; os próximos, informativo */
+  if(typeof anivNotificacoes==='function'){ anivNotificacoes().forEach(function(a){ (a.hoje?avi:info).push(a); }); }
   return {crit:crit, avi:avi, info:info}; }
 function pexNotifBadge(){ const d=pexNotifData(); const n=d.crit.length+d.avi.length; const b=document.getElementById('cockBadge');
   if(b){ b.textContent=n>99?'99+':(n||''); b.style.display=n?'flex':'none'; b.classList.toggle('crit',d.crit.length>0); } }
