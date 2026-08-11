@@ -136,6 +136,60 @@ function monRotaKm(rota){
   for(let i=0;i<rota.caminho.length-1;i++) km+=monDistKm(monLocal(rota.caminho[i]), monLocal(rota.caminho[i+1]));
   return km;
 }
+function monKmDoCaminho(ids){
+  let km=0;
+  for(let i=0;i<ids.length-1;i++) km+=monDistKm(monLocal(ids[i]), monLocal(ids[i+1]));
+  return km;
+}
+
+/* ------------------------------------------------------------------
+   MEDIDOR DE PERCURSO (v6.76) — a malha viária acima é um grafo: cada
+   rodovia liga cidades vizinhas em sequência. Achando o caminho mais
+   curto entre duas cidades e somando os trechos, sai uma estimativa de
+   quilometragem MUITO melhor que a linha reta, e sem inventar nada:
+   as coordenadas são reais e a sequência das rodovias também.
+   Continua sendo ESTIMATIVA (o traçado real da pista tem curvas), e a
+   tela diz isso — a regra da casa é nunca apresentar conta como certeza.
+   ------------------------------------------------------------------ */
+let _monGrafo=null;
+function monGrafo(){
+  if(_monGrafo) return _monGrafo;
+  const g={};
+  const liga=function(a,b,via){
+    if(!monLocal(a)||!monLocal(b)) return;
+    (g[a]=g[a]||[]).push({para:b, via:via});
+    (g[b]=g[b]||[]).push({para:a, via:via});
+  };
+  MON_VIAS.forEach(function(v){
+    for(let i=0;i<v.cidades.length-1;i++) liga(v.cidades[i], v.cidades[i+1], v.nome);
+  });
+  _monGrafo=g; return g;
+}
+/* Dijkstra por quilometragem — devolve {ids, km, vias} ou null se não há ligação */
+function monCaminhoEntre(de, para){
+  if(de===para) return {ids:[de], km:0, vias:[]};
+  const g=monGrafo();
+  if(!g[de]||!g[para]) return null;
+  const dist={}, ant={}, visto={};
+  MON_LOCAIS.forEach(function(l){ dist[l.id]=Infinity; });
+  dist[de]=0;
+  for(;;){
+    let u=null, melhor=Infinity;
+    for(const id in dist){ if(!visto[id] && dist[id]<melhor){ melhor=dist[id]; u=id; } }
+    if(u===null || u===para) break;
+    visto[u]=true;
+    (g[u]||[]).forEach(function(e){
+      const d=dist[u]+monDistKm(monLocal(u), monLocal(e.para));
+      if(d<dist[e.para]){ dist[e.para]=d; ant[e.para]={de:u, via:e.via}; }
+    });
+  }
+  if(dist[para]===Infinity) return null;
+  const ids=[], vias=[];
+  let x=para;
+  while(x!==de){ ids.unshift(x); const a=ant[x]; if(!a) return null; if(vias[0]!==a.via) vias.unshift(a.via); x=a.de; }
+  ids.unshift(de);
+  return {ids:ids, km:monKmDoCaminho(ids), vias:[...new Set(vias)]};
+}
 
 /* ==================================================================
    4) PROJEÇÃO — escala uniforme (longitude corrigida por cos(lat)).
@@ -147,16 +201,21 @@ function monRotaKm(rota){
    janela inteira sem cortar nada (nada de faixas vazias nem de cidade
    fora da área). monMedir() é chamado antes de desenhar. */
 const MON_VB = { w:1000, h:580 };
-const MON_AREA = { x0:220, x1:780, y0:150, y1:430 };
+const MON_AREA = { x0:130, x1:870, y0:104, y1:476 };
 function monMedir(){
   const el=document.getElementById('monMapa');
   const r=el? el.getBoundingClientRect() : null;
   const razao=(r && r.width>40 && r.height>40)? (r.width/r.height) : 1.35;
   MON_VB.h=580;
   MON_VB.w=Math.round(580*Math.max(0.85, Math.min(2.6, razao)));
-  /* área das cidades: 58% central da largura, deixando margem p/ os rótulos */
-  MON_AREA.x0=Math.round(MON_VB.w*0.21);
-  MON_AREA.x1=Math.round(MON_VB.w*0.79);
+  /* Área das cidades: 74% central da largura e 64% da altura (v6.76 — era
+     58% e 48%). Quanto MAIOR esta área, maior a escala e mais AFASTADAS
+     ficam as cidades umas das outras: a base e as vizinhas coladas
+     (Cambé e Ibiporã, a 12 km) deixam de ficar num amontoado.
+     A margem que sobra é para os rótulos não escaparem do card. */
+  MON_AREA.x0=Math.round(MON_VB.w*0.13);
+  MON_AREA.x1=Math.round(MON_VB.w*0.87);
+  MON_AREA.y0=104; MON_AREA.y1=476;
   _monProj=null;
 }
 let _monProj=null;
@@ -519,7 +578,10 @@ function monMapaHTML(){
     let acima=true;
     _refPost.forEach(function(q){ if(Math.abs(p.x-q.x)<58 && Math.abs(p.y-q.y)<16 && q.acima) acima=false; });
     _refPost.push({x:p.x, y:p.y, acima:acima});
-    return '<g class="mon-ref" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
+    /* data-local também aqui: as cidades de referência entram no medidor
+       de percurso (são elas que formam a malha das rodovias) */
+    return '<g class="mon-ref" data-local="'+c.id+'" transform="translate('+p.x.toFixed(1)+','+p.y.toFixed(1)+')">'
+      +'<circle class="mon-r-hit" r="11" fill="transparent"/>'
       +'<circle class="mon-r-dot" r="2.1"/>'
       +'<text class="mon-r-nome" y="'+(acima? -6.5 : 11)+'" text-anchor="middle">'+esc(c.nome)+'</text></g>';
   }).join('');
@@ -716,6 +778,92 @@ function monTipCidade(id, alvo){
    +'<div class="mon-tip-rota">'+Math.abs(c.lat).toFixed(4)+'° S · '+Math.abs(c.lon).toFixed(4)+'° O</div>'
    +'<div class="mon-tip-f"><i class="mon-dot ok"></i>ONLINE<span class="mon-tip-sim">'+hora+'</span></div>', alvo);
 }
+/* ==================================================================
+   11b) MEDIDOR DE PERCURSO — clique em duas cidades e veja a distância
+   ================================================================== */
+let _monRegua = { ligado:false, de:null, para:null };
+
+function monReguaToggle(){
+  _monRegua.ligado = !_monRegua.ligado;
+  _monRegua.de = null; _monRegua.para = null;
+  monReguaPintar();
+  const b=document.getElementById('monBtnRegua'); if(b) b.classList.toggle('on', _monRegua.ligado);
+  const w=document.getElementById('monMapa'); if(w) w.classList.toggle('mon-medindo', _monRegua.ligado);
+  if(typeof toast==='function') toast(_monRegua.ligado? 'Medir percurso: toque na cidade de origem e depois na de destino.' : 'Medição encerrada.');
+}
+function monReguaLimpar(){ _monRegua.de=null; _monRegua.para=null; monReguaPintar(); }
+function monReguaClique(id){
+  if(!_monRegua.ligado) return false;
+  if(!_monRegua.de || (_monRegua.de && _monRegua.para)){ _monRegua.de=id; _monRegua.para=null; }
+  else if(id===_monRegua.de){ _monRegua.de=null; }
+  else _monRegua.para=id;
+  monReguaPintar();
+  return true;
+}
+/* Desenha o trajeto no mapa e escreve o resultado no painel */
+function monReguaPintar(){
+  const svg=document.getElementById('monSvg');
+  const painel=document.getElementById('monRegua');
+  if(svg){
+    const g=svg.querySelector('.mon-regua-path');
+    if(g) g.remove();
+    svg.querySelectorAll('.mon-medido').forEach(function(n){ n.classList.remove('mon-medido'); });
+  }
+  if(!painel) return;
+  if(!_monRegua.ligado){ painel.classList.remove('show'); painel.innerHTML=''; return; }
+  painel.classList.add('show');
+
+  const de=_monRegua.de? monLocal(_monRegua.de):null;
+  const para=_monRegua.para? monLocal(_monRegua.para):null;
+  const fechar='<button class="mon-rg-x" onclick="monReguaToggle()" title="Fechar" aria-label="Fechar">×</button>';
+
+  if(!de){ painel.innerHTML='<div class="mon-rg-h">'+svgMonRegua()+'<b>Medir percurso</b>'+fechar+'</div>'
+    +'<div class="mon-rg-dica">Toque na cidade de <b>origem</b>.</div>'; return; }
+  if(!para){ painel.innerHTML='<div class="mon-rg-h">'+svgMonRegua()+'<b>Medir percurso</b>'+fechar+'</div>'
+    +'<div class="mon-rg-de">Saindo de <b>'+esc(de.nome)+'</b></div>'
+    +'<div class="mon-rg-dica">Agora toque na cidade de <b>destino</b>.</div>'; marcarPonto(de.id); return; }
+
+  const c=monCaminhoEntre(de.id, para.id);
+  if(!c){
+    painel.innerHTML='<div class="mon-rg-h">'+svgMonRegua()+'<b>Medir percurso</b>'+fechar+'</div>'
+      +'<div class="mon-rg-de"><b>'+esc(de.nome)+'</b> → <b>'+esc(para.nome)+'</b></div>'
+      +'<div class="mon-rg-dica">Estas duas cidades não estão ligadas pelas rodovias do mapa. Escolha outro par.</div>'
+      +'<button class="mon-rg-b" onclick="monReguaLimpar()">Medir outro</button>';
+    return;
+  }
+  const reta=monDistKm(de, para);
+  const h=Math.floor(c.km/60), min=Math.round((c.km/60-h)*60);   /* média conservadora de 60 km/h para carreta */
+  const tempo=(h? h+'h ':'')+String(min).padStart(h?2:1,'0')+'min';
+  const passa=c.ids.slice(1,-1).map(function(i){ return monLocal(i).nome; });
+  painel.innerHTML=''
+    +'<div class="mon-rg-h">'+svgMonRegua()+'<b>Medir percurso</b>'+fechar+'</div>'
+    +'<div class="mon-rg-de"><b>'+esc(de.nome)+'</b> → <b>'+esc(para.nome)+'</b></div>'
+    +'<div class="mon-rg-num"><span>'+c.km.toFixed(0)+'<small>km</small></span>'
+      +'<span>'+tempo+'<small>a 60 km/h</small></span></div>'
+    +'<div class="mon-rg-l"><i>Rodovias</i>'+esc(c.vias.join(' · ')||'—')+'</div>'
+    +(passa.length? '<div class="mon-rg-l"><i>Passa por</i>'+esc(passa.join(' · '))+'</div>' : '<div class="mon-rg-l"><i>Trecho</i>direto, sem cidade no meio</div>')
+    +'<div class="mon-rg-l"><i>Em linha reta</i>'+reta.toFixed(0)+' km</div>'
+    +'<div class="mon-rg-nota">Estimativa somando os trechos entre as cidades da rodovia — a quilometragem oficial pode variar.</div>'
+    +'<button class="mon-rg-b" onclick="monReguaLimpar()">Medir outro</button>';
+
+  /* traça o percurso por cima do mapa */
+  if(svg){
+    const zoom=document.getElementById('monZoom');
+    if(zoom){
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('class','mon-regua-path');
+      p.setAttribute('d', monCaminhoDe(c.ids));
+      zoom.appendChild(p);
+    }
+    c.ids.forEach(marcarPonto);
+  }
+  function marcarPonto(id){
+    const n=svg && svg.querySelector('[data-local="'+id+'"]');
+    if(n) n.classList.add('mon-medido');
+  }
+}
+function svgMonRegua(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 15 21 9M6 12.5v2.6M9.5 11.3v2.6M13 10.2v2.6M16.5 9v2.6"/></svg>'; }
+
 function monLigarEventos(){
   const mapa=document.getElementById('monSvg'); if(!mapa) return;
   mapa.querySelectorAll('.mon-veic').forEach(function(g){
@@ -730,9 +878,17 @@ function monLigarEventos(){
     const id=g.getAttribute('data-local'); const abrir=function(){ monTipCidade(id,g); };
     g.addEventListener('mouseenter',abrir); g.addEventListener('focus',abrir);
     g.addEventListener('mouseleave',monTipEsconder); g.addEventListener('blur',monTipEsconder);
-    g.addEventListener('click',function(e){ e.stopPropagation(); abrir(); });
+    g.addEventListener('click',function(e){ e.stopPropagation();
+      if(monReguaClique(id)){ monTipEsconder(); return; }    /* medindo: o clique escolhe o ponto */
+      abrir(); });
+  });
+  /* cidades de referência: só participam do medidor de percurso */
+  mapa.querySelectorAll('.mon-ref').forEach(function(g){
+    const id=g.getAttribute('data-local'); if(!id) return;
+    g.addEventListener('click',function(e){ e.stopPropagation(); monReguaClique(id); });
   });
   mapa.addEventListener('click',function(e){ if(e.target===mapa) monTipEsconder(); });
+  monReguaPintar();
 }
 
 /* ==================================================================
@@ -773,7 +929,9 @@ function monComponenteHTML(){
       +'<button class="mon-ctl" onclick="monZoom(-.35)" title="Afastar" aria-label="Afastar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>'
       +'<button class="mon-ctl" onclick="monZoom(0,true)" title="Centralizar na base" aria-label="Centralizar na base"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="8.4"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>'
       +'<button class="mon-ctl" onclick="monCamadas()" title="Camadas" aria-label="Camadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/></svg></button>'
+      +'<button class="mon-ctl" id="monBtnRegua" onclick="monReguaToggle()" title="Medir a distância entre duas cidades" aria-label="Medir percurso">'+svgMonRegua()+'</button>'
     +'</div>'
+    +'<div class="mon-regua no-print" id="monRegua"></div>'
     +'<div class="mon-legenda">'
       +'<span><i class="mon-dot ok"></i>Base</span>'
       +'<span><i class="mon-dot go"></i>Em trânsito</span>'

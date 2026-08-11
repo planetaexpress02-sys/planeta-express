@@ -3496,3 +3496,64 @@ tr.aniv-inativo td{ opacity:.62 }
 .aniv-prazo{ display:flex; align-items:center; gap:10px; margin-bottom:8px }
 .aniv-prazo input{ width:96px; text-align:center }
 .aniv-prazo span{ color:var(--text-soft); font-size:13px }
+
+/* ==========================================================================
+   MONITORAMENTO — MEDIDOR DE PERCURSO (v6.76)
+   Painel que aparece sobre o mapa ao clicar na régua. NÃO muda o tamanho
+   nem a posição do card (regra do cliente): flutua por cima.
+   ========================================================================== */
+.mon-wrap.mon-medindo .mon-cidade,
+.mon-wrap.mon-medindo .mon-base,
+.mon-wrap.mon-medindo .mon-ref{ cursor:crosshair }
+/* fica à DIREITA: os controles de zoom/camadas ocupam a coluna da esquerda */
+.mon-regua{ position:absolute; right:12px; top:12px; z-index:6; width:214px; max-width:calc(100% - 90px);
+  display:none; flex-direction:column; gap:7px; padding:11px 12px 12px; border-radius:14px;
+  background:linear-gradient(165deg, rgba(8,26,45,.96), rgba(4,14,26,.97));
+  border:1px solid rgba(0,190,255,.3); box-shadow:0 12px 34px rgba(0,8,26,.55), 0 0 22px rgba(0,170,255,.12);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); animation:mobViewIn .22s ease-out }
+.mon-regua.show{ display:flex }
+.mon-rg-h{ display:flex; align-items:center; gap:7px; color:#8fe0ff; font-size:11px; font-weight:800;
+  letter-spacing:.7px; text-transform:uppercase }
+.mon-rg-h svg{ width:15px; height:15px; flex:0 0 auto }
+.mon-rg-x{ margin-left:auto; width:20px; height:20px; border:0; border-radius:6px; background:rgba(255,255,255,.07);
+  color:#bcd8ee; font-size:15px; line-height:1; cursor:pointer }
+.mon-rg-x:hover{ background:rgba(255,90,90,.22); color:#ffd7d7 }
+.mon-rg-dica{ color:#a9c8e2; font-size:11.5px; line-height:1.45 }
+.mon-rg-dica b{ color:#eaf6ff }
+.mon-rg-de{ color:#eaf6ff; font-size:12.5px; line-height:1.4 }
+.mon-rg-de b{ color:#7fe3c0 }
+.mon-rg-num{ display:flex; gap:8px }
+.mon-rg-num span{ flex:1; display:flex; flex-direction:column; align-items:center; padding:7px 4px; border-radius:10px;
+  background:rgba(0,170,255,.11); border:1px solid rgba(0,190,255,.2); color:#eaf6ff; font-size:19px; font-weight:800;
+  line-height:1.1; font-variant-numeric:tabular-nums }
+.mon-rg-num span small{ display:block; margin-top:3px; font-size:9.5px; font-weight:600; color:#8fb6d4;
+  text-transform:uppercase; letter-spacing:.5px }
+.mon-rg-l{ font-size:11px; color:#cfe4f5; line-height:1.4 }
+.mon-rg-l i{ display:block; font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.6px;
+  text-transform:uppercase; color:#7aa6c8; margin-bottom:1px }
+.mon-rg-nota{ font-size:9.8px; color:#7b9db8; line-height:1.4; border-top:1px solid rgba(255,255,255,.07); padding-top:7px }
+.mon-rg-b{ border:1px solid rgba(0,190,255,.3); background:rgba(0,170,255,.14); color:#cfeeff; border-radius:9px;
+  padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer }
+.mon-rg-b:hover{ background:rgba(0,170,255,.26) }
+.mon-ctl.on{ background:linear-gradient(180deg,#37e3d0,#00b3ff)!important; color:#001018!important;
+  box-shadow:0 0 16px rgba(0,200,255,.45)!important }
+/* traçado do percurso medido e destaque das cidades escolhidas */
+.mon-regua-path{ fill:none; stroke:#37e3d0; stroke-width:4.2; stroke-linecap:round; stroke-linejoin:round;
+  opacity:.95; filter:drop-shadow(0 0 7px rgba(55,227,208,.7)); pointer-events:none }
+.mon-medido .mon-r-dot{ r:4.2; fill:#37e3d0 }
+.mon-medido .mon-r-nome{ fill:#bdfff2; font-weight:700 }
+.mon-medido circle{ stroke:#37e3d0 }
+@media(max-width:860px){
+  /* No celular o card tem 380px de altura: o painel vai para BAIXO, ocupando
+     a largura toda e só a parte de baixo — o mapa continua à vista em cima. */
+  /* No celular vai para baixo, à direita da coluna de controles e acima do
+     rodapé "SINCRONIZADO" — sem tapar nada e sem mexer no tamanho do card. */
+  .mon-regua{ width:auto; max-width:none; left:58px; right:8px; top:auto; bottom:54px; padding:9px 11px 10px; gap:6px;
+    max-height:48%; overflow-y:auto; -webkit-overflow-scrolling:touch }
+  .mon-rg-num span{ font-size:17px; padding:5px 4px }
+  .mon-rg-l{ font-size:10.5px }
+  /* "Passa por" pode ser uma lista longa: no celular fica em 2 linhas */
+  .mon-rg-l:nth-of-type(2){ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+  .mon-rg-nota{ font-size:9.2px; padding-top:5px }
+  .mon-rg-b{ padding:8px 10px }
+}
