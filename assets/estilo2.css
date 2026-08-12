@@ -3740,3 +3740,33 @@ tr.aniv-inativo td{ opacity:.62 }
   .fin-saldos{ padding:11px 12px 12px }
   .fin-saldos-g{ grid-template-columns:1fr }
 }
+
+/* ==========================================================================
+   RELATÓRIO — SAÍDA SEMPRE VISÍVEL (v6.79)
+   O botão de fechar era discreto e no celular ficava espremido entre outros
+   quatro: o usuário usava o "voltar" do navegador e caía para fora do
+   sistema. Agora: Voltar grande à esquerda + ✕ fixo no canto + tecla ESC +
+   o gesto de voltar do celular fecha o relatório.
+   ========================================================================== */
+.rel-voltar{ display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; cursor:pointer;
+  padding:9px 16px 9px 12px; border-radius:12px; font-size:14px; font-weight:700; letter-spacing:.2px;
+  color:#001018; background:linear-gradient(180deg,#37e3d0,#00b3ff); border:0;
+  box-shadow:0 0 18px rgba(0,200,255,.38); transition:transform .12s, box-shadow .2s }
+.rel-voltar svg{ width:19px; height:19px }
+.rel-voltar:hover{ box-shadow:0 0 24px rgba(0,200,255,.55) }
+.rel-voltar:active{ transform:scale(.94) }
+/* ✕ fixo no canto — independe da barra e de rolagem */
+.rel-sair{ position:fixed; top:12px; right:14px; z-index:9200; width:42px; height:42px; border-radius:50%;
+  border:1px solid rgba(255,255,255,.22); background:rgba(10,26,44,.92); color:#eaf6ff;
+  font-size:20px; line-height:1; cursor:pointer; backdrop-filter:blur(10px);
+  box-shadow:0 6px 20px rgba(0,8,26,.5); display:none }
+.rel-ov.show ~ .rel-sair, .rel-ov.show .rel-sair{ display:block }
+.rel-sair:hover{ background:rgba(220,60,60,.9); border-color:rgba(255,140,140,.5) }
+@media(max-width:860px){
+  .rel-ov-bar{ padding-top:calc(env(safe-area-inset-top,0px) + 9px) }
+  .rel-voltar{ padding:10px 18px 10px 13px; font-size:15px; flex:1 1 auto; justify-content:center }
+  .rel-ov-t{ order:3; width:100%; font-size:13px }
+  .rel-ov-acoes{ order:4 }
+  .rel-sair{ top:calc(env(safe-area-inset-top,0px) + 10px); right:10px; width:40px; height:40px }
+}
+@media print{ .rel-voltar, .rel-sair{ display:none!important } }

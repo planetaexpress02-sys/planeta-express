@@ -5417,7 +5417,8 @@ function viewFinConteudo(){
   const pagMeses=[...new Set(pagAll.map(p=>(p.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   let pagLista=pagAll.slice();
   if(pagMes!=='todos') pagLista=pagLista.filter(p=>(p.data||'').slice(0,7)===pagMes);
-  pagLista.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  /* Gastos: SEMPRE do mais antigo para o mais novo (pedido do cliente) */
+  pagLista.sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const pagTotFiltro=pagLista.reduce((s,p)=>s+(Number(p.valor)||0),0);
   const pagMesTot=pagAll.filter(p=>{ const d=parseD(p.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,p)=>s+(Number(p.valor)||0),0);
   const pagRows=pagLista.map(p=>`<tr class="clickable" onclick="modalPagamento('${p.id}')">
@@ -5448,7 +5449,8 @@ function viewFinConteudo(){
   const fatRows=fatSel.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
     <td class="mono">${fmtD(f.data)}</td><td>${esc(f.cliente||'—')}</td><td class="mono"><b>${money(f.valor)}</b></td>
     <td class="muted">${esc(f.obs||'')}</td><td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalFaturamento('${f.id}')">${svg('edit')}</button></td></tr>`).join('');
-  const valeRows=DB.vales.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(v=>{ const m=motorista(v.motoristaId);
+  /* Vales Motoristas: SEMPRE do mais antigo para o mais novo (pedido do cliente) */
+  const valeRows=DB.vales.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v=>{ const m=motorista(v.motoristaId);
     return `<tr class="clickable" onclick="modalVale('${v.id}')"><td class="mono">${fmtD(v.data)}</td><td>${m?esc(m.nome):'—'}</td>
     <td><span class="st ${v.tipo==='Pagamento'?'ok':'warn'}">${esc(v.tipo)}</span></td>
     <td class="mono"><b>${money(v.valor)}</b></td>

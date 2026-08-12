@@ -313,6 +313,12 @@ function PEXRelGerar(spec){
   if(!ov){ ov = document.createElement('div'); ov.id='pexRelOv'; ov.className='rel-ov'; document.body.appendChild(ov); }
   ov.innerHTML =
     '<div class="rel-ov-bar no-print">'
+      /* VOLTAR em primeiro, grande e à esquerda: é por onde o usuário sai.
+         Sem ele o cliente usava o "voltar" do navegador e caía para fora do
+         sistema. Também dá para sair com ESC. */
+      + '<button class="rel-voltar" onclick="PEXRelFechar()" title="Voltar ao sistema (ESC)" aria-label="Voltar ao sistema">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'
+        + '<span>Voltar</span></button>'
       + '<div class="rel-ov-t">'+svg('print')+'<b>'+esc(spec.titulo||'Relatório')+'</b>'
         + '<span id="relOvPg"></span></div>'
       + '<div class="rel-ov-acoes">'
@@ -320,11 +326,24 @@ function PEXRelGerar(spec){
         + '<button class="btn" onclick="PEXRelExportar(\'csv\')" title="Baixar em CSV">'+svg('download')+' CSV</button>'
         + '<button class="btn" onclick="PEXRelExportar(\'xls\')" title="Baixar para Excel">'+svg('download')+' Excel</button>'
         + '<button class="btn primary" onclick="PEXRelImprimir()">'+svg('print')+' Imprimir / Salvar PDF</button>'
-        + '<button class="btn ghost" onclick="PEXRelFechar()">Fechar</button>'
       + '</div>'
     + '</div>'
-    + '<div class="rel-ov-scroll" id="relOvScroll"></div>';
+    + '<div class="rel-ov-scroll" id="relOvScroll"></div>'
+    /* segunda saída, sempre visível no canto — não depende de rolar a barra */
+    + '<button class="rel-sair no-print" onclick="PEXRelFechar()" title="Fechar o relatório (ESC)" aria-label="Fechar o relatório">✕</button>';
   document.body.classList.add('rel-aberto');
+  if(!window._pexRelEsc){
+    window._pexRelEsc = true;
+    document.addEventListener('keydown', function(e){
+      if(e.key==='Escape' && document.body.classList.contains('rel-aberto')){ e.stopPropagation(); PEXRelFechar(); }
+    }, true);
+    /* O "voltar" do navegador e o gesto de voltar do celular devem FECHAR o
+       relatório, não sair do sistema. Para isso empilhamos um estado ao abrir. */
+    window.addEventListener('popstate', function(){
+      if(document.body.classList.contains('rel-aberto')) PEXRelFechar(true);
+    });
+  }
+  try{ history.pushState({pexRel:1}, '', location.href); }catch(e){}
   PEXRelRedesenhar();
   ov.classList.add('show');
 }
@@ -347,11 +366,15 @@ function PEXRelOrientar(){
   if(b) b.textContent = PEXRel_estado.spec.orientacao==='paisagem'?'Paisagem':'Retrato';
   PEXRelRedesenhar();
 }
-function PEXRelFechar(){
+/* doPop = veio do "voltar" do navegador (aí o histórico já foi desfeito) */
+function PEXRelFechar(doPop){
   const ov = document.getElementById('pexRelOv');
   if(ov){ ov.classList.remove('show'); ov.innerHTML=''; }
   document.body.classList.remove('rel-aberto');
   PEXRel_estado = null;
+  if(!doPop){
+    try{ if(history.state && history.state.pexRel) history.back(); }catch(e){}
+  }
 }
 function PEXRelImprimir(){
   if(!PEXRel_estado) return;
