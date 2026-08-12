@@ -5404,9 +5404,15 @@ function finTrocarPin(){ if(val('fpa')!==DB.config.finPin){ toast('Senha atual i
 
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
 let pagMes='todos';
+/* Faturamento não fica em lista o tempo todo (pedido do cliente): a lista só
+   abre ao clicar num dos dois cartões de faturamento lá em cima.
+   '' = fechado · 'mes' = só o mês corrente · 'tudo' = todos os lançamentos */
+let finFatVer='';
+function finVerFat(qual){ finFatVer = (finFatVer===qual? '' : qual); router();
+  if(finFatVer) setTimeout(function(){ const e=document.getElementById('finFatCard'); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); },60); }
 function viewFinConteudo(){
   const h=hoje();
-  /* PLANILHA DE PAGAMENTOS (livre — separada dos vales dos motoristas) */
+  /* GASTOS (planilha livre — separada dos vales dos motoristas) */
   const pagAll=DB.pagamentos||[];
   const pagMeses=[...new Set(pagAll.map(p=>(p.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   let pagLista=pagAll.slice();
@@ -5421,20 +5427,25 @@ function viewFinConteudo(){
     <td class="ta-r mono"><b>${money(p.valor)}</b></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPagamento('${p.id}')">${svg('edit')}</button></td></tr>`).join('');
   const pagCard=`
-  <div class="card" style="margin-top:18px"><div class="card-h">${svg('doc')}<h3>Planilha de Pagamentos</h3>
+  <div class="card" style="margin-top:18px"><div class="card-h">${svg('doc')}<h3>Gastos</h3>
     <div class="r no-print" style="gap:8px">
       <select class="selectlite" onchange="pagMes=this.value;router()"><option value="todos">Todos os meses</option>${pagMeses.map(m=>`<option value="${m}" ${pagMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
-      <button class="btn primary sm" onclick="modalPagamento()">${svg('plus')} Novo pagamento</button></div></div>
+      <button class="btn sm" onclick="PEXRelAbrirId('fin-gastos')" title="Emitir o relatório de Gastos em A4/PDF">${svg('print')} Relatório</button>
+      <button class="btn primary sm" onclick="modalPagamento()">${svg('plus')} Novo gasto</button></div></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th class="ta-r">Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${pagRows||`<tr><td colspan="6">${emptyState('Nenhum pagamento lançado ainda. Clique em "Novo pagamento" para começar sua planilha.')}</td></tr>`}</tbody>
+      <tbody>${pagRows||`<tr><td colspan="6">${emptyState('Nenhum gasto lançado ainda. Clique em "Novo gasto" para começar.')}</td></tr>`}</tbody>
       ${pagLista.length?`<tfoot><tr><td colspan="4" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
     </table></div></div></div>`;
   const fatMes=DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,f)=>s+(Number(f.valor)||0),0);
   const fatTot=DB.faturamento.reduce((s,f)=>s+(Number(f.valor)||0),0);
   const valesAberto=DB.motoristas.reduce((s,m)=>s+Math.max(0,valeSaldo(m.id)),0);
 
-  const fatRows=DB.faturamento.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
+  /* a lista de faturamento respeita o cartão que foi clicado lá em cima */
+  const fatSel = finFatVer==='mes'
+    ? DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); })
+    : DB.faturamento.slice();
+  const fatRows=fatSel.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
     <td class="mono">${fmtD(f.data)}</td><td>${esc(f.cliente||'—')}</td><td class="mono"><b>${money(f.valor)}</b></td>
     <td class="muted">${esc(f.obs||'')}</td><td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalFaturamento('${f.id}')">${svg('edit')}</button></td></tr>`).join('');
   const valeRows=DB.vales.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(v=>{ const m=motorista(v.motoristaId);
@@ -5443,38 +5454,53 @@ function viewFinConteudo(){
     <td class="mono"><b>${money(v.valor)}</b></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalVale('${v.id}')">${svg('edit')}</button></td></tr>`; }).join('');
   const saldoCards=DB.motoristas.filter(m=>valeSaldo(m.id)!==0).map(m=>{ const s=valeSaldo(m.id);
-    return `<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:12px">
-      ${avatarFoto(m,42)}<div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(m.nome.split(' ')[0])} ${esc((m.nome.split(' ')[1]||''))}</b>
-      <div class="muted" style="font-size:11.5px">saldo de vales</div></div>
-      <div class="mono" style="font-weight:800;font-size:16px;color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
+    return `<div class="fin-saldo"><div class="fin-saldo-b">
+      ${avatarFoto(m,38)}<div style="flex:1;min-width:0"><b>${esc(m.nome.split(' ')[0])} ${esc((m.nome.split(' ')[1]||''))}</b>
+      <span>saldo de vales</span></div>
+      <div class="mono fin-saldo-v" style="color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
 
-  return `
-  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e a sua planilha de pagamentos. Tudo somado automaticamente.</span></div></div>
-
-  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
-    ${kpi('money','i-green', money(fatMes), 'Faturamento no mês','')}
-    ${kpi('export','i-blue', money(fatTot), 'Faturamento acumulado', DB.faturamento.length+' lançamento(s)')}
-    ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
-    ${kpi('doc','i-red', money(pagMesTot), 'Pagamentos no mês', pagAll.length+' na planilha')}
-  </div>
-
-  <div class="grid two-col">
-    <div class="card"><div class="card-h">${svg('money')}<h3>Faturamento</h3>
-      <div class="r no-print" style="gap:6px"><button class="btn sm" onclick="cpidEscolher('Faturamento')" title="Vai para a Central de Documentos: relatório do contador (PDF), planilha ou XML das notas — o sistema lê e preenche sozinho">${svg('upload')} Importar do contador</button><button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button></div></div>
+  /* Card do Faturamento: só entra na tela quando o usuário clica num dos
+     dois cartões de faturamento lá em cima (finFatVer). */
+  const fatCard = !finFatVer ? '' : `
+    <div class="card" id="finFatCard"><div class="card-h">${svg('money')}<h3>Faturamento — ${finFatVer==='mes'?esc(MESES_L[h.getMonth()]+' de '+h.getFullYear()):'todos os lançamentos'}</h3>
+      <div class="r no-print" style="gap:6px">
+        <button class="btn sm" onclick="cpidEscolher('Faturamento')" title="Vai para a Central de Documentos: relatório do contador (PDF), planilha ou XML das notas — o sistema lê e preenche sozinho">${svg('upload')} Importar do contador</button>
+        <button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button>
+        <button class="btn ghost sm" onclick="finVerFat('${finFatVer}')" title="Fechar a lista">✕</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
-        <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento lançado.')}</td></tr>`}</tbody></table></div></div></div>
-    <div class="card"><div class="card-h">${svg('wallet')}<h3>Vales e Pagamentos</h3>
-      <div class="r no-print"><button class="btn primary sm" onclick="modalVale()">${svg('plus')} Novo</button></div></div>
-      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
-        <tbody>${valeRows||`<tr><td colspan="5">${emptyState('Nenhum vale ou pagamento.')}</td></tr>`}</tbody></table></div></div></div>
+        <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento neste período.')}</td></tr>`}</tbody></table></div></div></div>`;
+
+  return `
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e os gastos da empresa. Tudo somado automaticamente. Clique num cartão de faturamento para ver os lançamentos.</span></div></div>
+
+  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+    <a class="kpi link${finFatVer==='mes'?' ativo':''}" onclick="finVerFat('mes')" title="Clique para ver os lançamentos do mês">
+      <div class="k-top"><div class="k-ico i-green">${svg('money')}</div><span class="k-go">→</span></div>
+      <div class="k-val">${money(fatMes)}</div><div class="k-label">Faturamento no mês</div>
+      <div class="k-sub">${finFatVer==='mes'?'clique para fechar':'clique para ver a lista'}</div></a>
+    <a class="kpi link${finFatVer==='tudo'?' ativo':''}" onclick="finVerFat('tudo')" title="Clique para ver todos os lançamentos">
+      <div class="k-top"><div class="k-ico i-blue">${svg('export')}</div><span class="k-go">→</span></div>
+      <div class="k-val">${money(fatTot)}</div><div class="k-label">Faturamento acumulado</div>
+      <div class="k-sub">${DB.faturamento.length} lançamento(s) · ${finFatVer==='tudo'?'clique para fechar':'clique para ver a lista'}</div></a>
+    ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
+    ${kpi('doc','i-red', money(pagMesTot), 'Gastos no mês', pagAll.length+' lançamento(s)')}
   </div>
 
-  ${pagCard}
+  ${fatCard}
 
-  ${saldoCards?`<div class="sectitulo" style="margin-top:20px">${svg('wallet')} Saldo de vales por motorista</div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${saldoCards}</div>`:''}`;
+  <div class="card"${fatCard?' style="margin-top:18px"':''}><div class="card-h">${svg('wallet')}<h3>Vales Motoristas</h3>
+    <div class="r no-print" style="gap:8px">
+      <button class="btn sm" onclick="PEXRelAbrirId('fin-vales')" title="Emitir o relatório de Vales Motoristas em A4/PDF">${svg('print')} Relatório</button>
+      <button class="btn primary sm" onclick="modalVale()">${svg('plus')} Novo</button></div></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${valeRows||`<tr><td colspan="5">${emptyState('Nenhum vale ou pagamento lançado.')}</td></tr>`}</tbody></table></div></div>
+    ${saldoCards?`<div class="fin-saldos"><div class="fin-saldos-t">${svg('wallet')} Saldo de vales por motorista</div>
+      <div class="fin-saldos-g">${saldoCards}</div></div>`:''}
+  </div>
+
+  ${pagCard}`;
 }
 function modalFaturamento(id){
   const f=id?DB.faturamento.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),cliente:'',valor:'',obs:''};
@@ -5701,12 +5727,12 @@ function excluirVale(id){ if(!confirm('Excluir este lançamento?'))return; DB.va
 /* ---------- PLANILHA DE PAGAMENTOS (separada dos vales) ---------- */
 function modalPagamento(id){
   const p=id?(DB.pagamentos||[]).find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),descricao:'',categoria:'',forma:'',valor:'',obs:''};
-  if(!p){ toast('Pagamento não encontrado.','err'); return; }
+  if(!p){ toast('Gasto não encontrado.','err'); return; }
   const cats=['Combustível','Manutenção','Pedágio','Pneus','Peças','Fornecedor','Salário','Imposto/Taxa','Aluguel','Financiamento/Parcela','Seguro','Escritório','Outros'];
   const formas=['Pix','Dinheiro','Boleto','Cartão','Débito automático','Transferência','Cheque'];
-  openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar pagamento':'Novo pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
+  openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar gasto':'Novo gasto'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fldR$('Valor pago (R$)','f_valor',p.valor)}</div>
+      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fldR$('Valor (R197609','f_valor',p.valor)}</div>
       ${fld('Descrição','f_desc',p.descricao,'text','O que foi pago (ex.: Diesel Posto X, Boleto fornecedor...)')}
       <div class="field-row">
         <div class="field"><label>Categoria</label><input id="f_cat" list="pagCats" value="${esc(p.categoria||'')}" placeholder="Escolha ou digite"><datalist id="pagCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
@@ -5723,9 +5749,9 @@ function salvarPagamento(id){
   const d={ data:val('f_data'), descricao:val('f_desc'), categoria:val('f_cat'), forma:val('f_forma'), valor:parseBRL(val('f_valor')), obs:val('f_obs') };
   if(id){ Object.assign((DB.pagamentos||[]).find(x=>x.id===id), d); }
   else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); }
-  saveDB(); closeModal(); toast('Pagamento salvo.'); router();
+  saveDB(); closeModal(); toast('Gasto salvo.'); router();
 }
-function excluirPagamento(id){ if(!confirm('Excluir este pagamento da planilha?'))return; DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Pagamento excluído.'); router(); }
+function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
 
 /* ================================================================== */
 /*  CT-e (Conhecimento de Transporte Eletrônico)                      */

@@ -779,6 +779,56 @@ const PEX_RELATORIOS = [
       };
     }},
 
+  { id:'fin-vales', modulo:'financeiro', nome:'Vales Motoristas',
+    desc:'Vales e pagamentos por motorista, com o saldo de cada um.',
+    filtros:['periodo','motorista'],
+    gerar:function(f){
+      let v = (DB.vales||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
+      if(f.motorista && f.motorista!=='todos') v = v.filter(function(x){ return x.motoristaId===f.motorista; });
+      v.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      const nome = function(id){ const m=(typeof motorista==='function')? motorista(id):null; return m? m.nome : '—'; };
+      const vales = v.filter(function(x){ return x.tipo!=='Pagamento'; });
+      const pagos = v.filter(function(x){ return x.tipo==='Pagamento'; });
+      const sv=_relSoma(vales,'valor'), sp=_relSoma(pagos,'valor');
+      /* saldo por motorista — mesma conta da tela (valeSaldo) */
+      const saldos = (DB.motoristas||[]).map(function(m){
+        return {rotulo:m.nome, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
+      }).filter(function(s){ return s.valor!==0; }).sort(function(a,b){ return b.valor-a.valor; });
+      return {
+        tituloTabela:'Lançamentos',
+        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Motorista',larg:'32%'},{rotulo:'Tipo'},{rotulo:'Valor',tipo:'moeda'}],
+        linhas: v.map(function(x){ return [relData(x.data), nome(x.motoristaId), x.tipo||'Vale', relMoney(x.valor)]; }),
+        kpis:[{rotulo:'Lançamentos',valor:relNum(v.length)},
+              {rotulo:'Vales adiantados',valor:relMoney(sv),nota:vales.length+' lançamento(s)'},
+              {rotulo:'Pagamentos',valor:relMoney(sp),nota:pagos.length+' lançamento(s)'},
+              {rotulo:'Saldo em aberto',valor:relMoney(saldos.reduce(function(s,x){ return s+Math.max(0,x.valor); },0)),
+               nota:'devedor dos motoristas'}],
+        totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)},{rotulo:'PAGAMENTOS', valor:relMoney(sp)},
+                           {rotulo:'DIFERENÇA', valor:relMoney(sv-sp)}] : [],
+        graficos: saldos.length? [{titulo:'Saldo por motorista', dados:saldos.map(_relMoneyBar)}] : []
+      };
+    }},
+  { id:'fin-gastos', modulo:'financeiro', nome:'Gastos',
+    desc:'Gastos lançados por período, categoria e forma de pagamento.',
+    filtros:['periodo','categoriaGasto'],
+    gerar:function(f){
+      let p = (DB.pagamentos||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
+      if(f.categoriaGasto && f.categoriaGasto!=='todos') p = p.filter(function(x){ return (x.categoria||'')===f.categoriaGasto; });
+      p.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      const total=_relSoma(p,'valor');
+      return {
+        tituloTabela:'Gastos',
+        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Descrição',larg:'34%'},{rotulo:'Categoria'},
+                 {rotulo:'Forma de pagamento'},{rotulo:'Valor',tipo:'moeda'}],
+        linhas: p.map(function(x){ return [relData(x.data), x.descricao, x.categoria, x.forma, relMoney(x.valor)]; }),
+        kpis:[{rotulo:'Gastos',valor:relNum(p.length)},{rotulo:'Total',valor:relMoney(total)},
+              {rotulo:'Gasto médio',valor: p.length? relMoney(total/p.length):'—'}],
+        totais: p.length? [{rotulo:'TOTAL DO PERÍODO', valor:relMoney(total)}] : [],
+        graficos: p.length? [{titulo:'Gasto por categoria', dados:_relPorChave(p,'categoria','valor').slice(0,10).map(_relMoneyBar)}] : [],
+        analise: p.length? ['Maior categoria: '+(_relPorChave(p,'categoria','valor')[0]||{}).rotulo+'.'] : []
+      };
+    }},
+
   /* ---------------------------------------------------- CONTABILIDADE */
   { id:'contab-lanc', modulo:'contabilidade', nome:'Lançamentos contábeis',
     desc:'Lançamentos derivados dos módulos, com conta, centro de custo e origem.',
@@ -847,6 +897,13 @@ function PEXRelAbrir(mod){
   _relRenderConfig(lista, mod);
 }
 function PEXRelAbrirTodos(){ _relEscolhido = PEX_RELATORIOS[0].id; _relRenderConfig(PEX_RELATORIOS, null); }
+/* Abre o configurador já num relatório específico — usado pelos botões
+   "Relatório" que ficam dentro de um card (ex.: Vales Motoristas, Gastos). */
+function PEXRelAbrirId(id){
+  const r = relPorId(id); if(!r) return;
+  _relEscolhido = id;
+  _relRenderConfig(relPorModulo(r.modulo), r.modulo);
+}
 
 function _relRenderConfig(lista, mod){
   const r = relPorId(_relEscolhido) || lista[0];
@@ -909,6 +966,16 @@ function _relRenderConfig(lista, mod){
   if(fl.indexOf('statusViagem')>=0){
     campos.push('<div class="field"><label>Situação da viagem</label><select id="f_relStVg">'
       + '<option value="todos">Todas</option><option value="Pendente">Pendentes</option><option value="Concluída">Concluídas</option></select></div>');
+  }
+  if(fl.indexOf('motorista')>=0){
+    const ms = (DB.motoristas||[]).filter(function(m){ return (m.status||'Ativo')==='Ativo'; });
+    campos.push('<div class="field"><label>Motorista</label><select id="f_relMot"><option value="todos">Todos os motoristas</option>'
+      + ms.map(function(m){ return '<option value="'+m.id+'">'+esc(m.nome)+'</option>'; }).join('')+'</select></div>');
+  }
+  if(fl.indexOf('categoriaGasto')>=0){
+    const cats = [...new Set((DB.pagamentos||[]).map(function(p){ return p.categoria; }).filter(Boolean))].sort();
+    campos.push('<div class="field"><label>Categoria</label><select id="f_relCat"><option value="todos">Todas as categorias</option>'
+      + cats.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('')+'</select></div>');
   }
 
   openModal('<div class="m-h">'+svg('print')+'<h3>Relatório'+(mod && ROTAS[mod]? ' — '+esc(ROTAS[mod].t) : '')+'</h3>'
@@ -978,6 +1045,11 @@ function PEXRelExecutar(){
     rot['Situação'] = f.statusCte==='todos'?'Todas':f.statusCte; }
   if((r.filtros||[]).indexOf('statusViagem')>=0){ f.statusViagem=v('f_relStVg')||'todos';
     rot['Situação'] = f.statusViagem==='todos'?'Todas':f.statusViagem; }
+  if((r.filtros||[]).indexOf('motorista')>=0){ f.motorista=v('f_relMot')||'todos';
+    const m=(typeof motorista==='function' && f.motorista!=='todos')? motorista(f.motorista):null;
+    rot['Motorista'] = m? m.nome : 'Todos'; }
+  if((r.filtros||[]).indexOf('categoriaGasto')>=0){ f.categoriaGasto=v('f_relCat')||'todos';
+    rot['Categoria'] = f.categoriaGasto==='todos'?'Todas':f.categoriaGasto; }
 
   let ds;
   try{ ds = r.gerar(f) || {}; }
