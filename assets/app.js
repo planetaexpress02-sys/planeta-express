@@ -1205,7 +1205,7 @@ function viewExames(){
   </div>
   <div class="card">
     <div class="card-h">${svg('stetho')}<h3>Matriz de exames por colaborador</h3>
-      <div class="r no-print"><button class="btn sm" onclick="window.print()">${svg('print')} Imprimir</button></div></div>
+      <div class="r no-print"><button class="btn sm" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl matrix">
       <thead><tr><th>Colaborador</th><th>ASO</th><th>Toxicológico</th><th>Opentech (BRF)</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
@@ -1344,7 +1344,7 @@ function viewVencimentos(){
     ${vencFiltro!=='todos'?`<button class="btn sm no-print" onclick="vencFiltro='todos';router()">${svg('list')} Ver todas as faixas</button>`:''}
     <div class="spacer"></div>
     <div class="muted no-print" style="font-size:12.5px">${vendoEmDia? cont.emdia+' documento(s) em dia' : total+' vencimento(s) na faixa'}</div>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
     <button class="btn no-print" onclick="modalImportar()" title="Importe uma planilha (Excel ou CSV) e o sistema puxa as validades sozinho">${svg('upload')} Importar planilha</button>
   </div>
   ${vendoEmDia
@@ -2481,7 +2481,7 @@ function viewNotas(){
   </div>
   <div class="grid two-col">
     <div class="card"><div class="card-h">${svg('money')}<h3>Despesas por período</h3>
-      <div class="r no-print"><button class="btn sm" onclick="window.print()">${svg('print')}</button><button class="btn primary sm" onclick="modalNota()">${svg('plus')} Novo</button></div></div>
+      <div class="r no-print"><button class="btn sm" onclick="imprimirRelatorio()">${svg('print')}</button><button class="btn primary sm" onclick="modalNota()">${svg('plus')} Novo</button></div></div>
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Período</th><th>Alexandria</th><th>Notas em geral</th><th>Combustível</th><th>Total</th><th class="no-print">NF</th><th class="no-print"></th></tr></thead>
         <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum período lançado.')}</td></tr>`}
@@ -3252,7 +3252,7 @@ function viewSeguros(){
     </select>
     ${segFiltro!=='todos'?`<button class="btn sm no-print" onclick="segFiltro='todos';router()">${svg('list')} Ver todos</button><span class="muted" style="font-size:12.5px">filtro: ${esc(filtroLabel||'')}</span>`:''}
     <div class="spacer"></div>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
   </div>
 
   ${ordem.length? ordem.map(grupoCard).join('') : `<div class="card"><div class="card-b">${emptyState('Nenhuma apólice neste filtro.')}</div></div>`}
@@ -3593,7 +3593,7 @@ function viewPedagios(){
     <div class="seg2">${perChip('todos','Todos')}${perChip('mes','Este mês')}${perChip('ano','Este ano')}${perChip('personalizado','Personalizado')}</div>
     <div class="seg2">${tpChip('todos','Tudo')}${tpChip('Pedágio','Pagos')}${tpChip('Vale-pedágio','Vale-pedágio')}</div>
     <div class="spacer"></div>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Relatório</button>
+    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Relatório</button>
   </div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
@@ -4694,7 +4694,7 @@ function viewEtica(){
       <div class="etica-logo"><img src="assets/logo.png" alt=""></div>
       <div><h2>Código de Ética e Conduta</h2><p class="muted">Planeta Express Transportes</p></div>
       <div class="no-print" style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn" onclick="window.print()">${svg('print')} Imprimir</button>
+        <button class="btn" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
         <button class="btn primary" onclick="baixarReal('../Documentos Internos/Código de Ética e Contuta.docx','Codigo de Etica.docx')">${svg('download')} Baixar Word</button>
       </div>
     </div>
@@ -4766,7 +4766,7 @@ function viewViagens(){
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
     <select class="selectlite" onchange="viagemPlaca=this.value;router()"><option value="todas">Todas as placas</option>
       ${placas.map(p=>`<option value="${esc(p)}" ${viagemPlaca===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
-    <div class="spacer"></div><div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
+    <div class="spacer"></div><div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl viag-tbl pex-noenh">
     <thead><tr><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th class="no-print"></th></tr></thead>
     <tbody>${corpo||`<tr><td colspan="10">${emptyState('Nenhuma viagem neste filtro.')}</td></tr>`}</tbody></table></div></div></div>`;
@@ -5037,7 +5037,7 @@ function viewDescargas(){
     <span class="spacer"></span>
     <button class="btn ghost sm" onclick="descExpandir(1)">Expandir tudo</button>
     <button class="btn ghost sm" onclick="descExpandir(0)">Recolher tudo</button>
-    <button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button>
+    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
   </div>
   <div id="dscMeta" class="dsc-meta muted no-print">${lista.length} descarga(s) em ${comps.length} mês(es) · <b>${money(totalFiltro)}</b></div>
   <div id="dscMonths" class="dsc-months">${descMonthsHTML()}</div>`;
@@ -5767,7 +5767,7 @@ function viewCtes(){
   <div class="toolbar"><div class="seg">${fb('todos','Todos')}${fb('Emitido','Emitidos',cont.Emitido)}${fb('Lançado','Lançados',cont.Lançado)}${fb('Trocado','Trocados',cont.Trocado)}${fb('Pago','Pagos',cont.Pago)}${fb('Cancelado','Cancelados',cont.Cancelado)}</div>
     <select class="selectlite" onchange="cteMes=this.value;router()"><option value="todos">Todos os meses</option>
       ${meses.map(m=>`<option value="${m}" ${cteMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
-    <div class="spacer"></div><button class="btn no-print" onclick="window.print()">${svg('print')} Imprimir</button></div>
+    <div class="spacer"></div><button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div>
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>Data</th><th>Nº CT-e</th><th>Placa</th><th>Cliente / Destinatário</th><th>Rota</th><th>Valor</th><th>Situação</th><th class="no-print"></th></tr></thead>
     <tbody>${rows||`<tr><td colspan="8">${emptyState('Nenhum CT-e neste filtro. Importe os XML ou clique em "Novo CT-e".')}</td></tr>`}</tbody></table></div></div></div>`;
@@ -5831,7 +5831,21 @@ function importarCteArquivos(ev){
 
 function tick(){ const d=new Date(); const el=document.getElementById('clock'); if(el) el.innerHTML=`<b>${DIAS[d.getDay()]}</b>, ${String(d.getDate()).padStart(2,'0')} de ${MESES_L[d.getMonth()]} de ${d.getFullYear()}`; }
 /* Tirar relatório: monta um cabeçalho e abre a impressão (permite salvar em PDF) */
+/* Botão "Relatório" da barra superior.
+   Desde a v6.77 ele abre a CENTRAL DE RELATÓRIOS (assets/relatorios.js):
+   o usuário escolhe o relatório e os filtros, confere na tela e só então
+   imprime — em A4, paginado e com o cabeçalho da empresa.
+   Se a tela atual não tem relatório no catálogo, cai na impressão simples
+   da própria tela (o comportamento antigo), para nada ficar sem saída. */
 function imprimirRelatorio(){
+  const rota=(location.hash||'#inicio').slice(1).split('/')[0];
+  if(typeof PEXRelAbrir==='function' && typeof relPorModulo==='function'){
+    if(relPorModulo(rota).length){ PEXRelAbrir(rota); return; }
+    PEXRelAbrirTodos(); return;
+  }
+  imprimirTelaAtual();
+}
+function imprimirTelaAtual(){
   const h=(location.hash||'#inicio').slice(1).split('/'); const meta=(typeof ROTAS!=='undefined'&&ROTAS[h[0]])||{};
   let tit=meta.t||'Relatório';
   if(h[1]){ const v=veiculo(h[1]); const m=motorista(h[1]); if(v) tit+=' — '+v.placa; else if(m) tit+=' — '+m.nome; }

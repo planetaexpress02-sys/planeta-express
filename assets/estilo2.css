@@ -3557,3 +3557,165 @@ tr.aniv-inativo td{ opacity:.62 }
   .mon-rg-nota{ font-size:9.2px; padding-top:5px }
   .mon-rg-b{ padding:8px 10px }
 }
+
+/* ==========================================================================
+   CENTRAL DE RELATÓRIOS (v6.77) — documento A4 empresarial
+   O sistema é cyber; o DOCUMENTO é branco e sóbrio, porque sai da empresa
+   para cliente, contador, seguradora, banco e auditoria.
+   ========================================================================== */
+.rel-ov{ position:fixed; inset:0; z-index:9000; display:none; flex-direction:column; background:#20262e }
+.rel-ov.show{ display:flex }
+.rel-ov-bar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px;
+  background:linear-gradient(180deg,#0a1a2c,#061220); border-bottom:1px solid rgba(0,190,255,.24);
+  box-shadow:0 6px 22px rgba(0,8,26,.5) }
+.rel-ov-t{ display:flex; align-items:center; gap:9px; color:#eaf6ff; font-size:14.5px; font-weight:700; min-width:0 }
+.rel-ov-t svg{ width:18px; height:18px; color:#4fd0ff; flex:0 0 auto }
+.rel-ov-t span{ font-size:11.5px; font-weight:600; color:#8fb6d4; white-space:nowrap }
+.rel-ov-acoes{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
+.rel-ov-scroll{ flex:1; overflow:auto; padding:22px 14px 40px; -webkit-overflow-scrolling:touch }
+
+/* ---------- a folha ---------- */
+.rel-doc{ margin:0 auto; color:#12212f; font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  font-size:9.6pt; line-height:1.38; -webkit-font-smoothing:antialiased }
+.rel-pg{ position:relative; width:210mm; min-height:297mm; padding:12mm; margin:0 auto 18px; background:#fff;
+  box-shadow:0 10px 34px rgba(0,0,0,.42); display:flex; flex-direction:column; box-sizing:border-box }
+.rel-paisagem .rel-pg{ width:297mm; min-height:210mm }
+.rel-corpo{ flex:1 }
+/* Régua de medição: SEMPRE em escala 1:1, mesmo no celular (onde a prévia
+   usa zoom). Se ela encolhesse junto, a paginação mudaria de acordo com o
+   tamanho da tela — e o PDF tem que sair igual em qualquer aparelho. */
+.rel-regua{ position:fixed; left:-10000px; top:0; visibility:hidden; pointer-events:none; background:#fff;
+  zoom:1!important; transform:none!important }
+
+/* ---------- cabeçalho ---------- */
+.rel-hd{ display:flex; align-items:flex-start; gap:14px }
+.rel-hd-marca{ display:flex; align-items:center; gap:9px; flex:0 0 auto }
+.rel-hd-logo{ width:34px; height:34px; object-fit:contain }
+.rel-hd-emp{ display:flex; flex-direction:column; line-height:1.06 }
+.rel-hd-emp b{ font-size:12.4pt; font-weight:800; letter-spacing:.4px; color:#0b2a44 }
+.rel-hd-emp span{ font-size:7.4pt; font-weight:600; letter-spacing:2.5px; color:#5b7d99 }
+.rel-hd-doc{ flex:1; text-align:center; padding-top:2px; min-width:0 }
+.rel-hd-tit{ font-size:13pt; font-weight:800; color:#0b2a44; letter-spacing:.2px; line-height:1.15 }
+.rel-hd-sub{ font-size:8pt; color:#5b7d99; margin-top:2px }
+.rel-hd-meta{ flex:0 0 auto; display:flex; flex-direction:column; gap:1px; text-align:right }
+.rel-hd-meta span{ font-size:7.6pt; color:#2a4459 }
+.rel-hd-meta i{ display:inline-block; font-style:normal; font-size:6.6pt; font-weight:700; letter-spacing:.7px;
+  text-transform:uppercase; color:#8aa5b8; margin-right:5px }
+.rel-hd-linha{ height:2px; margin:7px 0 11px;
+  background:linear-gradient(90deg,#0a6ebd 0%,#17a8d8 42%,#cfe3ef 42%,#cfe3ef 100%) }
+
+/* ---------- identificação / filtros ---------- */
+.rel-ident{ border:1px solid #dce6ee; border-left:3px solid #17a8d8; border-radius:3px;
+  padding:7px 11px; margin-bottom:11px; background:#f7fafc; break-inside:avoid }
+.rel-ident-t{ font-size:6.8pt; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#7d99ad; margin-bottom:4px }
+.rel-ident-g{ display:flex; flex-wrap:wrap; gap:5px 22px }
+.rel-ident-g span{ font-size:8.2pt; color:#1d3348 }
+.rel-ident-g i{ font-style:normal; font-weight:700; color:#7d99ad; margin-right:5px }
+
+/* ---------- KPIs ---------- */
+.rel-kpis{ display:flex; gap:9px; margin-bottom:12px; flex-wrap:wrap; break-inside:avoid }
+.rel-kpi{ flex:1 1 0; min-width:96px; border:1px solid #dce6ee; border-top:2.5px solid #17a8d8; border-radius:3px;
+  padding:7px 10px 8px; background:#fff; display:flex; flex-direction:column; gap:2px }
+.rel-kpi-l{ font-size:6.8pt; font-weight:700; letter-spacing:.7px; text-transform:uppercase; color:#7d99ad }
+.rel-kpi-v{ font-size:12.6pt; font-weight:800; color:#0b2a44; font-variant-numeric:tabular-nums; line-height:1.14 }
+.rel-kpi-n{ font-size:6.9pt; color:#8aa5b8 }
+
+/* ---------- seções ---------- */
+.rel-sec-t{ font-size:9.4pt; font-weight:800; color:#0b2a44; letter-spacing:.3px; text-transform:uppercase;
+  padding-bottom:4px; margin:2px 0 7px; border-bottom:1px solid #dce6ee; break-after:avoid; page-break-after:avoid }
+.rel-cont{ font-size:7.4pt; font-style:italic; color:#8aa5b8; margin:0 0 5px; break-after:avoid; page-break-after:avoid }
+
+/* ---------- tabela ---------- */
+.rel-tab{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:9px }
+.rel-tab th{ background:#0b2a44; color:#fff; font-size:7.3pt; font-weight:700; letter-spacing:.5px;
+  text-transform:uppercase; text-align:left; padding:5px 6px; border:1px solid #0b2a44; vertical-align:middle }
+.rel-tab td{ font-size:8.2pt; padding:4px 6px; border:1px solid #e2eaf1; vertical-align:top; color:#1d3348;
+  word-wrap:break-word; overflow-wrap:anywhere }
+.rel-tab tbody tr:nth-child(even) td{ background:#f7fafc }
+.rel-tab .rel-r{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap }
+.rel-tab .rel-c{ text-align:center; white-space:nowrap }
+.rel-tab tr{ break-inside:avoid; page-break-inside:avoid }
+.rel-tot td{ font-weight:800; background:#eef4f9!important; border-color:#c9d9e6; font-size:8.6pt; color:#0b2a44 }
+.rel-tot .rel-tot-l{ text-align:right; letter-spacing:.5px }
+
+/* ---------- resumo / análise / vazio ---------- */
+.rel-resumo{ margin-bottom:11px; break-inside:avoid }
+.rel-resumo-g{ display:flex; flex-wrap:wrap; gap:6px 26px }
+.rel-resumo-i{ font-size:8.4pt; color:#1d3348 }
+.rel-resumo-i i{ font-style:normal; color:#7d99ad; margin-right:6px }
+.rel-analise{ margin-top:4px; break-inside:avoid }
+.rel-analise ul{ margin:0; padding-left:16px }
+.rel-analise li{ font-size:8.4pt; color:#1d3348; margin-bottom:3px }
+.rel-vazio-b{ border:1px dashed #c9d9e6; border-radius:4px; padding:22px; text-align:center;
+  font-size:9pt; color:#7d99ad; background:#f7fafc }
+
+/* ---------- gráfico de barras para papel ---------- */
+.rel-graf{ margin-bottom:12px; break-inside:avoid; page-break-inside:avoid }
+.rel-graf-t{ font-size:7.6pt; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:#7d99ad; margin-bottom:5px }
+.rel-gb{ display:flex; flex-direction:column; gap:3px }
+.rel-gb-l{ display:flex; align-items:center; gap:8px }
+.rel-gb-rot{ flex:0 0 27%; font-size:7.8pt; color:#1d3348; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rel-gb-tr{ flex:1; height:9px; background:#eef4f9; border-radius:2px; overflow:hidden }
+.rel-gb-tr i{ display:block; height:100%; background:linear-gradient(90deg,#0a6ebd,#17a8d8); border-radius:2px }
+.rel-gb-val{ flex:0 0 auto; font-size:7.8pt; font-weight:700; color:#0b2a44; font-variant-numeric:tabular-nums; white-space:nowrap }
+
+/* ---------- rodapé ---------- */
+.rel-ft{ margin-top:auto; padding-top:6px; border-top:1px solid #dce6ee; display:flex; gap:12px; align-items:baseline }
+.rel-ft span{ font-size:6.8pt; color:#8aa5b8 }
+.rel-ft-e{ font-weight:700; color:#5b7d99 }
+.rel-ft-c{ flex:1; text-align:center }
+.rel-ft-p{ font-weight:700; color:#0b2a44; white-space:nowrap }
+
+/* ---------- configurador ---------- */
+.rel-cfg-t{ font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  color:#8fb6d4; margin-bottom:8px }
+.rel-ops{ display:grid; grid-template-columns:1fr 1fr; gap:8px }
+.rel-op{ text-align:left; border:1px solid rgba(0,170,255,.2); background:rgba(0,20,38,.4); border-radius:11px;
+  padding:9px 11px; cursor:pointer; display:flex; flex-direction:column; gap:2px; transition:.15s; min-width:0 }
+.rel-op:hover{ background:rgba(0,170,255,.12); border-color:rgba(0,190,255,.4) }
+.rel-op.on{ background:linear-gradient(160deg,rgba(0,150,255,.24),rgba(0,110,220,.12));
+  border-color:rgba(0,200,255,.55); box-shadow:0 0 14px rgba(0,170,255,.2) }
+.rel-op b{ font-size:13px; color:#eaf6ff }
+.rel-op span{ font-size:11px; color:#9fc6e6; line-height:1.35 }
+.rel-atalhos{ display:flex; gap:6px; flex-wrap:wrap; margin:-4px 0 12px }
+
+@media(max-width:860px){
+  .rel-ops{ grid-template-columns:1fr }
+  .rel-ov-bar{ padding:9px 11px; gap:8px }
+  .rel-ov-t{ width:100%; font-size:13.5px }
+  .rel-ov-acoes{ margin-left:0; width:100% }
+  .rel-ov-acoes .btn{ flex:1; justify-content:center; font-size:12px; padding:8px 6px }
+  .rel-ov-scroll{ padding:12px 6px 30px }
+  /* A folha é maior que a tela: encolhe para caber, sem deixar de ser A4.
+     Usa `zoom` e NÃO `transform:scale` — o scale só encolhe o desenho, o
+     elemento continua ocupando 1123px e o painel passa a rolar de lado. */
+  .rel-doc{ zoom:.45 }
+  .rel-doc.rel-paisagem{ zoom:.32 }
+}
+
+/* ==========================================================================
+   IMPRESSÃO — só a folha vai para o papel
+   ========================================================================== */
+@media print{
+  body.rel-aberto .app,
+  body.rel-aberto #printHead,
+  body.rel-aberto .toasts,
+  body.rel-aberto #overlay,
+  body.rel-aberto .ia-fab,
+  body.rel-aberto .ia-panel,
+  body.rel-aberto #splash,
+  body.rel-aberto #loginScreen{ display:none!important }
+  body.rel-aberto .rel-ov{ display:block!important; position:static; background:#fff; inset:auto }
+  body.rel-aberto .rel-ov-bar{ display:none!important }
+  body.rel-aberto .rel-ov-scroll{ overflow:visible; padding:0; display:block }
+  body.rel-aberto .rel-doc{ transform:none!important; zoom:1!important; margin:0 }
+  body.rel-aberto .rel-pg{ box-shadow:none; margin:0; break-after:page; page-break-after:always }
+  body.rel-aberto .rel-pg:last-child{ break-after:auto; page-break-after:auto }
+  body.rel-aberto .rel-tab th,
+  body.rel-aberto .rel-tab tbody tr:nth-child(even) td,
+  body.rel-aberto .rel-tot td,
+  body.rel-aberto .rel-ident,
+  body.rel-aberto .rel-gb-tr i,
+  body.rel-aberto .rel-hd-linha,
+  body.rel-aberto .rel-kpi{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
+}
