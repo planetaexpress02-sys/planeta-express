@@ -2,3 +2,6 @@
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Backups de seguranca (nunca versionar)
+Backup Planeta Express*/
