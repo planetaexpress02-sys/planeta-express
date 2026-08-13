@@ -5596,7 +5596,47 @@ function finImpProcessar(cab){
   }
   if(!FIN_IMP.length){ toast('Não encontrei linhas com data e valor. Confira as colunas.','err'); modalFinColunas(); return; }
   FIN_IMP.sort(function(a,b){ return a.data.localeCompare(b.data); });
+  finImpMarcarRepetidos();
   modalFinImportar(FIN_NOME);
+}
+/* ------------------------------------------------------------------
+   Marca o que JÁ EXISTE no sistema, para não lançar duas vezes.
+   Vale: mesma data + mesmo motorista + mesmo valor.
+   Gasto: mesma data + mesmo valor + mesma descrição.
+   O repetido entra DESMARCADO — mas continua na lista, porque às vezes
+   houve mesmo dois vales iguais no mesmo dia, e quem decide é você.
+   ------------------------------------------------------------------ */
+function finImpMarcarRepetidos(manterMarcacao){
+  const norm = function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  const cent = function(v){ return Math.round((Number(v)||0)*100); };
+  /* também marca repetição DENTRO da própria planilha */
+  const vistos = {};
+  FIN_IMP.forEach(function(x){
+    let jaTem = false;
+    if(x.destino==='vale'){
+      jaTem = (DB.vales||[]).some(function(v){
+        return v.data===x.data && cent(v.valor)===cent(x.valor)
+            && (!x.motoristaId || v.motoristaId===x.motoristaId);
+      });
+    } else {
+      jaTem = (DB.pagamentos||[]).some(function(p){
+        return p.data===x.data && cent(p.valor)===cent(x.valor) && norm(p.descricao)===norm(x.desc);
+      });
+    }
+    const chave = x.destino+'|'+x.data+'|'+cent(x.valor)+'|'+norm(x.desc)+'|'+(x.motoristaId||'');
+    if(vistos[chave]){ x._repetidoNaPlanilha = true; }
+    vistos[chave] = true;
+    x._jaExiste = jaTem;
+    if(!manterMarcacao && (jaTem || x._repetidoNaPlanilha)) x._ok = false;   /* ja existe: vem desmarcado */
+  });
+}
+function finImpMarcarTodos(ligar){
+  FIN_IMP.forEach(function(x){ x._ok = !!ligar; });
+  modalFinImportar();
+}
+function finImpSoNovos(){
+  FIN_IMP.forEach(function(x){ x._ok = !(x._jaExiste || x._repetidoNaPlanilha); });
+  modalFinImportar();
 }
 /* Saída manual: mostra as primeiras linhas e deixa você dizer qual coluna é
    qual. Assim o importador funciona com qualquer planilha, sempre. */
@@ -5644,11 +5684,13 @@ function modalFinImportar(nome){
   const opMot = (DB.motoristas||[]).map(function(m){ return '<option value="'+m.id+'">'+esc(m.nome)+'</option>'; }).join('');
 
   const linha = function(x,i){
-    return '<tr class="'+(x._ok?'':'fin-imp-off')+'">'
+    const selo = x._jaExiste ? '<span class="st warn" style="font-size:10px;margin-left:6px">já existe</span>'
+               : x._repetidoNaPlanilha ? '<span class="st neutro" style="font-size:10px;margin-left:6px">repetida na planilha</span>' : '';
+    return '<tr class="'+(x._ok?'':'fin-imp-off')+(x._jaExiste?' fin-imp-dup':'')+'">'
       + '<td class="no-print"><input type="checkbox" '+(x._ok?'checked':'')+' onchange="FIN_IMP['+i+']._ok=this.checked;modalFinImportar()"></td>'
       + '<td class="mono">'+fmtD(x.data)+'</td>'
-      + '<td>'+esc(x.desc)+'</td>'
-      + '<td><select class="selectlite" onchange="FIN_IMP['+i+'].destino=this.value;modalFinImportar()">'
+      + '<td>'+esc(x.desc)+selo+'</td>'
+      + '<td><select class="selectlite" onchange="FIN_IMP['+i+'].destino=this.value;finImpMarcarRepetidos(1);modalFinImportar()">'
         + '<option value="vale"'+(x.destino==='vale'?' selected':'')+'>Vales Motoristas</option>'
         + '<option value="gasto"'+(x.destino==='gasto'?' selected':'')+'>Gastos</option></select></td>'
       + '<td>'+(x.destino==='vale'
@@ -5668,6 +5710,20 @@ function modalFinImportar(nome){
         + kpi('doc','i-red', money(soma(gastos)), 'Gastos', gastos.filter(function(x){return x._ok;}).length+' lançamento(s)')
         + kpi('money','i-blue', money(soma(FIN_IMP)), 'Total', FIN_IMP.filter(function(x){return x._ok;}).length+' de '+FIN_IMP.length+' linha(s))')
       +'</div>'
+      + (function(){
+          const dup = FIN_IMP.filter(function(x){ return x._jaExiste; }).length;
+          const rep = FIN_IMP.filter(function(x){ return x._repetidoNaPlanilha; }).length;
+          if(!dup && !rep) return '';
+          return '<div class="fin-imp-aviso">'+svg('bell')+'<div><b>'
+            + (dup? dup+' lançamento(s) já existem no sistema' : '')
+            + (dup&&rep? ' e ' : '')
+            + (rep? rep+' linha(s) repetida(s) dentro da própria planilha' : '')
+            + '.</b><span>Deixei essas linhas desmarcadas para não lançar duas vezes. Se quiser incluir mesmo assim, é só marcar.</span></div></div>';
+        })()
+      + '<div class="rel-atalhos no-print" style="margin-bottom:10px">'
+        + '<button class="btn ghost sm" onclick="finImpSoNovos()">Só os novos</button>'
+        + '<button class="btn ghost sm" onclick="finImpMarcarTodos(true)">Marcar todos</button>'
+        + '<button class="btn ghost sm" onclick="finImpMarcarTodos(false)">Desmarcar todos</button></div>'
       + (semDono? '<div class="hint" style="color:var(--warn);margin-bottom:8px">'+semDono+' vale sem motorista escolhido — escolha quem é, ou mude a linha para Gastos.</div>' : '')
       +'<div class="tbl-wrap" style="max-height:44vh;overflow:auto"><table class="tbl">'
         +'<thead><tr><th class="no-print"></th><th>Data</th><th>Descrição</th><th>Vai para</th><th>Motorista / Categoria</th><th class="ta-r">Valor</th></tr></thead>'
@@ -5688,6 +5744,7 @@ function finImpQuem(i, id){
     if(x.destino==='vale' && !x.motoristaId && String(x.desc||'').trim().toLowerCase()===chave){ x.motoristaId=id; n++; }
   });
   alvo.motoristaId = id;
+  finImpMarcarRepetidos(1);
   modalFinImportar();
   if(n > 1 && id) toast('Apliquei em '+n+' linhas com a mesma descrição.');
 }

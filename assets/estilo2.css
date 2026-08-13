@@ -3757,3 +3757,11 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
 /* Importacao de planilha no Financeiro (v6.82) */
 .fin-imp-off td{ opacity:.42 }
 .fin-imp-off b{ text-decoration:line-through }
+
+/* Importacao do Financeiro: linhas ja existentes (v6.86) */
+.fin-imp-dup td{ background:rgba(255,176,32,.07) }
+.fin-imp-aviso{ display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin-bottom:10px;
+  border-radius:11px; background:rgba(255,176,32,.1); border:1px solid rgba(255,176,32,.28) }
+.fin-imp-aviso svg{ width:17px; height:17px; color:#ffb020; flex:0 0 auto; margin-top:1px }
+.fin-imp-aviso b{ display:block; font-size:13px; color:#ffd79a }
+.fin-imp-aviso span{ display:block; font-size:11.5px; color:#c9b393; margin-top:2px }
