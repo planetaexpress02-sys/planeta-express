@@ -16,9 +16,10 @@ function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
   ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs',
+   /* 'aniversarios' ficou aqui de propósito: a aba foi removida na v6.81, mas
+      quem tiver cadastrado alguém não pode perder o registro — trocar de
+      versão nunca apaga dado. */
    'aniversarios','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
-  /* Prazos de aviso de aniversário — o usuário edita na própria tela */
-  if(!Array.isArray(DB.config.anivAvisos) || !DB.config.anivAvisos.length) DB.config.anivAvisos=[30,10];
   if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
@@ -477,7 +478,6 @@ const ROTAS = {
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
   pedagios:{t:'Pedágios', s:'Passagens, custos, praças e concessionárias', ico:'toll'},
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
-  aniversarios:{t:'Aniversários', s:'Quem faz aniversário e quando avisar', ico:'cake'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
@@ -489,7 +489,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1, aniversarios:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1};
 function router(){
   const h = (location.hash||'#inicio').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -527,7 +527,6 @@ function router(){
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
   else if(rota==='central'){ if(arg) cpidAba=arg; el.innerHTML=viewCentral(); }
   else if(rota==='contabilidade'){ if(arg) contabAba=arg; el.innerHTML=viewContabilidade(); }
-  else if(rota==='aniversarios'){ if(arg) anivFiltro=arg; el.innerHTML=viewAniversarios(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -739,8 +738,7 @@ function contadores(){
   let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
   let lic=0; (DB.licencas||[]).forEach(l=>{ if(l && l.situacao!=='arquivada'){ const d=diasAte(l.validade); if(d!=null && d<=60) lic++; } });
   const cpid=(typeof cpidPendentes==='function')? cpidPendentes() : 0;
-  const aniv=(typeof anivPendentes==='function')? anivPendentes() : 0;
-  return {venc, crit, total:venc+crit, seg, lic, cpid, aniv};
+  return {venc, crit, total:venc+crit, seg, lic, cpid};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -754,7 +752,7 @@ function renderSidebar(rota){
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
-    `<div class="group">Empresa</div>`+ item('socios')+ item('aniversarios', c.aniv?{n:c.aniv, cls:'warn'}:null)+ item('etica')+
+    `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
 
@@ -1134,7 +1132,9 @@ function viewMotorista(id){
     ${info('Matrícula', esc(m.matricula))}
     ${info('CPF', esc(m.cpf))}
     ${info('RG', esc(m.rg?((m.rg)+(m.emissorRg?' '+m.emissorRg:'')):''))}
-    ${info('Nascimento', fmtD(m.nascimento))}
+    ${info('Nascimento', m.nascimento
+        ? fmtD(m.nascimento)+(typeof anivSelo==='function'? ' '+anivSelo(m.nascimento) : '')
+        : '—')}
     ${info('Celular', (m.celular||m.telefone)?`<a class="pill-link" href="tel:${esc(m.celular||m.telefone)}">${esc(m.celular||m.telefone)}</a>`:'—')}
     ${info('E-mail', esc(m.email))}
     ${info('CNH nº', esc(m.cnh))}

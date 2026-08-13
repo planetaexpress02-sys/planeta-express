@@ -879,21 +879,27 @@ const PEX_RELATORIOS = [
       };
     }},
 
-  /* ----------------------------------------------------- ANIVERSÁRIOS */
-  { id:'aniv-lista', modulo:'aniversarios', nome:'Aniversários do pessoal',
-    desc:'Datas de aniversário, idade e proximidade.',
+  /* Aniversários: sem aba própria desde a v6.81 — a data vem do cadastro do
+     motorista, então o relatório mora dentro de Motoristas. */
+  { id:'mot-aniversarios', modulo:'motoristas', nome:'Aniversários',
+    desc:'Data de nascimento dos motoristas, idade e quantos dias faltam.',
     filtros:[],
     gerar:function(){
-      const l = (typeof anivLista==='function')? anivLista() : [];
+      const l = (DB.motoristas||[]).filter(function(m){ return (m.status||'Ativo')==='Ativo'; })
+        .map(function(m){ return {m:m, d:(typeof anivDiasAte==='function')? anivDiasAte(m.nascimento) : null}; })
+        .sort(function(a,b){ return (a.d==null?9e9:a.d)-(b.d==null?9e9:b.d); });
       return {
         tituloTabela:'Aniversariantes',
-        colunas:[{rotulo:'Pessoa',larg:'26%'},{rotulo:'Cadastro'},{rotulo:'Função'},{rotulo:'Nascimento',tipo:'data'},
+        colunas:[{rotulo:'Motorista',larg:'30%'},{rotulo:'Função'},{rotulo:'Nascimento',tipo:'data'},
                  {rotulo:'Faz',tipo:'numero'},{rotulo:'Próximo aniversário',tipo:'data'},{rotulo:'Faltam',tipo:'numero'}],
-        linhas: l.map(function(x){ return [x.nome, x.origem==='motorista'?'Motorista':'Pessoa', x.papel,
-          x.nascimento? relData(x.nascimento):'—', x.idade!=null? x.idade+' anos':'—',
-          x.quando? relData(x.quando.toISOString().slice(0,10)):'—',
-          x.dias==null?'—':(x.dias===0?'hoje':x.dias+' dias')]; }),
-        kpis:[{rotulo:'Pessoas',valor:relNum(l.length)}]
+        linhas: l.map(function(x){
+          const idade=(typeof anivIdadeQueFaz==='function')? anivIdadeQueFaz(x.m.nascimento) : null;
+          return [x.m.nome, x.m.funcao||x.m.cargo, relData(x.m.nascimento),
+                  idade!=null? idade+' anos':'—',
+                  (typeof anivProximo==='function' && x.m.nascimento)? relData(anivProximo(x.m.nascimento)):'—',
+                  x.d==null?'—':(x.d===0?'hoje':x.d+' dias')]; }),
+        kpis:[{rotulo:'Motoristas',valor:relNum(l.length)},
+              {rotulo:'Sem data',valor:relNum(l.filter(function(x){ return x.d==null; }).length)}]
       };
     }}
 ];

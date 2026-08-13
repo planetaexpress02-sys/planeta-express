@@ -3480,23 +3480,6 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
   background:rgba(0,20,38,.55); border:1px solid rgba(0,170,255,.14); transition:all .15s ease }
 .cb-pconta:hover{ border-color:rgba(0,229,255,.45); color:#eaf6ff }
 .cb-pconta.off{ opacity:.4; text-decoration:line-through }
-
-/* ==========================================================================
-   ANIVERSÁRIOS (v6.75) — tabela do pessoal e prazos de aviso editáveis
-   ========================================================================== */
-.aniv-sub{ display:block; font-size:11.5px; color:var(--text-mute); margin-top:2px }
-.aniv-orig{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
-  padding:3px 9px; border-radius:999px; white-space:nowrap }
-.aniv-orig svg{ width:13px; height:13px }
-.aniv-orig.mot{ color:#7fd4ff; background:rgba(0,170,255,.13); border:1px solid rgba(0,170,255,.26); cursor:pointer }
-.aniv-orig.mot:hover{ background:rgba(0,170,255,.22) }
-.aniv-orig.pes{ color:#9ad8b4; background:rgba(34,197,94,.13); border:1px solid rgba(34,197,94,.26) }
-tr.aniv-hoje{ background:rgba(34,197,94,.10)!important; box-shadow:inset 3px 0 0 #22c55e }
-tr.aniv-inativo td{ opacity:.62 }
-.aniv-prazo{ display:flex; align-items:center; gap:10px; margin-bottom:8px }
-.aniv-prazo input{ width:96px; text-align:center }
-.aniv-prazo span{ color:var(--text-soft); font-size:13px }
-
 /* ==========================================================================
    MONITORAMENTO — MEDIDOR DE PERCURSO (v6.76)
    Painel que aparece sobre o mapa ao clicar na régua. NÃO muda o tamanho
