@@ -1,0 +1,88 @@
+########################################################################
+  >>> CONFIGURADO! O projeto foi enviado para o GitHub em 28/07/2026:
+      Repositório: https://github.com/planetaexpress02-sys/planeta-express
+      Site (após ativar o Pages):
+         https://planetaexpress02-sys.github.io/planeta-express/
+
+  Para ATIVAR o site (uma vez só): abra o repositório acima >
+  Settings > Pages > Source "Deploy from a branch" > Branch "main" +
+  pasta "/ (root)" > Save. Espere 1-2 min e recarregue.
+
+  Próximas atualizações: a autorização do GitHub ficou salva no PC,
+  então as novas versões são enviadas automaticamente e o site
+  (GitHub Pages) se atualiza sozinho.
+########################################################################
+
+========================================================================
+  COMO USAR / ATUALIZAR O SISTEMA SEM O NETLIFY
+  (O Netlify ficou sem créditos e travou novas publicações. Sem problema —
+   você NÃO precisa dele. O sistema no seu computador já está atualizado.)
+========================================================================
+
+>>> IMPORTANTE: o sistema no seu COMPUTADOR e o arquivo do CELULAR já estão
+    na versão mais nova (v5.5). O Netlify só servia para o "site online".
+
+
+------------------------------------------------------------------------
+OPÇÃO 1 — USAR NO COMPUTADOR (já está atualizado, nada a fazer)
+------------------------------------------------------------------------
+- Abra o atalho "Planeta Express" na Área de Trabalho
+  (ou entre na pasta "Sistema Planeta Express" e dê 2 cliques em "index.html").
+- Pronto. Já é a versão v5.5, com tudo que fizemos.
+
+
+------------------------------------------------------------------------
+OPÇÃO 2 — USAR NO CELULAR (já está atualizado)
+------------------------------------------------------------------------
+- O arquivo "Planeta Express - CELULAR.html" (nesta pasta) já é a v5.5.
+- Envie ele para o seu celular (WhatsApp para você mesmo, Google Drive,
+  e-mail ou cabo) e abra. Funciona sozinho, sem internet.
+
+
+------------------------------------------------------------------------
+OPÇÃO 3 — SITE ONLINE GRÁTIS, SEM CRÉDITOS: GITHUB PAGES  (recomendado)
+------------------------------------------------------------------------
+O seu projeto já está no GitHub (é de lá que o Netlify puxava). O GitHub
+tem um serviço de site GRÁTIS e SEM LIMITE de créditos, chamado GitHub Pages.
+Configura UMA vez e, depois, cada "Push" já atualiza o site sozinho.
+
+PASSO A PASSO (uma vez só):
+1. No GitHub Desktop, clique em "Push origin" para enviar a versão v5.5.
+2. Abra o navegador em: https://github.com   (faça login).
+3. Entre no seu repositório (o projeto Planeta Express).
+4. Clique na aba "Settings" (Configurações) do repositório.
+5. No menu da esquerda, clique em "Pages".
+6. Em "Build and deployment" > "Source", escolha "Deploy from a branch".
+7. Em "Branch", escolha "main" e a pasta "/ (root)". Clique em "Save".
+8. Espere 1 a 2 minutos e recarregue a página. O GitHub vai mostrar o
+   endereço do seu site, algo como:
+      https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/
+9. Esse é o seu novo site online. Salve/favorite esse link.
+
+DEPOIS DISSO: sempre que eu fizer uma melhoria, você só dá "Push origin"
+no GitHub Desktop e o GitHub Pages atualiza o site sozinho (grátis).
+
+Obs.: o login/sincronização (Supabase) funciona igual no GitHub Pages.
+
+
+------------------------------------------------------------------------
+OPÇÃO 4 — ESPERAR O NETLIFY VOLTAR
+------------------------------------------------------------------------
+Pela mensagem do Netlify, os créditos voltam no próximo ciclo de
+faturamento. Quando voltar, é só dar "Push" que ele publica de novo.
+Mas o GitHub Pages (Opção 3) é grátis e resolve de vez.
+
+
+------------------------------------------------------------------------
+OPÇÃO 5 — LINK PRIVADO JÁ ATUALIZADO (claude.ai)
+------------------------------------------------------------------------
+Há também o link privado (abre com o seu login do claude.ai), que eu mantenho
+sempre atualizado:
+  https://claude.ai/code/artifact/b9498522-eeee-48ea-ad9d-c5fc06f505cf
+É uma versão offline por-aparelho (sem sincronização). Serve para consulta
+rápida de qualquer lugar.
+
+========================================================================
+Recomendação: use a OPÇÃO 1/2 hoje (já pronto) e configure a OPÇÃO 3
+(GitHub Pages) quando puder, para ter o site online de graça e para sempre.
+========================================================================

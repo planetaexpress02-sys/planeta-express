@@ -46,7 +46,7 @@ function _iaData(t){ const m=String(t).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\
   if(/anteontem/.test(n)){ const d=new Date(); d.setDate(d.getDate()-2); return d.toISOString().slice(0,10); }
   return _iaHoje();
 }
-function _iaTemData(t){ return /(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})|hoje|ontem|anteontem/i.test(String(t)); }
+
 /* número "solto" (o maior, ignorando placa/data) — usado como KM/horas quando não há a palavra km */
 function _iaNumeroSolto(t){
   let s=String(t).replace(/\b[A-Za-z]{3}[- ]?\d[A-Za-z0-9]\d{2}\b/g,' ').replace(/\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/g,' ');

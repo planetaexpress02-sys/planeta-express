@@ -723,7 +723,7 @@ function pexTipInit(){
 }
 /* ---- barra de carregamento global (topo) + estado loading de botão ---- */
 function pexBar(on){ var b=document.getElementById('pexBar'); if(!b){ b=document.createElement('div'); b.id='pexBar'; document.body.appendChild(b); } b.className=on?'run':''; }
-function pexBtnLoad(btn,on){ if(!btn)return; if(on){ btn.classList.add('loading'); btn.disabled=true; } else { btn.classList.remove('loading'); btn.disabled=false; } }
+
 /* ---- revela o mapa do dashboard após um skeleton (widget "ao vivo") ---- */
 function pexDashMapReveal(){ var s=document.getElementById('pexMapSkel'); if(!s) return;
   setTimeout(function(){ s.classList.add('gone'); setTimeout(function(){ if(s.parentNode) s.remove(); },450); }, 700); }
@@ -2332,21 +2332,9 @@ function salvarManutencao(id){ if(!val('f_item')){toast('Informe o item.','err')
   if(id)Object.assign(DB.manutencoes.find(x=>x.id===id),d); else{ d.id=uid('o'); DB.manutencoes.push(d); } saveDB(); closeModal(); toast('Manutenção salva.'); router(); }
 function excluirManutencao(id){ if(!confirm('Excluir este registro?'))return; DB.manutencoes=DB.manutencoes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
-function modalDocumento(id){
-  const d=id?DB.documentos.find(x=>x.id===id):{titulo:'',categoria:'Interno',entidade:'empresa',refId:'empresa',validade:'',arquivo:''};
-  openModal(`<div class="m-h">${svg('doc')}<h3>${id?'Editar apontamento':'Novo apontamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">${fld('Título','f_tit',d.titulo)}
-      <div class="field-row">${fld('Categoria','f_cat',d.categoria)}${fld('Validade (se houver)','f_val',d.validade,'date')}</div>
-      ${fld('Caminho do arquivo original','f_arq',d.arquivo,'text','Caminho dentro da pasta da empresa')}
-      <div class="hint">Este é um apontamento (referência). Para guardar o arquivo dentro do sistema, use "Enviar arquivo".</div></div>
-    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirDocumento('${id}')">${svg('trash')} Excluir</button>`:''}
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn primary" onclick="salvarDocumento('${id||''}')">Salvar</button></div>`);
-}
-function salvarDocumento(id){ if(!val('f_tit')){toast('Informe o título.','err');return;}
-  const d={titulo:val('f_tit'),categoria:val('f_cat')||'Interno',entidade:'empresa',refId:'empresa',validade:val('f_val'),arquivo:val('f_arq')};
-  if(id)Object.assign(DB.documentos.find(x=>x.id===id),d); else{ d.id=uid('d'); DB.documentos.push(d); } saveDB(); closeModal(); toast('Salvo.'); router(); }
-function excluirDocumento(id){ if(!confirm('Excluir este apontamento?'))return; DB.documentos=DB.documentos.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+
+
+
 
 /* ================================================================== */
 /*  20. CONFIG / BACKUP / BUSCA / TOAST                                */
@@ -3067,8 +3055,7 @@ function iniAbrirVeic(placa){ const v=DB.veiculos.find(x=>x.placa===placa); cons
 }
 /* Command Center — zoom do mapa (visual, ao redor da base Londrina) */
 var _ccZoom=1;
-function iniMapZoom(d,reset){ _ccZoom=reset?1:Math.max(1,Math.min(2.4, _ccZoom+d));
-  const g=document.getElementById('ccZoom'); if(g){ g.style.transformOrigin='440px 258px'; g.style.transform='scale('+_ccZoom+')'; } }
+
 /* clima REAL de Londrina (mesma fonte do cockpit) no chip da base */
 function iniBaseWx(){ const g=document.getElementById('iniBaseWx'); if(!g) return;
   try{ const c=JSON.parse(localStorage.getItem('pex_weather')||'null'); if(c && c.temp!=null){ const t=g.querySelector('text'); if(t) t.textContent=c.temp+'°'; } }catch(e){} }
@@ -3395,21 +3382,7 @@ function _apoliceMatch(nome, texto){
   });
   return {id:bestScore>0?best:'', score:bestScore, reason:bestWhy};
 }
-function modalEnviarApolice(){
-  openModal(`<div class="m-h">${svg('upload')}<h3>Enviar apólice</h3><button class="x" onclick="APOLICE_FILA=[];closeModal()">×</button></div>
-    <div class="m-b">
-      <label class="apo-drop" id="apoDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="_apoliceDrop(event)">
-        <input type="file" accept=".pdf,image/*" multiple style="display:none" onchange="_apoliceLer(this.files);this.value=''">
-        ${svg('upload')}<b>Solte os PDFs das apólices aqui ou clique para escolher</b>
-        <span>O sistema lê cada arquivo e descobre sozinho a qual seguro ele pertence. Você confere e confirma.</span>
-      </label>
-      <div id="apoFila">${_apoliceFilaHTML()}</div>
-    </div>
-    <div class="m-f">
-      <button class="btn" onclick="APOLICE_FILA=[];closeModal()">Fechar</button>
-      <button class="btn primary" id="apoBtn" onclick="_apoliceAnexar()" ${APOLICE_FILA.length?'':'disabled'}>Anexar ${APOLICE_FILA.filter(f=>f.matchId).length||''} apólice(s)</button>
-    </div>`, true);
-}
+
 function _apoliceFilaHTML(){
   if(!APOLICE_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum arquivo escolhido ainda.</div>`;
   return `<div class="apo-list">`+APOLICE_FILA.map((f,i)=>{
@@ -3436,7 +3409,7 @@ function _apoliceRefresh(){ const el=document.getElementById('apoFila'); if(el) 
   const b=document.getElementById('apoBtn'); if(b){ const lendo=APOLICE_FILA.some(f=>f.status==='reading'); const n=APOLICE_FILA.filter(f=>f.matchId).length;
     b.disabled=!APOLICE_FILA.length||lendo; b.innerHTML=lendo?'Lendo arquivos…':('Anexar '+(n||'')+' apólice(s)'); } }
 function _apoliceRemove(i){ APOLICE_FILA.splice(i,1); _apoliceRefresh(); }
-function _apoliceDrop(e){ e.preventDefault(); const el=e.currentTarget; if(el)el.classList.remove('over'); if(e.dataTransfer&&e.dataTransfer.files) _apoliceLer(e.dataTransfer.files); }
+
 async function _apoliceLer(fileList){
   const files=[].slice.call(fileList||[]); if(!files.length) return;
   if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
@@ -3752,19 +3725,7 @@ function pedPeriodoModal(){
 }
 /* ---- Importar extrato (PDF Sem Parar / imagem / CSV) ---- */
 let PED_FILA=[];
-function pedImportarModal(){
-  openModal(`<div class="m-h">${svg('upload')}<h3>Importar extrato de pedágios</h3><button class="x" onclick="PED_FILA=[];closeModal()">×</button></div>
-    <div class="m-b">
-      <label class="apo-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');_pedImportLer(event.dataTransfer.files)">
-        <input type="file" accept=".pdf,.csv,image/*" multiple style="display:none" onchange="_pedImportLer(this.files);this.value=''">
-        ${svg('upload')}<b>Solte o extrato Sem Parar (PDF) aqui ou clique</b>
-        <span>O sistema lê o extrato e extrai as passagens automaticamente (data, hora, praça, concessionária, valor…). Você confere antes de importar.</span>
-      </label>
-      <div id="pedImpFila">${_pedImpFilaHTML()}</div>
-    </div>
-    <div class="m-f"><button class="btn" onclick="PED_FILA=[];closeModal()">Fechar</button>
-      <button class="btn primary" id="pedImpBtn" onclick="_pedImportConfirmar()" ${PED_FILA.length?'':'disabled'}>Importar ${PED_FILA.filter(x=>x._ok).length||''}</button></div>`, true);
-}
+
 function _pedImpFilaHTML(){
   if(!PED_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhuma passagem lida ainda.</div>`;
   const novas=PED_FILA.filter(x=>x._ok).length, dup=PED_FILA.filter(x=>x._dup).length;
@@ -3806,12 +3767,7 @@ function _pedParseSemParar(txt){
   }
   return out;
 }
-function _pedImportConfirmar(){
-  const sel=PED_FILA.filter(x=>x._ok && !x._dup);
-  if(!sel.length){ toast('Nada novo para importar.','err'); return; }
-  sel.forEach(x=>{ const {_ok,_dup,...rec}=x; rec.id=uid('pd'); (DB.pedagios=DB.pedagios||[]).push(rec); });
-  PED_FILA=[]; saveDB(); closeModal(); toast(sel.length+' passagem(ns) importada(s).'); location.hash='#pedagios'; router();
-}
+
 /* Count-up dos KPIs (roda no pexAfterRender p/ a rota pedagios) */
 function pedCountUp(){
   document.querySelectorAll('#view[data-route="pedagios"] .k-val[data-count]').forEach(function(el){
@@ -4011,17 +3967,7 @@ function licHash(txt){ let h=0x811c9dc5; const s=String(txt||'');
 
 /* ---- Alertas automáticos: 60 / 30 / 15 dias e vencida ---- */
 const LIC_AVISOS=[60,30,15];
-function licAlertas(){
-  const out=[];
-  licencas().forEach(l=>{
-    if(l.situacao==='arquivada') return;
-    const d=diasAte(l.validade); if(d==null) return;
-    if(d<0){ out.push({l, nivel:'vencida', dias:d, txt:'Vencida há '+Math.abs(d)+' dia(s)'}); return; }
-    const faixa=LIC_AVISOS.filter(f=>d<=f).sort((a,b)=>a-b)[0];
-    if(faixa!=null) out.push({l, nivel:'aviso', faixa, dias:d, txt:'Vence em '+d+' dia(s) (alerta de '+faixa+' dias)'});
-  });
-  return out.sort((a,b)=>a.dias-b.dias);
-}
+
 /* Abre sozinho a tarefa de renovação quando a licença entra na faixa de alerta */
 function licAutoRenovacao(){
   let mudou=false;
@@ -4443,24 +4389,7 @@ function _licTitulo(s){ return String(s||'').trim().replace(/\s+/g,' ').toLowerC
   .replace(/(^|\s|')([a-zà-ÿ])/g,(x,a,b)=>a+b.toUpperCase())
   .replace(/\b(De|Da|Do|Das|Dos|E)\b/g,w=>w.toLowerCase()); }
 
-function licEnviarModal(){
-  LIC_FILA=[];
-  openModal(`<div class="m-h">${svg('upload')}<h3>Enviar documento de licença</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <div class="banner" style="margin-bottom:12px">${svg('spark')}<div><b>Leitura automática</b>
-        <span>Solte os PDFs ou fotos das licenças. O sistema lê cada documento e preenche número, órgão, município, estado, datas e tipo — você só confere e confirma.</span></div></div>
-      <div class="apo-drop lic-drop" id="licDrop"
-        ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
-        ondrop="event.preventDefault();this.classList.remove('over');licLer(event.dataTransfer.files)"
-        onclick="document.getElementById('licFile').click()">
-        ${svg('upload')}<b>Arraste os documentos aqui</b><span>ou clique para escolher — PDF, JPG ou PNG</span>
-      </div>
-      <input type="file" id="licFile" multiple accept=".pdf,image/*" style="display:none" onchange="licLer(this.files);this.value=''">
-      <div id="licFilaBox"></div>
-    </div>
-    <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn primary" id="licBtnOk" disabled onclick="licConfirmar()">Cadastrar licenças</button></div>`, true);
-}
+
 async function licLer(files){
   if(!files||!files.length) return;
   for(const f of files){
@@ -5363,44 +5292,12 @@ function modalAlarme(code){
 /* ================================================================== */
 let finUnlocked=false;
 function viewFinanceiro(){ return viewFinConteudo(); }  /* senha removida a pedido do cliente — acesso direto */
-function viewFinSetPin(){
-  return `<div class="fin-gate"><div class="fin-card">
-    <div class="fin-lock">${svg('lock')}</div>
-    <h2>Proteger o Financeiro</h2>
-    <p class="muted">Defina uma senha de acesso. Só você terá acesso a esta área — guarde bem, pois sem ela os dados financeiros não abrem.</p>
-    <div class="field"><label>Nova senha</label><input type="password" id="fp1" autocomplete="new-password"></div>
-    <div class="field"><label>Repita a senha</label><input type="password" id="fp2" autocomplete="new-password"></div>
-    <button class="btn primary" style="width:100%" onclick="finSetPin()">${svg('lock')} Definir senha e entrar</button>
-  </div></div>`;
-}
-function finSetPin(){ const a=val('fp1'), b=val('fp2');
-  if(a.length<4){ toast('Use ao menos 4 caracteres.','err'); return; }
-  if(a!==b){ toast('As senhas não conferem.','err'); return; }
-  DB.config.finPin=a; saveDB(); finUnlocked=true; toast('Senha definida.'); router();
-}
-function viewFinLock(){
-  return `<div class="fin-gate"><div class="fin-card">
-    <div class="fin-lock">${svg('lock')}</div>
-    <h2>Área Financeira</h2>
-    <p class="muted">Digite a senha para acessar.</p>
-    <div class="field"><input type="password" id="fpin" placeholder="Senha" autocomplete="off" onkeydown="if(event.key==='Enter')finUnlock()"></div>
-    <button class="btn primary" style="width:100%" onclick="finUnlock()">${svg('lock')} Entrar</button>
-  </div></div>`;
-}
-function finUnlock(){ if(val('fpin')===DB.config.finPin){ finUnlocked=true; router(); } else toast('Senha incorreta.','err'); }
-function modalFinPin(){
-  openModal(`<div class="m-h">${svg('lock')}<h3>Alterar senha do Financeiro</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <div class="field"><label>Senha atual</label><input type="password" id="fpa"></div>
-      <div class="field"><label>Nova senha</label><input type="password" id="fpn1"></div>
-      <div class="field"><label>Repita a nova senha</label><input type="password" id="fpn2"></div>
-    </div>
-    <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="finTrocarPin()">Salvar</button></div>`);
-}
-function finTrocarPin(){ if(val('fpa')!==DB.config.finPin){ toast('Senha atual incorreta.','err'); return; }
-  const n=val('fpn1'); if(n.length<4){ toast('Use ao menos 4 caracteres.','err'); return; }
-  if(n!==val('fpn2')){ toast('As senhas não conferem.','err'); return; }
-  DB.config.finPin=n; saveDB(); closeModal(); toast('Senha alterada.'); }
+
+
+
+
+
+
 
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
 let pagMes='todos';
@@ -5523,19 +5420,7 @@ function excluirFaturamento(id){ if(!confirm('Excluir este faturamento?'))return
 let FAT_FILA=[];
 function _capitaliza(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
 function _fatCompLabel(comp){ if(!comp)return '—'; const p=String(comp).split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
-function modalImportarFatur(){
-  openModal(`<div class="m-h">${svg('money')}<h3>Importar documentos — leitura automática</h3><button class="x" onclick="FAT_FILA=[];closeModal()">×</button></div>
-    <div class="m-b">
-      <label class="apo-drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');_faturLer(event.dataTransfer.files)">
-        <input type="file" accept=".pdf,.xlsx,.xls,.csv,.xml,image/*" multiple style="display:none" onchange="_faturLer(this.files);this.value=''">
-        ${svg('upload')}<b>Solte um ou vários documentos (PDF, imagem, Excel, CSV ou XML)</b>
-        <span>O sistema lê o texto (pdf.js), aplica OCR se for escaneado (Tesseract), reconhece o tipo (relatório, CT-e, NF-e, NFS-e, boleto…), extrai os valores, relaciona à frota e confere — tudo automaticamente. Você só confirma.</span>
-      </label>
-      <div id="fatImpFila">${_faturImpFilaHTML()}</div>
-    </div>
-    <div class="m-f"><button class="btn" onclick="FAT_FILA=[];closeModal()">Fechar</button>
-      <button class="btn primary" id="fatImpBtn" onclick="_faturImportConfirmar()" ${FAT_FILA.length?'':'disabled'}>Importar ${FAT_FILA.filter(x=>x._ok).length||''}</button></div>`, true);
-}
+
 function _faturImpFilaHTML(){
   if(!FAT_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum documento na fila. Solte um ou vários arquivos acima.</div>`;
   return `<div class="doc-fila">`+FAT_FILA.map(function(item,ci){
@@ -5635,12 +5520,7 @@ async function _docProcessar(item, onEtapa){
   item.status = txt && txt.replace(/\s/g,'').length>20 ? 'done' : (regs.length?'done':'vazio');
 }
 /* Log auditável do processamento */
-function _faturLog(item, salvos){
-  if(!Array.isArray(DB.faturLogs)) DB.faturLogs=[];
-  DB.faturLogs.unshift({ id:uid('lg'), quando:new Date().toISOString(), usuario:(typeof nomeUsuario==='function'?nomeUsuario():'')||'local',
-    arquivo:item.nome, tipo:item.tipo, conf:item.conf, campos:item.campos, salvos:salvos, pend:(item.pend||[]).length, tempo:Math.round((item.tempo||0)*100)/100 });
-  if(DB.faturLogs.length>300) DB.faturLogs.length=300;
-}
+
 /* Relatório de faturamento do contador (PDF/texto): linhas "Mês Ano Saídas Serviços Outros Total" */
 function _faturParseRelatorio(txt){
   const out=[]; if(!txt) return out;
@@ -5700,15 +5580,7 @@ function _faturDetectExcel(grid){
       out.push({ data:dISO, cliente:String(g('cliente')||'').trim(), valor:totalV, obs:'Importado da planilha do contador', fonte:'contador', _tipo:'nota' }); } }
   return out;
 }
-function _faturImportConfirmar(){
-  let total=0;
-  FAT_FILA.forEach(function(item){ const sel=(item.regs||[]).filter(function(r){ return r._ok&&!r._dup; });
-    sel.forEach(function(x){ const rec={}; Object.keys(x).forEach(function(k){ if(k[0]!=='_') rec[k]=x[k]; }); rec.id=uid('ft'); (DB.faturamento=DB.faturamento||[]).push(rec); });
-    if(item.status && item.status!=='fila') _faturLog(item, sel.length);
-    total+=sel.length; });
-  if(!total){ toast('Nada novo para importar.','err'); return; }
-  FAT_FILA=[]; saveDB(); closeModal(); toast(total+' lançamento(s) de faturamento importado(s).'); location.hash='#financeiro'; router();
-}
+
 function modalVale(id){
   const v=id?DB.vales.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),motoristaId:(DB.motoristas[0]||{}).id,tipo:'Vale',valor:'',obs:''};
   openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar lançamento':'Novo vale / pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
