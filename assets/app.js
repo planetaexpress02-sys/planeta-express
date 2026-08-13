@@ -5313,16 +5313,63 @@ function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEac
    leitor de Excel novo aqui (regra: um pipeline só para documento).
    Nada é gravado sem a sua conferência na prévia.
    ================================================================== */
-let FIN_IMP = [];
+let FIN_IMP = [], FIN_GRID = null, FIN_NOME = '';
 
+/* ------------------------------------------------------------------
+   Converte para AAAA-MM-DD QUALQUER data que uma planilha possa entregar.
+   O SheetJS devolve coisas diferentes conforme o arquivo: objeto Date,
+   texto ISO, "01/08/2026", "8/1/26" (americano) ou o número de série do
+   Excel. Antes eu só aceitava dd/mm/aaaa — e por isso a planilha real foi
+   recusada com "não achei as colunas".
+   Devolve '' quando não é data.
+   ------------------------------------------------------------------ */
+function _finData(v){
+  if(v == null || v === '') return '';
+  const iso2 = function(y,m,d){
+    y=+y; m=+m; d=+d;
+    if(y < 100) y += (y < 70 ? 2000 : 1900);
+    if(!(m>=1 && m<=12) || !(d>=1 && d<=31) || !(y>=1900 && y<=2200)) return '';
+    return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  };
+  /* objeto Date (SheetJS com cellDates) */
+  if(v instanceof Date && !isNaN(v)) return iso2(v.getFullYear(), v.getMonth()+1, v.getDate());
+  const t = String(v).trim();
+  if(!t) return '';
+  /* ISO, com ou sem hora */
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return iso2(m[1], m[2], m[3]);
+  /* dd/mm/aa(aa) ou mm/dd/aa(aa) — decide pelo que faz sentido */
+  m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if(m){
+    const a=+m[1], b=+m[2];
+    if(a > 12 && b <= 12) return iso2(m[3], b, a);        /* só pode ser dd/mm */
+    if(b > 12 && a <= 12) return iso2(m[3], a, b);        /* só pode ser mm/dd */
+    return iso2(m[3], b, a);                              /* empate: Brasil = dd/mm */
+  }
+  /* número de série do Excel (dias desde 1900) */
+  if(/^\d{4,5}(\.\d+)?$/.test(t)){
+    const n = Math.floor(+t);
+    if(n >= 20000 && n <= 80000){                          /* ~1954 a ~2119 */
+      const d = new Date(Date.UTC(1899,11,30) + n*86400000);
+      if(!isNaN(d)) return iso2(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
+    }
+  }
+  /* último recurso: o que o navegador entender (ex.: "Aug 1 2026") */
+  if(/[a-z]{3}/i.test(t) && /\d{4}/.test(t)){
+    const d = new Date(t);
+    if(!isNaN(d)) return iso2(d.getFullYear(), d.getMonth()+1, d.getDate());
+  }
+  return '';
+}
 /* Sem cabeçalho? Descobre as colunas pelo CONTEÚDO.
    É o caso da "Planilha Vales Bradesco": ela só tem o título "Vales e
    Pagamentos" e depois data | descrição | valor, sem nomear as colunas.
    Regra: a coluna com mais datas é a data; entre as demais, a com mais
    números é o valor e a com mais texto é a descrição. */
 function _finImpPorConteudo(grid){
-  const ehData = function(v){ return /^\s*\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\s*$/.test(String(v||'')) || /^\d{4}-\d{2}-\d{2}/.test(String(v||'')); };
-  const ehNum  = function(v){ const t=String(v==null?'':v).trim(); return t!=='' && /^-?[\d.,]+$/.test(t) && /\d/.test(t); };
+  const ehData = function(v){ return _finData(v) !== ''; };
+  const ehNum  = function(v){ const t=String(v==null?'':v).trim();
+    return t!=='' && !ehData(v) && /^-?\s*(r\$)?\s*[\d.,]+$/i.test(t) && /\d/.test(t); };
   const cont = [];
   grid.forEach(function(l){
     (l||[]).forEach(function(c, j){
@@ -5462,40 +5509,81 @@ function finImportar(){
     catch(e){ toast(e.message||'Não consegui ler a planilha.','err'); return; }
     if(!grid || !grid.length){ toast('A planilha veio vazia.','err'); return; }
 
-    /* primeiro tenta pelo cabeçalho; se a planilha não tiver, deduz pelo conteúdo */
+    /* 1º pelo cabeçalho; 2º pelo conteúdo; 3º pergunta ao usuário — nunca desiste */
+    FIN_GRID = grid; FIN_NOME = f.name;
     const cab = _finImpCabecalho(grid) || _finImpPorConteudo(grid);
-    if(!cab){ toast('Não achei as colunas de data e valor nessa planilha.','err'); return; }
-
-    FIN_IMP = [];
-    for(let i=cab.linha+1; i<grid.length; i++){
-      const l = grid[i]||[];
-      const pega = function(k){ return cab.col[k]==null? '' : String(l[cab.col[k]]==null?'':l[cab.col[k]]).trim(); };
-      const dataISO = _impISO(pega('data'));
-      const valor   = parseBRL(pega('valor'));
-      if(!dataISO || !valor) continue;                         /* linha sem data ou sem valor não entra */
-      const desc = pega('desc') || pega('cat') || 'Lançamento importado';
-      const quem = pega('quem');
-      /* classifica: motorista citado OU palavra de vale => Vales Motoristas */
-      const texto = (quem+' '+desc+' '+pega('cat')).trim();
-      let mot = _finImpMotorista(texto);
-      /* Descrição que é SÓ o nome do motorista também é vale — na planilha de
-         vales aparecem linhas escritas apenas "Renato", sem a palavra vale. */
-      if(!mot) mot = _finImpMotoristaSozinho(desc);
-      const ehVale = /\bvale\b|adiantament|vale-?motorista/i.test(texto);
-      FIN_IMP.push({
-        _ok:true,
-        destino: (mot || ehVale) ? 'vale' : 'gasto',
-        data: dataISO, desc: desc, valor: valor,
-        motoristaId: mot? mot.id : '',
-        categoria: pega('cat'), forma: pega('forma'),
-        tipoVale: /pagamento|quita|desconto/i.test(texto) ? 'Pagamento' : 'Vale'
-      });
-    }
-    if(!FIN_IMP.length){ toast('Nenhuma linha com data e valor foi encontrada.','err'); return; }
-    FIN_IMP.sort(function(a,b){ return a.data.localeCompare(b.data); });
-    modalFinImportar(f.name);
+    if(!cab){ modalFinColunas(); return; }
+    finImpProcessar(cab);
   };
   inp.click();
+}
+/* Monta a lista a partir do grid + mapa de colunas, e abre a conferência */
+function finImpProcessar(cab){
+  const grid = FIN_GRID || [];
+  FIN_IMP = [];
+  for(let i=cab.linha+1; i<grid.length; i++){
+    const l = grid[i]||[];
+    const pega = function(k){ return cab.col[k]==null? '' : String(l[cab.col[k]]==null?'':l[cab.col[k]]).trim(); };
+    const bruto = cab.col.data==null ? '' : (l[cab.col.data]);
+    const dataISO = _finData(bruto) || _impISO(pega('data'));
+    const valor   = parseBRL(pega('valor'));
+    if(!dataISO || !valor) continue;
+    const desc = pega('desc') || pega('cat') || 'Lançamento importado';
+    const quem = pega('quem');
+    const texto = (quem+' '+desc+' '+pega('cat')).trim();
+    let mot = _finImpMotorista(texto);
+    if(!mot) mot = _finImpMotoristaSozinho(desc);
+    const ehVale = /\bvale\b|adiantament|vale-?motorista/i.test(texto);
+    FIN_IMP.push({
+      _ok:true,
+      destino: (mot || ehVale) ? 'vale' : 'gasto',
+      data: dataISO, desc: desc, valor: valor,
+      motoristaId: mot? mot.id : '',
+      categoria: pega('cat'), forma: pega('forma'),
+      tipoVale: /pagamento|quita|desconto/i.test(texto) ? 'Pagamento' : 'Vale'
+    });
+  }
+  if(!FIN_IMP.length){ toast('Não encontrei linhas com data e valor. Confira as colunas.','err'); modalFinColunas(); return; }
+  FIN_IMP.sort(function(a,b){ return a.data.localeCompare(b.data); });
+  modalFinImportar(FIN_NOME);
+}
+/* Saída manual: mostra as primeiras linhas e deixa você dizer qual coluna é
+   qual. Assim o importador funciona com qualquer planilha, sempre. */
+function modalFinColunas(){
+  const grid = FIN_GRID || [];
+  let nCol = 0; grid.forEach(function(l){ if((l||[]).length > nCol) nCol = l.length; });
+  const letra = function(i){ let s='', n=i; do { s = String.fromCharCode(65 + (n%26)) + s; n = Math.floor(n/26)-1; } while(n >= 0); return s; };
+  const opts = function(sel){ let o = '<option value="">— nenhuma —</option>';
+    for(let j=0;j<nCol;j++) o += '<option value="'+j+'"'+(sel===j?' selected':'')+'>Coluna '+letra(j)+'</option>';
+    return o; };
+  const sug = _finImpPorConteudo(grid) || {col:{}, linha:0};
+  const amostra = grid.slice(0, Math.min(grid.length, 12)).map(function(l,i){
+    return '<tr><td class="mono muted">'+(i+1)+'</td>'
+      + Array.from({length:nCol}).map(function(_,j){
+          return '<td>'+esc(String((l||[])[j]==null?'':(l||[])[j]).slice(0,22))+'</td>'; }).join('')
+      + '</tr>'; }).join('');
+  openModal('<div class="m-h">'+svg('upload')+'<h3>De qual coluna eu tiro cada informação?</h3>'
+      +'<button class="x" onclick="FIN_GRID=null;closeModal()">×</button></div>'
+    +'<div class="m-b">'
+      +'<div class="hint" style="margin-bottom:10px">Não reconheci sozinho o formato de <b>'+esc(FIN_NOME||'planilha')+'</b>. Veja as primeiras linhas abaixo e me diga onde está cada coisa — depois disso eu sigo normalmente.</div>'
+      +'<div class="tbl-wrap" style="max-height:30vh;overflow:auto;margin-bottom:12px"><table class="tbl"><tbody>'+amostra+'</tbody></table></div>'
+      +'<div class="field-row"><div class="field"><label>Data</label><select id="fc_data">'+opts(sug.col.data)+'</select></div>'
+      +'<div class="field"><label>Valor</label><select id="fc_valor">'+opts(sug.col.valor)+'</select></div></div>'
+      +'<div class="field-row"><div class="field"><label>Descrição</label><select id="fc_desc">'+opts(sug.col.desc)+'</select></div>'
+      +'<div class="field"><label>Primeira linha com dados</label><input type="number" id="fc_lin" min="1" value="'+((sug.linha||0)+2)+'"></div></div>'
+    +'</div>'
+    +'<div class="m-f"><button class="btn" onclick="FIN_GRID=null;closeModal()">Cancelar</button>'
+      +'<div class="spacer"></div>'
+      +'<button class="btn primary" onclick="finColunasOk()">Continuar</button></div>', true);
+}
+function finColunasOk(){
+  const v = function(id){ const e=document.getElementById(id); return e && e.value!==''? +e.value : null; };
+  const col = {data:v('fc_data'), valor:v('fc_valor')};
+  if(col.data==null || col.valor==null){ toast('Escolha pelo menos a coluna da data e a do valor.','err'); return; }
+  const d = v('fc_desc'); if(d!=null) col.desc = d;
+  const lin = Math.max(1, (v('fc_lin')||1)) - 2;
+  closeModal();
+  finImpProcessar({linha: lin, col: col});
 }
 function modalFinImportar(nome){
   if(nome) FIN_IMP._nome=nome; else nome=FIN_IMP._nome||'';
