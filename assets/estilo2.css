@@ -3753,3 +3753,7 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
   .rel-sair{ top:calc(env(safe-area-inset-top,0px) + 10px); right:10px; width:40px; height:40px }
 }
 @media print{ .rel-voltar, .rel-sair{ display:none!important } }
+
+/* Importacao de planilha no Financeiro (v6.82) */
+.fin-imp-off td{ opacity:.42 }
+.fin-imp-off b{ text-decoration:line-through }

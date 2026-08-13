@@ -5300,6 +5300,182 @@ function viewFinanceiro(){ return viewFinConteudo(); }  /* senha removida a pedi
 
 
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
+
+/* ==================================================================
+   IMPORTAR PLANILHA NO FINANCEIRO (v6.82)
+   ------------------------------------------------------------------
+   Você sobe o Excel e o sistema separa sozinho: linha que fala de um
+   motorista (ou traz a palavra vale/adiantamento) vai para VALES
+   MOTORISTAS; o resto vai para GASTOS. Data, descrição e valor saem
+   da própria planilha.
+
+   A LEITURA reusa `cpidLerPlanilha` da Central de Documentos — não há
+   leitor de Excel novo aqui (regra: um pipeline só para documento).
+   Nada é gravado sem a sua conferência na prévia.
+   ================================================================== */
+let FIN_IMP = [];
+
+/* Descobre em qual coluna está cada informação, pelo cabeçalho */
+function _finImpCabecalho(grid){
+  const chaves = {
+    data:  /^(data|dia|dt|emiss|vencim|compet)/i,
+    desc:  /^(descri|hist|hist[oó]rico|lan[cç]|documento|obs|refer|servi|item|fornecedor|favorecido|benefici)/i,
+    valor: /^(valor|vlr|total|montante|d[eé]bito|pago|r\$)/i,
+    quem:  /^(motorista|colaborador|funcion|nome|pessoa)/i,
+    cat:   /^(categoria|tipo|classific|grupo|conta)/i,
+    forma: /^(forma|pagamento|meio|modo)/i
+  };
+  for(let i=0; i<Math.min(grid.length, 15); i++){
+    const linha = grid[i]||[], col = {};
+    linha.forEach(function(celula, j){
+      const t = String(celula==null?'':celula).trim();
+      if(!t) return;
+      Object.keys(chaves).forEach(function(k){ if(col[k]==null && chaves[k].test(t)) col[k]=j; });
+    });
+    /* só serve se achou pelo menos data + valor */
+    if(col.data!=null && col.valor!=null) return {linha:i, col:col};
+  }
+  return null;
+}
+/* Acha o motorista citado na linha.
+   ⚠️ NÃO ADIVINHA: a frota tem três "Marcelo". Se o texto só traz um nome que
+   serve para mais de uma pessoa, devolve null e a prévia pede para você
+   escolher — melhor perguntar do que lançar o vale na conta errada. */
+function _finImpMotorista(txt){
+  const t = ' ' + String(txt||'').toLowerCase().replace(/\s+/g,' ') + ' ';
+  if(t.trim().length < 3) return null;
+  const lista = (DB.motoristas||[]).filter(function(m){ return m && m.nome; });
+
+  /* 1) nome completo escrito na linha */
+  const inteiro = lista.filter(function(m){ return t.indexOf(String(m.nome).toLowerCase()) >= 0; });
+  if(inteiro.length === 1) return inteiro[0];
+
+  /* 2) combinação primeiro nome + qualquer outra parte do nome (ex.: "Marcelo Goto") */
+  const combinado = lista.filter(function(m){
+    const p = String(m.nome).toLowerCase().split(/\s+/).filter(function(x){ return x.length >= 3; });
+    if(p.length < 2) return false;
+    const temPrimeiro = new RegExp('\\b'+p[0]+'\\b').test(t);
+    const temOutra = p.slice(1).some(function(x){ return new RegExp('\\b'+x+'\\b').test(t); });
+    return temPrimeiro && temOutra;
+  });
+  if(combinado.length === 1) return combinado[0];
+
+  /* 3) uma parte do nome só (primeiro nome ou sobrenome). Só é aceita quando a
+        linha FALA de vale/adiantamento — senão "Combustível posto da Silva"
+        viraria vale do Renato Carlos da Silva. E ainda tem de apontar para uma
+        pessoa só: "Goto" identifica, "Marcelo" e "Moreira" não. */
+  if(!/\bvale\b|adiantament|\bpagamento\b|\bacerto\b/i.test(t)) return null;
+  const ignorar = /^(de|da|do|das|dos|e)$/;
+  const porParte = lista.filter(function(m){
+    return String(m.nome).toLowerCase().split(/\s+/).some(function(p){
+      return p.length >= 3 && !ignorar.test(p) && new RegExp('\\b'+p+'\\b').test(t);
+    });
+  });
+  return porParte.length === 1 ? porParte[0] : null;
+}
+function finImportar(){
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='.xlsx,.xls,.csv';
+  inp.onchange = async function(){
+    const f = inp.files && inp.files[0]; if(!f) return;
+    if(typeof cpidLerPlanilha!=='function'){ toast('O leitor de planilhas não está disponível.','err'); return; }
+    toast('Lendo a planilha…');
+    let grid=null;
+    try{ grid = await cpidLerPlanilha(f, function(){}); }
+    catch(e){ toast(e.message||'Não consegui ler a planilha.','err'); return; }
+    if(!grid || !grid.length){ toast('A planilha veio vazia.','err'); return; }
+
+    const cab = _finImpCabecalho(grid);
+    if(!cab){ toast('Não achei as colunas de data e valor. Confira o cabeçalho da planilha.','err'); return; }
+
+    FIN_IMP = [];
+    for(let i=cab.linha+1; i<grid.length; i++){
+      const l = grid[i]||[];
+      const pega = function(k){ return cab.col[k]==null? '' : String(l[cab.col[k]]==null?'':l[cab.col[k]]).trim(); };
+      const dataISO = _impISO(pega('data'));
+      const valor   = parseBRL(pega('valor'));
+      if(!dataISO || !valor) continue;                         /* linha sem data ou sem valor não entra */
+      const desc = pega('desc') || pega('cat') || 'Lançamento importado';
+      const quem = pega('quem');
+      /* classifica: motorista citado OU palavra de vale => Vales Motoristas */
+      const texto = (quem+' '+desc+' '+pega('cat')).trim();
+      const mot = _finImpMotorista(texto);
+      const ehVale = /\bvale\b|adiantament|vale-?motorista/i.test(texto);
+      FIN_IMP.push({
+        _ok:true,
+        destino: (mot || ehVale) ? 'vale' : 'gasto',
+        data: dataISO, desc: desc, valor: valor,
+        motoristaId: mot? mot.id : '',
+        categoria: pega('cat'), forma: pega('forma'),
+        tipoVale: /pagamento|quita|desconto/i.test(texto) ? 'Pagamento' : 'Vale'
+      });
+    }
+    if(!FIN_IMP.length){ toast('Nenhuma linha com data e valor foi encontrada.','err'); return; }
+    FIN_IMP.sort(function(a,b){ return a.data.localeCompare(b.data); });
+    modalFinImportar(f.name);
+  };
+  inp.click();
+}
+function modalFinImportar(nome){
+  const vales = FIN_IMP.filter(function(x){ return x.destino==='vale'; });
+  const gastos= FIN_IMP.filter(function(x){ return x.destino==='gasto'; });
+  const soma  = function(a){ return a.filter(function(x){ return x._ok; }).reduce(function(s,x){ return s+x.valor; },0); };
+  const opMot = (DB.motoristas||[]).map(function(m){ return '<option value="'+m.id+'">'+esc(m.nome)+'</option>'; }).join('');
+
+  const linha = function(x,i){
+    return '<tr class="'+(x._ok?'':'fin-imp-off')+'">'
+      + '<td class="no-print"><input type="checkbox" '+(x._ok?'checked':'')+' onchange="FIN_IMP['+i+']._ok=this.checked;modalFinImportar()"></td>'
+      + '<td class="mono">'+fmtD(x.data)+'</td>'
+      + '<td>'+esc(x.desc)+'</td>'
+      + '<td><select class="selectlite" onchange="FIN_IMP['+i+'].destino=this.value;modalFinImportar()">'
+        + '<option value="vale"'+(x.destino==='vale'?' selected':'')+'>Vales Motoristas</option>'
+        + '<option value="gasto"'+(x.destino==='gasto'?' selected':'')+'>Gastos</option></select></td>'
+      + '<td>'+(x.destino==='vale'
+          ? '<select class="selectlite" onchange="FIN_IMP['+i+'].motoristaId=this.value"><option value="">— quem? —</option>'
+            + opMot.replace('value="'+x.motoristaId+'"','value="'+x.motoristaId+'" selected')+'</select>'
+          : '<span class="muted">'+esc(x.categoria||'—')+'</span>')+'</td>'
+      + '<td class="ta-r mono"><b>'+money(x.valor)+'</b></td></tr>';
+  };
+  const semDono = FIN_IMP.filter(function(x){ return x._ok && x.destino==='vale' && !x.motoristaId; }).length;
+
+  openModal('<div class="m-h">'+svg('upload')+'<h3>Importar planilha — conferência</h3>'
+      +'<button class="x" onclick="FIN_IMP=[];closeModal()">×</button></div>'
+    +'<div class="m-b">'
+      +'<div class="hint" style="margin-bottom:10px">Li <b>'+esc(nome||'a planilha')+'</b> e separei sozinho: linha que fala de um motorista vai para <b>Vales Motoristas</b>, o resto vai para <b>Gastos</b>. Confira e ajuste o que quiser antes de gravar — nada é salvo até você confirmar.</div>'
+      +'<div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">'
+        + kpi('wallet','i-amber', money(soma(vales)), 'Vales Motoristas', vales.filter(function(x){return x._ok;}).length+' lançamento(s)')
+        + kpi('doc','i-red', money(soma(gastos)), 'Gastos', gastos.filter(function(x){return x._ok;}).length+' lançamento(s)')
+        + kpi('money','i-blue', money(soma(FIN_IMP)), 'Total', FIN_IMP.filter(function(x){return x._ok;}).length+' de '+FIN_IMP.length+' linha(s))')
+      +'</div>'
+      + (semDono? '<div class="hint" style="color:var(--warn);margin-bottom:8px">'+semDono+' vale sem motorista escolhido — escolha quem é, ou mude a linha para Gastos.</div>' : '')
+      +'<div class="tbl-wrap" style="max-height:44vh;overflow:auto"><table class="tbl">'
+        +'<thead><tr><th class="no-print"></th><th>Data</th><th>Descrição</th><th>Vai para</th><th>Motorista / Categoria</th><th class="ta-r">Valor</th></tr></thead>'
+        +'<tbody>'+FIN_IMP.map(linha).join('')+'</tbody></table></div>'
+    +'</div>'
+    +'<div class="m-f"><button class="btn" onclick="FIN_IMP=[];closeModal()">Cancelar</button>'
+      +'<div class="spacer"></div>'
+      +'<button class="btn primary" onclick="finImportConfirmar()">'+svg('check')+' Gravar '+FIN_IMP.filter(function(x){return x._ok;}).length+' lançamento(s)</button></div>', true);
+}
+function finImportConfirmar(){
+  const sel = FIN_IMP.filter(function(x){ return x._ok; });
+  if(!sel.length){ toast('Nenhuma linha marcada.','err'); return; }
+  const semDono = sel.filter(function(x){ return x.destino==='vale' && !x.motoristaId; });
+  if(semDono.length){ toast(semDono.length+' vale sem motorista. Escolha quem é antes de gravar.','err'); return; }
+  let nv=0, ng=0;
+  sel.forEach(function(x){
+    if(x.destino==='vale'){
+      DB.vales.push({id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor});
+      nv++;
+    } else {
+      (DB.pagamentos=DB.pagamentos||[]).push({id:uid('pg'), data:x.data, descricao:x.desc,
+        categoria:x.categoria||'', forma:x.forma||'', valor:x.valor, obs:'importado de planilha'});
+      ng++;
+    }
+  });
+  FIN_IMP=[]; saveDB(); closeModal();
+  toast('Importado: '+nv+' em Vales Motoristas e '+ng+' em Gastos.');
+  router();
+}
 let pagMes='todos';
 /* Faturamento não fica em lista o tempo todo (pedido do cliente): a lista só
    abre ao clicar num dos dois cartões de faturamento lá em cima.
@@ -5371,7 +5547,10 @@ function viewFinConteudo(){
         <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento neste período.')}</td></tr>`}</tbody></table></div></div></div>`;
 
   return `
-  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e os gastos da empresa. Tudo somado automaticamente. Clique num cartão de faturamento para ver os lançamentos.</span></div></div>
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e os gastos da empresa. Tudo somado automaticamente. Clique num cartão de faturamento para ver os lançamentos.</span></div>
+    <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" onclick="finImportar()" title="Suba a planilha: o sistema separa vales de motorista e gastos sozinho, e você confere antes de gravar">${svg('upload')} Importar planilha</button>
+    </div></div>
 
   <div class="grid kpis fin-gold" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     <a class="kpi link${finFatVer==='mes'?' ativo':''}" onclick="finVerFat('mes')" title="Clique para ver os lançamentos do mês">
