@@ -5804,12 +5804,9 @@ function pagExcluirSel(){
   DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)<0; });
   PAG_SEL={}; saveDB(); toast(ids.length+' gasto(s) excluído(s).'); router();
 }
-/* Faturamento não fica em lista o tempo todo (pedido do cliente): a lista só
-   abre ao clicar num dos dois cartões de faturamento lá em cima.
-   '' = fechado · 'mes' = só o mês corrente · 'tudo' = todos os lançamentos */
-let finFatVer='';
-function finVerFat(qual){ finFatVer = (finFatVer===qual? '' : qual); router();
-  if(finFatVer) setTimeout(function(){ const e=document.getElementById('finFatCard'); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); },60); }
+/* O FATURAMENTO saiu daqui na v6.88 e foi para a Contabilidade (é receita —
+   o lugar dela é lá). Este módulo ficou só com Vales Motoristas e Gastos.
+   Os lançamentos continuam em DB.faturamento: nada mudou de banco. */
 function viewFinConteudo(){
   const h=hoje();
   /* GASTOS (planilha livre — separada dos vales dos motoristas) */
@@ -5845,17 +5842,7 @@ function viewFinConteudo(){
       <tbody>${pagRows||`<tr><td colspan="7">${emptyState('Nenhum gasto lançado ainda. Clique em "Novo gasto" para começar.')}</td></tr>`}</tbody>
       ${pagLista.length?`<tfoot><tr><td colspan="5" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
     </table></div></div></div>`;
-  const fatMes=DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,f)=>s+(Number(f.valor)||0),0);
-  const fatTot=DB.faturamento.reduce((s,f)=>s+(Number(f.valor)||0),0);
   const valesAberto=DB.motoristas.reduce((s,m)=>s+Math.max(0,valeSaldo(m.id)),0);
-
-  /* a lista de faturamento respeita o cartão que foi clicado lá em cima */
-  const fatSel = finFatVer==='mes'
-    ? DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); })
-    : DB.faturamento.slice();
-  const fatRows=fatSel.sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
-    <td class="mono">${fmtD(f.data)}</td><td>${esc(f.cliente||'—')}</td><td class="mono"><b>${money(f.valor)}</b></td>
-    <td class="muted">${esc(f.obs||'')}</td><td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalFaturamento('${f.id}')">${svg('edit')}</button></td></tr>`).join('');
   /* Vales Motoristas: SEMPRE do mais antigo para o mais novo (pedido do cliente) */
   const valeRows=DB.vales.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v=>{ const m=motorista(v.motoristaId);
     return `<tr class="clickable${VALE_SEL[v.id]?' sel-on':''}" onclick="modalVale('${v.id}')">
@@ -5872,40 +5859,18 @@ function viewFinConteudo(){
       <span>saldo de vales</span></div>
       <div class="mono fin-saldo-v" style="color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
 
-  /* Card do Faturamento: só entra na tela quando o usuário clica num dos
-     dois cartões de faturamento lá em cima (finFatVer). */
-  const fatCard = !finFatVer ? '' : `
-    <div class="card" id="finFatCard"><div class="card-h">${svg('money')}<h3>Faturamento — ${finFatVer==='mes'?esc(MESES_L[h.getMonth()]+' de '+h.getFullYear()):'todos os lançamentos'}</h3>
-      <div class="r no-print" style="gap:6px">
-        <button class="btn sm" onclick="cpidEscolher('Faturamento')" title="Vai para a Central de Documentos: relatório do contador (PDF), planilha ou XML das notas — o sistema lê e preenche sozinho">${svg('upload')} Importar do contador</button>
-        <button class="btn primary sm" onclick="modalFaturamento()">${svg('plus')} Novo</button>
-        <button class="btn ghost sm" onclick="finVerFat('${finFatVer}')" title="Fechar a lista">✕</button></div></div>
-      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>
-        <tbody>${fatRows||`<tr><td colspan="5">${emptyState('Nenhum faturamento neste período.')}</td></tr>`}</tbody></table></div></div></div>`;
-
   return `
-  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Faturamento, vales dos motoristas e os gastos da empresa. Tudo somado automaticamente. Clique num cartão de faturamento para ver os lançamentos.</span></div>
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Vales dos motoristas e gastos da empresa. Tudo somado automaticamente. O faturamento agora fica na Contabilidade.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn primary" onclick="finImportar()" title="Suba a planilha: o sistema separa vales de motorista e gastos sozinho, e você confere antes de gravar">${svg('upload')} Importar planilha</button>
     </div></div>
 
-  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
-    <a class="kpi link${finFatVer==='mes'?' ativo':''}" onclick="finVerFat('mes')" title="Clique para ver os lançamentos do mês">
-      <div class="k-top"><div class="k-ico i-green">${svg('money')}</div><span class="k-go">→</span></div>
-      <div class="k-val">${money(fatMes)}</div><div class="k-label">Faturamento no mês</div>
-      <div class="k-sub">${finFatVer==='mes'?'clique para fechar':'clique para ver a lista'}</div></a>
-    <a class="kpi link${finFatVer==='tudo'?' ativo':''}" onclick="finVerFat('tudo')" title="Clique para ver todos os lançamentos">
-      <div class="k-top"><div class="k-ico i-blue">${svg('export')}</div><span class="k-go">→</span></div>
-      <div class="k-val">${money(fatTot)}</div><div class="k-label">Faturamento acumulado</div>
-      <div class="k-sub">${DB.faturamento.length} lançamento(s) · ${finFatVer==='tudo'?'clique para fechar':'clique para ver a lista'}</div></a>
+  <div class="grid kpis fin-gold" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px">
     ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
     ${kpi('doc','i-red', money(pagMesTot), 'Gastos no mês', pagAll.length+' lançamento(s)')}
   </div>
 
-  ${fatCard}
-
-  <div class="card"${fatCard?' style="margin-top:18px"':''}><div class="card-h">${svg('wallet')}<h3>Vales Motoristas</h3>
+  <div class="card"><div class="card-h">${svg('wallet')}<h3>Vales Motoristas</h3>
     <div class="r no-print" style="gap:8px">
       <button class="btn sm" onclick="PEXRelAbrirId('fin-vales')" title="Emitir o relatório de Vales Motoristas em A4/PDF">${svg('print')} Relatório</button>
       <button class="btn primary sm" onclick="modalVale()">${svg('plus')} Novo</button></div></div>

@@ -518,7 +518,7 @@ function viewContabilidade(){
   const ant=contabAnterior(iv);
   const dreAnt=contabDRE(contabPeriodo(todos, ant.ini, ant.fim));
 
-  const abas=[['painel','Painel'],['dre','DRE'],['veiculos','Por veículo'],['lanc','Lançamentos'],
+  const abas=[['painel','Painel'],['dre','DRE'],['fatur','Faturamento'],['veiculos','Por veículo'],['lanc','Lançamentos'],
     ['ativos','Ativos'],['financ','Financiamentos'],['tributos','Tributos'],
     ['fech','Fechamento'],['audit','Auditoria'],['rel','Relatórios'],['plano','Plano de contas']];
   /* Aba desconhecida (endereço antigo, link salvo, erro de digitação) cairia
@@ -536,6 +536,7 @@ function viewContabilidade(){
   let corpo='';
   if(contabAba==='painel')        corpo=contabPainel(lanc, dre, dreAnt, todos);
   else if(contabAba==='dre')      corpo=contabViewDRE(dre, dreAnt, todos, iv);
+  else if(contabAba==='fatur')    corpo=contabViewFaturamento();
   else if(contabAba==='veiculos') corpo=contabViewVeiculos(lanc);
   else if(contabAba==='lanc')     corpo=contabViewLanc(lanc);
   else if(contabAba==='ativos')   corpo=contabViewAtivos();
@@ -557,6 +558,65 @@ function viewContabilidade(){
   + (semDado? '<div class="card"><div class="card-b">'+emptyState('Ainda não há valores nos módulos. Lance um abastecimento, um CT-e ou importe o relatório do contador — a Contabilidade preenche sozinha.')+'</div></div>' : corpo);
 }
 function contabSetAba(a){ contabAba=a; router(); }
+
+/* ==================================================================
+   FATURAMENTO (v6.88) — veio do Financeiro para cá, a pedido do dono.
+   É receita: o lugar dela é na Contabilidade. O Financeiro ficou só com
+   vales e gastos. Os lançamentos continuam em DB.faturamento (nada foi
+   copiado nem movido de banco) e a Contabilidade já os lia para a DRE.
+   ================================================================== */
+let contabFatVer = '';    /* '' | 'mes' | 'tudo' — a lista só abre quando pedida */
+function contabVerFat(qual){
+  contabFatVer = (contabFatVer===qual? '' : qual); router();
+  if(contabFatVer) setTimeout(function(){ const e=document.getElementById('cbFatCard'); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); },60);
+}
+function contabViewFaturamento(){
+  const h = hoje();
+  const todos = DB.faturamento || [];
+  const noMes = todos.filter(function(f){ const d=parseD(f.data); return d && d.getMonth()===h.getMonth() && d.getFullYear()===h.getFullYear(); });
+  const somaMes = noMes.reduce(function(s,f){ return s+(Number(f.valor)||0); },0);
+  const somaTot = todos.reduce(function(s,f){ return s+(Number(f.valor)||0); },0);
+  /* CT-e também é receita — mostra os dois, sem misturar */
+  const ctes = (DB.ctes||[]).reduce(function(s,c){ return s+(Number(c.valor)||0); },0);
+
+  const lista = (contabFatVer==='mes' ? noMes : todos.slice())
+    .sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+  const linhas = lista.map(function(f){
+    return '<tr class="clickable" onclick="modalFaturamento(\''+f.id+'\')">'
+      + '<td class="mono">'+fmtD(f.data)+'</td><td>'+esc(f.cliente||'—')+'</td>'
+      + '<td class="mono"><b>'+money(f.valor)+'</b></td>'
+      + '<td class="muted">'+esc(f.obs||'')+'</td>'
+      + '<td class="no-print ta-r"><button class="btn ghost sm" onclick="event.stopPropagation();modalFaturamento(\''+f.id+'\')">'+svg('edit')+'</button></td></tr>';
+  }).join('');
+
+  const card = !contabFatVer ? '' :
+    '<div class="card" id="cbFatCard" style="margin-top:16px"><div class="card-h">'+svg('money')
+      +'<h3>Faturamento — '+(contabFatVer==='mes'? esc(MESES_L[h.getMonth()]+' de '+h.getFullYear()) : 'todos os lançamentos')+'</h3>'
+      +'<div class="r no-print" style="gap:6px">'
+        +'<button class="btn sm" onclick="cpidEscolher(\'Faturamento\')" title="Manda o documento para a Central: relatório do contador, planilha ou XML — o sistema lê e preenche">'+svg('upload')+' Importar do contador</button>'
+        +'<button class="btn primary sm" onclick="modalFaturamento()">'+svg('plus')+' Novo</button>'
+        +'<button class="btn ghost sm" onclick="contabVerFat(\''+contabFatVer+'\')" title="Fechar a lista">✕</button></div></div>'
+      +'<div class="card-b p0"><div class="tbl-wrap"><table class="tbl">'
+        +'<thead><tr><th>Data</th><th>Cliente</th><th>Valor</th><th>Obs</th><th class="no-print"></th></tr></thead>'
+        +'<tbody>'+(linhas || '<tr><td colspan="5">'+emptyState('Nenhum faturamento neste período.')+'</td></tr>')+'</tbody></table></div></div></div>';
+
+  return ''
+  + '<div class="grid kpis fin-gold" style="grid-template-columns:repeat(3,1fr);margin-bottom:4px">'
+    + '<a class="kpi link'+(contabFatVer==='mes'?' ativo':'')+'" onclick="contabVerFat(\'mes\')" title="Clique para ver os lançamentos do mês">'
+      + '<div class="k-top"><div class="k-ico i-green">'+svg('money')+'</div><span class="k-go">→</span></div>'
+      + '<div class="k-val">'+money(somaMes)+'</div><div class="k-label">Faturamento no mês</div>'
+      + '<div class="k-sub">'+(contabFatVer==='mes'?'clique para fechar':'clique para ver a lista')+'</div></a>'
+    + '<a class="kpi link'+(contabFatVer==='tudo'?' ativo':'')+'" onclick="contabVerFat(\'tudo\')" title="Clique para ver todos os lançamentos">'
+      + '<div class="k-top"><div class="k-ico i-blue">'+svg('export')+'</div><span class="k-go">→</span></div>'
+      + '<div class="k-val">'+money(somaTot)+'</div><div class="k-label">Faturamento acumulado</div>'
+      + '<div class="k-sub">'+todos.length+' lançamento(s) · '+(contabFatVer==='tudo'?'clique para fechar':'clique para ver a lista')+'</div></a>'
+    + '<a class="kpi link" href="#ctes"><div class="k-top"><div class="k-ico i-amber">'+svg('ctedoc')+'</div><span class="k-go">→</span></div>'
+      + '<div class="k-val">'+money(ctes)+'</div><div class="k-label">CT-e emitidos</div>'
+      + '<div class="k-sub">'+((DB.ctes||[]).length)+' conhecimento(s)</div></a>'
+  + '</div>'
+  + '<div class="hint" style="margin:0 0 12px">O faturamento lançado aqui e os CT-e são somados como receita na DRE, cada um na sua conta — nada é contado duas vezes.</div>'
+  + card;
+}
 function contabSetPer(p){ contabPer=p; contabIni=''; contabFim=''; router(); }
 function contabPeriodoCustom(){
   openModal('<div class="m-h">'+svg('cal')+'<h3>Período personalizado</h3><button class="x" onclick="closeModal()">×</button></div>'
