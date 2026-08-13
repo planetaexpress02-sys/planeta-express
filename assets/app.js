@@ -5315,6 +5315,43 @@ function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEac
    ================================================================== */
 let FIN_IMP = [];
 
+/* Sem cabeçalho? Descobre as colunas pelo CONTEÚDO.
+   É o caso da "Planilha Vales Bradesco": ela só tem o título "Vales e
+   Pagamentos" e depois data | descrição | valor, sem nomear as colunas.
+   Regra: a coluna com mais datas é a data; entre as demais, a com mais
+   números é o valor e a com mais texto é a descrição. */
+function _finImpPorConteudo(grid){
+  const ehData = function(v){ return /^\s*\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\s*$/.test(String(v||'')) || /^\d{4}-\d{2}-\d{2}/.test(String(v||'')); };
+  const ehNum  = function(v){ const t=String(v==null?'':v).trim(); return t!=='' && /^-?[\d.,]+$/.test(t) && /\d/.test(t); };
+  const cont = [];
+  grid.forEach(function(l){
+    (l||[]).forEach(function(c, j){
+      cont[j] = cont[j] || {data:0, num:0, txt:0};
+      const t = String(c==null?'':c).trim();
+      if(!t) return;
+      if(ehData(t)) cont[j].data++;
+      else if(ehNum(t)) cont[j].num++;
+      else cont[j].txt++;
+    });
+  });
+  const idxMaior = function(campo, exceto){
+    let melhor=-1, val=0;
+    cont.forEach(function(c, j){ if(!c || (exceto||[]).indexOf(j)>=0) return;
+      if(c[campo] > val){ val=c[campo]; melhor=j; } });
+    return val >= 2 ? melhor : -1;     /* precisa de pelo menos 2 para valer */
+  };
+  const cData = idxMaior('data');
+  if(cData < 0) return null;
+  const cValor = idxMaior('num', [cData]);
+  if(cValor < 0) return null;
+  const cDesc  = idxMaior('txt', [cData, cValor]);
+  const col = {data:cData, valor:cValor};
+  if(cDesc >= 0) col.desc = cDesc;
+  /* começa na primeira linha que tem data de verdade */
+  let primeira = 0;
+  for(let i=0; i<grid.length; i++){ if(ehData((grid[i]||[])[cData])){ primeira = i-1; break; } }
+  return {linha: primeira, col: col, semCabecalho:true};
+}
 /* Descobre em qual coluna está cada informação, pelo cabeçalho */
 function _finImpCabecalho(grid){
   const chaves = {
@@ -5337,10 +5374,30 @@ function _finImpCabecalho(grid){
   }
   return null;
 }
+/* Quando um nome serve para mais de um motorista, esta tabela diz quem é.
+   Confirmado pelo dono: na planilha de vales, "Marcelo" é sempre o Marcelo
+   Setsuo Goto. Casa por TRECHO DO NOME (não por id), então continua valendo
+   se o cadastro for reeditado. Para acrescentar outro caso, é só uma linha. */
+const FIN_APELIDOS = [
+  { quando:/\bmarcelo\b/i, nome:'setsuo goto' }
+];
+function _finDesempatar(txt, candidatos){
+  const t = String(txt||'').toLowerCase();
+  for(let i=0; i<FIN_APELIDOS.length; i++){
+    const a = FIN_APELIDOS[i];
+    if(!a.quando.test(t)) continue;
+    const escolhido = candidatos.filter(function(m){
+      return String(m.nome||'').toLowerCase().indexOf(a.nome) >= 0;
+    });
+    if(escolhido.length === 1) return escolhido[0];
+  }
+  return null;
+}
 /* Acha o motorista citado na linha.
-   ⚠️ NÃO ADIVINHA: a frota tem três "Marcelo". Se o texto só traz um nome que
-   serve para mais de uma pessoa, devolve null e a prévia pede para você
-   escolher — melhor perguntar do que lançar o vale na conta errada. */
+   ⚠️ NÃO ADIVINHA sozinha: a frota tem três "Marcelo". Se o texto só traz um
+   nome que serve para mais de uma pessoa, primeiro consulta FIN_APELIDOS; se
+   nem assim der, devolve null e a prévia pergunta — melhor perguntar do que
+   lançar o vale na conta errada. */
 function _finImpMotorista(txt){
   const t = ' ' + String(txt||'').toLowerCase().replace(/\s+/g,' ') + ' ';
   if(t.trim().length < 3) return null;
@@ -5349,6 +5406,7 @@ function _finImpMotorista(txt){
   /* 1) nome completo escrito na linha */
   const inteiro = lista.filter(function(m){ return t.indexOf(String(m.nome).toLowerCase()) >= 0; });
   if(inteiro.length === 1) return inteiro[0];
+  if(inteiro.length > 1){ const d=_finDesempatar(t,inteiro); if(d) return d; }
 
   /* 2) combinação primeiro nome + qualquer outra parte do nome (ex.: "Marcelo Goto") */
   const combinado = lista.filter(function(m){
@@ -5359,6 +5417,7 @@ function _finImpMotorista(txt){
     return temPrimeiro && temOutra;
   });
   if(combinado.length === 1) return combinado[0];
+  if(combinado.length > 1){ const d=_finDesempatar(t,combinado); if(d) return d; }
 
   /* 3) uma parte do nome só (primeiro nome ou sobrenome). Só é aceita quando a
         linha FALA de vale/adiantamento — senão "Combustível posto da Silva"
@@ -5371,7 +5430,25 @@ function _finImpMotorista(txt){
       return p.length >= 3 && !ignorar.test(p) && new RegExp('\\b'+p+'\\b').test(t);
     });
   });
-  return porParte.length === 1 ? porParte[0] : null;
+  if(porParte.length === 1) return porParte[0];
+  return porParte.length > 1 ? _finDesempatar(t, porParte) : null;
+}
+/* A descrição é APENAS o nome de um motorista? (ex.: a linha "Renato" da
+   planilha de vales). Só aceita quando o nome ocupa praticamente toda a
+   descrição — "Toxicológico Wesley" ou "Descarga QIO" não entram —, e só
+   quando aponta para uma pessoa só. */
+function _finImpMotoristaSozinho(desc){
+  const t = String(desc||'').toLowerCase().replace(/[^a-zà-ú\s]/gi,' ').replace(/\s+/g,' ').trim();
+  if(!t || t.length < 3) return null;
+  const palavras = t.split(' ').filter(function(p){ return p.length >= 3; });
+  if(!palavras.length || palavras.length > 3) return null;
+  const achados = (DB.motoristas||[]).filter(function(m){
+    const partes = String(m.nome||'').toLowerCase().split(/\s+/).filter(function(p){ return p.length >= 3; });
+    /* toda palavra da descrição tem de fazer parte do nome dessa pessoa */
+    return palavras.every(function(p){ return partes.indexOf(p) >= 0; });
+  });
+  if(achados.length === 1) return achados[0];
+  return achados.length > 1 ? _finDesempatar(t, achados) : null;
 }
 function finImportar(){
   const inp = document.createElement('input');
@@ -5385,8 +5462,9 @@ function finImportar(){
     catch(e){ toast(e.message||'Não consegui ler a planilha.','err'); return; }
     if(!grid || !grid.length){ toast('A planilha veio vazia.','err'); return; }
 
-    const cab = _finImpCabecalho(grid);
-    if(!cab){ toast('Não achei as colunas de data e valor. Confira o cabeçalho da planilha.','err'); return; }
+    /* primeiro tenta pelo cabeçalho; se a planilha não tiver, deduz pelo conteúdo */
+    const cab = _finImpCabecalho(grid) || _finImpPorConteudo(grid);
+    if(!cab){ toast('Não achei as colunas de data e valor nessa planilha.','err'); return; }
 
     FIN_IMP = [];
     for(let i=cab.linha+1; i<grid.length; i++){
@@ -5399,7 +5477,10 @@ function finImportar(){
       const quem = pega('quem');
       /* classifica: motorista citado OU palavra de vale => Vales Motoristas */
       const texto = (quem+' '+desc+' '+pega('cat')).trim();
-      const mot = _finImpMotorista(texto);
+      let mot = _finImpMotorista(texto);
+      /* Descrição que é SÓ o nome do motorista também é vale — na planilha de
+         vales aparecem linhas escritas apenas "Renato", sem a palavra vale. */
+      if(!mot) mot = _finImpMotoristaSozinho(desc);
       const ehVale = /\bvale\b|adiantament|vale-?motorista/i.test(texto);
       FIN_IMP.push({
         _ok:true,
@@ -5417,6 +5498,7 @@ function finImportar(){
   inp.click();
 }
 function modalFinImportar(nome){
+  if(nome) FIN_IMP._nome=nome; else nome=FIN_IMP._nome||'';
   const vales = FIN_IMP.filter(function(x){ return x.destino==='vale'; });
   const gastos= FIN_IMP.filter(function(x){ return x.destino==='gasto'; });
   const soma  = function(a){ return a.filter(function(x){ return x._ok; }).reduce(function(s,x){ return s+x.valor; },0); };
@@ -5431,7 +5513,7 @@ function modalFinImportar(nome){
         + '<option value="vale"'+(x.destino==='vale'?' selected':'')+'>Vales Motoristas</option>'
         + '<option value="gasto"'+(x.destino==='gasto'?' selected':'')+'>Gastos</option></select></td>'
       + '<td>'+(x.destino==='vale'
-          ? '<select class="selectlite" onchange="FIN_IMP['+i+'].motoristaId=this.value"><option value="">— quem? —</option>'
+          ? '<select class="selectlite" onchange="finImpQuem('+i+',this.value)"><option value="">— quem? —</option>'
             + opMot.replace('value="'+x.motoristaId+'"','value="'+x.motoristaId+'" selected')+'</select>'
           : '<span class="muted">'+esc(x.categoria||'—')+'</span>')+'</td>'
       + '<td class="ta-r mono"><b>'+money(x.valor)+'</b></td></tr>';
@@ -5455,6 +5537,20 @@ function modalFinImportar(nome){
     +'<div class="m-f"><button class="btn" onclick="FIN_IMP=[];closeModal()">Cancelar</button>'
       +'<div class="spacer"></div>'
       +'<button class="btn primary" onclick="finImportConfirmar()">'+svg('check')+' Gravar '+FIN_IMP.filter(function(x){return x._ok;}).length+' lançamento(s)</button></div>', true);
+}
+/* Escolheu quem é numa linha: aplica nas outras com a MESMA descrição.
+   A planilha repete "Vale Marcelo" várias vezes — não faz sentido perguntar
+   três vezes a mesma coisa. */
+function finImpQuem(i, id){
+  const alvo = FIN_IMP[i]; if(!alvo) return;
+  const chave = String(alvo.desc||'').trim().toLowerCase();
+  let n = 0;
+  FIN_IMP.forEach(function(x){
+    if(x.destino==='vale' && !x.motoristaId && String(x.desc||'').trim().toLowerCase()===chave){ x.motoristaId=id; n++; }
+  });
+  alvo.motoristaId = id;
+  modalFinImportar();
+  if(n > 1 && id) toast('Apliquei em '+n+' linhas com a mesma descrição.');
 }
 function finImportConfirmar(){
   const sel = FIN_IMP.filter(function(x){ return x._ok; });
