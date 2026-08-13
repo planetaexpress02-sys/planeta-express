@@ -5323,7 +5323,54 @@ let FIN_IMP = [], FIN_GRID = null, FIN_NOME = '';
    recusada com "não achei as colunas".
    Devolve '' quando não é data.
    ------------------------------------------------------------------ */
-function _finData(v){
+/* ------------------------------------------------------------------
+   O Excel exporta em formato americano com frequência. A planilha de vales
+   chega assim: data "8/1/26" (mês/dia/ano) e valor "R$ 1,000.00" (vírgula
+   de milhar, ponto decimal). Ler isso como brasileiro dá 8 de janeiro e
+   R$ 1,00 — foi exatamente o que quebrou a importação.
+
+   _finFormatoData olha a COLUNA INTEIRA para decidir: se em alguma linha o
+   1º número passa de 12, é dia/mês; se o 2º passa de 12, é mês/dia. Decidir
+   célula a célula não funciona, porque "8/1/26" sozinho é ambíguo.
+   ------------------------------------------------------------------ */
+function _finFormatoData(valores){
+  let diaPrimeiro = 0, mesPrimeiro = 0;
+  (valores||[]).forEach(function(v){
+    const m = String(v==null?'':v).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+    if(!m) return;
+    const a = +m[1], b = +m[2];
+    if(a > 12 && b <= 12) diaPrimeiro++;
+    else if(b > 12 && a <= 12) mesPrimeiro++;
+  });
+  if(mesPrimeiro > diaPrimeiro) return 'mdy';
+  if(diaPrimeiro > mesPrimeiro) return 'dmy';
+  return '';                                     /* sem pista: usa o padrão BR */
+}
+/* Converte valor em qualquer notação: "R$ 1.000,00" (BR) ou "R$ 1,000.00" (US) */
+function _finValor(v){
+  if(v == null || v === '') return 0;
+  if(typeof v === 'number') return v;
+  let t = String(v).replace(/[R$\s ]/gi,'').trim();
+  if(!t) return 0;
+  const neg = /^\(.*\)$/.test(t) || /^-/.test(t);
+  t = t.replace(/[()\-]/g,'');
+  const ultVirg = t.lastIndexOf(','), ultPonto = t.lastIndexOf('.');
+  if(ultVirg >= 0 && ultPonto >= 0){
+    /* o separador que vem por ÚLTIMO é o decimal */
+    if(ultPonto > ultVirg) t = t.replace(/,/g,'');            /* 1,000.00 -> 1000.00 */
+    else { t = t.replace(/\./g,''); t = t.replace(',','.'); } /* 1.000,00 -> 1000.00 */
+  } else if(ultVirg >= 0){
+    /* só vírgula: decimal se sobrarem 1 ou 2 casas, senão é milhar */
+    t = (t.length - ultVirg - 1) <= 2 ? t.replace(',','.') : t.replace(/,/g,'');
+  } else if(ultPonto >= 0){
+    /* só ponto: milhar quando são exatamente 3 casas e há mais de um grupo */
+    const casas = t.length - ultPonto - 1;
+    if(casas === 3 && /^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g,'');
+  }
+  const n = parseFloat(t);
+  return isNaN(n) ? 0 : (neg ? -n : n);
+}
+function _finData(v, formato){
   if(v == null || v === '') return '';
   const iso2 = function(y,m,d){
     y=+y; m=+m; d=+d;
@@ -5338,13 +5385,15 @@ function _finData(v){
   /* ISO, com ou sem hora */
   let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m) return iso2(m[1], m[2], m[3]);
-  /* dd/mm/aa(aa) ou mm/dd/aa(aa) — decide pelo que faz sentido */
+  /* dd/mm/aa(aa) ou mm/dd/aa(aa) */
   m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
   if(m){
     const a=+m[1], b=+m[2];
-    if(a > 12 && b <= 12) return iso2(m[3], b, a);        /* só pode ser dd/mm */
-    if(b > 12 && a <= 12) return iso2(m[3], a, b);        /* só pode ser mm/dd */
-    return iso2(m[3], b, a);                              /* empate: Brasil = dd/mm */
+    if(a > 12 && b <= 12) return iso2(m[3], b, a);        /* só pode ser dia/mês */
+    if(b > 12 && a <= 12) return iso2(m[3], a, b);        /* só pode ser mês/dia */
+    /* ambíguo (ex.: "8/1/26"): manda o formato decidido pela COLUNA inteira */
+    if(formato === 'mdy') return iso2(m[3], a, b);
+    return iso2(m[3], b, a);                              /* sem pista: padrão brasileiro */
   }
   /* número de série do Excel (dias desde 1900) */
   if(/^\d{4,5}(\.\d+)?$/.test(t)){
@@ -5521,12 +5570,14 @@ function finImportar(){
 function finImpProcessar(cab){
   const grid = FIN_GRID || [];
   FIN_IMP = [];
+  /* decide dia/mes ou mes/dia olhando a coluna de data inteira */
+  const fmtData = _finFormatoData(grid.slice(cab.linha+1).map(function(l){ return (l||[])[cab.col.data]; }));
   for(let i=cab.linha+1; i<grid.length; i++){
     const l = grid[i]||[];
     const pega = function(k){ return cab.col[k]==null? '' : String(l[cab.col[k]]==null?'':l[cab.col[k]]).trim(); };
     const bruto = cab.col.data==null ? '' : (l[cab.col.data]);
-    const dataISO = _finData(bruto) || _impISO(pega('data'));
-    const valor   = parseBRL(pega('valor'));
+    const dataISO = _finData(bruto, fmtData) || _impISO(pega("data"));
+    const valor   = _finValor(pega("valor"));
     if(!dataISO || !valor) continue;
     const desc = pega('desc') || pega('cat') || 'Lançamento importado';
     const quem = pega('quem');
