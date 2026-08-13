@@ -68,4 +68,6 @@ const ARQUIVOS_EMPRESA = [
   {id:"j11",nome:"PCMSO 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PCMSO 2026.pdf"},
   {id:"j12",nome:"PGR 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PGR 2026.pdf"},
   {id:"j13",nome:"Simpes Nacional.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Simpes Nacional.pdf"},
+  /* Faturas Sem Parar (pedágios) */
+  {id:"sp1",nome:"Fatura Sem Parar 26176725165 - 08-2026.pdf",categoria:"Pedágio",entidade:"empresa",refId:"empresa",path:"../Documentos Internos/Faturas Sem Parar/Fatura Sem Parar 26176725165 - 08-2026.pdf"},
 ];
