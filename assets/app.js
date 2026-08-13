@@ -1619,7 +1619,7 @@ function viewBaterias(){
 }
 /* --- Baterias reservas (estoque, não instaladas em veículo) --- */
 function estoqueBateriasSecao(){
-  const eb=DB.estoqueBaterias.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const eb=DB.estoqueBaterias.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const qt=eb.reduce((s,x)=>s+(parseInt(x.qtd)||1),0);
   const tot=eb.reduce((s,x)=>s+(Number(x.valor)||0)*(parseInt(x.qtd)||1),0);
   const rows=eb.map(x=>`<tr class="clickable" onclick="modalEstoqueBateria('${x.id}')">
@@ -2439,7 +2439,7 @@ function alarmeSyncChips(){ const box=document.getElementById('almChips'); if(!b
 /* ---------- NOTAS FISCAIS ---------- */
 function totalNota(n){ return (Number(n.alexandria)||0)+(Number(n.notasGerais)||0)+(Number(n.combustivel)||0); }
 function viewNotas(){
-  const notas=DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
+  const notas=DB.notas.slice().sort((a,b)=>(a.fim||'').localeCompare(b.fim||''));
   const acumulado=notas.reduce((s,n)=>s+totalNota(n),0);
   const ultimo=notas[0];
   const somaAlex=notas.reduce((s,n)=>s+(Number(n.alexandria)||0),0);
@@ -2603,7 +2603,7 @@ function viewPneusLimite(){
 function pneuIrEstoque(){ const el=document.getElementById('sec-estoque-pneus'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
 /* --- Pneus em estoque (não instalados) --- */
 function estoquePneusSecao(){
-  const ep=DB.estoquePneus.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const ep=DB.estoquePneus.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const qt=ep.reduce((s,x)=>s+(parseInt(x.qtd)||1),0);
   const tot=ep.reduce((s,x)=>s+(Number(x.valor)||0)*(parseInt(x.qtd)||1),0);
   const rows=ep.map(x=>`<tr class="clickable" onclick="modalEstoquePneu('${x.id}')">
@@ -2935,7 +2935,7 @@ function chkRenderMap(){ const el=document.getElementById('chkMapArea'); if(!el)
     <div class="tm-list">${lista||'<div class="muted" style="font-size:12.5px;padding:6px 0">Nenhum ponto marcado ainda.</div>'}</div>`;
 }
 function viewChecklist(){
-  const cls=DB.checklists.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const cls=DB.checklists.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const mes=cls.filter(c=>{ const d=parseD(c.data); const h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
   const comNok=cls.filter(c=>chkResumo(c).nok>0).length;
   const rows=cls.map(c=>{ const v=veiculo(c.veiculoId), m=motorista(c.motoristaId); const r=chkResumo(c);
@@ -4659,7 +4659,7 @@ function viewViagens(){
   const kpiV=(ico,cls,val,label,onclk,ativo)=>`<a class="kpi link ${ativo?'ativo':''}" style="cursor:pointer" onclick="${onclk}">
     <div class="k-top"><div class="k-ico ${cls}">${svg(ico)}</div><span class="k-go">→</span></div>
     <div class="k-val">${val}</div><div class="k-label">${label}</div></a>`;
-  let lista=DB.viagens.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  let lista=DB.viagens.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   if(viagemFiltro==='emviagem') lista=lista.filter(v=>v.status==='Pendente');
   else if(viagemFiltro==='pendentes') lista=lista.filter(v=>v.baixado!=='SIM'&&v.baixado!=='TSP');
   else if(viagemFiltro==='termo') lista=lista.filter(v=>v.termoBaixado!=='SIM');
@@ -5204,7 +5204,7 @@ function viewAbastecimento(){
   const totR=DB.abastecimentos.reduce((s,a)=>s+(Number(a.valor)||0),0);
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const medias=veics.map(v=>({v,m:mediaVeiculo(v)})).filter(x=>x.m);
-  const rows=DB.abastecimentos.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(a=>{ const v=veiculo(a.veiculoId);
+  const rows=DB.abastecimentos.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(a=>{ const v=veiculo(a.veiculoId);
     return `<tr class="clickable" onclick="modalAbastec('${a.id}')"><td class="mono">${fmtD(a.data)}</td><td>${v?plate(v.placa,v.tipo):'—'}</td>
       <td class="mono">${num(a.litros)} L</td><td class="mono">${money(a.valor)}</td>
       <td class="mono muted">${a.km!=null&&a.km!==''?num(a.km)+' km':(a.horas!=null&&a.horas!==''?num(a.horas)+' h':'—')}</td>
@@ -5769,6 +5769,41 @@ function finImportConfirmar(){
   router();
 }
 let pagMes='todos';
+/* Seleção múltipla em Gastos — para apagar vários de uma vez (ex.: uma
+   importação que entrou errada). A seleção vive só na tela, não no banco. */
+let PAG_SEL = {};
+function pagSel(id, on){ if(on) PAG_SEL[id]=true; else delete PAG_SEL[id]; router(); }
+function pagSelTodos(on){
+  const h=hoje(); let lista=(DB.pagamentos||[]).slice();
+  if(pagMes!=='todos') lista=lista.filter(p=>(p.data||'').slice(0,7)===pagMes);
+  PAG_SEL = {};
+  if(on) lista.forEach(function(p){ PAG_SEL[p.id]=true; });
+  router();
+}
+function pagSelLimpar(){ PAG_SEL={}; router(); }
+/* mesma coisa em Vales Motoristas */
+let VALE_SEL = {};
+function valeSel(id, on){ if(on) VALE_SEL[id]=true; else delete VALE_SEL[id]; router(); }
+function valeSelTodos(on){ VALE_SEL={}; if(on) (DB.vales||[]).forEach(function(v){ VALE_SEL[v.id]=true; }); router(); }
+function valeSelLimpar(){ VALE_SEL={}; router(); }
+function valeExcluirSel(){
+  const ids=Object.keys(VALE_SEL).filter(function(k){ return VALE_SEL[k]; });
+  if(!ids.length) return;
+  const alvo=(DB.vales||[]).filter(function(v){ return ids.indexOf(v.id)>=0; });
+  const tot=alvo.reduce(function(s,v){ return s+(Number(v.valor)||0); },0);
+  if(!confirm('Excluir '+ids.length+' lançamento(s) de vale, somando '+money(tot)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  DB.vales=(DB.vales||[]).filter(function(v){ return ids.indexOf(v.id)<0; });
+  VALE_SEL={}; saveDB(); toast(ids.length+' lançamento(s) excluído(s).'); router();
+}
+function pagExcluirSel(){
+  const ids=Object.keys(PAG_SEL).filter(function(k){ return PAG_SEL[k]; });
+  if(!ids.length) return;
+  const alvo=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)>=0; });
+  const tot=alvo.reduce(function(s,p){ return s+(Number(p.valor)||0); },0);
+  if(!confirm('Excluir '+ids.length+' gasto(s), somando '+money(tot)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)<0; });
+  PAG_SEL={}; saveDB(); toast(ids.length+' gasto(s) excluído(s).'); router();
+}
 /* Faturamento não fica em lista o tempo todo (pedido do cliente): a lista só
    abre ao clicar num dos dois cartões de faturamento lá em cima.
    '' = fechado · 'mes' = só o mês corrente · 'tudo' = todos os lançamentos */
@@ -5786,22 +5821,29 @@ function viewFinConteudo(){
   pagLista.sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const pagTotFiltro=pagLista.reduce((s,p)=>s+(Number(p.valor)||0),0);
   const pagMesTot=pagAll.filter(p=>{ const d=parseD(p.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,p)=>s+(Number(p.valor)||0),0);
-  const pagRows=pagLista.map(p=>`<tr class="clickable" onclick="modalPagamento('${p.id}')">
+  const pagRows=pagLista.map(p=>`<tr class="clickable${PAG_SEL[p.id]?' sel-on':''}" onclick="modalPagamento('${p.id}')">
+    <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" ${PAG_SEL[p.id]?'checked':''} onchange="pagSel('${p.id}',this.checked)"></td>
     <td class="mono">${fmtD(p.data)}</td><td>${esc(p.descricao||'—')}</td>
     <td>${p.categoria?`<span class="st neutro">${esc(p.categoria)}</span>`:'—'}</td>
     <td>${esc(p.forma||'—')}</td>
     <td class="ta-r mono"><b>${money(p.valor)}</b></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalPagamento('${p.id}')">${svg('edit')}</button></td></tr>`).join('');
+  const pagNSel=Object.keys(PAG_SEL).filter(k=>PAG_SEL[k]).length;
+  const pagTotSel=pagLista.filter(p=>PAG_SEL[p.id]).reduce((s,p)=>s+(Number(p.valor)||0),0);
   const pagCard=`
   <div class="card" style="margin-top:18px"><div class="card-h">${svg('doc')}<h3>Gastos</h3>
     <div class="r no-print" style="gap:8px">
       <select class="selectlite" onchange="pagMes=this.value;router()"><option value="todos">Todos os meses</option>${pagMeses.map(m=>`<option value="${m}" ${pagMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
       <button class="btn sm" onclick="PEXRelAbrirId('fin-gastos')" title="Emitir o relatório de Gastos em A4/PDF">${svg('print')} Relatório</button>
       <button class="btn primary sm" onclick="modalPagamento()">${svg('plus')} Novo gasto</button></div></div>
+    ${pagNSel?`<div class="sel-bar no-print">${svg('check')}<b>${pagNSel} selecionado(s)</b>
+      <span>${money(pagTotSel)}</span><div class="spacer"></div>
+      <button class="btn ghost sm" onclick="pagSelLimpar()">Limpar seleção</button>
+      <button class="btn sm sel-del" onclick="pagExcluirSel()">${svg('trash')} Excluir selecionados</button></div>`:''}
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th class="ta-r">Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${pagRows||`<tr><td colspan="6">${emptyState('Nenhum gasto lançado ainda. Clique em "Novo gasto" para começar.')}</td></tr>`}</tbody>
-      ${pagLista.length?`<tfoot><tr><td colspan="4" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
+      <thead><tr><th class="no-print" style="width:34px"><input type="checkbox" ${pagLista.length&&pagLista.every(p=>PAG_SEL[p.id])?'checked':''} onchange="pagSelTodos(this.checked)" title="Selecionar todos"></th><th>Data</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th class="ta-r">Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${pagRows||`<tr><td colspan="7">${emptyState('Nenhum gasto lançado ainda. Clique em "Novo gasto" para começar.')}</td></tr>`}</tbody>
+      ${pagLista.length?`<tfoot><tr><td colspan="5" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
     </table></div></div></div>`;
   const fatMes=DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,f)=>s+(Number(f.valor)||0),0);
   const fatTot=DB.faturamento.reduce((s,f)=>s+(Number(f.valor)||0),0);
@@ -5811,15 +5853,19 @@ function viewFinConteudo(){
   const fatSel = finFatVer==='mes'
     ? DB.faturamento.filter(f=>{ const d=parseD(f.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); })
     : DB.faturamento.slice();
-  const fatRows=fatSel.sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
+  const fatRows=fatSel.sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(f=>`<tr class="clickable" onclick="modalFaturamento('${f.id}')">
     <td class="mono">${fmtD(f.data)}</td><td>${esc(f.cliente||'—')}</td><td class="mono"><b>${money(f.valor)}</b></td>
     <td class="muted">${esc(f.obs||'')}</td><td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalFaturamento('${f.id}')">${svg('edit')}</button></td></tr>`).join('');
   /* Vales Motoristas: SEMPRE do mais antigo para o mais novo (pedido do cliente) */
   const valeRows=DB.vales.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v=>{ const m=motorista(v.motoristaId);
-    return `<tr class="clickable" onclick="modalVale('${v.id}')"><td class="mono">${fmtD(v.data)}</td><td>${m?esc(m.nome):'—'}</td>
+    return `<tr class="clickable${VALE_SEL[v.id]?' sel-on':''}" onclick="modalVale('${v.id}')">
+    <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" ${VALE_SEL[v.id]?'checked':''} onchange="valeSel('${v.id}',this.checked)"></td>
+    <td class="mono">${fmtD(v.data)}</td><td>${m?esc(m.nome):'—'}</td>
     <td><span class="st ${v.tipo==='Pagamento'?'ok':'warn'}">${esc(v.tipo)}</span></td>
     <td class="mono"><b>${money(v.valor)}</b></td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalVale('${v.id}')">${svg('edit')}</button></td></tr>`; }).join('');
+  const valeNSel=Object.keys(VALE_SEL).filter(k=>VALE_SEL[k]).length;
+  const valeTotSel=(DB.vales||[]).filter(v=>VALE_SEL[v.id]).reduce((s,v)=>s+(Number(v.valor)||0),0);
   const saldoCards=DB.motoristas.filter(m=>valeSaldo(m.id)!==0).map(m=>{ const s=valeSaldo(m.id);
     return `<div class="fin-saldo"><div class="fin-saldo-b">
       ${avatarFoto(m,38)}<div style="flex:1;min-width:0"><b>${esc(m.nome.split(' ')[0])} ${esc((m.nome.split(' ')[1]||''))}</b>
@@ -5863,9 +5909,13 @@ function viewFinConteudo(){
     <div class="r no-print" style="gap:8px">
       <button class="btn sm" onclick="PEXRelAbrirId('fin-vales')" title="Emitir o relatório de Vales Motoristas em A4/PDF">${svg('print')} Relatório</button>
       <button class="btn primary sm" onclick="modalVale()">${svg('plus')} Novo</button></div></div>
+    ${valeNSel?`<div class="sel-bar no-print">${svg('check')}<b>${valeNSel} selecionado(s)</b>
+      <span>${money(valeTotSel)}</span><div class="spacer"></div>
+      <button class="btn ghost sm" onclick="valeSelLimpar()">Limpar seleção</button>
+      <button class="btn sm sel-del" onclick="valeExcluirSel()">${svg('trash')} Excluir selecionados</button></div>`:''}
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${valeRows||`<tr><td colspan="5">${emptyState('Nenhum vale ou pagamento lançado.')}</td></tr>`}</tbody></table></div></div>
+      <thead><tr><th class="no-print" style="width:34px"><input type="checkbox" ${(DB.vales||[]).length&&(DB.vales||[]).every(v=>VALE_SEL[v.id])?'checked':''} onchange="valeSelTodos(this.checked)" title="Selecionar todos"></th><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${valeRows||`<tr><td colspan="6">${emptyState('Nenhum vale ou pagamento lançado.')}</td></tr>`}</tbody></table></div></div>
     ${saldoCards?`<div class="fin-saldos"><div class="fin-saldos-t">${svg('wallet')} Saldo de vales por motorista</div>
       <div class="fin-saldos-g">${saldoCards}</div></div>`:''}
   </div>
@@ -6112,7 +6162,7 @@ function viewCtes(){
   const meses=[...new Set(DB.ctes.map(c=>(c.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   const cont={}; CTE_STATUS.forEach(s=>cont[s]=DB.ctes.filter(c=>c.status===s).length);
   const fb=(k,l,n)=>`<button class="${cteFiltro===k?'active':''}" onclick="cteFiltro='${k}';router()">${l}${n!=null?` <b style="opacity:.55">${n}</b>`:''}</button>`;
-  let lista=DB.ctes.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  let lista=DB.ctes.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   if(cteFiltro!=='todos') lista=lista.filter(c=>c.status===cteFiltro);
   if(cteMes!=='todos') lista=lista.filter(c=>(c.data||'').slice(0,7)===cteMes);
   const rows=lista.map(c=>{ const v=veiculoByPlaca(c.placa);
