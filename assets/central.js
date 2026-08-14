@@ -21,7 +21,6 @@
 
 /* ---------------- estado do módulo ---------------- */
 let CPID_FILA = [];              // arquivos em processamento/conferência
-let cpidAba = 'entrada';         // entrada | modelos | logs
 let cpidBusca = '';
 
 const CPID_ETAPAS = [
@@ -835,82 +834,6 @@ function cpidLog(item, salvos, onde){
 /* ==================================================================
    TELA — Central de Processamento Inteligente de Documentos
    ================================================================== */
-function viewCentral(){
-  const logs=cpidLogs(), modelos=cpidModelos();
-  const hoje=new Date().toISOString().slice(0,10);
-  const kHoje=logs.filter(function(l){ return (l.quando||'').slice(0,10)===hoje; }).length;
-  const kSalvos=logs.reduce(function(s,l){ return s+(+l.salvos||0); },0);
-  const kOcr=logs.filter(function(l){ return l.ocr; }).length;
-
-  const kp=function(ico,cor,val,label,sub){
-    return '<a class="kpi"><div class="k-top"><div class="k-ico" style="color:'+cor+';background:'+cor+'1f">'+svg(ico)+'</div></div>'+
-      '<div class="k-val" data-count="'+val+'" style="'+(val?'color:'+cor:'')+'">0</div>'+
-      '<div class="k-label">'+label+'</div>'+(sub?'<div class="k-sub">'+sub+'</div>':'')+'</a>'; };
-
-  const aba=function(k,rot,n){ return '<button class="cp-aba'+(cpidAba===k?' on':'')+'" onclick="cpidSetAba(\''+k+'\')">'+rot+(n!=null?' <b>'+n+'</b>':'')+'</button>'; };
-
-  let corpo='';
-  if(cpidAba==='entrada'){
-    corpo=
-      '<div class="cp-drop" id="cpDrop"'+
-      ' ondragover="event.preventDefault();this.classList.add(\'over\')"'+
-      ' ondragleave="this.classList.remove(\'over\')"'+
-      ' ondrop="event.preventDefault();this.classList.remove(\'over\');cpidReceber(event.dataTransfer.files)"'+
-      ' onclick="document.getElementById(\'cpFile\').click()">'+
-        svg('upload')+'<b>Solte aqui qualquer documento</b>'+
-        '<span>PDF · XML · Excel · CSV · JPG · PNG · DOCX · E-mail · ZIP — o sistema identifica sozinho o que é e para onde vai</span>'+
-      '</div>'+
-      '<input type="file" id="cpFile" multiple style="display:none" onchange="cpidReceber(this.files);this.value=\'\'">'+
-      cpidFluxoHTML()+
-      '<div id="cpFila">'+cpidFilaHTML()+'</div>';
-  } else if(cpidAba==='modelos'){
-    corpo=
-      '<div class="card"><div class="card-h">'+svg('spark')+'<h3>Modelos aprendidos</h3>'+
-        '<div class="r"><span class="muted" style="font-size:11.5px">cada documento conferido ensina o sistema</span></div></div>'+
-      (modelos.length?
-      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Emitente</th><th>CNPJ</th><th>Reconhece como</th><th>Acertos</th><th>Último uso</th><th class="no-print"></th></tr></thead><tbody>'+
-      modelos.map(function(m){ return '<tr><td><b>'+esc(m.nome||'—')+'</b></td><td class="mono">'+esc(_cpFmtCNPJ(m.cnpj)||'—')+'</td>'+
-        '<td>'+esc(cpidTipoInfo(m.tipo).n)+'</td><td class="mono">'+(m.acertos||0)+'</td><td class="mono">'+fmtD(m.ultimoUso)+'</td>'+
-        '<td class="no-print ta-r"><button class="btn ghost sm" onclick="cpidEsquecerModelo(\''+m.id+'\')">'+svg('trash')+'</button></td></tr>'; }).join('')+
-      '</tbody></table></div>'
-      : '<div class="card-b">'+emptyState('Ainda não aprendi nenhum emitente. Processe um documento e confirme — na próxima vez eu já reconheço sozinho.')+'</div>')+
-      '</div>';
-  } else {
-    corpo=
-      '<div class="card"><div class="card-h">'+svg('doc')+'<h3>Histórico de processamento</h3>'+
-        '<div class="r"><span class="muted" style="font-size:11.5px">'+logs.length+' registro(s)</span>'+
-        (logs.length?'<button class="btn ghost sm no-print" onclick="cpidLimparLogs()">'+svg('trash')+' Limpar</button>':'')+'</div></div>'+
-      (logs.length?
-      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Quando</th><th>Arquivo</th><th>Formato</th><th>Tipo</th><th>Confiança</th><th>Salvos</th><th>Atualizou</th><th>Tempo</th></tr></thead><tbody>'+
-      logs.slice(0,200).map(function(l){
-        const d=new Date(l.quando);
-        return '<tr><td class="mono" style="white-space:nowrap">'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'</td>'+
-          '<td>'+esc(l.arquivo||'')+(l.ocr?' <span class="cp-ocr">OCR</span>':'')+'</td>'+
-          '<td>'+esc(l.formato||'')+'</td><td>'+esc(l.tipo||'')+'</td>'+
-          '<td><span class="cp-conf" style="--p:'+(l.conf||0)+'">'+(l.conf||0)+'%</span></td>'+
-          '<td class="mono">'+(l.salvos||0)+'</td><td class="muted" style="font-size:11.5px">'+esc(l.onde||'—')+'</td>'+
-          '<td class="mono">'+(l.tempo||0)+'s</td></tr>'; }).join('')+
-      '</tbody></table></div>'
-      : '<div class="card-b">'+emptyState('Nenhum documento processado ainda.')+'</div>')+
-      '</div>';
-  }
-
-  return ''+
-  '<div class="banner">'+svg('spark')+'<div><b>Central de Processamento Inteligente de Documentos</b>'+
-    '<span>Todo documento entra por aqui e segue sempre o mesmo caminho: identifica o formato, lê, classifica, extrai, relaciona com o banco, atualiza os módulos, arquiva e registra o log.</span></div></div>'+
-
-  '<div class="grid kpis cp-kpis" style="margin-bottom:16px">'+
-    kp('doc','#4c8dff', logs.length, 'Documentos processados','desde o início')+
-    kp('cal','#37e3d0', kHoje, 'Processados hoje','')+
-    kp('check','#16c98d', kSalvos, 'Lançamentos gerados','gravados nos módulos')+
-    kp('spark','#b98cff', modelos.length, 'Modelos aprendidos','emitentes reconhecidos')+
-    kp('eye','#f2a44e', kOcr, 'Lidos por OCR','documentos digitalizados')+
-  '</div>'+
-
-  '<div class="cp-abas no-print">'+aba('entrada','Entrada')+aba('modelos','Modelos',modelos.length)+aba('logs','Logs',logs.length)+'</div>'+
-  corpo;
-}
-function cpidSetAba(k){ cpidAba=k; router(); }
 function cpidLimparLogs(){ if(!confirm('Apagar o histórico de processamento? Os documentos e lançamentos continuam.')) return;
   DB.docLogs=[]; saveDB(); toast('Histórico limpo.'); router(); }
 
@@ -1070,15 +993,6 @@ async function cpidAplicarTodos(){
 function cpidPendentes(){ return CPID_FILA.filter(function(i){ return i.status==='revisar'; }).length; }
 
 /* contagem animada dos KPIs da Central */
-function cpidCountUp(){
-  document.querySelectorAll('#view[data-route="central"] .k-val[data-count]').forEach(function(el){
-    if(typeof _pexSemAnimacao==='function' && _pexSemAnimacao()){ _pexEscreverContador(el); return; }
-    var alvo=parseFloat(el.getAttribute('data-count'))||0, t0=null, dur=850;
-    function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur); var e=1-Math.pow(1-k,3);
-      el.textContent=Math.round(alvo*e).toLocaleString('pt-BR'); if(k<1) requestAnimationFrame(step); }
-    requestAnimationFrame(step);
-  });
-}
 
 /* ==================================================================
    PONTE — as telas antigas passam a usar ESTE pipeline.
@@ -1086,19 +1000,44 @@ function cpidCountUp(){
    abre a Central já com os arquivos processando. Assim não existe
    mais um leitor por tela — existe um só, aqui.
    ================================================================== */
-function cpidEnviar(files, origem){
-  location.hash='#central';
-  cpidAba='entrada';
-  if(typeof router==='function') router();
-  setTimeout(function(){ cpidReceber(files); }, 60);
-  if(origem && typeof toast==='function') toast('Documento enviado para a Central ('+origem+').');
-}
-/* Abre o seletor de arquivos e manda tudo para a Central */
-function cpidEscolher(origem){
+/* ==================================================================
+   LEITURA DE DOCUMENTO DENTRO DE CADA ABA (v6.89)
+   ------------------------------------------------------------------
+   A aba "Central de Documentos" foi removida a pedido do dono: em vez
+   de mandar o documento para outra tela, cada módulo tem o seu próprio
+   botão "Enviar documento" e a leitura acontece ali mesmo, num painel.
+
+   ⚠️ O MOTOR CONTINUA SENDO UM SÓ — tudo o que está acima neste
+   arquivo (identificar formato, ler PDF/Excel/XML/imagem, OCR quando
+   precisa, classificar, extrair, relacionar com a frota, conferir e
+   aplicar) é compartilhado. Mudou a PORTA DE ENTRADA, não o motor.
+   Não crie leitor próprio numa tela: chame docEnviar('<modulo>').
+   ================================================================== */
+let DOC_ORIGEM = '';
+function docEnviar(origem){
+  DOC_ORIGEM = origem || '';
   const inp=document.createElement('input'); inp.type='file'; inp.multiple=true;
-  inp.onchange=function(e){ cpidEnviar(e.target.files, origem); };
+  inp.accept='.pdf,.xml,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.docx,.eml,.zip';
+  inp.onchange=function(e){ docPainel(); cpidReceber(e.target.files); };
   inp.click();
 }
+/* Painel de leitura — mesma fila e mesmos cartões da antiga Central */
+function docPainel(){
+  const alvo = DOC_ORIGEM ? ' — '+esc(DOC_ORIGEM) : '';
+  openModal('<div class="m-h">'+svg('spark')+'<h3>Leitura de documento'+alvo+'</h3>'
+      +'<button class="x" onclick="docFechar()">×</button></div>'
+    +'<div class="m-b" id="cpFilaWrap">'
+      +'<div class="hint" style="margin-bottom:10px">Identifico o tipo sozinho e leio PDF, XML, Excel, CSV, imagem, DOCX e e-mail — com OCR quando o arquivo é digitalizado. Depois mostro o que encontrei para você conferir antes de gravar.</div>'
+      +'<div id="cpFila">'+cpidFilaHTML()+'</div>'
+    +'</div>'
+    +'<div class="m-f"><button class="btn" onclick="docFechar()">Fechar</button>'
+      +'<div class="spacer"></div>'
+      +'<button class="btn" onclick="docEnviar(DOC_ORIGEM)">'+svg('plus')+' Outro arquivo</button></div>', true);
+}
+function docFechar(){ CPID_FILA=[]; if(typeof closeModal==='function') closeModal(); if(typeof router==='function') router(); }
+/* Compatibilidade: chamadas antigas continuam funcionando */
+function cpidEnviar(files, origem){ DOC_ORIGEM=origem||''; docPainel(); setTimeout(function(){ cpidReceber(files); },40); }
+function cpidEscolher(origem){ docEnviar(origem); }
 
 /* ==================================================================
    LEITURA ESTRUTURADA DE PDF (tabelas)

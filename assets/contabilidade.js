@@ -552,7 +552,7 @@ function viewContabilidade(){
   +'<div class="banner">'+svg('coins')+'<div><b>Contabilidade</b>'
     +'<span>Núcleo contábil da operação. Os lançamentos são lidos dos módulos que você já usa — CT-e, abastecimentos, pedágios, manutenção, seguros, descargas e financeiro — sem cadastrar nada duas vezes.</span></div>'
     +'<div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">'
-      +'<button class="btn" onclick="cpidEscolher(\'Contabilidade\')" title="Manda o documento para a Central, que lê e lança">'+svg('upload')+' Importar documento</button>'
+      +'<button class="btn" onclick="docEnviar(\'Contabilidade\')" title="Leio o documento e lanço">'+svg('upload')+' Importar documento</button>'
       +'<button class="btn primary" onclick="contabModalLanc()">'+svg('plus')+' Lançamento</button></div></div>'
   + perHTML + abaHTML
   + (semDado? '<div class="card"><div class="card-b">'+emptyState('Ainda não há valores nos módulos. Lance um abastecimento, um CT-e ou importe o relatório do contador — a Contabilidade preenche sozinha.')+'</div></div>' : corpo);
@@ -593,7 +593,7 @@ function contabViewFaturamento(){
     '<div class="card" id="cbFatCard" style="margin-top:16px"><div class="card-h">'+svg('money')
       +'<h3>Faturamento — '+(contabFatVer==='mes'? esc(MESES_L[h.getMonth()]+' de '+h.getFullYear()) : 'todos os lançamentos')+'</h3>'
       +'<div class="r no-print" style="gap:6px">'
-        +'<button class="btn sm" onclick="cpidEscolher(\'Faturamento\')" title="Manda o documento para a Central: relatório do contador, planilha ou XML — o sistema lê e preenche">'+svg('upload')+' Importar do contador</button>'
+        +'<button class="btn sm" onclick="docEnviar(\'Faturamento\')" title="Manda o documento para a Central: relatório do contador, planilha ou XML — o sistema lê e preenche">'+svg('upload')+' Importar do contador</button>'
         +'<button class="btn primary sm" onclick="modalFaturamento()">'+svg('plus')+' Novo</button>'
         +'<button class="btn ghost sm" onclick="contabVerFat(\''+contabFatVer+'\')" title="Fechar a lista">✕</button></div></div>'
       +'<div class="card-b p0"><div class="tbl-wrap"><table class="tbl">'

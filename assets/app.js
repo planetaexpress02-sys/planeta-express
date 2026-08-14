@@ -482,14 +482,13 @@ const ROTAS = {
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
   licencas:{t:'Licenças e Alvarás', s:'Alvarás, vigilância sanitária, inscrições e certidões', ico:'stamp'},
-  central:{t:'Central de Documentos', s:'Todo documento entra por aqui — leitura e lançamento automáticos', ico:'spark'},
   financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
   contabilidade:{t:'Contabilidade', s:'DRE, custos por veículo, tributos e resultado', ico:'coins'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, central:1, contabilidade:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, contabilidade:1};
 function router(){
   const h = (location.hash||'#inicio').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -525,7 +524,6 @@ function router(){
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='antt') el.innerHTML=viewAntt();
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
-  else if(rota==='central'){ if(arg) cpidAba=arg; el.innerHTML=viewCentral(); }
   else if(rota==='contabilidade'){ if(arg) contabAba=arg; el.innerHTML=viewContabilidade(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
@@ -638,7 +636,6 @@ function pexAfterRender(rota){
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
-    if(rota==='central' && typeof cpidCountUp==='function') cpidCountUp();
     if(typeof pexMobileInit==='function') pexMobileInit(rota);
     if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
 }
@@ -737,8 +734,7 @@ function contadores(){
   todosVencimentos().forEach(v=>{ const s=situacao(v.validade); if(s.ord===0) venc++; else if(s.ord===1) crit++; });
   let seg=0; (DB.seguros||[]).forEach(s=>{ if(s && s.status!=='Cancelado'){ const d=diasAte(s.fim); if(d!=null && d<=60) seg++; } });
   let lic=0; (DB.licencas||[]).forEach(l=>{ if(l && l.situacao!=='arquivada'){ const d=diasAte(l.validade); if(d!=null && d<=60) lic++; } });
-  const cpid=(typeof cpidPendentes==='function')? cpidPendentes() : 0;
-  return {venc, crit, total:venc+crit, seg, lic, cpid};
+  return {venc, crit, total:venc+crit, seg, lic};
 }
 function renderSidebar(rota){
   const c = contadores();
@@ -746,7 +742,7 @@ function renderSidebar(rota){
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
     return `<a href="#${k}" data-label="${esc(m.t)}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
   document.getElementById('nav').innerHTML =
-    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+ item('central', c.cpid?{n:c.cpid, cls:'warn'}:null)+
+    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
@@ -766,6 +762,11 @@ function kpi(ico,cor,val,label,sub,href){
 }
 function stBadge(validade){ const s=situacao(validade); return `<span class="st ${s.cls}">${s.label}</span>`; }
 function plate(placa,tipo){ const cls=(tipo&&tipo.indexOf('Reboque')>=0)?'plate rebo':'plate'; return `<span class="${cls}">${esc(placa)}</span>`; }
+/* Botão padrão de leitura de documento — a MESMA tecnologia em toda aba.
+   O motor vive em central.js; aqui é só a porta de entrada do módulo. */
+function docBtn(modulo, rotulo){
+  return `<button class="btn no-print" onclick="docEnviar('${modulo}')" title="Envie PDF, Excel, XML ou foto: eu leio, extraio os dados e lanço aqui — você confere antes">${svg('upload')} ${rotulo||'Enviar documento'}</button>`;
+}
 function emptyState(txt){ return `<div class="empty">${svg('folder')}<b>Nada por aqui</b><span>${esc(txt)}</span></div>`; }
 function avatarFoto(m, size){ size=size||56;
   const st=`width:${size}px;height:${size}px;font-size:${size*0.34}px`;
@@ -965,6 +966,7 @@ function viewFrota(){
     <div class="seg">${fb('todos','Todos')}${fb('cavalo','Cavalos')}${fb('reboque','Reboques')}${fb('arquivado','Arquivados')}</div>
     <div class="spacer"></div>
     <button class="btn primary" onclick="modalVeiculo()">${svg('plus')} Novo veículo</button>
+    ${docBtn('Frota')}
   </div>
   <div class="grid vgrid">${cards||emptyState('Nenhum veículo neste filtro.')}</div>`;
 }
@@ -1106,7 +1108,7 @@ function viewMotoristas(){
       </div></div>`;
   }).join('');
   return `<div class="toolbar"><div class="spacer"></div>
-    <button class="btn primary" onclick="modalMotorista()">${svg('plus')} Novo motorista</button></div>
+    ${docBtn('Motoristas')}<button class="btn primary" onclick="modalMotorista()">${svg('plus')} Novo motorista</button></div>
     <div class="grid mgrid">${cards}</div>`;
 }
 
@@ -1191,6 +1193,7 @@ function viewExames(){
   });
 
   return `
+  <div class="toolbar"><div class="spacer"></div>${docBtn('Exames')}</div>
   <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${resumo.map(r=>`<div class="card"><div class="card-b">
       <div style="font-size:12.5px;color:var(--text-soft);font-weight:600">${esc(r.t)}</div>
@@ -1231,7 +1234,7 @@ function viewDirecao(){
   const arr=DB.vencimentos.filter(x=>x.tipo==='Direção Defensiva').map(x=>situacao(x.validade));
   const comCert=DB.motoristas.filter(m=>anexoTipo('motorista',m.id,/defensiv|dire[çc][ãa]o/i)).length;
   return `
-  <div class="banner">${svg('wheel')}<div><b>Direção Defensiva</b><span>Certificado de direção defensiva dos motoristas (válido por 1 ano). Anexe o certificado; ele aparece como "Anexado" e abre ao clicar.</span></div></div>
+  <div class="banner">${svg('wheel')}<div><b>Direção Defensiva</b><span>Certificado de direção defensiva dos motoristas (válido por 1 ano). Anexe o certificado; ele aparece como "Anexado" e abre ao clicar.</span></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Direção Defensiva')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('wheel','i-blue', arr.length, 'Certificados cadastrados','')}
     ${kpi('bell', arr.filter(s=>s.ord<=1).length?'i-red':'i-green', arr.filter(s=>s.ord<=1).length, 'Vencidos / críticos','')}
@@ -1268,7 +1271,7 @@ function viewTacografos(){
   const arr=veics.map(v=>DB.vencimentos.find(x=>x.entidade==='veiculo'&&x.refId===v.id&&x.tipo==='Tacógrafo')).filter(Boolean).map(x=>situacao(x.validade));
   const comCert=veics.filter(v=>tacoCertificado(v)).length;
   return `
-  <div class="banner">${svg('taco')}<div><b>Tacógrafos — Cavalos</b><span>Aferição do cronotacógrafo (INMETRO). Anexe o certificado; ele aparece como "Certificado anexado" ao lado da placa.</span></div></div>
+  <div class="banner">${svg('taco')}<div><b>Tacógrafos — Cavalos</b><span>Aferição do cronotacógrafo (INMETRO). Anexe o certificado; ele aparece como "Certificado anexado" ao lado da placa.</span></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Tacógrafos')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('taco','i-blue', arr.length, 'Aferições cadastradas','')}
     ${kpi('bell', arr.filter(s=>s.ord<=1).length?'i-red':'i-green', arr.filter(s=>s.ord<=1).length, 'Vencidas / críticas','')}
@@ -1333,7 +1336,7 @@ function viewVencimentos(){
   <div class="banner">${svg('bell')}<div><b>Vencimentos — ${vendoEmDia?'em dia':'faixa de atenção'}</b><span>${vendoEmDia
       ?'Tudo o que está em dia: validade acima de 30 dias, nada a fazer agora. Use os cartões acima para voltar à faixa de atenção.'
       :'Mostra apenas o que está vencido ou vence nos próximos 30 dias, agrupado por prazo. O que está em dia (mais de 30 dias) aparece no cartão verde.'}</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Vencimentos')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
     ${kpiV('emdia')}${kpiV('venc')}${kpiV('d10')}${kpiV('d20')}${kpiV('d30')}
   </div>
@@ -1450,7 +1453,7 @@ function viewOleo(){
   <div class="banner">${svg('wrench')}<div><b>Trocas de Óleo</b><span>Óleo e filtros por veículo. A coluna "Faltam" usa o KM/Horas atual (aba KM / Horas).</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalManutencao()">${svg('plus')} Nova troca</button></div>
 
-  <div class="sectitulo">${svg('truck')} Cavalos (por quilometragem)</div>
+  <div class="sectitulo">${svg('truck')} Cavalos (por quilometragem)<div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Trocas de Óleo')}</div></div>
   <div class="grid" style="gap:18px">${cavalos.length?cavalos.map(manutBloco).join(''):emptyState('Sem trocas de óleo de cavalos.')}</div>
 
   <div class="sectitulo" style="margin-top:24px">${svg('battery')} Carretas (horas do Thermo King)</div>
@@ -1498,7 +1501,7 @@ function viewManutencao(){
     return `<div class="mnt-cardfoot"><div class="r"><span class="st neutro">${s.length} serviço(s)</span><span class="mnt-cost ${g>0?'has':''}">${money(g)}</span></div>${mix}</div>`; };
   return `
   <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Manutenção')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kpiF('coins','i-blue',money(total),'Gasto total',todos.length+' lançamentos','todas')}
     ${kpiF('wrench','i-amber',money(corr),'Corretiva',corrN+' serviço(s)','corretiva')}
@@ -1612,7 +1615,7 @@ function viewBaterias(){
       ${kpi('shield','i-green',emGarantia,'Dentro da garantia','')}
       ${kpi('export','i-amber',money(total),'Investimento total','')}</div>
     <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver as baterias daquele veículo. A garantia aparece <b>só aqui</b> — não gera alerta no painel.</div>
-      <div class="spacer"></div><button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
+      <div class="spacer"></div>${docBtn('Baterias')}<button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
     ${vcardsSecoes('baterias', foot)}
     ${orfBlocos?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Outras placas (fora da frota atual)</div><div class="grid" style="gap:14px">${orfBlocos}</div>`:''}
     ${estoqueBateriasSecao()}`;
@@ -1725,7 +1728,7 @@ function viewDocumentos(){
 
   return `
   <div class="banner">${svg('doc')}<div><b>Documentos da empresa</b><span>Todos os arquivos da pasta (CRLV, ASO, toxicológicos, CNH, jurídicos...) já ficam aqui para abrir e baixar. Você também pode enviar arquivos novos, que ficam guardados dentro do sistema.</span></div>
-    <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label></div>
+    <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Documentos')}</div></div>
 
   <div class="toolbar"><div class="seg">${fb('todos','Todos')}${fb('empresa','Empresa')}${fb('motorista','Motoristas')}${fb('veiculo','Veículos')}</div>
     <div class="spacer"></div><div class="muted">${REG.length} arquivo(s) na pasta · ${totalArquivos()} enviado(s)${_online()?' · ☁ sincronizado':''}</div></div>
@@ -2460,7 +2463,7 @@ function viewNotas(){
   return `
   <div class="banner">${svg('money')}<div><b>Notas de Despesa</b><span>Envie a NF em PDF (fica anexada e eu sugiro o valor) ou digite os valores no padrão R$ (ex.: 50.490,84). Despesas somadas por período.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar PDF<input type="file" accept="application/pdf,.pdf" onchange="notaNfUpload(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button></div>
+    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Notas de Despesa')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('money','i-green', ultimo?money(totalNota(ultimo)):money(0), 'Último período', ultimo?fmtD(ultimo.inicio)+' a '+fmtD(ultimo.fim):'—')}
     ${kpi('doc','i-blue', ultimo?money(ultimo.alexandria):money(0), 'Alexandria (período)','')}
@@ -2562,7 +2565,7 @@ function viewPneus(){
     return t? `<span class="st ok">${t} pneu(s)</span>` : `<span class="st neutro">sem pneus</span>`; };
   return `
   <div class="banner">${svg('tire')}<div><b>Pneus</b><span>Controle de pneus por veículo e o estoque de reserva. Clique numa placa para ver e cadastrar. Ao instalar um pneu, você pode dar baixa automática no estoque.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalPneu()">${svg('plus')} Novo pneu</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Pneus')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
     ${kpi('tire','i-blue',total,'Pneus no total','instalados na frota')}
     ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
@@ -2949,7 +2952,7 @@ function viewChecklist(){
   }).join('');
   return `
   <div class="banner">${svg('check')}<div><b>Check-list mensal de frota</b><span>Inspeção do cavalo e da carreta (OK / NOK). Pode ser preenchido no computador ou no celular. Feito no celular? Toque em exportar e envie o arquivo — no computador use "Importar" para atualizar automaticamente.</span></div>
-    <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar<input type="file" accept="application/json" onchange="importarChecklist(event)" style="display:none"></label></div>
+    <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar<input type="file" accept="application/json" onchange="importarChecklist(event)" style="display:none"></label><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Check-list')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('check','i-blue',cls.length,'Check-lists realizados','')}
     ${kpi('cal','i-green',mes,'Neste mês','')}
@@ -3213,7 +3216,7 @@ function viewSeguros(){
   return `
   <div class="banner">${svg('umbrella')}<div><b>Seguros — apólices e vigências</b><span>Controle de todas as apólices da empresa e dos sócios: seguradora, número, vigência, prêmio e avisos de renovação. As apólices ativas também aparecem em Vencimentos e no Painel de Controle.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="cpidEscolher('Seguros')" title="Vai para a Central de Documentos, que lê a apólice e identifica a qual seguro pertence">${svg('upload')} Enviar apólice</button>
+      <button class="btn" onclick="docEnviar('Seguros')" title="Leio a apólice e identifico a qual seguro pertence">${svg('upload')} Enviar apólice</button>
       <button class="btn primary" onclick="modalSeguro()">${svg('plus')} Novo seguro</button>
     </div></div>
 
@@ -3558,7 +3561,7 @@ function viewPedagios(){
   return `
   <div class="banner">${svg('toll')}<div><b>Pedágios — centro de inteligência</b><span>Todas as passagens de pedágio da frota (extrato Sem Parar), com custos, praças, concessionárias, rotas e integração com viagens e financeiro.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="cpidEscolher('Pedágios')" title="Vai para a Central de Documentos, que lê o extrato e lança as passagens">${svg('upload')} Importar extrato</button>
+      <button class="btn" onclick="docEnviar('Pedágios')" title="Leio o extrato e lanço as passagens">${svg('upload')} Importar extrato</button>
       <button class="btn primary" onclick="pedModal()">${svg('plus')} Novo pedágio</button>
     </div></div>
 
@@ -3805,7 +3808,7 @@ function viewAntt(){
         <div style="color:${apto?'#16c98d':'#f2686b'};font-size:12.5px;font-weight:600;margin-top:4px">${apto?'✓ Apto a realizar o transporte remunerado de cargas.':'⚠ Verificar situação do registro.'}</div></div>
       <div class="antt-acoes no-print">
         <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button>
-        <button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div>
+        ${docBtn('ANTT')}<button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div>
     </div></div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
@@ -4081,7 +4084,7 @@ function viewLicencas(){
     <span>Alvarás, vigilância sanitária, inscrições e certidões da empresa, veículos, filiais e parceiros. A situação é calculada sozinha pela validade e os vencimentos aparecem no Painel, nas notificações e na IA.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="licRelatoriosModal()">${svg('print')} Relatórios</button>
-      <button class="btn" onclick="cpidEscolher('Licenças')" title="Vai para a Central de Documentos, que lê a licença e preenche os campos">${svg('upload')} Enviar documento</button>
+      <button class="btn" onclick="docEnviar('Licenças')" title="Vai para a Central de Documentos, que lê a licença e preenche os campos">${svg('upload')} Enviar documento</button>
       <button class="btn primary" onclick="modalLicenca()">${svg('plus')} Nova licença</button>
     </div></div>
 
@@ -4683,7 +4686,7 @@ function viewViagens(){
   <div class="banner">${svg('route')}<div><b>Controle de Viagens BRF</b><span>Registre a saída do motorista com o número de transporte e o termo pallet. Filtre por mês e por placa.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
-      <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div></div>
+      <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Viagens')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpiV('route','i-blue', mesAtual, 'Viagens no mês', "viagemFiltro='todas';viagemMes='"+ymAtual+"';router()", viagemMes===ymAtual)}
     ${kpiV('truck', emV?'i-orange':'i-green', emV, 'Pendentes', "viagemFiltro='emviagem';viagemMes='todos';router()", viagemFiltro==='emviagem')}
@@ -4952,7 +4955,7 @@ function viewDescargas(){
   <div class="banner">${svg('box')}<div><b>Descargas</b><span>Senhas e valores de descarga (pagos via Bradesco), organizados por mês.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarDescarga()">${svg('upload')} Importar Planilha Excel</button>
-      <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div></div>
+      <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Descargas')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kpi('box','i-blue',DB.descargas.length,'Descargas registradas','')}
     ${kpi('money','i-green',money(totalMes),'Valor no mês atual',mesAtual.length+' descarga(s)')}
@@ -5215,7 +5218,7 @@ function viewAbastecimento(){
   return `
   <div class="banner">${svg('fuel')}<div><b>Abastecimentos e médias</b><span>Envie a NF em PDF que eu tento preencher sozinho (litros, valor, KM/horas). Cavalos: KM. Carretas: horas do Thermo King. A média de consumo é calculada automaticamente.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar NF (PDF)<input type="file" accept="application/pdf,.pdf" onchange="abastecNfUpload(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button></div>
+    <button class="btn primary no-print" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Abastecimentos')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('fuel','i-blue', num(totL)+' L', 'Litros lançados','')}
     ${kpi('money','i-amber', money(totR), 'Valor total','')}
@@ -6143,7 +6146,7 @@ function viewCtes(){
   return `
   <div class="banner">${svg('ctedoc')}<div><b>CT-e — Conhecimentos de Transporte</b><span>Controle dos CT-e emitidos, lançados, trocados e pagos. Importe os XML direto aqui. Filtre por situação e por mês.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar XML<input type="file" accept=".xml,text/xml" multiple onchange="importarCteArquivos(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalCte()">${svg('plus')} Novo CT-e</button></div>
+    <button class="btn primary no-print" onclick="modalCte()">${svg('plus')} Novo CT-e</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('CT-e')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('ctedoc','i-blue', total, 'CT-e registrados','')}
     ${kpi('money','i-green', money(valorTot), 'Valor total (válidos)','')}
