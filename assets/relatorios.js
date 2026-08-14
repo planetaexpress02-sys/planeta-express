@@ -783,7 +783,7 @@ const PEX_RELATORIOS = [
     }},
 
   /* ------------------------------------------------------- FINANCEIRO */
-  { id:'fin-notas', modulo:'financeiro', nome:'Notas de despesa',
+  { id:'fin-notas', modulo:'financeiro', nome:'Soma de Notas Fiscais',
     desc:'Despesas somadas por período.',
     filtros:['periodo'],
     gerar:function(f){

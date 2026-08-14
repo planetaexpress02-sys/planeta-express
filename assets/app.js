@@ -474,7 +474,7 @@ const ROTAS = {
   ctes:{t:'CT-e', s:'Conhecimentos de transporte emitidos', ico:'ctedoc'},
   checklist:{t:'Check-list', s:'Inspeção de frota (cavalo e carreta)', ico:'check'},
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
-  notas:{t:'Notas de Despesa', s:'Despesas somadas por período', ico:'money'},
+  notas:{t:'Soma de Notas Fiscais', s:'Notas somadas por período', ico:'money'},
   documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
   pedagios:{t:'Pedágios', s:'Passagens, custos, praças e concessionárias', ico:'toll'},
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
@@ -2444,10 +2444,23 @@ function totalNota(n){ return (Number(n.alexandria)||0)+(Number(n.notasGerais)||
 function viewNotas(){
   const notas=DB.notas.slice().sort((a,b)=>(a.fim||'').localeCompare(b.fim||''));
   const acumulado=notas.reduce((s,n)=>s+totalNota(n),0);
-  const ultimo=notas[0];
   const somaAlex=notas.reduce((s,n)=>s+(Number(n.alexandria)||0),0);
   const somaComb=notas.reduce((s,n)=>s+(Number(n.combustivel)||0),0);
-  const barras=notas.slice(0,8).reverse().map(n=>({label:fmtD(n.fim).slice(0,5),value:Math.round(totalNota(n))}));
+  /* Os cartões de cima mostram o MÊS VIGENTE (pedido do cliente): soma de
+     todos os períodos que terminam dentro do mês corrente — do dia 1º até a
+     última data já lançada. Antes mostravam "o último período", e como a
+     lista passou a ser crescente isso acabava pegando o mais ANTIGO. */
+  const hj=hoje();
+  const doMes=notas.filter(n=>{ const d=parseD(n.fim); return d && d.getMonth()===hj.getMonth() && d.getFullYear()===hj.getFullYear(); });
+  const mes={
+    alexandria: doMes.reduce((s,n)=>s+(Number(n.alexandria)||0),0),
+    notasGerais:doMes.reduce((s,n)=>s+(Number(n.notasGerais)||0),0),
+    combustivel:doMes.reduce((s,n)=>s+(Number(n.combustivel)||0),0)
+  };
+  mes.total = mes.alexandria + mes.notasGerais + mes.combustivel;
+  const iniMes = hj.getFullYear()+'-'+String(hj.getMonth()+1).padStart(2,'0')+'-01';
+  const fimLanc = doMes.length ? doMes.map(n=>n.fim).sort().pop() : '';
+  const rotMes = doMes.length ? fmtD(iniMes)+' a '+fmtD(fimLanc) : 'nada lançado neste mês';
   const rows=notas.map(n=>`<tr class="clickable" onclick="modalNota('${n.id}')">
     <td><b>${fmtD(n.inicio)} — ${fmtD(n.fim)}</b>${n.obs?`<div class="muted" style="font-size:12px">${esc(n.obs)}</div>`:''}</td>
     <td class="mono">${money(n.alexandria)}</td><td class="mono">${money(n.notasGerais)}</td><td class="mono">${money(n.combustivel)}</td>
@@ -2455,20 +2468,20 @@ function viewNotas(){
     <td class="no-print" onclick="event.stopPropagation()">${badgeAnexo('nota',n.id,/nota|nf|fiscal|\.pdf/i,'Nota Fiscal')}</td>
     <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalNota('${n.id}')">${svg('edit')}</button></td></tr>`).join('');
   const AZ='#4a90d9', LA='#e0812f', CZ='#a6a6a6';
-  const pizza = ultimo? [
-    {label:'Alexandria', value:Number(ultimo.alexandria)||0, color:AZ},
-    {label:'Notas em geral', value:Number(ultimo.notasGerais)||0, color:LA},
-    {label:'Combustível', value:Number(ultimo.combustivel)||0, color:CZ}
+  const pizza = mes.total? [
+    {label:'Alexandria', value:mes.alexandria, color:AZ},
+    {label:'Notas em geral', value:mes.notasGerais, color:LA},
+    {label:'Combustível', value:mes.combustivel, color:CZ}
   ]:[];
   return `
-  <div class="banner">${svg('money')}<div><b>Notas de Despesa</b><span>Envie a NF em PDF (fica anexada e eu sugiro o valor) ou digite os valores no padrão R$ (ex.: 50.490,84). Despesas somadas por período.</span></div>
+  <div class="banner">${svg('money')}<div><b>Soma de Notas Fiscais</b><span>Envie a NF em PDF (fica anexada e eu sugiro o valor) ou digite os valores no padrão R$ (ex.: 50.490,84). Despesas somadas por período.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar PDF<input type="file" accept="application/pdf,.pdf" onchange="notaNfUpload(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Notas de Despesa')}</div></div>
+    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Soma de Notas Fiscais')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
-    ${kpi('money','i-green', ultimo?money(totalNota(ultimo)):money(0), 'Último período', ultimo?fmtD(ultimo.inicio)+' a '+fmtD(ultimo.fim):'—')}
-    ${kpi('doc','i-blue', ultimo?money(ultimo.alexandria):money(0), 'Alexandria (período)','')}
-    ${kpi('export','i-amber', ultimo?money(ultimo.notasGerais):money(0), 'Notas em geral (período)','')}
-    ${kpi('truck','i-orange', ultimo?money(ultimo.combustivel):money(0), 'Combustível (período)','')}
+    ${kpi('money','i-green', money(mes.total), 'Mês vigente', rotMes)}
+    ${kpi('doc','i-blue', money(mes.alexandria), 'Alexandria (mês)','')}
+    ${kpi('export','i-amber', money(mes.notasGerais), 'Notas em geral (mês)','')}
+    ${kpi('truck','i-orange', money(mes.combustivel), 'Combustível (mês)','')}
   </div>
   <div class="grid two-col">
     <div class="card"><div class="card-h">${svg('money')}<h3>Despesas por período</h3>
@@ -2476,18 +2489,16 @@ function viewNotas(){
       <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
         <thead><tr><th>Período</th><th>Alexandria</th><th>Notas em geral</th><th>Combustível</th><th>Total</th><th class="no-print">NF</th><th class="no-print"></th></tr></thead>
         <tbody>${rows||`<tr><td colspan="7">${emptyState('Nenhum período lançado.')}</td></tr>`}
-        ${notas.length?`<tr style="background:#f7f9fc;font-weight:800"><td>TOTAL GERAL</td><td class="mono">${money(somaAlex)}</td><td class="mono">${money(notas.reduce((s,n)=>s+(Number(n.notasGerais)||0),0))}</td><td class="mono">${money(somaComb)}</td><td class="mono">${money(acumulado)}</td><td class="no-print"></td><td class="no-print"></td></tr>`:''}</tbody></table></div></div></div>
-    <div class="card"><div class="card-h">${svg('dash')}<h3>Composição do último período</h3></div>
-      <div class="card-b">${ultimo?`<div class="donut-wrap">
-        ${donut(pizza,{center:'R$',sub:'último'})}
+        ${notas.length?`<tr class="tr-total"><td>TOTAL GERAL</td><td class="mono">${money(somaAlex)}</td><td class="mono">${money(notas.reduce((s,n)=>s+(Number(n.notasGerais)||0),0))}</td><td class="mono">${money(somaComb)}</td><td class="mono">${money(acumulado)}</td><td class="no-print"></td><td class="no-print"></td></tr>`:''}</tbody></table></div></div></div>
+    <div class="card"><div class="card-h">${svg('dash')}<h3>Composição do mês vigente</h3></div>
+      <div class="card-b">${mes.total?`<div class="donut-wrap">
+        ${donut(pizza,{center:money(mes.total),sub:'no mês'})}
         <div class="legend">
-          <div class="li"><span class="dot" style="background:${AZ}"></span>Alexandria<b>${money(ultimo.alexandria)}</b></div>
-          <div class="li"><span class="dot" style="background:${LA}"></span>Notas em geral<b>${money(ultimo.notasGerais)}</b></div>
-          <div class="li"><span class="dot" style="background:${CZ}"></span>Combustível<b>${money(ultimo.combustivel)}</b></div>
-        </div></div>`:emptyState('Lance um período para ver a pizza.')}</div></div>
-  </div>
-  ${notas.length>1?`<div class="card" style="margin-top:18px"><div class="card-h">${svg('dash')}<h3>Evolução por período</h3></div>
-    <div class="card-b">${barChart(barras)}</div></div>`:''}`;
+          <div class="li"><span class="dot" style="background:${AZ}"></span>Alexandria<b>${money(mes.alexandria)}</b></div>
+          <div class="li"><span class="dot" style="background:${LA}"></span>Notas em geral<b>${money(mes.notasGerais)}</b></div>
+          <div class="li"><span class="dot" style="background:${CZ}"></span>Combustível<b>${money(mes.combustivel)}</b></div>
+        </div></div>`:emptyState('Nada lançado neste mês ainda.')}</div></div>
+  </div>`;
 }
 /* Converte texto no padrão brasileiro (50.490,84) para número (50490.84) */
 function parseBRL(s){ if(s==null)return 0; s=String(s).replace(/[^\d.,\-]/g,'').trim(); if(!s)return 0;

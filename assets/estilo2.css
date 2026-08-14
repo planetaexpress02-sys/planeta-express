@@ -3778,3 +3778,7 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
 .sel-del:hover{ background:rgba(220,60,60,.32)!important }
 tr.sel-on td{ background:rgba(0,170,255,.12)!important }
 @media(max-width:860px){ .sel-bar{ flex-wrap:wrap; gap:7px; padding:9px 12px } .sel-bar .spacer{ display:none } }
+
+/* Linha de TOTAL das tabelas — no tema escuro (v6.90) */
+.tbl .tr-total td{ background:rgba(0,170,255,.14)!important; font-weight:800; color:#eaf6ff;
+  border-top:2px solid rgba(0,190,255,.35) }
