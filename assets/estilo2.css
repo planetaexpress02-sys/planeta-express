@@ -3382,6 +3382,11 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
 .cb-aba:hover{ border-color:rgba(0,229,255,.38); color:#eaf6ff }
 .cb-aba.on{ color:#eaf6ff; border-color:rgba(0,229,255,.6); background:rgba(0,120,220,.25);
   box-shadow:0 0 16px rgba(0,170,255,.25) }
+/* contador ao lado do nome da aba (ex.: Documentos 9) */
+.cb-n{ display:inline-block; min-width:18px; padding:1px 6px; margin-left:5px; border-radius:9px;
+  font-size:11px; font-weight:700; line-height:16px; text-align:center;
+  color:#eaf6ff; background:rgba(0,170,255,.22); border:1px solid rgba(0,170,255,.3) }
+.cb-aba.on .cb-n{ background:rgba(0,229,255,.32); border-color:rgba(0,229,255,.5) }
 
 /* KPIs */
 .cb-kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px }

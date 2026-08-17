@@ -20,6 +20,9 @@ const SEED = {
     { id:"m4", matricula:"", nome:"Marcelo Ronsoni Moreira", nascimento:"1973-10-11", genero:"Masculino", celular:"", telefone:"", email:"", ufNat:"RS", municipioNat:"Erechim", tipoCondutor:"", cpf:"782.481.089-53", rg:"54901925", emissorRg:"SSP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"AE", cnh:"02040947477", primeiraHab:"1991-11-25", emissaoCnh:"2025-12-15", cnhValidade:"2031-05-14", cnhUf:"RS", cnhMunicipio:"Porto Alegre", renach:"", espelho:"3427735020", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Sócio · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m4.png", pasta:"Documentos Motoristas/Marcelo Ronsoni Moreira" },
     { id:"m5", matricula:"", nome:"Uilian Marcelo Moreira", nascimento:"1997-01-06", genero:"Masculino", celular:"", telefone:"", email:"", ufNat:"RS", municipioNat:"Getúlio Vargas", tipoCondutor:"", cpf:"022.997.900-98", rg:"02299790098", emissorRg:"SESP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"AE", cnh:"06304514325", primeiraHab:"2018-12-18", emissaoCnh:"2025-09-19", cnhValidade:"2035-08-22", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"", espelho:"3400239528", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Sócio · Responsável Técnico · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m5.jpg", pasta:"Documentos Motoristas/Uilian Marcelo Moreira" },
     { id:"m6", matricula:"098", nome:"Odecio Delatorre Fernandes", nascimento:"1956-06-12", genero:"Masculino", celular:"(43) 99128-8293", telefone:"(43) 99128-8293", email:"odecio@gmail.com", ufNat:"PR", municipioNat:"São João do Caiuá", tipoCondutor:"Motorista/Manobrista CLT - SPOT", cpf:"467.902.179-91", rg:"3421659-2", emissorRg:"SESP PR", cargo:"Motorista Carreta Primária", ctps:"0", pis:"0", admissao:"2026-07-20", categoria:"E", cnh:"0136225833", primeiraHab:"1990-09-24", emissaoCnh:"2024-05-29", cnhValidade:"2029-05-17", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"PR925643909", espelho:"2817862750", ear:"Sim", cep:"86031-380", logradouro:"Rua Almenio Correia Lemos Neto", numero:"676", complemento:"", bairro:"Conjunto Habitacional Jesualdo Garcia Pessoa", ufEnd:"PR", municipioEnd:"Londrina", endereco:"Rua Almenio Correia Lemos Neto, 676 — Conj. Hab. Jesualdo Garcia Pessoa, Londrina/PR", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m6.png", pasta:"Documentos Motoristas/Odecio Delatorre Fernandes" },
+    { id:"m7", matricula:"", nome:"Wesley Luiz da Silva Pereira", nascimento:"1988-03-10", genero:"Masculino", celular:"(66) 98127-2639", telefone:"(66) 98127-2639", email:"", ufNat:"PR", municipioNat:"Sertanópolis", tipoCondutor:"Motorista Carreteiro CLT - Primária", cpf:"068.256.969-04", rg:"97574090", emissorRg:"SESP-PR", mae:"Marlene Silva de Oliveira", pai:"Valdeir Luiz Pereira", cargo:"Motorista de Carreta", ctps:"068256", ctpsSerie:"96904", pis:"", admissao:"2026-08-18", categoria:"AE", cnh:"05396948335", primeiraHab:"2012-01-06", emissaoCnh:"2026-07-10", cnhValidade:"2036-07-08", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"PR929170076", espelho:"5160834370", ear:"Sim", cep:"86039-560", logradouro:"Avenida Anália Franco", numero:"151", complemento:"Casa", bairro:"Jardim Brasília", ufEnd:"PR", municipioEnd:"Londrina", endereco:"Avenida Anália Franco, 151 — Jardim Brasília, Londrina/PR", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m7.png", pasta:"Documentos Motoristas/Wesley Luiz da Silva Pereira",
+      contratoTipo:"Experiência", contratoInicio:"2026-08-18", contratoDias:45, contratoProrrog:"", contratoFuncao:"Motorista de Carreta", contratoSalario:2758.33, contratoLocal:"Carambeí/PR", contratoObs:"Contrato de experiência assinado digitalmente em 17/08/2026. Prorrogável uma única vez, respeitado o limite legal de 90 dias.",
+      criminalSituacao:"Possui processo(s)", criminalData:"2026-08-05", criminalFonte:"Declaração da advogada Sarah Cachioni Machado Camilo (OAB/PR 117.881), de 05/08/2026, apresentada pelo próprio colaborador ao empregador.", criminalObs:"Um processo encerrado com ABSOLVIÇÃO (o próprio Ministério Público pediu a absolvição) e um segundo em fase inicial, sem audiência de instrução e julgamento e sem condenação. Certidões de objeto e pé dos dois processos foram requeridas pela defesa e serão entregues quando expedidas pelo Juízo." },
   ],
 
   /* -------------------- FROTA / VEÍCULOS --------------------
@@ -47,6 +50,7 @@ const SEED = {
     { id:"c4", tipo:"CNH", entidade:"motorista", refId:"m4", emissao:"2025-12-15", validade:"2031-05-14", numero:"02040947477", orgao:"DETRAN-RS", obs:"Categoria AE" },
     { id:"c5", tipo:"CNH", entidade:"motorista", refId:"m5", emissao:"2025-09-19", validade:"2035-08-22", numero:"06304514325", orgao:"DETRAN-PR", obs:"Categoria AE" },
     { id:"c6", tipo:"CNH", entidade:"motorista", refId:"m6", emissao:"2024-05-29", validade:"2029-05-17", numero:"0136225833", orgao:"DETRAN-PR", obs:"Categoria E" },
+    { id:"c7", tipo:"CNH", entidade:"motorista", refId:"m7", emissao:"2026-07-10", validade:"2036-07-08", numero:"05396948335", orgao:"DETRAN-PR", obs:"Categoria AE · RENACH PR929170076 · EAR" },
 
     /* Toxicológico */
     { id:"t1", tipo:"Toxicológico", entidade:"motorista", refId:"m1", emissao:"2025-02-06", validade:"2027-10-11", numero:"", orgao:"", obs:"" },
@@ -55,6 +59,7 @@ const SEED = {
     { id:"t4", tipo:"Toxicológico", entidade:"motorista", refId:"m2", emissao:"2025-02-03", validade:"2027-02-03", numero:"", orgao:"", obs:"" },
     { id:"t5", tipo:"Toxicológico", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2028-09-13", numero:"", orgao:"", obs:"" },
     { id:"t6", tipo:"Toxicológico", entidade:"motorista", refId:"m6", emissao:"", validade:"2028-12-16", numero:"", orgao:"", obs:"" },
+    { id:"t7", tipo:"Toxicológico", entidade:"motorista", refId:"m7", emissao:"2026-08-11", validade:"2029-02-11", numero:"03J7DXAC012221046", orgao:"Laboratório Sodré", obs:"Coleta 11/08/2026 (pelo de perna), resultado NEGATIVO para todas as substâncias. Laudo do médico revisor emitido em 13/08/2026. Validade aqui = periodicidade legal de 2 anos e 6 meses; o laudo traz 10/10/2026 como prazo para uso na admissão." },
 
     /* ASO (exame ocupacional) */
     { id:"a1", tipo:"ASO", entidade:"motorista", refId:"m1", emissao:"2026-07-13", validade:"2027-07-13", numero:"", orgao:"", obs:"" },
@@ -63,6 +68,7 @@ const SEED = {
     { id:"a4", tipo:"ASO", entidade:"motorista", refId:"m2", emissao:"2026-03-18", validade:"2027-03-18", numero:"", orgao:"", obs:"" },
     { id:"a5", tipo:"ASO", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2027-03-13", numero:"", orgao:"", obs:"" },
     { id:"a6", tipo:"ASO", entidade:"motorista", refId:"m6", emissao:"2026-07-20", validade:"2027-07-20", numero:"", orgao:"", obs:"" },
+    { id:"a7", tipo:"ASO", entidade:"motorista", refId:"m7", emissao:"2026-08-12", validade:"2027-08-12", numero:"", orgao:"Dr. Vinícius Marcondes Silva — CRM 51786/PR", obs:"ASO admissional — APTO para a função. Exames de 12/08/2026, assinado em 14/08/2026. Validade de 1 ano (padrão da empresa; o ASO não traz data de validade impressa)." },
 
     /* Opentech Funcionários (BRF) */
     { id:"of1", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m1", emissao:"2026-07-10", validade:"2027-01-10", numero:"", orgao:"BRF", obs:"BRF" },
@@ -462,6 +468,23 @@ const SEED = {
 
   /* -------------------- SERVIÇOS / REPAROS (relatório de manutenção) -------------------- */
   servicos: [],      /* {id, data, veiculoId, descricao, oficina, km, valor, obs} */
+
+  /* -------------------- PROCESSOS JUDICIAIS dos colaboradores --------------------
+     Registro factual do que o colaborador APRESENTOU à empresa (declaração da
+     defesa, sentença, certidão). Serve para a homologação nas gerenciadoras de
+     risco. Nunca inferir culpa: só é condenação quando o documento diz que é. */
+  processos: [
+    { id:"pj1", entidade:"motorista", refId:"m7", numero:"0057800-83.2024.8.16.0014",
+      classe:"Ação Penal - Procedimento Ordinário", assunto:"Furto",
+      comarca:"Londrina/PR", vara:"2ª Vara Criminal de Londrina", data:"2026-04-27",
+      situacao:"Encerrado", resultado:"Absolvido",
+      obs:"Sentença de 27/04/2026 (Juíza Chélida Roberta Soterroni Heitzmann): denúncia julgada IMPROCEDENTE e o réu ABSOLVIDO, com fulcro no art. 386, VII, do Código de Processo Penal. O próprio Ministério Público se manifestou pela absolvição. As medidas cautelares foram revogadas." },
+    { id:"pj2", entidade:"motorista", refId:"m7", numero:"0039943-58.2023.8.16.0014",
+      classe:"Ação Penal", assunto:"Violência doméstica",
+      comarca:"Londrina/PR", vara:"", data:"",
+      situacao:"Em andamento", resultado:"Sem julgamento",
+      obs:"Em fase inicial, sem audiência de instrução e julgamento. Conforme a declaração da defesa, a denúncia não traz imputação de violência física e há elementos probatórios a apresentar. Não há condenação — vale a presunção de inocência." },
+  ],
 
   /* -------------------- ANEXOS na nuvem (metadados; bytes no Supabase Storage) -------------------- */
   anexos: [],        /* {id, name, type, size, categoria, entidade, refId, validade, uploadedAt, storagePath} */

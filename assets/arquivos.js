@@ -68,6 +68,17 @@ const ARQUIVOS_EMPRESA = [
   {id:"j11",nome:"PCMSO 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PCMSO 2026.pdf"},
   {id:"j12",nome:"PGR 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PGR 2026.pdf"},
   {id:"j13",nome:"Simpes Nacional.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Simpes Nacional.pdf"},
+  /* Wesley Luiz da Silva Pereira (m7) — admissão 18/08/2026 */
+  {id:"a41",nome:"CNH Wesley.pdf",categoria:"CNH",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/CNH Wesley.pdf"},
+  {id:"a42",nome:"ASO Wesley Luiz da Silva Pereira.pdf",categoria:"ASO",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/ASOWESLEYLUIZDASILVAPEREIRA-902671001786730380.pdf"},
+  {id:"a43",nome:"Toxicológico Wesley - Laudo Sodré.pdf",categoria:"Toxicológico",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/LaudoSodre-639222215651716265.pdf"},
+  {id:"a44",nome:"Toxicológico Wesley - Laudo médico revisor.pdf",categoria:"Toxicológico",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/LaudoSodreRevisor-639222215703969291.pdf"},
+  {id:"a45",nome:"Contrato de Trabalho Wesley assinado.pdf",categoria:"Contrato de Trabalho",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/Contrato de Trabalho Wesley assinado.pdf"},
+  {id:"a46",nome:"Declaração da advogada - processos Wesley.pdf",categoria:"Ficha Criminal",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/DECLARAÇÃO EMPREGO WESLEY-assinado.pdf"},
+  {id:"a47",nome:"Sentença de absolvição - processo 0057800-83.2024.8.16.0014.pdf",categoria:"Ficha Criminal",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/0057800-83.2024.8.16.0014.0026.pdf"},
+  {id:"a48",nome:"Integração BRF Wesley.png",categoria:"Integração BRF",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/Integração Wesley.png"},
+  {id:"a49",nome:"Foto Wesley.png",categoria:"Foto",entidade:"motorista",refId:"m7",path:"../Documentos Motoristas/Wesley Luiz da Silva Pereira/Foto Wesley.png"},
+
   /* Faturas Sem Parar (pedágios) */
   {id:"sp1",nome:"Fatura Sem Parar 26176725165 - 08-2026.pdf",categoria:"Pedágio",entidade:"empresa",refId:"empresa",path:"../Documentos Internos/Faturas Sem Parar/Fatura Sem Parar 26176725165 - 08-2026.pdf"},
 ];

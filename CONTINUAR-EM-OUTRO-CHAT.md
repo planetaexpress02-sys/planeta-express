@@ -17,7 +17,7 @@ App **SPA em JavaScript puro, sem framework, sem build**. Funciona offline e, qu
 Arquivos em `Sistema Planeta Express\`:
 - `index.html` — casca: splash, sidebar, topbar, carrega os scripts. Tem `?v=NN` nos assets (cache-bust) e registro do service worker.
 - `assets/estilo.css` + `assets/estilo2.css` — estilos (estilo2 tem os componentes v2+ e overrides).
-- `assets/dados.js` — SEED (base semente com dados reais). Coleções: empresa, motoristas, veiculos, vencimentos, baterias, manutencoes, documentos, notas, checklists, pneus, viagens(via VIAGENS_SEED), descargas, abastecimentos, faturamento, vales, ctes, servicos, anexos, checklistModelo, config.
+- `assets/dados.js` — SEED (base semente com dados reais). Coleções: empresa, motoristas, veiculos, vencimentos, baterias, manutencoes, documentos, notas, checklists, pneus, viagens(via VIAGENS_SEED), descargas, abastecimentos, faturamento, vales, ctes, servicos, anexos, processos (ficha criminal), checklistModelo, config.
 - `assets/viagens.js` — `const VIAGENS_SEED` (90 viagens jan–jun/2026 importadas das planilhas). Carrega ANTES de dados.js.
 - `assets/alarmes.js` — `const ALARMES_TK` (137 alarmes Thermo King, cada um com {c, d, ex, so} = código, descrição, o que significa, o que fazer).
 - `assets/arquivos.js` — `const ARQUIVOS_EMPRESA` (68 arquivos reais da pasta, com caminhos relativos `../...` — só abrem no modo LOCAL, não no site online).
@@ -32,11 +32,11 @@ Arquivos em `Sistema Planeta Express\`:
 ## 4. DADOS (persistência)
 - Offline: tudo num objeto `DB` salvo em `localStorage['pex_db_v4']`. Uploads locais em **IndexedDB** (`pex_files`).
 - **Preferências** (`DB.config`) também salvas em `localStorage['pex_config']` — sobrevivem a trocas de versão (não resetam).
-- `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`.
+- `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`. Desde a v6.91 também roda `importarCadastroSeed()`: motorista/vencimento/arquivo/processo novo da semente chega em quem já tinha base salva, sem duplicar, sem sobrescrever edição do cliente e sem ressuscitar o que foi apagado de propósito (`DB.*Removidos` + `marcarRemovido`).
 - Funções-chave de dados: `loadDB`, `saveDB` (salva local + nuvem debounced), `saveLocal`, `ensureCollections`, `aplicarRemoto` (recebe realtime), `flushNuvem` (salva ao fechar/trocar aba).
 
 ## 5. MÓDULOS (abas do menu, na ordem)
-Início → Painel de Controle → Vencimentos | Cadastros: Frota, Motoristas (form completo tipo "Condutor"), Exames (matriz ASO/Tox/Opentech), Direção Defensiva | Manutenção: KM/Horas, Trocas de Óleo, Relatório de Manutenção (serviços/reparos = `servicos`), Pneus, Baterias, Abastecimentos, Tacógrafos (só cavalos) | Operação: Viagens, Descargas, CT-e, Check-list (com mapa SVG do veículo p/ marcar pontos), Notas de Despesa, Alarmes Thermo King, Documentos | Financeiro (**SEM senha desde v6.21** — `viewFinanceiro` abre direto) | Empresa: Quadro Societário, Código de Ética | Sistema: Configurações.
+Início → Painel de Controle → Vencimentos | Cadastros: Frota, Motoristas (form completo tipo "Condutor"; a ficha tem abas Resumo/Contrato de Trabalho/Ficha Criminal/Documentos), Exames (matriz ASO/Tox/Opentech), Direção Defensiva | Manutenção: KM/Horas, Trocas de Óleo, Relatório de Manutenção (serviços/reparos = `servicos`), Pneus, Baterias, Abastecimentos, Tacógrafos (só cavalos) | Operação: Viagens, Descargas, CT-e, Check-list (com mapa SVG do veículo p/ marcar pontos), Notas de Despesa, Alarmes Thermo King, Documentos | Financeiro (**SEM senha desde v6.21** — `viewFinanceiro` abre direto) | Empresa: Quadro Societário, Código de Ética | Sistema: Configurações.
 
 ## 6. PADRÕES/CONVENÇÕES IMPORTANTES
 - **Não dá para testar visualmente** no ambiente (o preview do Code fica congelado). Validar por: contagem balanceada de `{}`/`()`/backticks via grep + presença de funções + revisão. O cliente testa e manda print.
@@ -235,6 +235,38 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 17/08/2026 — v6.91 (motorista novo + Contrato e Ficha Criminal)
+
+**Entregue nesta sessão:**
+
+**1. Wesley Luiz da Silva Pereira cadastrado (`m7`)** — 7º colaborador. Dados extraídos dos documentos reais que o cliente mandou (CNH digital, ASO, laudo toxicológico Sodré + laudo do revisor, sentença do processo, declaração da advogada, contrato de trabalho assinado, integração BRF, foto). Nada foi inventado: o que o documento não traz ficou em branco (PIS, matrícula, e-mail).
+- CNH `05396948335`, cat. **AE**, 1ª hab. 06/01/2012, emissão 10/07/2026, **validade 08/07/2036**, RENACH `PR929170076`, espelho `5160834370`, EAR sim, Curitiba/PR.
+- CPF `068.256.969-04`, RG `97574090 SESP-PR`, nasc. 10/03/1988 em Sertanópolis/PR, filiação Valdeir Luiz Pereira e Marlene Silva de Oliveira.
+- Endereço Av. Anália Franco, 151 — Jardim Brasília, Londrina/PR, CEP 86039-560. Celular (66) 98127-2639.
+- Admissão **18/08/2026**, Motorista de Carreta, CTPS `068256` série `96904`.
+- Vencimentos criados: **CNH** (08/07/2036), **ASO** (12/08/2026 → 12/08/2027, apto) e **Toxicológico** (coleta 11/08/2026 → 11/02/2029).
+- **A validade do toxicológico é decisão a confirmar com o cliente:** o laudo Sodré imprime "Validade do exame: 10/10/2026" (prazo para uso na admissão, 60 dias). O sistema gravou **2 anos e 6 meses** (periodicidade legal da CLT, mesmo critério dos outros motoristas) e deixou os dois prazos escritos na observação do vencimento.
+- 9 arquivos registrados em `arquivos.js` (`a41`–`a49`), foto em `assets/fotos/m7.png`.
+
+**2. Ficha do motorista agora tem ABAS** (`viewMotorista`): **Resumo · Contrato de Trabalho · Ficha Criminal · Documentos**, com contador em cada aba. Estado na variável `motAba` — **não** no endereço, porque em `#motoristas/<id>` o argumento já é o id do registro (por isso `motoristas` **não** entra em `_ROTA_FILTRO`). Aba desconhecida cai no Resumo; trocar de motorista volta para o Resumo (`_motAbaId`).
+
+**3. Aba Contrato de Trabalho — em TODAS as fichas**, não só na do Wesley. Mostra tipo, vigência, duração da experiência, **término previsto calculado** (`contratoFim`/`contratoFimISO`: início + dias, contando o primeiro dia — com a memória de cálculo escrita na tela, sem guardar a data pronta em lugar nenhum), prorrogação, remuneração, CTPS/série, PIS e local. Avisa quando a experiência está terminando usando a **mesma régua dos vencimentos** (`DB.config.alertaCritico/alertaAtencao`), para não existir um segundo critério de "está perto" no sistema. Ao lado, o cartão de anexos com `uploadPara(...,'Contrato de Trabalho')`. O contrato assinado do Wesley já aparece anexado.
+
+**4. Aba Ficha Criminal.** Situação (`Nada consta` / `Possui processo(s)` / `Em análise` / `Não informado`), data da conferência, fonte da informação e observação — tudo editável pelo cadastro. Tabela de **processos judiciais** (nova coleção `DB.processos`, com `modalProcesso`/`salvarProcesso`/`excluirProcesso`) e cartão de certidões/sentenças. Regra que ficou escrita na própria tela: **processo em andamento não é condenação**; registrar só o que o documento diz. Os 2 processos do Wesley entraram como o papel descreve — o de furto **encerrado com absolvição** (art. 386, VII do CPP, com o próprio MP pedindo a absolvição) e o segundo **em fase inicial, sem julgamento**.
+
+**5. Cadastro (`modalMotorista`) ganhou 3 seções:** filiação (mãe/pai) e série da CTPS em Documentos/Trabalhistas, **Contrato de Trabalho** e **Situação Criminal / Antecedentes**.
+
+**6. Backfill que não apaga e não ressuscita** (`importarCadastroSeed`): motoristas, vencimentos, arquivos e processos novos da semente chegam em quem **já tinha base salva**, comparando por id fixo. Não duplica ao rodar de novo, **não sobrescreve edição do cliente**, e o que foi excluído de propósito não volta — `excluirMotorista`, `excluirVencimento`, `excluirArquivoReg` e `excluirProcesso` marcam o id em `DB.*Removidos` via `marcarRemovido`.
+
+**⚠️ COMO VALIDAR NESTE AMBIENTE (descoberta desta sessão — vale mais que a receita antiga):**
+O `preview_start` continua caindo em `data:` URI (scripts relativos não resolvem). **Mas o Chrome do cliente roda headless e executa o sistema de verdade:**
+```
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu \
+  --allow-file-access-from-files --virtual-time-budget=15000 \
+  --user-data-dir="$T/chromeprofile" --dump-dom "file:///C:/.../__teste.html"
+```
+Precisa da **URL `file://` completa e percent-encoded** (caminho relativo abre a página de erro do Chromium). Com `--screenshot=` sai a imagem da tela. Duas armadilhas: o `init()` do app roda `router()` e **sobrescreve** o que você injetou (renderize num `setInterval` que só age se o alvo sumiu), e sem `pexAfterRender` o `#view` não recebe a classe `.cyber` — aí o nome no cabeçalho sai escuro (é artefato do teste, não defeito). Foi assim que rodei 60 asserções nos arquivos reais e as 4 abas das 7 fichas antes de publicar.
 
 ### ✅ ESTADO EM 14/08/2026 — TUDO PUBLICADO E SINCRONIZADO (v6.90)
 

@@ -19,7 +19,7 @@ function ensureCollections(){
    /* 'aniversarios' ficou aqui de propósito: a aba foi removida na v6.81, mas
       quem tiver cadastrado alguém não pode perder o registro — trocar de
       versão nunca apaga dado. */
-   'aniversarios','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+   'aniversarios','processos','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
@@ -29,6 +29,7 @@ function ensureCollections(){
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
+  importarCadastroSeed();
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
@@ -42,6 +43,33 @@ function importarLicencasSeed(){
   const ids=new Set(DB.licencas.map(l=>l.id));
   const apagadas=new Set(DB.licencasRemovidas||[]);   // respeita o que o usuário apagou de propósito
   SEED.licencas.forEach(l=>{ if(!ids.has(l.id) && !apagadas.has(l.id)) DB.licencas.push(clone(l)); });
+}
+/* Importa (uma vez) COLABORADORES, VENCIMENTOS, ARQUIVOS DA PASTA e PROCESSOS
+   novos da semente. Cada registro tem id fixo (m7, c7, a41, pj1...), então:
+   - quem já tinha base salva RECEBE o colaborador novo sem perder nada;
+   - nada duplica, porque a checagem é por id;
+   - o que o usuário apagou DE PROPÓSITO não volta (listas *Removidos*).
+   Só ACRESCENTA: registro que já existe não é tocado, para não desfazer
+   nenhuma edição feita pelo cliente. */
+function importarCadastroSeed(){
+  if(!SEED) return;
+  [['motoristas','motoristasRemovidos'],
+   ['vencimentos','vencimentosRemovidos'],
+   ['arquivos','arquivosRemovidos'],
+   ['processos','processosRemovidos']].forEach(function(par){
+    const col=par[0], rem=par[1];
+    const semente = col==='arquivos' ? (typeof ARQUIVOS_EMPRESA!=='undefined'? ARQUIVOS_EMPRESA : null) : SEED[col];
+    if(!Array.isArray(semente)) return;
+    if(!Array.isArray(DB[col])) DB[col]=[];
+    const ids=new Set(DB[col].map(function(x){ return x.id; }));
+    const apagados=new Set(DB[rem]||[]);
+    semente.forEach(function(x){ if(!ids.has(x.id) && !apagados.has(x.id)) DB[col].push(clone(x)); });
+  });
+}
+/* Marca um id como apagado de propósito, para o backfill acima não ressuscitá-lo */
+function marcarRemovido(colecaoRemovidos, id){
+  if(!Array.isArray(DB[colecaoRemovidos])) DB[colecaoRemovidos]=[];
+  if(DB[colecaoRemovidos].indexOf(id)<0) DB[colecaoRemovidos].push(id);
 }
 /* Importa (uma vez) os CT-e vindos dos XML. Não duplica (id = cte_<chave>). */
 function importarCtesSeed(){
@@ -353,7 +381,9 @@ function tipoIcone(t){
   if(/certid[ãa]o|inscri[çc][ãa]o|bombeiros|ambiental/i.test(t)) return 'shield';
   const m={'CNH':'idcard','Toxicológico':'flask','ASO':'clinic','Tacógrafo':'taco','CRLV':'doc','Vigilância Sanitária':'shield',
     'Opentech Funcionário':'chip','Opentech Veículo':'chip','PCMSO':'clinic','PGR':'shield','Certificado Digital':'chip',
-    'Direção Defensiva':'wheel','Seguro':'umbrella','Rastreador':'chip'};
+    'Direção Defensiva':'wheel','Seguro':'umbrella','Rastreador':'chip',
+    'Contrato de Trabalho':'briefcase','Ficha Criminal':'shield','Integração BRF':'chip',
+    'Foto':'user','Laudo':'clinic','Documento':'doc','Pedágio':'toll'};
   return m[t]||'bell';
 }
 function svg(name,cls){ return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">${IC[name]||''}</svg>`; }
@@ -1112,12 +1142,67 @@ function viewMotoristas(){
     <div class="grid mgrid">${cards}</div>`;
 }
 
+/* ---------- FICHA DO MOTORISTA (com abas) ----------
+   A aba fica numa variável, e NÃO no endereço: em #motoristas/<id> o argumento
+   já é o id do registro. Ver a armadilha nº 1 anotada no topo do arquivo. */
+let motAba='resumo', _motAbaId='';
+function motSetAba(a){ motAba=a; router(); }
+
+/* Término previsto do contrato de experiência.
+   Fonte única: início + dias do contrato (o primeiro dia conta).
+   Não guarda a data pronta em lugar nenhum — sempre derivada daqui. */
+function contratoFim(m){
+  const ini=parseD(m&&m.contratoInicio), dias=Number(m&&m.contratoDias)||0;
+  if(!ini||dias<=0) return null;
+  const d=new Date(ini.getTime()); d.setDate(d.getDate()+dias-1); return d;
+}
+function contratoFimISO(m){ const d=contratoFim(m); if(!d) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* Lista de documentos do motorista = registrados da pasta + enviados na plataforma */
+function motDocsGrid(docs){
+  if(!docs.length) return emptyState('Nenhum documento aqui ainda. Use "Anexar" para enviar.');
+  return `<div class="files">${docs.map(d=>`<div class="filecard">
+    <div class="fc-ico">${fileThumb({name:d.nome})}</div>
+    <div class="fc-main"><b title="${esc(d.nome)}">${esc(d.nome)}</b>
+      <div class="muted" style="font-size:11px">${esc(d.cat||'Documento')}${d.tipo==='real'?' · arquivo da pasta':''}</div></div>
+    <div class="fc-act no-print">
+      ${d.tipo==='real'
+        ? `<button class="btn ghost sm" title="Abrir" onclick="abrirReal('${esc(d.path)}')">${svg('eye')}</button><button class="btn ghost sm" title="Baixar" onclick="baixarReal('${esc(d.path)}','${esc(d.nome)}')">${svg('download')}</button>`
+        : `<button class="btn ghost sm" title="Abrir" onclick="verArquivo('${d.id}')">${svg('eye')}</button><button class="btn ghost sm" title="Baixar" onclick="baixarArquivo('${d.id}')">${svg('download')}</button><button class="btn ghost sm" title="Excluir" onclick="excluirArquivo('${d.id}')">${svg('trash')}</button>`}
+    </div></div>`).join('')}</div>`;
+}
+/* Documentos do motorista filtrados por categoria (regex) */
+function motDocsCat(m, re){ return docsDoMotorista(m).filter(d=>re.test((d.cat||'')+' '+(d.nome||''))); }
+
 function viewMotorista(id){
   const m=motorista(id); if(!m) return emptyState('Motorista não encontrado.');
+  /* trocou de colaborador -> volta para o Resumo (senão abre na aba do anterior) */
+  if(_motAbaId!==id){ _motAbaId=id; motAba='resumo'; }
   const vencs=todosVencimentos().filter(x=>x.entidade==='motorista'&&x.refId===m.id).sort((a,b)=>situacao(a.validade).ord-situacao(b.validade).ord);
-  const anexos=filesDe('motorista',m.id);
   const idade=m.nascimento? Math.floor((hoje()-parseD(m.nascimento))/(365.25*86400000)):null;
   const info=(l,val)=>`<div class="it"><div class="l">${l}</div><div class="v">${val||'—'}</div></div>`;
+
+  const docsTodos=docsDoMotorista(m);
+  const docsContrato=motDocsCat(m,/contrato|ctps|registro de emprego/i);
+  const procs=(DB.processos||[]).filter(p=>p.entidade==='motorista'&&p.refId===m.id);
+  const docsCrim=motDocsCat(m,/criminal|antecedente|processo|senten|declara/i);
+
+  const abas=[['resumo','Resumo',null],
+              ['contrato','Contrato de Trabalho',docsContrato.length||null],
+              ['criminal','Ficha Criminal',procs.length||null],
+              ['docs','Documentos',docsTodos.length||null]];
+  /* aba desconhecida (variável de outra tela, link antigo) volta para o Resumo */
+  if(!abas.some(a=>a[0]===motAba)) motAba='resumo';
+  const abasHTML=`<div class="cb-abas no-print">${abas.map(a=>
+    `<button class="cb-aba${motAba===a[0]?' on':''}" onclick="motSetAba('${a[0]}')">${esc(a[1])}${a[2]?` <span class="cb-n">${a[2]}</span>`:''}</button>`).join('')}</div>`;
+
+  let corpo='';
+  if(motAba==='contrato')      corpo=viewMotContrato(m,docsContrato);
+  else if(motAba==='criminal') corpo=viewMotCriminal(m,procs,docsCrim);
+  else if(motAba==='docs')     corpo=viewMotDocs(m,docsTodos);
+  else                         corpo=viewMotResumo(m,vencs,info);
+
   return `
   <button class="btn ghost sm no-print" onclick="history.back()" style="margin-bottom:14px">← Voltar</button>
   <div class="detail-head">
@@ -1130,6 +1215,13 @@ function viewMotorista(id){
       <button class="btn" onclick="modalMotorista('${m.id}')">${svg('edit')} Editar</button>
     </div>
   </div>
+  ${abasHTML}
+  ${corpo}`;
+}
+
+function viewMotResumo(m,vencs,info){
+  const anexos=filesDe('motorista',m.id);
+  return `
   <div class="info-grid" style="margin-bottom:18px">
     ${info('Matrícula', esc(m.matricula))}
     ${info('CPF', esc(m.cpf))}
@@ -1145,11 +1237,21 @@ function viewMotorista(id){
     ${info('RENACH', esc(m.renach))}
     ${info('Admissão', fmtD(m.admissao))}
     ${info('EAR', esc(m.ear))}
+    ${info('Naturalidade', esc([m.municipioNat,m.ufNat].filter(Boolean).join('/')))}
+    ${info('Mãe', esc(m.mae))}
+    ${info('Pai', esc(m.pai))}
+    ${info('CTPS', esc(m.ctps?(m.ctps+(m.ctpsSerie?' · série '+m.ctpsSerie:'')):''))}
     ${info('Endereço', esc(m.endereco))}
   </div>
   ${m.problemasSaude?`<div class="card" style="margin-bottom:18px;border-left:3px solid #ff6b6b"><div class="card-b" style="display:flex;gap:12px;align-items:flex-start">
     <span style="color:#ff6b6b;flex:0 0 auto;display:flex">${svg('stetho')}</span>
     <div><b style="display:block;color:#ff6b6b;margin-bottom:3px">Problemas de saúde</b><span style="white-space:pre-wrap">${esc(m.problemasSaude)}</span></div></div></div>`:''}
+  ${(m.criminalSituacao && m.criminalSituacao!=='Nada consta' && m.criminalSituacao!=='Não informado')
+    ?`<div class="card" style="margin-bottom:18px;border-left:3px solid #f0a13a"><div class="card-b" style="display:flex;gap:12px;align-items:flex-start">
+      <span style="color:#f0a13a;flex:0 0 auto;display:flex">${svg('shield')}</span>
+      <div><b style="display:block;color:#f0a13a;margin-bottom:3px">Ficha criminal: ${esc(m.criminalSituacao)}</b>
+        <span class="muted">Registrado a partir do que o colaborador apresentou à empresa. Abra a aba <b>Ficha Criminal</b> para ver os processos e os documentos.</span>
+        <div class="no-print" style="margin-top:8px"><button class="btn ghost sm" onclick="motSetAba('criminal')">${svg('eye')} Abrir ficha criminal</button></div></div></div></div>`:''}
   <div class="grid subgrid">
     <div class="card">
       <div class="card-h">${svg('stetho')}<h3>Vencimentos & exames</h3>
@@ -1164,6 +1266,167 @@ function viewMotorista(id){
       <div class="card-h">${svg('doc')}<h3>Arquivos</h3><span class="sub">${anexos.length}</span>
         <div class="r no-print"><button class="btn sm" onclick="uploadPara('motorista','${m.id}')">${svg('upload')} Enviar</button></div></div>
       <div class="card-b">${anexos.length? filesGrid(anexos) : emptyState('Anexe CNH, ASO, toxicológico, foto...')}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- ABA: CONTRATO DE TRABALHO (existe em TODAS as fichas) ---------- */
+function viewMotContrato(m,docs){
+  const info=(l,v,sub)=>`<div class="it"><div class="l">${l}</div><div class="v">${v||'—'}</div>${sub?`<div class="muted" style="font-size:11px;margin-top:2px">${sub}</div>`:''}</div>`;
+  const fimISO=contratoFimISO(m);
+  const dias=Number(m.contratoDias)||0;
+  const s=fimISO? situacao(fimISO) : null;
+  const temDados=!!(m.contratoTipo||m.contratoInicio||Number(m.contratoSalario)>0||m.admissao);
+
+  /* Aviso do fim da experiência: usa a MESMA régua dos vencimentos (DB.config),
+     para não existir um segundo critério de "está perto" no sistema. */
+  const aviso = (s && m.contratoTipo==='Experiência' && s.ord<=2)
+    ? `<div class="card" style="margin-bottom:16px;border-left:3px solid ${s.ord===0?'#ff6b6b':'#f0a13a'}"><div class="card-b" style="display:flex;gap:12px;align-items:flex-start">
+        <span style="color:${s.ord===0?'#ff6b6b':'#f0a13a'};flex:0 0 auto;display:flex">${svg('clock')}</span>
+        <div><b style="display:block;color:${s.ord===0?'#ff6b6b':'#f0a13a'};margin-bottom:3px">${s.ord===0?'A experiência já terminou':'A experiência está terminando'}</b>
+        <span class="muted">Término previsto em <b>${fmtD(fimISO)}</b> (${s.label.toLowerCase()}). Decida entre prorrogar, efetivar ou encerrar antes desta data.</span></div></div></div>`
+    : '';
+
+  return `
+  ${aviso}
+  <div class="grid subgrid">
+    <div class="card">
+      <div class="card-h">${svg('briefcase')}<h3>Dados do contrato</h3>
+        <div class="r no-print"><button class="btn sm" onclick="modalMotorista('${m.id}')">${svg('edit')} Editar</button></div></div>
+      <div class="card-b">
+        ${temDados?`<div class="info-grid">
+          ${info('Tipo de contrato', esc(m.contratoTipo))}
+          ${info('Função no contrato', esc(m.contratoFuncao||m.cargo))}
+          ${info('Admissão', fmtD(m.admissao))}
+          ${info('Início da vigência', fmtD(m.contratoInicio))}
+          ${info('Duração da experiência', dias? dias+' dias' : '')}
+          ${info('Término previsto', fimISO? fmtD(fimISO) : '', fimISO? 'Como calculamos: '+fmtD(m.contratoInicio)+' + '+dias+' dias, contando o primeiro dia.' : 'Informe o início e a duração para o sistema calcular.')}
+          ${info('Prorrogação', esc(m.contratoProrrog), m.contratoProrrog? '' : 'Experiência pode ser prorrogada 1 vez, no limite total de 90 dias.')}
+          ${info('Remuneração', Number(m.contratoSalario)>0? money(m.contratoSalario) : '')}
+          ${info('CTPS', esc(m.ctps?(m.ctps+(m.ctpsSerie?' · série '+m.ctpsSerie:'')):''))}
+          ${info('PIS', esc(m.pis))}
+          ${info('Local e data', esc(m.contratoLocal))}
+          ${info('Situação', esc(m.status))}
+        </div>
+        ${m.contratoObs?`<div class="muted" style="margin-top:12px;white-space:pre-wrap">${esc(m.contratoObs)}</div>`:''}`
+        : emptyState('Nenhum dado de contrato preenchido. Clique em "Editar" e preencha a seção Contrato de Trabalho.')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">${svg('doc')}<h3>Contrato assinado e anexos</h3><span class="sub">${docs.length}</span>
+        <div class="r no-print"><button class="btn sm primary" onclick="uploadPara('motorista','${m.id}','Contrato de Trabalho')">${svg('upload')} Anexar contrato</button></div></div>
+      <div class="card-b">
+        ${docs.length? motDocsGrid(docs)
+          : emptyState('Nenhum contrato anexado. Envie o contrato assinado, aditivos de prorrogação e o registro em CTPS.')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- ABA: FICHA CRIMINAL ----------
+   Guarda o que o colaborador APRESENTOU (declaração, sentença, certidão).
+   O sistema não julga nada: só mostra o que o documento diz. */
+function viewMotCriminal(m,procs,docs){
+  const sit=m.criminalSituacao||'Não informado';
+  const cor = sit==='Nada consta' ? '#2ecc71' : (sit==='Não informado' ? 'var(--text-soft)' : '#f0a13a');
+  const rows=procs.map(p=>{
+    const cls = p.resultado==='Absolvido' ? 'ok' : (p.resultado==='Condenado' ? 'vencido' : (p.situacao==='Em andamento'?'warn':'neutro'));
+    return `<tr class="clickable" onclick="modalProcesso('${p.id}')">
+      <td><b class="mono">${esc(p.numero)}</b>${p.assunto?`<div class="muted" style="font-size:12px">${esc(p.assunto)}</div>`:''}</td>
+      <td>${esc(p.classe||'—')}${p.vara?`<div class="muted" style="font-size:11.5px">${esc(p.vara)}</div>`:''}</td>
+      <td>${esc(p.comarca||'—')}</td>
+      <td class="mono muted">${p.data?fmtD(p.data):'—'}</td>
+      <td><span class="st ${cls}">${esc(p.resultado||p.situacao||'—')}</span>
+        ${p.situacao&&p.resultado?`<div class="muted" style="font-size:11.5px;margin-top:3px">${esc(p.situacao)}</div>`:''}</td></tr>`;
+  }).join('');
+  const obsProcs=procs.filter(p=>p.obs).map(p=>`<div style="margin-bottom:10px">
+    <b class="mono" style="font-size:12.5px">${esc(p.numero)}</b>
+    <div class="muted" style="white-space:pre-wrap;font-size:12.5px">${esc(p.obs)}</div></div>`).join('');
+
+  return `
+  <div class="card" style="margin-bottom:18px;border-left:3px solid ${cor}">
+    <div class="card-b" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <span style="color:${cor};flex:0 0 auto;display:flex">${svg('shield')}</span>
+      <div style="flex:1;min-width:220px">
+        <b style="display:block;color:${cor};margin-bottom:3px">Situação: ${esc(sit)}</b>
+        ${m.criminalData?`<div class="muted" style="font-size:12.5px">Conferido em ${fmtD(m.criminalData)}</div>`:''}
+        ${m.criminalFonte?`<div class="muted" style="font-size:12.5px;margin-top:4px;white-space:pre-wrap">${esc(m.criminalFonte)}</div>`:''}
+        ${m.criminalObs?`<div style="margin-top:8px;white-space:pre-wrap">${esc(m.criminalObs)}</div>`:''}
+      </div>
+      <div class="no-print"><button class="btn sm" onclick="modalMotorista('${m.id}')">${svg('edit')} Editar situação</button></div>
+    </div>
+  </div>
+  <div class="banner" style="margin-bottom:18px">${svg('lock')}<div><b>Informação sensível — use só para a homologação</b>
+    <span>Processo em andamento não é condenação: vale a presunção de inocência. Registre aqui apenas o que estiver escrito nos documentos apresentados pelo colaborador.</span></div></div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-h">${svg('doc')}<h3>Processos judiciais</h3><span class="sub">${procs.length}</span>
+      <div class="r no-print"><button class="btn sm" onclick="modalProcesso(null,'${m.id}')">${svg('plus')} Adicionar processo</button></div></div>
+    <div class="card-b p0">${procs.length?`<div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Número do processo</th><th>Classe</th><th>Comarca</th><th>Data</th><th>Resultado</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      ${obsProcs?`<div class="card-b" style="border-top:1px solid var(--line)">${obsProcs}</div>`:''}`
+      : emptyState('Nenhum processo registrado.')}</div>
+  </div>
+  <div class="card">
+    <div class="card-h">${svg('clip')}<h3>Certidões, sentenças e declarações</h3><span class="sub">${docs.length}</span>
+      <div class="r no-print"><button class="btn sm primary" onclick="uploadPara('motorista','${m.id}','Ficha Criminal')">${svg('upload')} Anexar documento</button></div></div>
+    <div class="card-b">${docs.length? motDocsGrid(docs) : emptyState('Anexe certidão de antecedentes, certidão de objeto e pé, sentença, declaração da defesa...')}</div>
+  </div>`;
+}
+
+/* ---------- Processo judicial: cadastro/edição ---------- */
+const PROC_SITUACOES=['Em andamento','Encerrado','Arquivado','Suspenso','Recurso','Não informado'];
+const PROC_RESULTADOS=['Sem julgamento','Absolvido','Condenado','Arquivado sem mérito','Acordo','Não informado'];
+function modalProcesso(id, motId){
+  const p = id ? (DB.processos||[]).find(x=>x.id===id)
+              : {entidade:'motorista', refId:motId||'', numero:'', classe:'', assunto:'', comarca:'', vara:'',
+                 data:'', situacao:'Em andamento', resultado:'Sem julgamento', obs:''};
+  if(!p){ toast('Processo não encontrado.','err'); return; }
+  const optsMot=DB.motoristas.map(m=>`<option value="${m.id}" ${p.refId===m.id?'selected':''}>${esc(m.nome)}</option>`).join('');
+  openModal(`<div class="m-h">${svg('shield')}<h3>${id?'Editar processo':'Novo processo'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <div class="field"><label>Colaborador</label><select id="f_ref">${optsMot}</select></div>
+      ${fld('Número do processo','f_num',p.numero,'text','Ex.: 0057800-83.2024.8.16.0014')}
+      <div class="field-row">${fld('Classe','f_classe',p.classe,'text','Ex.: Ação Penal - Procedimento Ordinário')}${fld('Assunto','f_assunto',p.assunto,'text','Ex.: Furto')}</div>
+      <div class="field-row">${fld('Comarca','f_comarca',p.comarca)}${fld('Vara','f_vara',p.vara)}</div>
+      <div class="field-row">${sel('Situação','f_sit',p.situacao,PROC_SITUACOES)}${sel('Resultado','f_res',p.resultado,PROC_RESULTADOS)}</div>
+      ${fld('Data da decisão / última movimentação','f_data',p.data,'date')}
+      <div class="field"><label>O que o documento diz</label><textarea id="f_obs" rows="4" placeholder="Copie aqui o que está escrito na sentença, certidão ou declaração. Não escreva opinião.">${esc(p.obs||'')}</textarea>
+        <div class="hint">Processo em andamento não é condenação. Registre só o que está no documento apresentado.</div></div>
+    </div>
+    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirProcesso('${id}')">${svg('trash')} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="salvarProcesso('${id||''}')">Salvar</button></div>`, true);
+}
+function salvarProcesso(id){
+  if(!val('f_num')){ toast('Informe o número do processo.','err'); return; }
+  if(!val('f_ref')){ toast('Escolha o colaborador.','err'); return; }
+  const d={entidade:'motorista', refId:val('f_ref'), numero:val('f_num'), classe:val('f_classe'), assunto:val('f_assunto'),
+    comarca:val('f_comarca'), vara:val('f_vara'), data:val('f_data'), situacao:val('f_sit'), resultado:val('f_res'), obs:val('f_obs')};
+  if(!Array.isArray(DB.processos)) DB.processos=[];
+  if(id){ const p=DB.processos.find(x=>x.id===id); if(p) Object.assign(p,d); }
+  else { d.id=uid('pj'); DB.processos.push(d); }
+  saveDB(); closeModal(); toast('Processo salvo.'); motAba='criminal'; router();
+}
+function excluirProcesso(id){
+  if(!confirm('Excluir este processo da ficha?')) return;
+  DB.processos=(DB.processos||[]).filter(x=>x.id!==id);
+  marcarRemovido('processosRemovidos',id);
+  saveDB(); closeModal(); toast('Processo excluído.'); motAba='criminal'; router();
+}
+
+/* ---------- ABA: DOCUMENTOS (pasta + enviados) ---------- */
+function viewMotDocs(m,docs){
+  const cats={};
+  docs.forEach(d=>{ const c=d.cat||'Documento'; (cats[c]=cats[c]||[]).push(d); });
+  const ordem=Object.keys(cats).sort();
+  return `
+  <div class="card">
+    <div class="card-h">${svg('folder')}<h3>Todos os documentos</h3><span class="sub">${docs.length}</span>
+      <div class="r no-print"><button class="btn sm primary" onclick="uploadPara('motorista','${m.id}')">${svg('upload')} Anexar</button></div></div>
+    <div class="card-b">
+      ${docs.length? ordem.map(c=>`<div class="sectitulo">${svg(tipoIcone(c))} ${esc(c)} <span class="muted">(${cats[c].length})</span></div>${motDocsGrid(cats[c])}`).join('')
+        : emptyState('Nenhum documento. Use "Anexar" para enviar.')}
     </div>
   </div>`;
 }
@@ -1907,7 +2170,7 @@ async function excluirArquivo(id){ if(!confirm('Excluir este arquivo definitivam
   if(a){ if(a.storagePath && typeof nuvemRemoverArquivo==='function'){ try{ await nuvemRemoverArquivo(a.storagePath); }catch(e){} } DB.anexos=DB.anexos.filter(x=>x.id!==id); }
   try{ await idbDel(id); }catch(e){}
   await reloadFiles(); saveDB(); toast('Arquivo excluído.'); router(); }
-function excluirArquivoReg(id){ if(!confirm('Remover este documento da lista? (o arquivo original na pasta não é apagado)'))return; DB.arquivos=(DB.arquivos||[]).filter(f=>f.id!==id); saveDB(); toast('Documento removido da lista.'); router(); }
+function excluirArquivoReg(id){ if(!confirm('Remover este documento da lista? (o arquivo original na pasta não é apagado)'))return; DB.arquivos=(DB.arquivos||[]).filter(f=>f.id!==id); marcarRemovido('arquivosRemovidos',id); saveDB(); toast('Documento removido da lista.'); router(); }
 
 /* ================================================================== */
 /*  18. CONFIGURAÇÕES                                                  */
@@ -1999,12 +2262,27 @@ function modalMotorista(id){
       ${msec('Documentos')}
       <div class="field-row">${fldMask('CPF','f_cpf',m.cpf,'cpf','000.000.000-00 automático')}${fldMask('RG','f_rg',m.rg,'rg','pontuação automática')}</div>
       ${fld('Emissor RG','f_emrg',m.emissorRg)}
+      <div class="field-row">${fld('Nome da mãe','f_mae',m.mae)}${fld('Nome do pai','f_pai',m.pai)}</div>
 
       ${msec('Dados Trabalhistas')}
       <div class="field-row">${fld('Cargo','f_cargo',m.cargo)}${fld('Data Admissão','f_adm',m.admissao,'date')}</div>
-      <div class="field-row">${fld('CTPS','f_ctps',m.ctps)}${fld('PIS','f_pis',m.pis)}</div>
+      <div class="field-row">${fld('CTPS','f_ctps',m.ctps)}${fld('Série da CTPS','f_ctpss',m.ctpsSerie)}</div>
+      ${fld('PIS','f_pis',m.pis)}
       ${fld('Função no sistema','f_func',m.funcao,'text','Ex.: Sócio · Responsável Técnico · Motorista')}
       <label class="chkbox"><input type="checkbox" id="f_socio" ${m.socio?'checked':''}> É sócio da empresa (aparece no Quadro Societário)</label>
+
+      ${msec('Contrato de Trabalho')}
+      <div class="field-row">${sel('Tipo de contrato','f_ctipo',m.contratoTipo||'',['','Experiência','Prazo indeterminado','Prazo determinado','Autônomo/Agregado','Temporário'])}${fld('Função no contrato','f_cfunc',m.contratoFuncao,'text','Ex.: Motorista de Carreta')}</div>
+      <div class="field-row">${fld('Início da vigência','f_cini',m.contratoInicio,'date')}${fld('Duração da experiência (dias)','f_cdias',m.contratoDias,'number','O sistema calcula o término sozinho')}</div>
+      <div class="field-row">${fldR$('Remuneração mensal','f_csal',m.contratoSalario)}${fld('Prorrogação','f_cpror',m.contratoProrrog,'text','Ex.: prorrogado por mais 45 dias em 01/10/2026')}</div>
+      ${fld('Local e data da assinatura','f_cloc',m.contratoLocal,'text','Ex.: Carambeí/PR, 18/08/2026')}
+      <div class="field"><label>Observações do contrato</label><textarea id="f_cobs" rows="2" placeholder="Aditivos, cláusulas específicas, jornada combinada...">${esc(m.contratoObs||'')}</textarea></div>
+
+      ${msec('Situação Criminal / Antecedentes')}
+      <div class="field-row">${sel('Situação','f_crimsit',m.criminalSituacao||'Não informado',['Não informado','Nada consta','Possui processo(s)','Em análise'])}${fld('Conferido em','f_crimdata',m.criminalData,'date')}</div>
+      ${fld('De onde veio a informação','f_crimfonte',m.criminalFonte,'text','Ex.: certidão de antecedentes da Polícia Civil, declaração da defesa...')}
+      <div class="field"><label>Observação</label><textarea id="f_crimobs" rows="3" placeholder="Resuma o que os documentos dizem. Os processos, um a um, você cadastra na aba Ficha Criminal da ficha do colaborador.">${esc(m.criminalObs||'')}</textarea>
+        <div class="hint">Informação sensível, para uso na homologação junto às gerenciadoras de risco. Processo em andamento não é condenação.</div></div>
 
       ${msec('Saúde')}
       <div class="field"><label>Problemas de saúde</label><textarea id="f_saude" rows="2" placeholder="Identifique aqui qualquer problema de saúde: hipertensão, diabetes, alergias, uso de medicação, restrições…">${esc(m.problemasSaude||'')}</textarea></div>
@@ -2036,8 +2314,11 @@ function modalMotorista(id){
 function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');return;}
   const d={matricula:val('f_mat'),nome:val('f_nome'),nascimento:val('f_nasc'),genero:val('f_gen'),celular:maskFone(val('f_cel')),telefone:maskFone(val('f_tel')),email:val('f_email'),
     ufNat:val('f_ufnat'),municipioNat:val('f_munat'),tipoCondutor:val('f_tipo'),status:val('f_status'),
-    cpf:maskCPF(val('f_cpf')),rg:maskRG(val('f_rg')),emissorRg:val('f_emrg'),
-    cargo:val('f_cargo'),admissao:val('f_adm'),ctps:val('f_ctps'),pis:val('f_pis'),funcao:val('f_func'),socio:document.getElementById('f_socio').checked,problemasSaude:val('f_saude'),
+    cpf:maskCPF(val('f_cpf')),rg:maskRG(val('f_rg')),emissorRg:val('f_emrg'),mae:val('f_mae'),pai:val('f_pai'),
+    cargo:val('f_cargo'),admissao:val('f_adm'),ctps:val('f_ctps'),ctpsSerie:val('f_ctpss'),pis:val('f_pis'),funcao:val('f_func'),socio:document.getElementById('f_socio').checked,problemasSaude:val('f_saude'),
+    contratoTipo:val('f_ctipo'),contratoFuncao:val('f_cfunc'),contratoInicio:val('f_cini'),contratoDias:val('f_cdias'),
+    contratoSalario:parseBRL(val('f_csal')),contratoProrrog:val('f_cpror'),contratoLocal:val('f_cloc'),contratoObs:val('f_cobs'),
+    criminalSituacao:val('f_crimsit'),criminalData:val('f_crimdata'),criminalFonte:val('f_crimfonte'),criminalObs:val('f_crimobs'),
     categoria:val('f_cat'),cnh:val('f_cnhn'),primeiraHab:val('f_prim'),emissaoCnh:val('f_emis'),cnhValidade:val('f_cnh'),ear:val('f_ear'),cnhUf:val('f_cnhuf'),cnhMunicipio:val('f_cnhmun'),renach:val('f_renach'),espelho:val('f_esp'),
     rntrc:val('f_rntrc'),rntrcSituacao:val('f_rntrcsit'),rntrcCadastro:val('f_rntrccad'),rntrcValidade:val('f_rntrcval'),
     cep:maskCEP(val('f_cep')),logradouro:val('f_log'),numero:val('f_num'),complemento:val('f_comp'),bairro:val('f_bairro'),ufEnd:val('f_ufend'),municipioEnd:val('f_munend'),foto:val('f_foto')};
@@ -2049,15 +2330,21 @@ function salvarMotorista(id){ if(!val('f_nome')){toast('Informe o nome.','err');
 }
 async function excluirMotorista(id){
   const m=motorista(id);
-  if(!confirm('Excluir '+(m?m.nome:'este motorista')+' e TODOS os documentos dele (CNH, ASO, exames, toxicológico, Opentech, direção defensiva, comprovantes e arquivos anexados)?\n\nEsta ação não pode ser desfeita.')) return;
+  if(!confirm('Excluir '+(m?m.nome:'este motorista')+' e TODOS os documentos dele (CNH, ASO, exames, toxicológico, Opentech, direção defensiva, contrato de trabalho, ficha criminal, comprovantes e arquivos anexados)?\n\nEsta ação não pode ser desfeita.')) return;
   // 1) vencimentos/documentos (CNH, ASO, Toxicológico, Opentech, Direção Defensiva...)
+  DB.vencimentos.forEach(v=>{ if(v.entidade==='motorista'&&v.refId===id) marcarRemovido('vencimentosRemovidos',v.id); });
   DB.vencimentos=DB.vencimentos.filter(v=>!(v.entidade==='motorista'&&v.refId===id));
+  // 1b) processos judiciais registrados na ficha criminal
+  (DB.processos||[]).forEach(p=>{ if(p.entidade==='motorista'&&p.refId===id) marcarRemovido('processosRemovidos',p.id); });
+  DB.processos=(DB.processos||[]).filter(p=>!(p.entidade==='motorista'&&p.refId===id));
   // 2) arquivos ANEXADOS (enviados) — local (IndexedDB) + nuvem (Storage/DB.anexos)
   try{ const enviados=(typeof todosArquivos==='function'?todosArquivos():[]).filter(f=>f.entidade==='motorista'&&f.refId===id);
     for(const f of enviados){ try{ await _removerAnexoSilencioso(f.id); }catch(e){} } }catch(e){}
   // 3) arquivos REGISTRADOS da pasta (DB.arquivos) do motorista
+  (DB.arquivos||[]).forEach(f=>{ if(f.entidade==='motorista'&&f.refId===id) marcarRemovido('arquivosRemovidos',f.id); });
   DB.arquivos=(DB.arquivos||[]).filter(f=>!(f.entidade==='motorista'&&f.refId===id));
   // 4) o motorista
+  marcarRemovido('motoristasRemovidos',id);
   DB.motoristas=DB.motoristas.filter(x=>x.id!==id);
   try{ if(typeof reloadFiles==='function') await reloadFiles(); }catch(e){}
   saveDB(); closeModal(); toast('Motorista e todos os documentos excluídos.'); location.hash='motoristas'; router();
@@ -2151,7 +2438,7 @@ function salvarVencimento(id){ if(!val('f_valid')){toast('Informe a validade.','
   if(id)Object.assign(DB.vencimentos.find(x=>x.id===id),d); else{ d.id=uid('vc'); DB.vencimentos.push(d); }
   saveDB(); closeModal(); toast('Vencimento salvo.'); router();
 }
-function excluirVencimento(id){ if(!confirm('Excluir este vencimento?'))return; DB.vencimentos=DB.vencimentos.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+function excluirVencimento(id){ if(!confirm('Excluir este vencimento?'))return; DB.vencimentos=DB.vencimentos.filter(x=>x.id!==id); marcarRemovido('vencimentosRemovidos',id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 async function anexarVenc(input){
   const files=input.files; if(!files||!files.length)return;
   if(!IDB && !_online()){ toast('Anexo indisponível neste navegador (use Chrome ou Edge).','err'); return; }
