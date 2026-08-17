@@ -236,6 +236,29 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 17/08/2026 — v6.93 (a regra da v6.92 aplicada nos 4 importadores)
+
+O cliente mandou "corrija o que for necessário". Auditei **todos** os importadores de semente do sistema. Eram 4, e **3 ainda tinham o mesmo defeito** da v6.91:
+
+| importador | como estava | risco real |
+|---|---|---|
+| `importarCadastroSeed` | corrigido na v6.92 | — |
+| `importarLicencasSeed` | varria as 8 licenças a cada carregamento; respeitava `licencasRemovidas` | licença apagada **antes** da trava existir voltava |
+| `importarCtesSeed` | varria os 36 CT-e a cada carregamento, **sem trava nenhuma** | **CT-e excluído voltava na abertura seguinte, sempre** |
+| `importarManutencaoPlanilhas` | varria os 111 serviços do MANUT_SEED a cada carregamento, sem trava | **serviço de manutenção excluído voltava sempre** |
+
+**Todos agora usam a mesma regra:** entrega **uma vez** e carimba em `DB.seedAplicado` (`legado-licencas`, `legado-ctes`, `legado-manutencao`). Helper novo: `importarSeedLegado(col, fonte, rem, tag, prep)` — o `prep` preserva o `cteDerivaPlaca` dos CT-e; a manutenção ficou inline porque além de inserir ela **conserta** campos de quem foi importado em versão antiga.
+
+**Como a virada decide, já que não existe histórico de quando cada id foi entregue:**
+- base **já tem** algum registro daquela semente → já recebeu → **só carimba, não repõe nada** (o que falta, o cliente apagou);
+- base **não tem nenhum** → nunca recebeu → entrega.
+
+Depois do carimbo, apagar é definitivo. Segunda trava ligada em todas as exclusões: `excluirCte` → `ctesRemovidos`, `excluirServico` → `servicosRemovidos`, `excluirLicenca` passou a usar `marcarRemovido('licencasRemovidas')` (antes só marcava se o id fosse da semente).
+
+**Validado com 24 asserções no Chrome headless:** base nova recebe tudo (8 licenças, 36 CT-e, 111 serviços, 6 motoristas, 4 carimbos); apagar licença/CT-e/serviço e recarregar **duas vezes** não repõe nenhum; base do cliente na virada não ganha de volta o que apagou; base com a coleção vazia recebe a entrega; CT-e excluído pela tela não volta nem zerando o carimbo; e as 5 telas afetadas continuam renderizando.
+
+**Não há mais varredura de semente no sistema.** `VIAGENS_SEED` e as demais coleções só são clonadas quando a coleção **não existe** (base nova), o que não ressuscita nada.
+
 ### 🚨 ESTADO EM 17/08/2026 — v6.92 (conserta a ressurreição de motorista da v6.91)
 
 **O DEFEITO (meu, na v6.91):** o `importarCadastroSeed` varria a **semente inteira** e repunha na base tudo que estivesse faltando. O cliente já tinha **desligado e apagado o motorista Odecio Delatorre Fernandes (`m6`)** — e ele voltou sozinho na atualização, com vencimentos e documentos. O cliente viu na hora e cobrou: *"por que você puxou ele novamente, corrija isso para que nunca mais se repita"*.
@@ -258,7 +281,7 @@ Assim: registro **novo** chega em quem já tem base; registro que **sumiu da bas
 
 **Validado com 23 asserções no Chrome headless** (ver [[validar-no-chrome-headless]] na memória), cobrindo: base nova sem Odecio, base do cliente com ele voltando → correção o remove, recadastro manual **não** é apagado, motorista/vencimento/arquivo apagado **não** ressuscita mais (nem o próprio Wesley), base que ainda não recebeu a 6.91 ganha o Wesley, e entrega de versão não arrasta o resto da semente.
 
-**Lição para o resto do sistema:** `importarLicencasSeed` e `importarCtesSeed` ainda varrem a coleção inteira (o de licenças ao menos respeita `licencasRemovidas`; o de CT-e não tem trava nenhuma). **Se o cliente relatar CT-e ou licença voltando sozinho, é o mesmo defeito** — migrar os dois para o padrão `SEED_ENTREGAS`.
+**Resolvido na v6.93:** os outros 3 importadores (licenças, CT-e e manutenção) tinham o mesmo defeito e foram migrados para a mesma regra.
 
 ### ✅ ESTADO EM 17/08/2026 — v6.91 (motorista novo + Contrato e Ficha Criminal)
 

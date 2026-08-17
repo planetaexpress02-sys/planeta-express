@@ -35,15 +35,35 @@ function ensureCollections(){
   importarCtesSeed();
   corrigirValoresAntigos();
 }
-/* Importa (uma vez) as licenças/alvarás reais da semente. Não duplica: cada uma
-   tem id fixo (lic1, lic2...). Assim os documentos chegam mesmo em aparelhos que
-   já tinham a coleção criada vazia numa versão anterior. */
+/* ENTREGAS ANTIGAS (licenças/alvarás e CT-e). Durante várias versões elas
+   foram repostas a CADA carregamento, varrendo a semente inteira — o mesmo
+   defeito que ressuscitou um motorista na v6.91. Agora entram na regra do
+   `SEED_ENTREGAS`: carimbadas UMA vez em `DB.seedAplicado` e nunca mais
+   varridas.
+
+   Na virada, como não existe histórico de quando cada id foi entregue, vale
+   esta leitura: se a base **já tem** registros daquela semente, ela já
+   recebeu a entrega — então só carimba e **não repõe nada**, porque o que
+   está faltando o cliente apagou. Se a base não tem **nenhum**, é porque
+   nunca recebeu — aí entrega. Depois do carimbo, apagar é definitivo. */
+function importarSeedLegado(col, fonte, rem, tag, prep){
+  if(!Array.isArray(fonte) || !fonte.length) return;
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  if(DB.seedAplicado.indexOf(tag)>=0) return;          // esta base já foi carimbada
+  if(!Array.isArray(DB[col])) DB[col]=[];
+  const ids=new Set(DB[col].map(function(x){ return x.id; }));
+  const jaRecebeu=fonte.some(function(x){ return ids.has(x.id); });
+  if(!jaRecebeu){
+    const apagados=new Set(DB[rem]||[]);
+    fonte.forEach(function(x){
+      if(apagados.has(x.id)) return;
+      DB[col].push(prep? prep(x) : clone(x));
+    });
+  }
+  DB.seedAplicado.push(tag);
+}
 function importarLicencasSeed(){
-  if(!SEED || !Array.isArray(SEED.licencas)) return;
-  if(!Array.isArray(DB.licencas)) DB.licencas=[];
-  const ids=new Set(DB.licencas.map(l=>l.id));
-  const apagadas=new Set(DB.licencasRemovidas||[]);   // respeita o que o usuário apagou de propósito
-  SEED.licencas.forEach(l=>{ if(!ids.has(l.id) && !apagadas.has(l.id)) DB.licencas.push(clone(l)); });
+  importarSeedLegado('licencas', (SEED&&SEED.licencas), 'licencasRemovidas', 'legado-licencas');
 }
 /* ==================================================================
    O QUE CADA VERSÃO PODE ACRESCENTAR NUMA BASE QUE JÁ EXISTE.
@@ -115,12 +135,12 @@ function marcarRemovido(colecaoRemovidos, id){
   if(!Array.isArray(DB[colecaoRemovidos])) DB[colecaoRemovidos]=[];
   if(DB[colecaoRemovidos].indexOf(id)<0) DB[colecaoRemovidos].push(id);
 }
-/* Importa (uma vez) os CT-e vindos dos XML. Não duplica (id = cte_<chave>). */
+/* Importa (uma vez só, e nunca mais) os CT-e vindos dos XML. Id = cte_<chave>.
+   Antes da v6.93 esta função varria a lista toda a cada carregamento e NÃO
+   tinha trava nenhuma: CT-e que o cliente excluísse voltava na hora seguinte. */
 function importarCtesSeed(){
-  if(typeof CTES_SEED==='undefined' || !Array.isArray(CTES_SEED)) return;
-  if(!Array.isArray(DB.ctes)) DB.ctes=[];
-  const ids=new Set(DB.ctes.map(c=>c.id));
-  CTES_SEED.forEach(r=>{ if(!ids.has(r.id)){ DB.ctes.push(cteDerivaPlaca(Object.assign({},r))); } });
+  importarSeedLegado('ctes', (typeof CTES_SEED!=='undefined'? CTES_SEED : null), 'ctesRemovidos', 'legado-ctes',
+    function(r){ return cteDerivaPlaca(Object.assign({},r)); });
 }
 /* Descobre a placa do CT-e a partir do texto (PLACA: XXX) ou do Renavam citado na observação */
 function cteDerivaPlaca(c){
@@ -134,18 +154,29 @@ function cteDerivaPlaca(c){
 /* Importa (uma vez) as manutenções extraídas das planilhas de Relatório de Manutenção.
    Não duplica: cada registro tem id fixo (mi_...). Roda em qualquer aparelho e sincroniza. */
 function importarManutencaoPlanilhas(){
-  if(typeof MANUT_SEED==='undefined' || !Array.isArray(MANUT_SEED)) return;
   if(!Array.isArray(DB.servicos)) DB.servicos=[];
-  const porId={}; DB.servicos.forEach(s=>{ porId[s.id]=s; });
-  MANUT_SEED.forEach(r=>{
-    const ex=porId[r.id];
-    if(!ex){ DB.servicos.push(Object.assign({},r)); }
-    else {  // preenche o que faltava em quem foi importado antes
-      if(!ex.tipo) ex.tipo=r.tipo;
-      if((ex.km===''||ex.km==null) && r.km!=='' && r.km!=null) ex.km=r.km;      // horas das carretas migram p/ o campo km
-      if(ex.obs && /^Hora TK/i.test(ex.obs)) ex.obs='';
+  if(typeof MANUT_SEED!=='undefined' && Array.isArray(MANUT_SEED)){
+    if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+    /* Mesma regra do `importarSeedLegado`: entrega uma vez e carimba. Antes
+       da v6.93 isto rodava a cada carregamento, então serviço que o cliente
+       excluísse voltava sozinho na próxima abertura. */
+    if(DB.seedAplicado.indexOf('legado-manutencao')<0){
+      const porId={}; DB.servicos.forEach(s=>{ porId[s.id]=s; });
+      const jaRecebeu=MANUT_SEED.some(r=>porId[r.id]);
+      const apagados=new Set(DB.servicosRemovidos||[]);
+      MANUT_SEED.forEach(r=>{
+        const ex=porId[r.id];
+        if(ex){  // preenche o que faltava em quem foi importado antes
+          if(!ex.tipo) ex.tipo=r.tipo;
+          if((ex.km===''||ex.km==null) && r.km!=='' && r.km!=null) ex.km=r.km;  // horas das carretas migram p/ o campo km
+          if(ex.obs && /^Hora TK/i.test(ex.obs)) ex.obs='';
+        } else if(!jaRecebeu && !apagados.has(r.id)){
+          DB.servicos.push(Object.assign({},r));
+        }
+      });
+      DB.seedAplicado.push('legado-manutencao');
     }
-  });
+  }
   DB.servicos.forEach(s=>{ if(!s.tipo) s.tipo='Corretiva'; });  // qualquer serviço sem tipo vira Corretiva por padrão
 }
 /* Conserta valores gravados errados pelo bug antigo (÷1000). Só mexe em valor
@@ -1880,7 +1911,7 @@ function modalServico(id, vId){
 function salvarServico(id){ if(!val('f_desc')){toast('Descreva o serviço.','err');return;}
   const d={data:val('f_data'),veiculoId:val('f_veic'),descricao:val('f_desc'),oficina:val('f_ofi'),km:numOrNull('f_km'),valor:parseBRL(val('f_val')),tipo:val('f_tipo')||'Corretiva',obs:val('f_obs')};
   if(id)Object.assign(DB.servicos.find(y=>y.id===id),d); else{ d.id=uid('sv'); DB.servicos.push(d); } saveDB(); closeModal(); toast('Serviço salvo.'); router(); }
-function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.servicos=DB.servicos.filter(y=>y.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+function excluirServico(id){ if(!confirm('Excluir este serviço?'))return; DB.servicos=DB.servicos.filter(y=>y.id!==id); marcarRemovido('servicosRemovidos',id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ================================================================== */
 /*  16. BATERIAS                                                       */
@@ -4628,11 +4659,7 @@ function salvarLicenca(id){
 function excluirLicenca(id){ const l=licenca(id); if(!l) return;
   if(!confirm('Excluir a licença "'+(l.nome||'')+'"?\n\nO histórico e os arquivos anexados também serão perdidos.')) return;
   DB.licencas=licencas().filter(x=>x.id!==id);
-  /* se era uma licença da semente, marca para não voltar no próximo carregamento */
-  if(typeof SEED!=='undefined' && Array.isArray(SEED.licencas) && SEED.licencas.some(s=>s.id===id)){
-    if(!Array.isArray(DB.licencasRemovidas)) DB.licencasRemovidas=[];
-    if(DB.licencasRemovidas.indexOf(id)<0) DB.licencasRemovidas.push(id);
-  }
+  marcarRemovido('licencasRemovidas',id);   // segunda trava: não volta por nenhum caminho
   saveDB(); closeModal(); licFechar(); toast('Licença excluída.'); router();
 }
 
@@ -6523,7 +6550,7 @@ function modalCte(id){
 function salvarCte(id){ const d={data:val('f_data'),numero:val('f_num'),placa:val('f_placa'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),status:val('f_status'),
     origem:val('f_orig'),destino:val('f_dest'),destinatario:val('f_dtn'),obs:val('f_obs')};
   if(id)Object.assign(DB.ctes.find(x=>x.id===id),d); else{ d.id=uid('ct'); DB.ctes.push(d); } saveDB(); closeModal(); toast('CT-e salvo.'); router(); }
-function excluirCte(id){ if(!confirm('Excluir este CT-e?'))return; DB.ctes=DB.ctes.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+function excluirCte(id){ if(!confirm('Excluir este CT-e?'))return; DB.ctes=DB.ctes.filter(x=>x.id!==id); marcarRemovido('ctesRemovidos',id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 /* ---- Importar CT-e a partir dos arquivos XML (funciona no navegador, offline) ---- */
 function parseCteXml(txt, fname){
   const doc=new DOMParser().parseFromString(txt,'text/xml');
