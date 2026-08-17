@@ -30,6 +30,7 @@ function ensureCollections(){
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
+  corrigirRessurreicaoV691();
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
@@ -44,27 +45,70 @@ function importarLicencasSeed(){
   const apagadas=new Set(DB.licencasRemovidas||[]);   // respeita o que o usuário apagou de propósito
   SEED.licencas.forEach(l=>{ if(!ids.has(l.id) && !apagadas.has(l.id)) DB.licencas.push(clone(l)); });
 }
-/* Importa (uma vez) COLABORADORES, VENCIMENTOS, ARQUIVOS DA PASTA e PROCESSOS
-   novos da semente. Cada registro tem id fixo (m7, c7, a41, pj1...), então:
-   - quem já tinha base salva RECEBE o colaborador novo sem perder nada;
-   - nada duplica, porque a checagem é por id;
-   - o que o usuário apagou DE PROPÓSITO não volta (listas *Removidos*).
-   Só ACRESCENTA: registro que já existe não é tocado, para não desfazer
-   nenhuma edição feita pelo cliente. */
+/* ==================================================================
+   O QUE CADA VERSÃO PODE ACRESCENTAR NUMA BASE QUE JÁ EXISTE.
+
+   ⚠️ REGRA DURA, APRENDIDA ERRANDO. A v6.91 varria a semente INTEIRA e
+   repunha tudo que estivesse faltando — e ressuscitou um motorista que o
+   cliente já tinha desligado e apagado meses antes. Some tudo o que sumiu
+   da base é apagamento proposital: a semente não sabe disso, e as listas
+   `*Removidos` só existem para exclusões feitas DEPOIS da v6.91.
+
+   Por isso o backfill NUNCA olha a semente inteira. Ele aplica só a lista
+   da versão, e só UMA VEZ por base (`DB.seedAplicado`). Ao entregar dado
+   novo, some o id AQUI, numa entrada com a etiqueta da versão — nunca
+   volte a percorrer a coleção toda.
+   ================================================================== */
+const SEED_ENTREGAS = [
+  { v:'6.91',
+    motoristas:['m7'],
+    vencimentos:['c7','t7','a7'],
+    arquivos:['a41','a42','a43','a44','a45','a46','a47','a48','a49'],
+    processos:['pj1','pj2'] },
+];
 function importarCadastroSeed(){
   if(!SEED) return;
-  [['motoristas','motoristasRemovidos'],
-   ['vencimentos','vencimentosRemovidos'],
-   ['arquivos','arquivosRemovidos'],
-   ['processos','processosRemovidos']].forEach(function(par){
-    const col=par[0], rem=par[1];
-    const semente = col==='arquivos' ? (typeof ARQUIVOS_EMPRESA!=='undefined'? ARQUIVOS_EMPRESA : null) : SEED[col];
-    if(!Array.isArray(semente)) return;
-    if(!Array.isArray(DB[col])) DB[col]=[];
-    const ids=new Set(DB[col].map(function(x){ return x.id; }));
-    const apagados=new Set(DB[rem]||[]);
-    semente.forEach(function(x){ if(!ids.has(x.id) && !apagados.has(x.id)) DB[col].push(clone(x)); });
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  SEED_ENTREGAS.forEach(function(ent){
+    if(DB.seedAplicado.indexOf(ent.v)>=0) return;         // esta base já recebeu
+    [['motoristas','motoristasRemovidos'],
+     ['vencimentos','vencimentosRemovidos'],
+     ['arquivos','arquivosRemovidos'],
+     ['processos','processosRemovidos']].forEach(function(par){
+      const col=par[0], rem=par[1], quais=ent[col];
+      if(!Array.isArray(quais) || !quais.length) return;
+      const fonte = col==='arquivos' ? (typeof ARQUIVOS_EMPRESA!=='undefined'? ARQUIVOS_EMPRESA : []) : (SEED[col]||[]);
+      if(!Array.isArray(DB[col])) DB[col]=[];
+      const ids=new Set(DB[col].map(function(x){ return x.id; }));
+      const apagados=new Set(DB[rem]||[]);
+      quais.forEach(function(id){
+        if(ids.has(id) || apagados.has(id)) return;        // já está lá, ou foi apagado de propósito
+        const reg=fonte.filter(function(x){ return x.id===id; })[0];
+        if(reg) DB[col].push(clone(reg));
+      });
+    });
+    DB.seedAplicado.push(ent.v);
   });
+}
+/* Conserto pontual: desfaz a ressurreição causada pela v6.91.
+   Odecio Delatorre Fernandes (m6) foi desligado da empresa e apagado pelo
+   cliente; o backfill antigo o trouxe de volta junto com os vencimentos e
+   os documentos dele. Isto o remove de novo e marca como apagado, para não
+   voltar por nenhum caminho. Roda UMA vez por base. Se um dia ele for
+   recontratado, é só cadastrar de novo: a correção não roda outra vez. */
+function corrigirRessurreicaoV691(){
+  if(!DB.correcoes || typeof DB.correcoes!=='object') DB.correcoes={};
+  if(DB.correcoes.odecioV691) return;
+  const id='m6';
+  (DB.vencimentos||[]).forEach(function(v){ if(v.entidade==='motorista'&&v.refId===id) marcarRemovido('vencimentosRemovidos',v.id); });
+  DB.vencimentos=(DB.vencimentos||[]).filter(function(v){ return !(v.entidade==='motorista'&&v.refId===id); });
+  (DB.arquivos||[]).forEach(function(f){ if(f.entidade==='motorista'&&f.refId===id) marcarRemovido('arquivosRemovidos',f.id); });
+  DB.arquivos=(DB.arquivos||[]).filter(function(f){ return !(f.entidade==='motorista'&&f.refId===id); });
+  (DB.processos||[]).forEach(function(p){ if(p.entidade==='motorista'&&p.refId===id) marcarRemovido('processosRemovidos',p.id); });
+  DB.processos=(DB.processos||[]).filter(function(p){ return !(p.entidade==='motorista'&&p.refId===id); });
+  marcarRemovido('motoristasRemovidos',id);
+  DB.motoristas=(DB.motoristas||[]).filter(function(m){ return m.id!==id; });
+  DB.correcoes.odecioV691=true;
 }
 /* Marca um id como apagado de propósito, para o backfill acima não ressuscitá-lo */
 function marcarRemovido(colecaoRemovidos, id){

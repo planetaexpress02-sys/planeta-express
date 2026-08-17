@@ -32,7 +32,7 @@ Arquivos em `Sistema Planeta Express\`:
 ## 4. DADOS (persistência)
 - Offline: tudo num objeto `DB` salvo em `localStorage['pex_db_v4']`. Uploads locais em **IndexedDB** (`pex_files`).
 - **Preferências** (`DB.config`) também salvas em `localStorage['pex_config']` — sobrevivem a trocas de versão (não resetam).
-- `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`. Desde a v6.91 também roda `importarCadastroSeed()`: motorista/vencimento/arquivo/processo novo da semente chega em quem já tinha base salva, sem duplicar, sem sobrescrever edição do cliente e sem ressuscitar o que foi apagado de propósito (`DB.*Removidos` + `marcarRemovido`).
+- `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`. Roda também `importarCadastroSeed()`, que aplica **só a lista da versão** (`SEED_ENTREGAS`) e **uma vez por base** (`DB.seedAplicado`) — NUNCA varre a semente inteira, senão ressuscita o que o cliente apagou (foi o defeito da v6.91, corrigido na v6.92). Segunda trava: `DB.*Removidos` + `marcarRemovido`.
 - Funções-chave de dados: `loadDB`, `saveDB` (salva local + nuvem debounced), `saveLocal`, `ensureCollections`, `aplicarRemoto` (recebe realtime), `flushNuvem` (salva ao fechar/trocar aba).
 
 ## 5. MÓDULOS (abas do menu, na ordem)
@@ -235,6 +235,30 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### 🚨 ESTADO EM 17/08/2026 — v6.92 (conserta a ressurreição de motorista da v6.91)
+
+**O DEFEITO (meu, na v6.91):** o `importarCadastroSeed` varria a **semente inteira** e repunha na base tudo que estivesse faltando. O cliente já tinha **desligado e apagado o motorista Odecio Delatorre Fernandes (`m6`)** — e ele voltou sozinho na atualização, com vencimentos e documentos. O cliente viu na hora e cobrou: *"por que você puxou ele novamente, corrija isso para que nunca mais se repita"*.
+
+**POR QUE ACONTECEU:** as listas `DB.*Removidos` só registram exclusões feitas **a partir da v6.91**. Exclusão anterior a isso não deixou rastro nenhum, então o backfill não tinha como saber que aquele sumiço era proposital. Varrer a coleção toda transforma **"o cliente apagou"** em **"está faltando, vou repor"**.
+
+**A REGRA QUE FICA (não voltar atrás nisso):**
+> **O backfill NUNCA percorre a semente inteira.** Ele aplica só a lista da versão, declarada em `SEED_ENTREGAS` (`app.js`), e **uma única vez por base** — controlado por `DB.seedAplicado`, que guarda as etiquetas de versão já entregues.
+
+Ao entregar dado novo numa versão, some o id em `SEED_ENTREGAS` com a etiqueta:
+```js
+const SEED_ENTREGAS = [
+  { v:'6.91', motoristas:['m7'], vencimentos:['c7','t7','a7'],
+    arquivos:['a41',…,'a49'], processos:['pj1','pj2'] },
+];
+```
+Assim: registro **novo** chega em quem já tem base; registro que **sumiu da base continua sumido**, porque nunca esteve na lista da versão; e reaplicar não duplica. As listas `*Removidos` continuam valendo como segunda trava.
+
+**Conserto pontual:** `corrigirRessurreicaoV691()` remove o `m6` de novo (motorista + vencimentos + arquivos + processos), marca em `motoristasRemovidos` e grava `DB.correcoes.odecioV691` — roda uma vez só, então **se o Odecio for recontratado e recadastrado, não apaga de novo**. O `m6` também saiu da semente (`dados.js`, `arquivos.js`, `assets/fotos/m6.png`) e dos exemplos do Assistente; a foto continua recuperável pelo git e pela pasta de backup de 13/08.
+
+**Validado com 23 asserções no Chrome headless** (ver [[validar-no-chrome-headless]] na memória), cobrindo: base nova sem Odecio, base do cliente com ele voltando → correção o remove, recadastro manual **não** é apagado, motorista/vencimento/arquivo apagado **não** ressuscita mais (nem o próprio Wesley), base que ainda não recebeu a 6.91 ganha o Wesley, e entrega de versão não arrasta o resto da semente.
+
+**Lição para o resto do sistema:** `importarLicencasSeed` e `importarCtesSeed` ainda varrem a coleção inteira (o de licenças ao menos respeita `licencasRemovidas`; o de CT-e não tem trava nenhuma). **Se o cliente relatar CT-e ou licença voltando sozinho, é o mesmo defeito** — migrar os dois para o padrão `SEED_ENTREGAS`.
 
 ### ✅ ESTADO EM 17/08/2026 — v6.91 (motorista novo + Contrato e Ficha Criminal)
 

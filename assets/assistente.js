@@ -670,7 +670,7 @@ function iaConsulta(t,n){
   if(v) return _iaFichaVeiculo(v);
   if(mot) return _iaFichaMotorista(mot);
 
-  return `Posso informar qualquer dado do sistema. Exemplos:<br>• <i>dados do IRU-4G62</i> · <i>chassi do JSX-4D55</i> · <i>quantos pneus tem o BDP-1B55</i><br>• <i>CPF do Reinaldo</i> · <i>telefone do Odecio</i> · <i>quando vence a CNH do Marcelo</i><br>• <i>o que vence este mês</i> · <i>documentos vencidos</i> · <i>alarme 128</i><br>• <i>média do QIO-9J07</i> · <i>quantas viagens em junho</i> · <i>gastos</i>`;
+  return `Posso informar qualquer dado do sistema. Exemplos:<br>• <i>dados do IRU-4G62</i> · <i>chassi do JSX-4D55</i> · <i>quantos pneus tem o BDP-1B55</i><br>• <i>CPF do Reinaldo</i> · <i>telefone do Wesley</i> · <i>quando vence a CNH do Marcelo</i><br>• <i>o que vence este mês</i> · <i>documentos vencidos</i> · <i>alarme 128</i><br>• <i>média do QIO-9J07</i> · <i>quantas viagens em junho</i> · <i>gastos</i>`;
 }
 
 /* ================================================================== */
@@ -691,7 +691,7 @@ function iaAjuda(){
   <b>Consultar</b> — posso informar <b>qualquer dado</b> do sistema:
   <ul class="ia-help">
     <li>🚚 <i>dados do IRU-4G62</i> · <i>chassi do JSX-4D55</i> · <i>renavam do BDP</i> · <i>média do QIO-9J07</i></li>
-    <li>👤 <i>dados do Reinaldo</i> · <i>CPF do Odecio</i> · <i>telefone do Renato</i> · <i>idade do Marcelo</i></li>
+    <li>👤 <i>dados do Reinaldo</i> · <i>CPF do Wesley</i> · <i>telefone do Renato</i> · <i>idade do Marcelo</i></li>
     <li>📋 <i>quando vence a CNH do Reinaldo</i> · <i>o que vence este mês</i> · <i>documentos vencidos</i></li>
     <li>🛞 <i>quantos pneus tem o IRU-4G62</i> · 🔔 <i>alarme 128</i> · 💰 <i>gastos</i> · 🛣️ <i>quantas viagens em junho</i></li>
   </ul>
