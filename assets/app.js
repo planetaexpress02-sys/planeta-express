@@ -95,6 +95,10 @@ const SEED_ENTREGAS = [
       'pv56','pv57','pv58','pv59','pv60','pv61','pv62','pv63','pv64'],
     pedFaturas:['spf1'],
     arquivos:['sp1'] },
+  /* v6.95 — a parte da mesma fatura que NÃO é passagem (plano, estacionamento
+     e serviços, menos os créditos). O pedágio fica de fora de propósito: ele
+     já é custo pelo módulo Pedágios. */
+  { v:'6.95', pagamentos:['pg_semparar_26176725165'] },
 ];
 function importarCadastroSeed(){
   if(!SEED) return;
@@ -106,7 +110,8 @@ function importarCadastroSeed(){
      ['arquivos','arquivosRemovidos'],
      ['processos','processosRemovidos'],
      ['pedagios','pedagiosRemovidos'],
-     ['pedFaturas','pedFaturasRemovidos']].forEach(function(par){
+     ['pedFaturas','pedFaturasRemovidos'],
+     ['pagamentos','pagamentosRemovidos']].forEach(function(par){
       const col=par[0], rem=par[1], quais=ent[col];
       if(!Array.isArray(quais) || !quais.length) return;
       const fonte = col==='arquivos' ? (typeof ARQUIVOS_EMPRESA!=='undefined'? ARQUIVOS_EMPRESA : []) : (SEED[col]||[]);
@@ -4143,6 +4148,22 @@ function pedFaturaAbrir(id){
       <div style="margin-top:8px">${ok?'<span class="st ok">✓ A soma bate com a nota</span>':'<span class="st erro">Diferença de '+esc(money(Math.abs(c.dif)))+' — confira o extrato</span>'}</div>
       <div class="muted" style="font-size:11.5px;margin-top:6px">Pedágio e vale são somados das ${c.ps.length} passagens desta fatura; os outros itens vêm da capa da nota. O vale só entra pelo que <b>não</b> voltou como crédito.</div>
 
+      <div class="pn-sec">Onde este dinheiro está no sistema</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:8px">O banco debitou ${money(c.declarado)} de uma vez, mas no sistema o valor mora em dois lugares — e não pode ser lançado inteiro num só, senão o pedágio contaria em dobro.</div>
+      <div class="pn-f" style="flex-direction:row;justify-content:space-between;align-items:baseline">
+        <small>Pedágios (custo pelas passagens)</small><b class="mono">${money(c.pago+c.sobra)}</b></div>
+      ${(function(){ const pg=(DB.pagamentos||[]).filter(x=>String(x.faturaPed||'')===String(f.numero||''));
+        const soma=pg.reduce((s,x)=>s+(+x.valor||0),0);
+        const falta=+(c.declarado-(c.pago+c.sobra)-soma).toFixed(2);
+        if(!pg.length) return `<div class="pn-f" style="flex-direction:row;justify-content:space-between;align-items:baseline">
+            <small>Pagamentos (plano, estacionamento, serviços)</small><b class="mono">—</b></div>
+          <div style="margin-top:6px"><span class="st warn">Faltam ${esc(money(falta))} sem lançamento</span></div>`;
+        return pg.map(x=>`<div class="pn-item" onclick="location.hash='#financeiro'"><b>${money(x.valor)} — ${esc(x.categoria||'Pagamento')}</b><span>${fmtD(x.data)} · ${esc(x.descricao||'')}</span></div>`).join('')
+          + `<div style="margin-top:6px">${Math.abs(falta)<0.01
+              ? '<span class="st ok">✓ Os '+esc(money(c.declarado))+' do extrato estão todos lançados</span>'
+              : '<span class="st warn">Ainda faltam '+esc(money(falta))+'</span>'}</div>`;
+      })()}
+
       <div class="pn-sec">Custo de pedágio por veículo</div>
       ${Object.keys(porVeic).sort((a,b)=>porVeic[b]-porVeic[a]).map(pl=>`<div class="pn-item" onclick="pedBuscaPlaca('${esc(pl)}')"><b>${plate(pl,'')} ${money(porVeic[pl])}</b><span>${c.ps.filter(p=>p.placa===pl).length} passagem(ns)</span></div>`).join('')||'<div class="muted" style="font-size:12px">Sem passagens ligadas a esta fatura.</div>'}
 
@@ -6634,7 +6655,7 @@ function salvarPagamento(id){
   else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); }
   saveDB(); closeModal(); toast('Gasto salvo.'); router();
 }
-function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
+function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; marcarRemovido('pagamentosRemovidos',id); DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
 
 /* ================================================================== */
 /*  CT-e (Conhecimento de Transporte Eletrônico)                      */

@@ -237,6 +237,24 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 21/08/2026 — v6.95 (a parte da fatura que não é pedágio, sem contar duas vezes)
+
+Logo depois da v6.94 o cliente respondeu **"lança"** ao item que eu tinha deixado em aberto: os **R$ 274,62** da mesma fatura Sem Parar que **não** são passagem.
+
+**O lançamento:** um único registro em `DB.pagamentos`, id fixo `pg_semparar_26176725165`, data **15/08/2026** (o dia do débito em conta), R$ 274,62, categoria **"Fornecedor"**, forma "Débito automático", com `faturaPed:"26176725165"` ligando à fatura. A memória de cálculo ficou na observação: 397,20 (plano) + 54,00 (estacionamento) + 19,50 (gestor de débitos) − 196,08 (créditos).
+
+**A ARMADILHA QUE ISSO EVITA — e que precisa continuar evitada.** O extrato do banco mostra **R$ 874,81 numa linha só**. A tentação é lançar os R$ 874,81 em Pagamentos, e aí a Contabilidade contaria os **R$ 600,19 de pedágio duas vezes** (uma pelo módulo Pedágios, outra pelo pagamento). Por isso:
+
+> **Da fatura Sem Parar, em Pagamentos entra SÓ o que não é passagem.** Pedágio e sobra do vale já são custo pelo módulo Pedágios. A conta que fecha é `600,19 (Pedágios) + 274,62 (Pagamentos) = 874,81 (extrato)`.
+
+E a **categoria não pode ser "Pedágio"** — `_contabContaPorCategoria` casa `/pedagio/` e jogaria os R$ 274,62 na conta `c.pedagio`, inflando o custo de pedágio. "Fornecedor" cai em `a.outros` (Outras despesas); se o contador quiser outra conta, reclassifica na Contabilidade — o que **não** duplica o registro.
+
+**Ficou na tela, não só no commit:** o drawer da fatura ganhou a seção **"Onde este dinheiro está no sistema"**, que mostra os dois pedaços, soma e diz **"✓ Os R$ 874,81 do extrato estão todos lançados"** — ou, se o cliente apagar o pagamento, **"Faltam R$ 274,62 sem lançamento"**. O aviso é derivado de `DB.pagamentos` por `faturaPed`, então ele reage à realidade em vez de repetir um número fixo.
+
+Também: `excluirPagamento` passou a chamar `marcarRemovido('pagamentosRemovidos', id)` (era mais um CRUD sem a segunda trava da v6.92), e `importarCadastroSeed` aprendeu a coleção `pagamentos`. Entrega em `SEED_ENTREGAS` v**6.95**.
+
+**Validado no Chrome headless — 76 asserções em 3 fases, zero falha:** base nova e base na v6.94 (28 cada) conferem valor, data, vínculo, categoria, o lançamento único na Contabilidade **fora** da conta de pedágio, o custo de pedágio **intacto em R$ 1.419,36** e a conciliação 600,19 + 274,62 = 874,81; a 3ª fase (20) apaga o pagamento e confirma que **ele não ressuscita**, que nada sobra dele na Contabilidade e que o drawer passa a avisar o que falta.
+
 ### ✅ ESTADO EM 21/08/2026 — v6.94 (fatura Sem Parar 26176725165 lançada + o vale que NÃO volta)
 
 O cliente mandou a fatura **26176725165** (Sem Parar, emissão 08/08/2026, vencimento 15/08/2026, período **10/07 a 07/08/2026**, total **R$ 874,81**) e pediu: *"inserir no sistema esse relatório de pedágios, retire dados e anexe"*. O PDF **já estava** na pasta `Documentos Internos\Faturas Sem Parar\` e registrado em `arquivos.js` (`sp1`) desde 13/08 — o que faltava era o **dado**.
@@ -267,7 +285,7 @@ O cliente mandou a fatura **26176725165** (Sem Parar, emissão 08/08/2026, venci
 2. **Base de um cliente na v6.93** (56): recebe as 39 novas, **passagem apagada antes da virada não volta**, edição do cliente (valor trocado) preservada, migração carimba a fatura antiga sem sobrescrever nada.
 3. **Depois de receber a entrega** (9): cliente apaga 2 passagens e a capa da fatura, recarrega — **nada ressuscita**, carimbo não duplica, tela continua renderizando.
 
-⚠️ **O que ficou de fora de propósito:** os R$ 274,62 da fatura que **não** são pedágio (plano + estacionamento + gestor de débitos − créditos) **não** foram lançados em Pagamentos. Eles aparecem na capa da fatura (para o total fechar), mas lançar em Financeiro é decisão do cliente — e lançar a nota inteira ali **duplicaria** os R$ 600,19 de pedágio que já vêm do módulo. Se ele pedir, o certo é lançar **só os R$ 274,62**, nunca os R$ 874,81.
+✅ **Resolvido na v6.95 (acima):** os R$ 274,62 que não são pedágio foram lançados em Pagamentos — **só eles**, nunca os R$ 874,81, senão o pedágio contaria duas vezes.
 
 ⚠️ **Para a próxima fatura:** o caminho oficial é a **Central de Documentos** (`docEnviar('Pedágios')` → `_pedParseSemParar`). Este lançamento foi por semente porque o parser da Central lê o texto do pdf.js (ordem de stream), que sofre do mesmo embaralhamento do `-layout` — **ele ainda não sabe ler o par crédito/débito do vale nem o nº da fatura**. Enquanto isso não for feito, fatura nova importada pela Central entra com o vale como se fosse 100% reembolsado.
 

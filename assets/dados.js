@@ -332,6 +332,21 @@ const SEED = {
       arquivo:"sp1", obs:"Estacionamento: 3 estadias no Shopping Catuaí Londrina (BCG-4D41). Outras arrecadações: 5× Gestor de Débitos." },
   ],
 
+  /* -------------------- PAGAMENTOS --------------------
+     Coleção do CLIENTE (ele lança o que pagou). A semente só traz o que veio
+     de documento conferido, com id fixo e `faturaPed` apontando a origem.
+     ⚠️ REGRA: da fatura Sem Parar entra AQUI só o que NÃO é passagem. O pedágio
+     e a sobra do vale já são custo pelo módulo Pedágios — lançar a nota inteira
+     contaria o mesmo dinheiro duas vezes na Contabilidade.
+  */
+  pagamentos: [
+    { id:"pg_semparar_26176725165", data:"2026-08-15",
+      descricao:"Sem Parar — fatura 26176725165 (plano, estacionamento e serviços)",
+      categoria:"Fornecedor", forma:"Débito automático", valor:274.62,
+      faturaPed:"26176725165",
+      obs:"Parte da fatura que NÃO é passagem de pedágio: plano contratado R$ 397,20 + estacionamento R$ 54,00 (3 estadias no Shopping Catuaí, BCG-4D41) + gestor de débitos R$ 19,50 − créditos R$ 196,08 = R$ 274,62. O débito em conta do dia foi de R$ 874,81; os outros R$ 600,19 são pedágio e já entram como custo pelo módulo Pedágios — por isso não estão aqui." },
+  ],
+
   /* -------------------- ANTT / RNTRC (extrato do transportador) -------------------- */
   antt: {
     rntrc:"050428055", categoria:"ETC", situacao:"Ativo", apto:true,
