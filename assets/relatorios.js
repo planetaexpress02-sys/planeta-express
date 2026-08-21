@@ -655,15 +655,22 @@ const PEX_RELATORIOS = [
       const total=_relSoma(p,'valor');
       const pago=p.filter(function(x){ return !/vale/i.test(x.tipo||''); });
       const vale=p.filter(function(x){ return /vale/i.test(x.tipo||''); });
+      /* o que a empresa realmente pagou: pedágio próprio + a parte do vale que
+         o embarcador não devolveu (a mesma conta da tela, _pedSobra em app.js) */
+      const sobra = function(x){ return (typeof _pedSobra==='function') ? _pedSobra(x) : (+x.valor||0); };
+      const naoReemb = vale.reduce(function(s,x){ return s+sobra(x); },0);
+      const custoReal = p.reduce(function(s,x){ return s+sobra(x); },0);
       return {
         tituloTabela:'Passagens',
         colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Hora',tipo:'data'},{rotulo:'Placa'},{rotulo:'Concessionária'},
-                 {rotulo:'Praça',larg:'30%'},{rotulo:'Cat.',tipo:'numero'},{rotulo:'Tipo'},{rotulo:'Valor',tipo:'moeda'}],
-        linhas: p.map(function(x){ return [relData(x.data), x.hora, x.placa, x.conc, x.praca, x.cat, x.tipo, relMoney(x.valor)]; }),
-        kpis:[{rotulo:'Passagens',valor:relNum(p.length)},{rotulo:'Total',valor:relMoney(total)},
+                 {rotulo:'Praça',larg:'26%'},{rotulo:'Cat.',tipo:'numero'},{rotulo:'Tipo'},
+                 {rotulo:'Valor',tipo:'moeda'},{rotulo:'Custo real',tipo:'moeda'}],
+        linhas: p.map(function(x){ return [relData(x.data), x.hora, x.placa, x.conc, x.praca, x.cat, x.tipo, relMoney(x.valor), relMoney(sobra(x))]; }),
+        kpis:[{rotulo:'Passagens',valor:relNum(p.length)},{rotulo:'Total das passagens',valor:relMoney(total)},
               {rotulo:'Pago pela empresa',valor:relMoney(_relSoma(pago,'valor'))},
-              {rotulo:'Vale-pedágio',valor:relMoney(_relSoma(vale,'valor')),nota:'reembolsado pelo embarcador'}],
-        totais: p.length? [{rotulo:'TOTAL DO PERÍODO', valor:relMoney(total)}] : [],
+              {rotulo:'Vale-pedágio',valor:relMoney(_relSoma(vale,'valor')),nota: naoReemb>0? relMoney(naoReemb)+' não reembolsado':'reembolsado por inteiro'}],
+        totais: p.length? [{rotulo:'TOTAL DAS PASSAGENS', valor:relMoney(total)},
+                           {rotulo:'CUSTO REAL DA EMPRESA', valor:relMoney(custoReal)}] : [],
         graficos: p.length? [{titulo:'Valor por praça', dados:_relPorChave(p,'praca','valor').slice(0,10).map(_relMoneyBar)}] : []
       };
     }},

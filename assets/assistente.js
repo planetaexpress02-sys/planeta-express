@@ -370,7 +370,9 @@ function iaConsulta(t,n){
       return arr.length? `🧭 Viagem <b>${esc(vm[1])}</b>: ${arr.length} pedágio(s) — <b>${money(soma(arr))}</b>.<br>`+arr.slice(0,8).map(p=>`• ${fmtD(p.data)} ${esc(inf(p.praca).cidade)} — ${money(p.valor)}`).join('<br>') : `Não achei pedágios da viagem ${esc(vm[1])}.`; }
     /* total geral ou por veículo */
     const pago=lista.filter(p=>p.tipo==='Pedágio'), vale=lista.filter(p=>p.tipo==='Vale-pedágio');
-    return `🛣️ ${placaF?'<b>'+esc(placaF)+'</b> — ':''}pedágios: <b>${money(soma(lista))}</b> em ${lista.length} passagem(ns).<br>• Pago pela empresa: <b>${money(soma(pago))}</b><br>• Vale-pedágio (reembolsado pelo embarcador): <b>${money(soma(vale))}</b>`;
+    const sobra = (typeof _pedCustoReal==='function') ? _pedCustoReal(vale) : 0;
+    const real  = soma(pago)+sobra;
+    return `🛣️ ${placaF?'<b>'+esc(placaF)+'</b> — ':''}pedágios: <b>${money(soma(lista))}</b> em ${lista.length} passagem(ns).<br>• Pago pela empresa: <b>${money(soma(pago))}</b><br>• Vale-pedágio (embarcador): <b>${money(soma(vale))}</b>${sobra>0?` — desses, <b>${money(sobra)}</b> não voltou como crédito e sobrou para a empresa`:' — reembolsado por inteiro'}<br>• <b>Custo real da empresa: ${money(real)}</b>`;
   }
 
   /* LICENÇAS E ALVARÁS (conformidade) */

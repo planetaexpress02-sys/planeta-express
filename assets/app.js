@@ -19,7 +19,7 @@ function ensureCollections(){
    /* 'aniversarios' ficou aqui de propósito: a aba foi removida na v6.81, mas
       quem tiver cadastrado alguém não pode perder o registro — trocar de
       versão nunca apaga dado. */
-   'aniversarios','processos','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
+   'aniversarios','processos','pedFaturas','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
   if(DB.config.alertaLicenca==null) DB.config.alertaLicenca=60;
@@ -31,6 +31,7 @@ function ensureCollections(){
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
   corrigirRessurreicaoV691();
+  carimbarFaturaPedagio();
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
@@ -85,6 +86,15 @@ const SEED_ENTREGAS = [
     vencimentos:['c7','t7','a7'],
     arquivos:['a41','a42','a43','a44','a45','a46','a47','a48','a49'],
     processos:['pj1','pj2'] },
+  /* v6.94 — fatura Sem Parar 26176725165 (jul–ago/2026): 6 pedágios pagos
+     pela empresa + 33 vale-pedágio, mais a capa da fatura e o PDF dela. */
+  { v:'6.94',
+    pedagios:['pd32','pd33','pd34','pd35','pd36','pd37',
+      'pv32','pv33','pv34','pv35','pv36','pv37','pv38','pv39','pv40','pv41','pv42','pv43',
+      'pv44','pv45','pv46','pv47','pv48','pv49','pv50','pv51','pv52','pv53','pv54','pv55',
+      'pv56','pv57','pv58','pv59','pv60','pv61','pv62','pv63','pv64'],
+    pedFaturas:['spf1'],
+    arquivos:['sp1'] },
 ];
 function importarCadastroSeed(){
   if(!SEED) return;
@@ -94,7 +104,9 @@ function importarCadastroSeed(){
     [['motoristas','motoristasRemovidos'],
      ['vencimentos','vencimentosRemovidos'],
      ['arquivos','arquivosRemovidos'],
-     ['processos','processosRemovidos']].forEach(function(par){
+     ['processos','processosRemovidos'],
+     ['pedagios','pedagiosRemovidos'],
+     ['pedFaturas','pedFaturasRemovidos']].forEach(function(par){
       const col=par[0], rem=par[1], quais=ent[col];
       if(!Array.isArray(quais) || !quais.length) return;
       const fonte = col==='arquivos' ? (typeof ARQUIVOS_EMPRESA!=='undefined'? ARQUIVOS_EMPRESA : []) : (SEED[col]||[]);
@@ -129,6 +141,20 @@ function corrigirRessurreicaoV691(){
   marcarRemovido('motoristasRemovidos',id);
   DB.motoristas=(DB.motoristas||[]).filter(function(m){ return m.id!==id; });
   DB.correcoes.odecioV691=true;
+}
+/* As 62 passagens entregues na v6.47 saíram todas da fatura Sem Parar
+   26152227636 (está escrito no cabeçalho do bloco em dados.js), mas o campo
+   `fatura` só passou a existir na v6.94. Isto carimba a origem nelas UMA vez
+   por base, para a tela de faturas não deixar 62 passagens órfãs.
+   Só toca em quem ainda não tem `fatura`: edição do cliente fica intacta. */
+function carimbarFaturaPedagio(){
+  if(!DB.correcoes || typeof DB.correcoes!=='object') DB.correcoes={};
+  if(DB.correcoes.faturaPedagioV694) return;
+  const antigos=/^p[dv]([1-9]|[12]\d|3[01])$/;   // pd1..pd31 e pv1..pv31
+  (DB.pedagios||[]).forEach(function(p){
+    if(!p.fatura && antigos.test(p.id||'')) p.fatura='26152227636';
+  });
+  DB.correcoes.faturaPedagioV694=true;
 }
 /* Marca um id como apagado de propósito, para o backfill acima não ressuscitá-lo */
 function marcarRemovido(colecaoRemovidos, id){
@@ -3850,7 +3876,7 @@ async function _removerAnexoSilencioso(id){
 let pedFiltro='todos';      // todos | mes | ano | personalizado
 let pedTipo='todos';        // todos | Pedágio | Vale-pedágio
 let pedDe='', pedAte='';
-const PED_CONC_COR={ 'PRVIAS':'#00e5ff', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e' };
+const PED_CONC_COR={ 'PRVIAS':'#00e5ff', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e', 'VIA CAMPO':'#c58bff' };
 function _pedConcCor(c){ return PED_CONC_COR[c]||'#5c99ff'; }
 function _pedNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
 /* Extrai rodovia/km/sentido/cidade do texto da praça */
@@ -3875,6 +3901,19 @@ function _pedNaData(p){
 }
 function _pedFiltradas(){ return (DB.pedagios||[]).filter(p=> _pedNaData(p) && (pedTipo==='todos'||p.tipo===pedTipo) ); }
 function _pedCidade(p){ return (_pedInfo(p.praca).cidade||'').trim(); }
+/* Quanto de uma passagem sobrou para a EMPRESA pagar.
+   Pedágio comum: tudo. Vale-pedágio: o débito menos o crédito que o embarcador
+   devolveu na mesma fatura (registro sem `credito` = reembolso integral, que
+   era a regra até a v6.93). Nunca devolve negativo: crédito maior que o débito
+   é acerto do embarcador, não receita da transportadora. */
+function _pedSobra(p){
+  const v=+p.valor||0;
+  if(!/vale/i.test(p.tipo||'')) return v;
+  const c = (p.credito==null||p.credito==='') ? v : (+p.credito||0);
+  return Math.max(0, v-c);
+}
+/* Custo real do conjunto: pedágio pago + a sobra do vale-pedágio */
+function _pedCustoReal(lista){ return (lista||[]).reduce((s,p)=>s+_pedSobra(p),0); }
 /* Alertas inteligentes sobre um conjunto de passagens */
 function _pedAlertas(lista){
   const al=[];
@@ -3893,6 +3932,10 @@ function viewPedagios(){
   const total=lista.reduce((s,p)=>s+(+p.valor||0),0);
   const pago=lista.filter(p=>p.tipo==='Pedágio').reduce((s,p)=>s+(+p.valor||0),0);
   const vale=lista.filter(p=>p.tipo==='Vale-pedágio').reduce((s,p)=>s+(+p.valor||0),0);
+  /* Vale-pedágio nem sempre volta inteiro: o embarcador credita a categoria que
+     contratou, e se o veículo passou numa categoria maior a diferença fica para
+     a empresa. Sem o campo `credito` (registro antigo), vale reembolso total. */
+  const valeSobra=lista.filter(p=>p.tipo==='Vale-pedágio').reduce((s,p)=>s+_pedSobra(p),0);
   const qtd=lista.length;
   const ticket= qtd? total/qtd : 0;
   const veics=[...new Set(lista.map(p=>p.placa))];
@@ -3946,9 +3989,9 @@ function viewPedagios(){
   </div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
-    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens', '#00e5ff', 1)}
+    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens · custo real da empresa '+money(pago+valeSobra), '#00e5ff', 1)}
     ${kp('wallet', Math.round(pago), 'Pago pela empresa', 'débito direto', '#f2686b', 1, "pedTipo='Pedágio';router()")}
-    ${kp('shield', Math.round(vale), 'Vale-pedágio (BRF)', 'reembolsado', '#4bd6a0', 1, "pedTipo='Vale-pedágio';router()")}
+    ${kp('shield', Math.round(vale), 'Vale-pedágio (BRF)', valeSobra>0? money(valeSobra)+' NÃO reembolsado' : 'reembolsado por inteiro', '#4bd6a0', 1, "pedTipo='Vale-pedágio';router()")}
     ${kp('toll', qtd, 'Passagens', pracas.length+' praças', '#8b9dff', 0)}
   </div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
@@ -3967,6 +4010,8 @@ function viewPedagios(){
         <div class="legend">
           <div class="li"><span class="dot" style="background:#f2686b"></span>Pago pela empresa<b>${money(pago)}</b></div>
           <div class="li"><span class="dot" style="background:#4bd6a0"></span>Vale-pedágio (BRF)<b>${money(vale)}</b></div>
+          <div class="li"><span class="dot" style="background:#ffb020"></span>Do vale, sobrou p/ a empresa<b>${money(valeSobra)}</b></div>
+          <div class="li" style="border-top:1px solid rgba(255,255,255,.12);margin-top:4px;padding-top:6px"><span class="dot" style="background:#00e5ff"></span><b>Custo real da empresa</b><b>${money(pago+valeSobra)}</b></div>
         </div></div></div></div>
   </div>
 
@@ -3992,6 +4037,8 @@ function viewPedagios(){
   <div class="card" style="margin-top:16px"><div class="card-h">${svg('map')}<h3>Mapa de praças</h3><div class="r"><span class="muted" style="font-size:11.5px">clique numa praça</span></div></div>
     <div class="card-b">${_pedMapa(lista)}</div></div>
 
+  ${_pedFaturasCard()}
+
   <div class="card" style="margin-top:16px"><div class="card-h">${svg('toll')}<h3>Passagens</h3><div class="r"><span class="muted" style="font-size:12px">${qtd} passagem(ns) · ${money(total)}</span></div></div>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Data</th><th>Hora</th><th>Veículo</th><th>Praça</th><th>Concessionária</th><th>Cat</th><th>Tipo</th><th>Viagem</th><th class="ta-r">Valor</th></tr></thead>
@@ -4002,9 +4049,13 @@ function viewPedagios(){
 }
 /* Mapa estilizado das praças (base Londrina + praças como nós clicáveis) */
 function _pedMapa(lista){
-  const POS={ 'LONDRINA':[300,232],'ROLÂNDIA':[248,206],'ARAPONGAS':[212,190],'MANDAGUARI':[168,174],'MAUÁ DA SERRA':[364,256],'ORTIGUEIRA':[434,238],'IMBAÚ':[484,214],'TIBAGI':[530,198],'WITMARSUM':[602,186],'SÃO LUIZ DO PURUNÃ':[664,206] };
+  const POS={ 'LONDRINA':[300,232],'ROLÂNDIA':[248,206],'ARAPONGAS':[212,190],'MANDAGUARI':[168,174],'FLORESTA':[112,158],'MAUÁ DA SERRA':[364,256],'ORTIGUEIRA':[434,238],'IMBAÚ':[484,214],'TIBAGI':[530,198],'WITMARSUM':[602,186],'SÃO LUIZ DO PURUNÃ':[664,206] };
   const agg={}; lista.forEach(p=>{ const cid=_pedCidade(p).toUpperCase(); if(!cid)return; (agg[cid]=agg[cid]||{cid,n:0,v:0}); agg[cid].n++; agg[cid].v+=(+p.valor||0); });
   const nodes=Object.values(agg).filter(a=>POS[a.cid]);
+  /* o mapa é estilizado: só desenha praça com posição conhecida. O que não
+     couber no desenho é dito com todas as letras embaixo, para o número da
+     tela nunca "sumir" sem explicação. */
+  const fora=Object.values(agg).filter(a=>!POS[a.cid]);
   const maxN=Math.max(1,...nodes.map(a=>a.n)); const base=POS['LONDRINA'];
   const routes=nodes.filter(a=>a.cid!=='LONDRINA').map(a=>{ const q=POS[a.cid]; return `<line class="pdm-route" x1="${base[0]}" y1="${base[1]}" x2="${q[0]}" y2="${q[1]}"/>`; }).join('');
   const marks=nodes.map(a=>{ const q=POS[a.cid]; const r=(a.cid==='LONDRINA')?11:(6+(a.n/maxN)*9); const isBase=a.cid==='LONDRINA';
@@ -4015,7 +4066,95 @@ function _pedMapa(lista){
     </g>`; }).join('');
   return `<svg viewBox="0 0 720 360" class="pdm-map" preserveAspectRatio="xMidYMid meet">
     <defs><linearGradient id="pdmr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient></defs>
-    <g class="pdm-routes">${routes}</g>${marks}</svg>`;
+    <g class="pdm-routes">${routes}</g>${marks}</svg>
+    ${fora.length?`<div class="muted" style="font-size:11.5px;margin-top:6px">Fora do desenho (praça sem posição no mapa): ${fora.map(a=>esc(a.cid)+' — '+a.n+'× '+money(a.v)).join(' · ')}</div>`:''}`;
+}
+/* ---------- FATURAS SEM PARAR ----------
+   A capa da fatura guarda só o que NÃO é passagem (plano, estacionamento,
+   gestor de débitos, créditos). Pedágio e vale são SOMADOS das passagens, para
+   não existir o mesmo dinheiro escrito em dois lugares. Por isso a conta usa
+   DB.pedagios inteiro, e não o filtro de período da tela: uma fatura é uma
+   fatura, ela não muda porque o usuário escolheu "Este mês". */
+function _pedFaturaConta(f){
+  const ps=(DB.pedagios||[]).filter(p=>String(p.fatura||'')===String(f.numero||''));
+  const pago=ps.filter(p=>p.tipo==='Pedágio').reduce((s,p)=>s+(+p.valor||0),0);
+  const sobra=ps.filter(p=>p.tipo==='Vale-pedágio').reduce((s,p)=>s+_pedSobra(p),0);
+  const planos=+f.planos||0, estac=+f.estacionamento||0, outras=+f.outras||0, cred=+f.creditos||0;
+  const somado=pago+sobra+planos+estac+outras-cred;
+  const dec=+f.total||0;
+  return { ps, pago, sobra, planos, estac, outras, cred, somado, declarado:dec, dif:+(somado-dec).toFixed(2) };
+}
+function _pedFaturaArquivo(f){ return (DB.arquivos||[]).find(a=>a.id===f.arquivo); }
+function _pedFaturasCard(){
+  const fats=(DB.pedFaturas||[]).slice().sort((a,b)=>String(b.vencimento||'').localeCompare(String(a.vencimento||'')));
+  /* faturas que aparecem nas passagens mas ainda não têm capa cadastrada */
+  const comCapa=new Set(fats.map(f=>String(f.numero||'')));
+  const soltas={}; (DB.pedagios||[]).forEach(p=>{ const n=String(p.fatura||''); if(!n||comCapa.has(n))return;
+    (soltas[n]=soltas[n]||{n:0,v:0}); soltas[n].n++; soltas[n].v+=_pedSobra(p); });
+  const linhas=fats.map(f=>{ const c=_pedFaturaConta(f); const ok=Math.abs(c.dif)<0.01;
+    return `<tr style="cursor:pointer" onclick="pedFaturaAbrir('${f.id}')">
+      <td class="mono"><b>${esc(f.numero||'—')}</b></td>
+      <td>${esc(f.periodo||'—')}</td>
+      <td class="mono">${f.vencimento?fmtD(f.vencimento):'—'}</td>
+      <td class="mono">${c.ps.length}</td>
+      <td class="ta-r mono">${money(c.pago+c.sobra)}</td>
+      <td class="ta-r mono"><b>${money(c.declarado)}</b></td>
+      <td>${ok?'<span class="st ok">Confere</span>':`<span class="st erro" title="somado ${esc(money(c.somado))}">Difere ${esc(money(Math.abs(c.dif)))}</span>`}</td>
+      <td class="no-print">${_pedFaturaArquivo(f)?'<span class="st ok">'+svg('clip')+' PDF</span>':'<span class="muted" style="font-size:11px">sem PDF</span>'}</td>
+    </tr>`; }).join('');
+  const linhasSoltas=Object.keys(soltas).sort().map(n=>`<tr class="muted">
+      <td class="mono">${esc(n)}</td><td colspan="2">capa da fatura não cadastrada</td>
+      <td class="mono">${soltas[n].n}</td><td class="ta-r mono">${money(soltas[n].v)}</td>
+      <td class="ta-r mono">—</td><td><span class="st neutro">Só passagens</span></td><td></td></tr>`).join('');
+  if(!linhas && !linhasSoltas) return '';
+  return `<div class="card" style="margin-top:16px"><div class="card-h">${svg('doc')}<h3>Faturas Sem Parar</h3>
+      <div class="r"><span class="muted" style="font-size:11.5px">a fatura inteira, sem o filtro de período</span></div></div>
+    <div class="tbl-wrap tbl-rola"><table class="tbl">
+      <thead><tr><th>Nº da fatura</th><th>Período</th><th>Vencimento</th><th>Passagens</th><th class="ta-r">Custo de pedágio</th><th class="ta-r">Total da nota</th><th>Conferência</th><th></th></tr></thead>
+      <tbody>${linhas}${linhasSoltas}</tbody></table></div></div>`;
+}
+function pedFaturaAbrir(id){
+  const el=document.getElementById('pedPanel'); if(!el) return;
+  const f=(DB.pedFaturas||[]).find(x=>x.id===id); if(!f) return;
+  const c=_pedFaturaConta(f); const ok=Math.abs(c.dif)<0.01; const arq=_pedFaturaArquivo(f);
+  const ln=(rot,val,neg)=>`<div class="pn-f" style="flex-direction:row;justify-content:space-between;align-items:baseline"><small>${rot}</small><b class="mono">${neg?'− ':''}${money(val)}</b></div>`;
+  const porVeic={}; c.ps.forEach(p=>{ porVeic[p.placa]=(porVeic[p.placa]||0)+_pedSobra(p); });
+  el.innerHTML=`<div class="pn-head"><b>Fatura ${esc(f.numero||'')}</b><button class="pn-x" onclick="pedFechar()">×</button></div>
+    <div class="pn-body">
+      <div class="pn-grid2">
+        <div class="pn-f"><small>Período</small><b>${esc(f.periodo||'—')}</b></div>
+        <div class="pn-f"><small>Vencimento</small><b>${f.vencimento?fmtD(f.vencimento):'—'}</b></div>
+        <div class="pn-f"><small>Emissão</small><b>${f.emissao?fmtD(f.emissao):'—'}</b></div>
+        <div class="pn-f"><small>Nota fiscal</small><b>${esc(f.nf||'—')}</b></div>
+      </div>
+      <div class="pn-f"><small>Forma de pagamento</small><b>${esc(f.pagamento||'—')}</b></div>
+
+      <div class="pn-sec">Como se chega ao total da nota</div>
+      ${ln('Pedágio pago pela empresa', c.pago)}
+      ${ln('Vale-pedágio que sobrou p/ a empresa', c.sobra)}
+      ${ln('Plano contratado / serviços', c.planos)}
+      ${ln('Estacionamento', c.estac)}
+      ${ln('Outras arrecadações', c.outras)}
+      ${ln('Créditos', c.cred, true)}
+      <div class="pn-f" style="flex-direction:row;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(255,255,255,.14);margin-top:6px;padding-top:8px">
+        <small>Soma</small><b class="mono">${money(c.somado)}</b></div>
+      <div class="pn-f" style="flex-direction:row;justify-content:space-between;align-items:baseline">
+        <small>Total impresso na nota</small><b class="mono">${money(c.declarado)}</b></div>
+      <div style="margin-top:8px">${ok?'<span class="st ok">✓ A soma bate com a nota</span>':'<span class="st erro">Diferença de '+esc(money(Math.abs(c.dif)))+' — confira o extrato</span>'}</div>
+      <div class="muted" style="font-size:11.5px;margin-top:6px">Pedágio e vale são somados das ${c.ps.length} passagens desta fatura; os outros itens vêm da capa da nota. O vale só entra pelo que <b>não</b> voltou como crédito.</div>
+
+      <div class="pn-sec">Custo de pedágio por veículo</div>
+      ${Object.keys(porVeic).sort((a,b)=>porVeic[b]-porVeic[a]).map(pl=>`<div class="pn-item" onclick="pedBuscaPlaca('${esc(pl)}')"><b>${plate(pl,'')} ${money(porVeic[pl])}</b><span>${c.ps.filter(p=>p.placa===pl).length} passagem(ns)</span></div>`).join('')||'<div class="muted" style="font-size:12px">Sem passagens ligadas a esta fatura.</div>'}
+
+      ${f.obs?`<div class="pn-sec">Observações</div><div class="pn-f"><b style="font-weight:500">${esc(f.obs)}</b></div>`:''}
+
+      <div class="pn-sec">Documento</div>
+      ${arq?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="abrirReal('${esc(arq.path)}')">${svg('eye')} Abrir o PDF</button>
+        <button class="btn ghost sm" onclick="baixarReal('${esc(arq.path)}','${esc(arq.nome)}')">${svg('download')} Baixar</button></div>`
+        :`<div class="muted" style="font-size:12px">PDF não registrado.</div>`}
+    </div>`;
+  el.classList.add('show');
 }
 function pedBuscaPlaca(pl){ location.hash='#pedagios'; setTimeout(()=>{ const b=document.querySelector('#view .pex-search input'); if(b){ b.value=pl; b.dispatchEvent(new Event('input',{bubbles:true})); b.scrollIntoView({block:'center'}); } },60); }
 function pedPraca(cid){ const el=document.getElementById('pedPanel'); if(!el)return;
@@ -4048,8 +4187,14 @@ function pedAbrir(id){ const el=document.getElementById('pedPanel'); if(!el)retu
         <div class="pn-f"><small>Categoria (eixos)</small><b>${p.cat||'—'}</b></div>
         <div class="pn-f"><small>TAG</small><b>${esc(p.tag||'—')}</b></div>
       </div>
-      <div class="pn-f"><small>Tipo</small><b>${p.tipo==='Vale-pedágio'?'Vale-pedágio — reembolsado por '+esc(p.emb||'embarcador'):'Pago pela empresa'}</b></div>
+      <div class="pn-f"><small>Tipo</small><b>${p.tipo==='Vale-pedágio'?'Vale-pedágio — '+esc(p.emb||'embarcador'):'Pago pela empresa'}</b></div>
+      ${p.tipo==='Vale-pedágio'?`<div class="pn-grid2">
+        <div class="pn-f"><small>Débito da concessionária</small><b>${money(p.valor)}</b></div>
+        <div class="pn-f"><small>Crédito do embarcador</small><b>${p.credito==null||p.credito===''?money(p.valor)+' <span class="muted" style="font-size:11px">(integral)</span>':money(p.credito)}</b></div>
+        <div class="pn-f" style="grid-column:1/-1"><small>Sobrou para a empresa</small><b style="color:${_pedSobra(p)>0?'#ffb020':'#4bd6a0'}">${money(_pedSobra(p))}${_pedSobra(p)>0?' — o crédito veio menor que o pedágio':' — reembolso integral'}</b></div>
+      </div>`:''}
       ${p.viagem?`<div class="pn-f"><small>Viagem</small><b>${esc(p.viagem)}</b></div>`:''}
+      ${p.fatura?`<div class="pn-f"><small>Fatura Sem Parar</small><b>${(DB.pedFaturas||[]).some(f=>String(f.numero)===String(p.fatura))?`<a href="javascript:void(0)" onclick="pedFaturaAbrir('${esc(((DB.pedFaturas||[]).find(f=>String(f.numero)===String(p.fatura))||{}).id||'')}')">${esc(p.fatura)}</a>`:esc(p.fatura)}</b></div>`:''}
       ${p.obs?`<div class="pn-f"><small>Observações</small><b>${esc(p.obs)}</b></div>`:''}
       ${alertas.length?`<div class="pn-sec" style="color:#ffb020">⚠ Alertas</div>${alertas.map(a=>`<div class="pn-item"><b>${esc(a.t)}</b><span>${esc(a.s)}</span></div>`).join('')}`:''}
       <div class="pn-sec">Comprovante</div>
@@ -4077,6 +4222,8 @@ function pedModal(id){
       ${fld('Praça (rodovia, KM, sentido, cidade)','f_praca',p.praca,'text','Ex.: BR-376, KM 448+550, NORTE, TIBAGI')}
       <div class="field-row">${fldR$('Valor (R$)','f_valor',p.valor)}${fld('TAG','f_tag',p.tag)}</div>
       <div class="field-row">${fld('Embarcador (vale-pedágio)','f_emb',p.emb)}${fld('Viagem','f_viagem',p.viagem)}</div>
+      <div class="field-row">${fldR$('Crédito do embarcador (R$)','f_credito',p.credito)}${fld('Fatura Sem Parar','f_fatura',p.fatura)}</div>
+      <div class="muted" style="font-size:11.5px;margin:-4px 0 10px">No vale-pedágio, o crédito é quanto o embarcador devolveu. Deixe em branco quando o reembolso for integral — o que sobrar do valor vira custo da empresa.</div>
       <div class="field"><label>Observações</label><input id="f_obs" value="${esc(p.obs||'')}"></div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="pedExcluir('${id}')">${svg('trash')} Excluir</button>`:''}
@@ -4087,12 +4234,16 @@ function pedSalvar(id){
   if(!val('f_praca')){ toast('Informe a praça.','err'); return; }
   const d={ data:val('f_data'), hora:val('f_hora'), placa:val('f_placa'), conc:val('f_conc'), praca:val('f_praca'),
     cat: val('f_cat')? parseInt(val('f_cat')) : '', valor:parseBRL(val('f_valor')), tipo:val('f_tipo'),
-    emb:val('f_emb'), viagem:val('f_viagem'), tag:val('f_tag'), obs:val('f_obs') };
+    emb:val('f_emb'), viagem:val('f_viagem'), tag:val('f_tag'), obs:val('f_obs'),
+    /* crédito em branco = reembolso integral; não gravar 0, senão o vale
+       inteiro viraria custo (ver _pedSobra) */
+    credito: String(val('f_credito')||'').trim()? parseBRL(val('f_credito')) : '',
+    fatura: String(val('f_fatura')||'').trim() };
   if(id){ Object.assign((DB.pedagios||[]).find(x=>x.id===id), d); }
   else { d.id=uid('pd'); (DB.pedagios=DB.pedagios||[]).push(d); }
   saveDB(); closeModal(); toast('Pedágio salvo.'); router();
 }
-function pedExcluir(id){ if(!confirm('Excluir esta passagem?'))return; DB.pedagios=(DB.pedagios||[]).filter(x=>x.id!==id); saveDB(); closeModal(); pedFechar(); toast('Passagem excluída.'); router(); }
+function pedExcluir(id){ if(!confirm('Excluir esta passagem?'))return; marcarRemovido('pedagiosRemovidos',id); DB.pedagios=(DB.pedagios||[]).filter(x=>x.id!==id); saveDB(); closeModal(); pedFechar(); toast('Passagem excluída.'); router(); }
 function pedPeriodoModal(){
   openModal(`<div class="m-h">${svg('cal')}<h3>Período personalizado</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b"><div class="field-row">${fld('De','f_de',pedDe,'date')}${fld('Até','f_ate',pedAte,'date')}</div></div>

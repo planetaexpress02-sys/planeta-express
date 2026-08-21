@@ -177,86 +177,159 @@ const SEED = {
   ],
 
   /* -------------------- PEDÁGIOS (extrato Sem Parar) --------------------
-     Fatura 26152227636 (Sem Parar) — passagens reais jun–jul/2026.
-     tipo: "Pedágio" (pago pela empresa) | "Vale-pedágio" (embarcador BRF, reembolsado).
+     Passagens reais extraídas das faturas Sem Parar (PDF em Documentos Internos):
+       • 26152227636 — jun–jul/2026 (pd1–pd31 / pv1–pv31)
+       • 26176725165 — jul–ago/2026 (pd32–pd37 / pv32–pv64)
+     tipo: "Pedágio" (pago pela empresa) | "Vale-pedágio" (embarcador BRF).
      praca = texto original da praça; rodovia/km/sentido/cidade derivados por _pedInfo().
-     valor em R$; uf=PR; fatura fixa; pago=true.  cat = categoria tarifária (~eixos).
+     valor  = o DÉBITO da passagem, em R$ (o que a concessionária cobrou).
+     credito= o CRÉDITO de vale-pedágio que o embarcador devolveu na mesma fatura.
+              Quando credito < valor, a diferença SOBROU para a empresa pagar —
+              é o único pedaço do vale que vira custo (ver CONTAB_FONTES 'pedagio').
+              Registro antigo sem o campo = vale integralmente reembolsado.
+     cat = categoria tarifária (~eixos). uf=PR. fatura = nº da nota que originou.
   */
   pedagios: [
     /* ---- PEDÁGIOS PAGOS PELA EMPRESA (débito) ---- */
-    { id:"pd1",  data:"2026-06-18", hora:"13:18:15", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd2",  data:"2026-06-18", hora:"13:59:21", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd3",  data:"2026-06-18", hora:"14:35:33", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd4",  data:"2026-06-18", hora:"14:54:07", placa:"BBJ-2D77", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd5",  data:"2026-06-30", hora:"05:21:15", placa:"BBJ-2D77", conc:"PRVIAS", praca:"PR-445, KM 002+000, SUL, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd6",  data:"2026-06-30", hora:"05:42:10", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd7",  data:"2026-06-30", hora:"06:22:49", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
-    { id:"pd8",  data:"2026-06-30", hora:"07:07:14", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686" },
+    { id:"pd1",  data:"2026-06-18", hora:"13:18:15", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd2",  data:"2026-06-18", hora:"13:59:21", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd3",  data:"2026-06-18", hora:"14:35:33", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd4",  data:"2026-06-18", hora:"14:54:07", placa:"BBJ-2D77", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd5",  data:"2026-06-30", hora:"05:21:15", placa:"BBJ-2D77", conc:"PRVIAS", praca:"PR-445, KM 002+000, SUL, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd6",  data:"2026-06-30", hora:"05:42:10", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd7",  data:"2026-06-30", hora:"06:22:49", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
+    { id:"pd8",  data:"2026-06-30", hora:"07:07:14", placa:"BBJ-2D77", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0759070686", fatura:"26152227636" },
 
-    { id:"pd9",  data:"2026-06-09", hora:"09:14:42", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd10", data:"2026-06-09", hora:"10:06:21", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd11", data:"2026-06-09", hora:"10:43:59", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd12", data:"2026-06-09", hora:"11:24:11", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd13", data:"2026-06-17", hora:"10:45:57", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, SUL, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd14", data:"2026-06-17", hora:"11:04:46", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd15", data:"2026-06-17", hora:"11:45:39", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd16", data:"2026-06-17", hora:"12:25:53", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd17", data:"2026-06-18", hora:"13:18:09", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:11.91, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd18", data:"2026-06-18", hora:"13:59:12", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:11.37, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd19", data:"2026-06-18", hora:"14:34:54", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:11.94, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
-    { id:"pd20", data:"2026-06-18", hora:"14:53:58", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:9.87, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614" },
+    { id:"pd9",  data:"2026-06-09", hora:"09:14:42", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd10", data:"2026-06-09", hora:"10:06:21", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd11", data:"2026-06-09", hora:"10:43:59", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd12", data:"2026-06-09", hora:"11:24:11", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd13", data:"2026-06-17", hora:"10:45:57", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, SUL, LONDRINA", cat:1, valor:10.26, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd14", data:"2026-06-17", hora:"11:04:46", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd15", data:"2026-06-17", hora:"11:45:39", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd16", data:"2026-06-17", hora:"12:25:53", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:1, valor:12.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd17", data:"2026-06-18", hora:"13:18:09", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:1, valor:11.91, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd18", data:"2026-06-18", hora:"13:59:12", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:1, valor:11.37, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd19", data:"2026-06-18", hora:"14:34:54", placa:"BCG-4D41", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:1, valor:11.94, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
+    { id:"pd20", data:"2026-06-18", hora:"14:53:58", placa:"BCG-4D41", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:1, valor:9.87, tipo:"Pedágio", emb:"", viagem:"", tag:"0756334614", fatura:"26152227636" },
 
-    { id:"pd21", data:"2026-06-27", hora:"13:54:02", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, tipo:"Pedágio", emb:"", viagem:"", tag:"0720741926" },
-    { id:"pd22", data:"2026-06-27", hora:"14:29:27", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, tipo:"Pedágio", emb:"", viagem:"", tag:"0720741926" },
+    { id:"pd21", data:"2026-06-27", hora:"13:54:02", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, tipo:"Pedágio", emb:"", viagem:"", tag:"0720741926", fatura:"26152227636" },
+    { id:"pd22", data:"2026-06-27", hora:"14:29:27", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, tipo:"Pedágio", emb:"", viagem:"", tag:"0720741926", fatura:"26152227636" },
 
-    { id:"pd23", data:"2026-06-16", hora:"13:54:31", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, tipo:"Pedágio", emb:"", viagem:"", tag:"0724999385" },
+    { id:"pd23", data:"2026-06-16", hora:"13:54:31", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, tipo:"Pedágio", emb:"", viagem:"", tag:"0724999385", fatura:"26152227636" },
 
-    { id:"pd24", data:"2026-06-15", hora:"15:50:49", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, tipo:"Pedágio", emb:"", viagem:"", tag:"0756978339" },
+    { id:"pd24", data:"2026-06-15", hora:"15:50:49", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, tipo:"Pedágio", emb:"", viagem:"", tag:"0756978339", fatura:"26152227636" },
 
-    { id:"pd25", data:"2026-06-02", hora:"20:59:41", placa:"QIO-9J07", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:6, valor:61.56, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd26", data:"2026-06-08", hora:"13:16:29", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd27", data:"2026-06-11", hora:"12:39:00", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd28", data:"2026-07-02", hora:"09:09:47", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd29", data:"2026-07-02", hora:"10:50:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 289+000, SUL, MAUÁ DA SERRA", cat:3, valor:30.78, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd30", data:"2026-07-04", hora:"17:38:23", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 289+000, NORTE, MAUÁ DA SERRA", cat:6, valor:61.56, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
-    { id:"pd31", data:"2026-07-04", hora:"19:01:29", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751" },
+    { id:"pd25", data:"2026-06-02", hora:"20:59:41", placa:"QIO-9J07", conc:"PRVIAS", praca:"PR-445, KM 002+000, NORTE, LONDRINA", cat:6, valor:61.56, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd26", data:"2026-06-08", hora:"13:16:29", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd27", data:"2026-06-11", hora:"12:39:00", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd28", data:"2026-07-02", hora:"09:09:47", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd29", data:"2026-07-02", hora:"10:50:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 289+000, SUL, MAUÁ DA SERRA", cat:3, valor:30.78, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd30", data:"2026-07-04", hora:"17:38:23", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 289+000, NORTE, MAUÁ DA SERRA", cat:6, valor:61.56, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
+    { id:"pd31", data:"2026-07-04", hora:"19:01:29", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26152227636" },
 
     /* ---- VALE-PEDÁGIO (débito da concessionária; reembolsado pelo embarcador BRF) ---- */
-    { id:"pv1",  data:"2026-06-21", hora:"10:42:13", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328" },
-    { id:"pv2",  data:"2026-06-22", hora:"09:43:06", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328" },
-    { id:"pv3",  data:"2026-06-25", hora:"04:56:34", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328" },
-    { id:"pv4",  data:"2026-06-25", hora:"05:43:51", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104973048", tag:"0757930328" },
-    { id:"pv5",  data:"2026-06-25", hora:"10:34:05", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104973048", tag:"0757930328" },
-    { id:"pv6",  data:"2026-06-25", hora:"11:12:13", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328" },
+    { id:"pv1",  data:"2026-06-21", hora:"10:42:13", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328", fatura:"26152227636" },
+    { id:"pv2",  data:"2026-06-22", hora:"09:43:06", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328", fatura:"26152227636" },
+    { id:"pv3",  data:"2026-06-25", hora:"04:56:34", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328", fatura:"26152227636" },
+    { id:"pv4",  data:"2026-06-25", hora:"05:43:51", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104973048", tag:"0757930328", fatura:"26152227636" },
+    { id:"pv5",  data:"2026-06-25", hora:"10:34:05", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104973048", tag:"0757930328", fatura:"26152227636" },
+    { id:"pv6",  data:"2026-06-25", hora:"11:12:13", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104719038", tag:"0757930328", fatura:"26152227636" },
 
-    { id:"pv7",  data:"2026-06-08", hora:"12:19:49", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103808811", tag:"0720741926" },
-    { id:"pv8",  data:"2026-06-30", hora:"08:45:36", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:5, valor:49.88, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105274287", tag:"0720741926" },
-    { id:"pv9",  data:"2026-06-30", hora:"15:30:54", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105274287", tag:"0720741926" },
-    { id:"pv10", data:"2026-07-04", hora:"07:38:31", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355332", tag:"0720741926" },
+    { id:"pv7",  data:"2026-06-08", hora:"12:19:49", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103808811", tag:"0720741926", fatura:"26152227636" },
+    { id:"pv8",  data:"2026-06-30", hora:"08:45:36", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:5, valor:49.88, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105274287", tag:"0720741926", fatura:"26152227636" },
+    { id:"pv9",  data:"2026-06-30", hora:"15:30:54", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105274287", tag:"0720741926", fatura:"26152227636" },
+    { id:"pv10", data:"2026-07-04", hora:"07:38:31", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355332", tag:"0720741926", fatura:"26152227636" },
 
-    { id:"pv11", data:"2026-06-24", hora:"12:05:16", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104905197", tag:"0724999385" },
-    { id:"pv12", data:"2026-06-24", hora:"17:32:09", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104905197", tag:"0724999385" },
-    { id:"pv13", data:"2026-07-04", hora:"06:50:45", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355347", tag:"0724999385" },
+    { id:"pv11", data:"2026-06-24", hora:"12:05:16", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104905197", tag:"0724999385", fatura:"26152227636" },
+    { id:"pv12", data:"2026-06-24", hora:"17:32:09", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104905197", tag:"0724999385", fatura:"26152227636" },
+    { id:"pv13", data:"2026-07-04", hora:"06:50:45", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355347", tag:"0724999385", fatura:"26152227636" },
 
-    { id:"pv14", data:"2026-06-15", hora:"15:08:18", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103366926", tag:"0756978339" },
+    { id:"pv14", data:"2026-06-15", hora:"15:08:18", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103366926", tag:"0756978339", fatura:"26152227636" },
 
-    { id:"pv15", data:"2026-06-02", hora:"18:18:27", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:5, valor:60.80, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751" },
-    { id:"pv16", data:"2026-06-02", hora:"19:49:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751" },
-    { id:"pv17", data:"2026-06-02", hora:"20:36:17", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751" },
-    { id:"pv18", data:"2026-06-11", hora:"09:37:45", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"JAGUAFRANGOS", viagem:"103568573", tag:"0744936751" },
-    { id:"pv19", data:"2026-06-24", hora:"09:57:05", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751" },
-    { id:"pv20", data:"2026-06-24", hora:"10:48:33", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751" },
-    { id:"pv21", data:"2026-06-29", hora:"15:47:16", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751" },
-    { id:"pv22", data:"2026-06-29", hora:"16:22:10", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751" },
-    { id:"pv23", data:"2026-07-02", hora:"11:20:41", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv24", data:"2026-07-02", hora:"12:21:12", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv25", data:"2026-07-02", hora:"14:46:01", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv26", data:"2026-07-02", hora:"18:27:22", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 529+850, SUL, WITMARSUM", cat:6, valor:68.40, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv27", data:"2026-07-02", hora:"18:52:24", placa:"QIO-9J07", conc:"VIA ARAUCÁRIA", praca:"BR-277, KM 132+800, SUL, SÃO LUIZ DO PURUNÃ", cat:6, valor:53.04, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv28", data:"2026-07-04", hora:"12:31:40", placa:"QIO-9J07", conc:"VIA ARAUCÁRIA", praca:"BR-277, KM 132+800, NORTE, SÃO LUIZ DO PURUNÃ", cat:6, valor:53.04, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv29", data:"2026-07-04", hora:"12:52:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 529+850, NORTE, WITMARSUM", cat:6, valor:68.40, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv30", data:"2026-07-04", hora:"15:09:25", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
-    { id:"pv31", data:"2026-07-04", hora:"17:15:37", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751" },
+    { id:"pv15", data:"2026-06-02", hora:"18:18:27", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:5, valor:60.80, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv16", data:"2026-06-02", hora:"19:49:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 370+950, NORTE, IMBAÚ", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv17", data:"2026-06-02", hora:"20:36:17", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"103255837", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv18", data:"2026-06-11", hora:"09:37:45", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"JAGUAFRANGOS", viagem:"103568573", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv19", data:"2026-06-24", hora:"09:57:05", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv20", data:"2026-06-24", hora:"10:48:33", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv21", data:"2026-06-29", hora:"15:47:16", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv22", data:"2026-06-29", hora:"16:22:10", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"104737458", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv23", data:"2026-07-02", hora:"11:20:41", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, SUL, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv24", data:"2026-07-02", hora:"12:21:12", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 370+950, SUL, IMBAÚ", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv25", data:"2026-07-02", hora:"14:46:01", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, SUL, TIBAGI", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv26", data:"2026-07-02", hora:"18:27:22", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 529+850, SUL, WITMARSUM", cat:6, valor:68.40, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv27", data:"2026-07-02", hora:"18:52:24", placa:"QIO-9J07", conc:"VIA ARAUCÁRIA", praca:"BR-277, KM 132+800, SUL, SÃO LUIZ DO PURUNÃ", cat:6, valor:53.04, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv28", data:"2026-07-04", hora:"12:31:40", placa:"QIO-9J07", conc:"VIA ARAUCÁRIA", praca:"BR-277, KM 132+800, NORTE, SÃO LUIZ DO PURUNÃ", cat:6, valor:53.04, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv29", data:"2026-07-04", hora:"12:52:14", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 529+850, NORTE, WITMARSUM", cat:6, valor:68.40, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv30", data:"2026-07-04", hora:"15:09:25", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 448+550, NORTE, TIBAGI", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+    { id:"pv31", data:"2026-07-04", hora:"17:15:37", placa:"QIO-9J07", conc:"PRVIAS", praca:"BR-376, KM 316+700, NORTE, ORTIGUEIRA", cat:6, valor:72.96, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355313", tag:"0744936751", fatura:"26152227636" },
+
+    /* ---- FATURA 26176725165 (jul-ago/2026) - PEDAGIOS PAGOS PELA EMPRESA ---- */
+    { id:"pd32", data:"2026-07-14", hora:"11:31:35", placa:"BDP-1B55", conc:"VIA CAMPO", praca:"PR-317, KM 129+000, FLORESTA", cat:6, valor:107.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0757930328", fatura:"26176725165" },
+    { id:"pd33", data:"2026-07-14", hora:"16:20:29", placa:"BDP-1B55", conc:"VIA CAMPO", praca:"PR-317, KM 129+000, FLORESTA", cat:6, valor:107.16, tipo:"Pedágio", emb:"", viagem:"", tag:"0757930328", fatura:"26176725165" },
+
+    { id:"pd34", data:"2026-07-21", hora:"16:59:17", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:3, valor:28.22, tipo:"Pedágio", emb:"", viagem:"", tag:"0724999385", fatura:"26176725165" },
+    { id:"pd35", data:"2026-07-23", hora:"13:45:01", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, tipo:"Pedágio", emb:"", viagem:"", tag:"0724999385", fatura:"26176725165" },
+    { id:"pd36", data:"2026-07-23", hora:"14:26:23", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:3, valor:29.93, tipo:"Pedágio", emb:"", viagem:"", tag:"0724999385", fatura:"26176725165" },
+
+    { id:"pd37", data:"2026-07-13", hora:"14:08:18", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:5, valor:49.88, tipo:"Pedágio", emb:"", viagem:"", tag:"0744936751", fatura:"26176725165" },
+
+    /* ---- FATURA 26176725165 - VALE-PEDAGIO (embarcador BRF; credito = reembolso) ---- */
+    { id:"pv32", data:"2026-07-13", hora:"18:14:31", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:29.93, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106111443", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv33", data:"2026-07-13", hora:"19:03:43", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106111443", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv34", data:"2026-07-14", hora:"19:47:19", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106111443", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv35", data:"2026-07-18", hora:"06:22:42", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:29.93, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106502392", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv36", data:"2026-07-18", hora:"07:12:55", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106502392", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv37", data:"2026-07-23", hora:"18:20:47", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106502392", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv38", data:"2026-07-27", hora:"07:03:09", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107055548", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv39", data:"2026-07-27", hora:"07:49:48", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107055548", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv40", data:"2026-07-28", hora:"12:44:54", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107055548", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv41", data:"2026-07-28", hora:"13:24:05", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, credito:29.93, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106502392", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv42", data:"2026-08-03", hora:"09:56:38", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506401", tag:"0757930328", fatura:"26176725165" },
+    { id:"pv43", data:"2026-08-03", hora:"10:42:31", placa:"BDP-1B55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506401", tag:"0757930328", fatura:"26176725165" },
+
+    { id:"pv44", data:"2026-07-16", hora:"13:49:54", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:5, valor:47.03, credito:47.03, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355332", tag:"0720741926", fatura:"26176725165" },
+    { id:"pv45", data:"2026-07-16", hora:"14:27:47", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, credito:49.88, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355332", tag:"0720741926", fatura:"26176725165" },
+    { id:"pv46", data:"2026-08-03", hora:"12:13:36", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506431", tag:"0720741926", fatura:"26176725165" },
+    { id:"pv47", data:"2026-08-03", hora:"13:05:37", placa:"EJZ-4I65", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506431", tag:"0720741926", fatura:"26176725165" },
+
+    { id:"pv48", data:"2026-07-10", hora:"16:08:55", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:3, valor:28.22, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355347", tag:"0724999385", fatura:"26176725165" },
+    { id:"pv49", data:"2026-07-10", hora:"16:43:50", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:3, valor:29.93, credito:29.93, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105355347", tag:"0724999385", fatura:"26176725165" },
+    { id:"pv50", data:"2026-08-03", hora:"10:36:12", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506404", tag:"0724999385", fatura:"26176725165" },
+    { id:"pv51", data:"2026-08-03", hora:"11:21:58", placa:"IRU-4G62", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107506404", tag:"0724999385", fatura:"26176725165" },
+
+    { id:"pv52", data:"2026-07-10", hora:"07:48:35", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:28.22, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"105948948", tag:"0756978339", fatura:"26176725165" },
+    { id:"pv53", data:"2026-07-29", hora:"23:36:36", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106687420", tag:"0756978339", fatura:"26176725165" },
+    { id:"pv54", data:"2026-08-07", hora:"17:48:57", placa:"JSX-4D55", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:5, valor:49.88, credito:49.88, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"107343497", tag:"0756978339", fatura:"26176725165" },
+
+    { id:"pv55", data:"2026-07-13", hora:"14:57:35", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106086810", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv56", data:"2026-07-17", hora:"16:15:33", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106086810", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv57", data:"2026-07-17", hora:"16:53:28", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106086810", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv58", data:"2026-07-20", hora:"11:33:16", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 179+000, OESTE, ROLÂNDIA", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106573541", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv59", data:"2026-07-20", hora:"12:23:29", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106573541", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv60", data:"2026-07-22", hora:"16:23:16", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106573541", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv61", data:"2026-07-22", hora:"17:04:17", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106573541", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv62", data:"2026-07-24", hora:"07:27:08", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 195+800, OESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106902514", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv63", data:"2026-07-25", hora:"10:40:16", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-376, KM 200+500, LESTE, MANDAGUARI", cat:6, valor:56.43, credito:56.43, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106902514", tag:"0744936751", fatura:"26176725165" },
+    { id:"pv64", data:"2026-07-25", hora:"11:16:03", placa:"QIO-9J07", conc:"EPR PARANÁ", praca:"BR-369, KM 180+200, LESTE, ARAPONGAS", cat:6, valor:59.85, credito:59.85, tipo:"Vale-pedágio", emb:"BRF SA", viagem:"106902514", tag:"0744936751", fatura:"26176725165" },
+  ],
+
+  /* -------------------- FATURAS SEM PARAR --------------------
+     A capa de cada extrato. As passagens NÃO são repetidas aqui: pedagioPago e
+     valeNaoReemb são somados na hora, a partir de DB.pedagios com esta fatura.
+     Os outros campos são os itens da nota que NÃO são passagem (plano, vaga de
+     estacionamento, gestor de débitos, créditos) — é o que fecha o total da nota.
+     Confira sempre: pedágio + vale não reembolsado + plano + estacionamento
+     + outras − créditos = total.  (Nesta: 369,38+230,81+397,20+54,00+19,50−196,08 = 874,81 ✓)
+  */
+  pedFaturas: [
+    { id:"spf1", numero:"26176725165", nf:"705475728", cliente:"9281620",
+      emissao:"2026-08-08", fechamento:"2026-08-08", vencimento:"2026-08-15",
+      periodo:"10/07/2026 a 07/08/2026", competencia:"2026-08",
+      total:874.81, planos:397.20, estacionamento:54.00, outras:19.50, creditos:196.08,
+      pagamento:"Débito em conta — Bradesco, agência 6054",
+      arquivo:"sp1", obs:"Estacionamento: 3 estadias no Shopping Catuaí Londrina (BCG-4D41). Outras arrecadações: 5× Gestor de Débitos." },
   ],
 
   /* -------------------- ANTT / RNTRC (extrato do transportador) -------------------- */

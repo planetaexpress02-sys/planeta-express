@@ -151,11 +151,17 @@ const CONTAB_FONTES = [
     }},
   { id:'pedagio', modulo:'Pedágios', rota:'pedagios', colecao:'pedagios', tipo:'custo',
     mapear:function(p){
-      const v=_contabNum(p.valor); if(!v) return null;
-      /* vale-pedágio é reembolsado pelo embarcador: não é custo da empresa */
-      if(/vale/i.test(p.tipo||'')) return null;
+      if(!_contabNum(p.valor)) return null;
+      const vale=/vale/i.test(p.tipo||'');
+      /* Custo é só o que a empresa realmente pagou. No vale-pedágio isso é o
+         débito MENOS o crédito que o embarcador devolveu na mesma fatura
+         (_pedSobra, em app.js) — normalmente zero, e aí não vira lançamento;
+         quando o crédito vem menor que o pedágio, a diferença é custo sim.
+         Antes da v6.94 todo vale era descartado, e essa sobra ficava invisível. */
+      const v = (typeof _pedSobra==='function') ? _pedSobra(p) : (vale?0:_contabNum(p.valor));
+      if(!v) return null;
       return { data:p.data, valor:v, conta:'c.pedagio',
-        descricao:'Pedágio'+(p.conc?' — '+p.conc:'')+(p.praca?' · '+p.praca:''),
+        descricao:(vale?'Pedágio não reembolsado do vale':'Pedágio')+(p.conc?' — '+p.conc:'')+(p.praca?' · '+p.praca:''),
         placa:p.placa||'', fornecedor:p.conc||'' };
     }},
   { id:'servico', modulo:'Manutenção', rota:'manutencao', colecao:'servicos', tipo:'custo',
