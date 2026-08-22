@@ -804,27 +804,32 @@ function pexEnhanceTables(){
     var bar=document.createElement('div'); bar.className='pex-tbar no-print';
     bar.innerHTML='<div class="pex-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Pesquisar…"></div><div class="pex-pg"></div>';
     wrap.parentNode.insertBefore(bar, wrap);
-    var st={page:1,per:12,q:''}; tbl.__st=st; tbl.__rows=rows; tbl.__bar=bar;
+    var st={q:''}; tbl.__st=st; tbl.__rows=rows; tbl.__bar=bar;
     if(tbl.tHead && tbl.tHead.rows[0]){ [].forEach.call(tbl.tHead.rows[0].cells,function(th,ci){
       if(!th.textContent.trim()||th.classList.contains('no-print')) return;
       th.classList.add('pex-sortable'); th.addEventListener('click',function(){ pexSort(tbl,ci,th); });
     }); }
-    bar.querySelector('input').addEventListener('input',function(){ st.q=this.value.toLowerCase(); st.page=1; pexPaginate(tbl); });
-    pexPaginate(tbl);
+    bar.querySelector('input').addEventListener('input',function(){ st.q=this.value.toLowerCase(); pexFiltrarTabela(tbl); });
+    pexFiltrarTabela(tbl);
   });
 }
-function pexPaginate(tbl){
-  var st=tbl.__st, rows=tbl.__rows;
-  var filtered=rows.filter(function(r){ return !st.q || r.textContent.toLowerCase().indexOf(st.q)>=0; });
-  var pages=Math.max(1,Math.ceil(filtered.length/st.per)); if(st.page>pages) st.page=pages;
-  rows.forEach(function(r){ r.style.display='none'; });
-  filtered.forEach(function(r,i){ if(i>=(st.page-1)*st.per && i<st.page*st.per) r.style.display=''; });
-  var pg=tbl.__bar.querySelector('.pex-pg');
-  var info='<span class="pex-count">'+filtered.length+' registro(s)</span>';
-  if(filtered.length<=st.per){ pg.innerHTML=info; return; }
-  pg.innerHTML=info+'<button class="pex-pgb" data-d="-1" '+(st.page<=1?'disabled':'')+'>‹</button><span class="pex-pgn">'+st.page+' / '+pages+'</span><button class="pex-pgb" data-d="1" '+(st.page>=pages?'disabled':'')+'>›</button>';
-  [].forEach.call(pg.querySelectorAll('.pex-pgb'),function(b){ b.onclick=function(){ st.page+=(+b.getAttribute('data-d')); pexPaginate(tbl); }; });
+/* Mostra TODAS as linhas de uma vez — sem quebrar em páginas.
+   Era paginado de 12 em 12 e o cliente cobrou (v6.96): a tabela de Gastos
+   escondia lançamentos e o <tfoot> somava o filtro inteiro, então o TOTAL
+   não batia com o que estava na tela. Rolar é melhor que caçar página.
+   A busca e a ordenação continuam; quem pagina é só o relatório em A4
+   (PEXRel), porque folha de papel realmente tem página. */
+function pexFiltrarTabela(tbl){
+  var st=tbl.__st, rows=tbl.__rows, n=0;
+  rows.forEach(function(r){
+    var mostra = !st.q || r.textContent.toLowerCase().indexOf(st.q)>=0;
+    r.style.display = mostra ? '' : 'none';
+    if(mostra) n++;
+  });
+  tbl.__bar.querySelector('.pex-pg').innerHTML='<span class="pex-count">'+n+' registro(s)'+(st.q&&n!==rows.length?' de '+rows.length:'')+'</span>';
 }
+/* nome antigo — mantido para não quebrar chamada esquecida em outra tela */
+function pexPaginate(tbl){ pexFiltrarTabela(tbl); }
 function _pexKey(v){ v=(v==null?'':v).trim();
   var dm=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(dm) return {n:+(dm[3]+String(dm[2]).padStart(2,'0')+String(dm[1]).padStart(2,'0'))};
   // numérico só se NÃO houver letras (ignora prefixo R$ e sufixo de unidade); assim placas viram texto
@@ -841,7 +846,7 @@ function pexSort(tbl,ci,th){
     if(ka.n!=null) return -1; if(kb.n!=null) return 1;
     return (ka.s||'').localeCompare(kb.s||'','pt')*sign; });
   var tbody=tbl.tBodies[0]; rows.forEach(function(r){ tbody.appendChild(r); });
-  tbl.__st.page=1; pexPaginate(tbl);
+  pexFiltrarTabela(tbl);
 }
 /* ---- tooltip elegante (para gráficos, mapa e qualquer [data-tip]) ---- */
 function pexTipInit(){

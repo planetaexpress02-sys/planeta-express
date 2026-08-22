@@ -11,6 +11,13 @@ TMP="${T:-/c/Users/uilia/AppData/Local/Temp/claude/C--Users-uilia-OneDrive--rea-
 mkdir -p "$TMP"
 cd "$SYS"
 
+# Os passos de perl la embaixo leem os data URIs por $ENV{T} — NAO por $TMP.
+# Sem `export T`, o perl morre no meio... depois do arquivo do celular ja ter
+# sido truncado, e o cliente fica com um HTML de 0 byte. Aconteceu na v6.96.
+# Entao: exigir T ANTES de escrever qualquer coisa.
+export T="$TMP"
+if [ ! -d "$T" ]; then echo "ERRO: pasta de trabalho nao existe: $T" >&2; exit 1; fi
+
 OUT_CEL="$COMP/Planeta Express - CELULAR.html"
 ART="$TMP/planeta_artifact.html"      # corpo p/ publicar como Artifact (sem <head>/<body>)
 

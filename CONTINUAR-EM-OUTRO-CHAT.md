@@ -237,6 +237,22 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 22/08/2026 — v6.96 (acabou a quebra de página nas tabelas)
+
+Relato do cliente: *"na aba financeira, em Gastos, não fazer a quebra para segunda página, fica ruim de visualização... isso também em outros arquivos do sistema que quebrar a página"*.
+
+**Era uma paginação só, global.** `pexEnhanceTables` (v6.6) pendurava busca + ordenação + **paginação de 12 em 12** em toda `#view table.tbl` com 6 linhas ou mais. Ou seja: não era defeito da tela de Gastos, era do sistema inteiro — arrumar num lugar arrumou todas as telas de uma vez.
+
+**Além de chato, escondia dinheiro.** A tabela de Gastos tem `<tfoot>` com o TOTAL do filtro, mas só 12 linhas apareciam: o rodapé somava 31 lançamentos e a tela mostrava 12. O número não batia com o que dava para conferir — exatamente o que a regra de "número derivado tem que bater com a tela" existe para impedir.
+
+**O que mudou:** `pexPaginate` virou **`pexFiltrarTabela`** — mostra/esconde linha só pela busca, sem fatiar em páginas. Sumiram `st.page`/`st.per` e os botões ‹ ›. **Busca e ordenação continuam** (com a lista inteira à vista elas ficaram até mais úteis), e o contador passou a dizer `"7 registro(s) de 101"` quando há filtro. `pexSort` não volta mais para "página 1" — não existe página. O nome `pexPaginate` ficou como atalho para o novo, para não quebrar chamada esquecida.
+
+⚠️ **O que NÃO mudou, de propósito:** o **relatório em A4 (`PEXRel`) continua paginando** — folha de papel tem página mesmo. Só a tela deixou de quebrar. Teste cobre isso: 400 linhas → mais de uma página no PDF.
+
+**Validado no Chrome headless — 56 asserções, zero falha:** 17 rotas varridas, 9 tabelas com a melhoria (4 delas passavam de 12 linhas: **Pedágios 101, CT-e 36, Gastos 31, Documentos 13**), todas mostrando 100% das linhas; **zero** botão de página e zero "1 / 3" em todo o sistema; no caso exato do cliente, o **TOTAL do rodapé passou a bater com a soma do que está na tela**; busca acha 1 entre 31 e volta para 31 ao limpar; ordenar duas vezes mantém as 31 e põe o maior valor em cima.
+
+⚠️ **Armadilha nova registrada — `build_celular.sh` truncava o celular.** Os passos de `perl` leem os data URIs por `$ENV{T}`, mas o `TMP` do topo cai num caminho antigo quando `T` não está exportado: rodar sem `export T` matava o perl **depois** de o arquivo do celular já ter sido zerado (aconteceu aqui: 0 byte). O script agora faz `export T="$TMP"` e confere a pasta **antes** de escrever qualquer coisa — testado rodando com `env -u T`, sai o arquivo completo de 3,58 MB.
+
 ### ✅ ESTADO EM 21/08/2026 — v6.95 (a parte da fatura que não é pedágio, sem contar duas vezes)
 
 Logo depois da v6.94 o cliente respondeu **"lança"** ao item que eu tinha deixado em aberto: os **R$ 274,62** da mesma fatura Sem Parar que **não** são passagem.
