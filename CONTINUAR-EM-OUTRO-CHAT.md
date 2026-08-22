@@ -237,6 +237,30 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 22/08/2026 — v6.97 (escolher o mês nos Pedágios + contador que ficava em ZERO)
+
+Pedido do cliente: *"em pedágios, opção de selecionar por mês o que quer ver"*.
+
+**1. Lista de meses na barra de Pedágios.** Ao lado dos atalhos (Todos / Este mês / Este ano / Personalizado) entrou um `<select>` com **"Todos os meses" + um item por mês que tem passagem**, igual ao dos Gastos. Novo modo `pedFiltro='mesEsp'` + variável `pedMes`. Escolher um mês manda no período; clicar em qualquer atalho **limpa** a escolha (`pedMes='todos'`), para os dois controles nunca discordarem.
+
+⚠️ **A lista de meses é montada de `DB.pedagios` INTEIRO, nunca de `_pedFiltradas()`** — se saísse do filtrado, escolher julho apagaria os outros meses da lista e não teria como voltar. Teste guarda isso a cada mês.
+
+**2. O período agora está escrito na tela** (`_pedPeriodoLabel()`): aparece no KPI "Total em pedágios" e no cabeçalho da lista de Passagens. Como TODO número dessa tela sai do mesmo filtro, ele precisa dizer de que período está falando.
+
+**3. 🚨 DEFEITO ANTIGO ENCONTRADO NO CAMINHO — os 8 KPIs de Pedágios ficavam em "R$ 0,00".** A v6.72 já tinha aprendido que **`requestAnimationFrame` não serve para ESCREVER conteúdo**, mas só tapou o caso da **aba escondida** (`document.hidden`). Faltava o caso de a aba estar **visível e os quadros não virem assim mesmo**. Aí o contador nunca saía do zero — número errado na cara do cliente, que é pior do que não animar.
+
+**Conferido que era anterior:** rodei o mesmo teste contra o `app.js` da **v6.96 já publicada** e o defeito aparece igual. Não foi o filtro de mês que causou.
+
+**Correção — `_pexRedeContadores()`:** um `setTimeout` de 1,5 s (maior que os 900 ms da animação mais longa) que chama `pexFinalizarContadores()`. `setTimeout` dispara mesmo sem quadro nenhum, e reescrever um contador que já terminou não muda nada — o texto final é o mesmo. Ligado nos **três** count-ups (`iniCountUp`, `pedCountUp`, `licCountUp`), então Início/Painel, Pedágios e Licenças estão cobertos.
+
+> **Regra que fica:** `requestAnimationFrame` **anima**; quem **garante** o número é o `setTimeout`. Contador novo tem que chamar `_pexRedeContadores()`.
+
+**Validado no Chrome headless — 41 asserções, zero falha:** a lista traz os 3 meses reais (**jun/2026 = 47, jul/2026 = 47, ago/2026 = 7 = as 101 passagens**), do mais novo para o mais velho; escolher cada mês faz tabela, filtro e KPI baterem com o banco; **a soma dos meses = o total de todo o período**; a lista de meses não encolhe; o atalho "Todos" limpa a escolha e volta às 101; mês + tipo funcionam juntos; mês sem passagem não quebra a tela; e **os KPIs mostram o valor em vez de zero**.
+
+⚠️ **O KPI arredonda de propósito** (R$ 2.726,00 no cartão × R$ 2.725,84 na lista) — é assim em todo o sistema, não só aqui. Se o cliente quiser centavos nos cartões, é uma decisão visual do sistema inteiro, não desta tela.
+
+⚠️ **Nota de teste:** `--screenshot` do Chrome headless captura **antes** do JS assentar, então KPI animado sai zerado na imagem; `--dump-dom` espera e mostra o valor certo. Para conferir número, use `--dump-dom`; a imagem serve para layout.
+
 ### ✅ ESTADO EM 22/08/2026 — v6.96 (acabou a quebra de página nas tabelas)
 
 Relato do cliente: *"na aba financeira, em Gastos, não fazer a quebra para segunda página, fica ruim de visualização... isso também em outros arquivos do sistema que quebrar a página"*.

@@ -3493,8 +3493,23 @@ function pexFinalizarContadores(){
   try{ document.querySelectorAll('.num[data-count], .k-val[data-count]').forEach(_pexEscreverContador); }catch(e){}
 }
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) pexFinalizarContadores(); });
+/* REDE DE SEGURANÇA DOS CONTADORES (v6.97).
+   A v6.72 já tinha aprendido que requestAnimationFrame não serve para
+   ESCREVER conteúdo — mas só tapou o caso da aba escondida. Faltava o caso
+   de a aba estar visível e os quadros não virem assim mesmo (navegador
+   segurando quadros, aparelho fraco, automação). Aí os 8 KPIs de Pedágios
+   ficavam em "R$ 0,00" para sempre — número errado na cara do cliente, que
+   é pior do que não animar. Conferido: acontecia também na v6.96 publicada.
+   setTimeout dispara mesmo sem quadro nenhum; e reescrever um contador que
+   já terminou não muda nada, porque o texto final é o mesmo. */
+let _pexRedeT=null;
+function _pexRedeContadores(){
+  clearTimeout(_pexRedeT);
+  _pexRedeT=setTimeout(pexFinalizarContadores, 1500);   /* > que os 900ms da animação mais longa */
+}
 
 function iniCountUp(){
+  _pexRedeContadores();
   const els=document.querySelectorAll('.ini-cmd .num[data-count]');
   const ic=document.getElementById('iniClock'); if(ic){ const d=new Date(); ic.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   const reduce=_pexSemAnimacao();
@@ -3883,9 +3898,10 @@ async function _removerAnexoSilencioso(id){
 /* ================================================================== */
 /*  PEDÁGIOS — Centro de Inteligência (extrato Sem Parar)              */
 /* ================================================================== */
-let pedFiltro='todos';      // todos | mes | ano | personalizado
+let pedFiltro='todos';      // todos | mes | ano | mesEsp | personalizado
 let pedTipo='todos';        // todos | Pedágio | Vale-pedágio
 let pedDe='', pedAte='';
+let pedMes='todos';         // AAAA-MM escolhido na lista de meses (pedFiltro='mesEsp')
 const PED_CONC_COR={ 'PRVIAS':'#00e5ff', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e', 'VIA CAMPO':'#c58bff' };
 function _pedConcCor(c){ return PED_CONC_COR[c]||'#5c99ff'; }
 function _pedNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
@@ -3905,11 +3921,26 @@ function _pedNaData(p){
   if(pedFiltro==='todos') return true;
   const d=parseD(p.data); if(!d) return false; const h=hoje();
   if(pedFiltro==='mes') return d.getMonth()===h.getMonth() && d.getFullYear()===h.getFullYear();
+  if(pedFiltro==='mesEsp') return pedMes==='todos' || (p.data||'').slice(0,7)===pedMes;
   if(pedFiltro==='ano') return d.getFullYear()===h.getFullYear();
   if(pedFiltro==='personalizado'){ const de=parseD(pedDe), at=parseD(pedAte); if(de&&d<de)return false; if(at&&d>at)return false; return true; }
   return true;
 }
 function _pedFiltradas(){ return (DB.pedagios||[]).filter(p=> _pedNaData(p) && (pedTipo==='todos'||p.tipo===pedTipo) ); }
+/* Como o período está escrito na tela. Todo número da tela de Pedágios sai do
+   mesmo filtro, então ele precisa dizer de qual período está falando. */
+function _pedPeriodoLabel(){
+  const h=hoje();
+  if(pedFiltro==='mesEsp' && pedMes!=='todos') return mesLabel(pedMes);
+  if(pedFiltro==='mes') return mesLabel(h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'));
+  if(pedFiltro==='ano') return 'ano de '+h.getFullYear();
+  if(pedFiltro==='personalizado'){
+    if(pedDe && pedAte) return fmtD(pedDe)+' a '+fmtD(pedAte);
+    if(pedDe) return 'a partir de '+fmtD(pedDe);
+    if(pedAte) return 'até '+fmtD(pedAte);
+  }
+  return 'todo o período';
+}
 function _pedCidade(p){ return (_pedInfo(p.praca).cidade||'').trim(); }
 /* Quanto de uma passagem sobrou para a EMPRESA pagar.
    Pedágio comum: tudo. Vale-pedágio: o débito menos o crédito que o embarcador
@@ -3981,7 +4012,15 @@ function viewPedagios(){
       <td class="ta-r mono"><b>${money(p.valor)}</b></td>
     </tr>`; };
 
-  const perChip=(k,l)=>`<button class="seg-b ${pedFiltro===k?'on':''}" onclick="pedFiltro='${k}';${k==='personalizado'?'pedPeriodoModal()':'router()'}">${l}</button>`;
+  /* Meses disponíveis: lidos de TODAS as passagens, nunca das filtradas —
+     senão escolher julho faria sumir da lista todos os outros meses e não
+     teria como voltar. Mesma regra da lista de meses dos Gastos. */
+  const pedMeses=[...new Set((DB.pedagios||[]).map(p=>(p.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  /* Escolher um mês manda no período; clicar num atalho limpa a escolha. */
+  const perChip=(k,l)=>`<button class="seg-b ${pedFiltro===k?'on':''}" onclick="pedMes='todos';pedFiltro='${k}';${k==='personalizado'?'pedPeriodoModal()':'router()'}">${l}</button>`;
+  const mesSel=`<select class="selectlite" title="Ver só um mês" onchange="pedMes=this.value;pedFiltro=(this.value==='todos'?'todos':'mesEsp');router()">
+    <option value="todos">Todos os meses</option>
+    ${pedMeses.map(m=>`<option value="${m}" ${(pedFiltro==='mesEsp'&&pedMes===m)?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>`;
   const tpChip=(k,l)=>`<button class="seg-b ${pedTipo===k?'on':''}" onclick="pedTipo='${k}';router()">${l}</button>`;
 
   return `
@@ -3993,13 +4032,14 @@ function viewPedagios(){
 
   <div class="toolbar" style="gap:10px;flex-wrap:wrap">
     <div class="seg2">${perChip('todos','Todos')}${perChip('mes','Este mês')}${perChip('ano','Este ano')}${perChip('personalizado','Personalizado')}</div>
+    ${mesSel}
     <div class="seg2">${tpChip('todos','Tudo')}${tpChip('Pedágio','Pagos')}${tpChip('Vale-pedágio','Vale-pedágio')}</div>
     <div class="spacer"></div>
     <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Relatório</button>
   </div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
-    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens · custo real da empresa '+money(pago+valeSobra), '#00e5ff', 1)}
+    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens · '+esc(_pedPeriodoLabel())+' · custo real '+money(pago+valeSobra), '#00e5ff', 1)}
     ${kp('wallet', Math.round(pago), 'Pago pela empresa', 'débito direto', '#f2686b', 1, "pedTipo='Pedágio';router()")}
     ${kp('shield', Math.round(vale), 'Vale-pedágio (BRF)', valeSobra>0? money(valeSobra)+' NÃO reembolsado' : 'reembolsado por inteiro', '#4bd6a0', 1, "pedTipo='Vale-pedágio';router()")}
     ${kp('toll', qtd, 'Passagens', pracas.length+' praças', '#8b9dff', 0)}
@@ -4049,7 +4089,7 @@ function viewPedagios(){
 
   ${_pedFaturasCard()}
 
-  <div class="card" style="margin-top:16px"><div class="card-h">${svg('toll')}<h3>Passagens</h3><div class="r"><span class="muted" style="font-size:12px">${qtd} passagem(ns) · ${money(total)}</span></div></div>
+  <div class="card" style="margin-top:16px"><div class="card-h">${svg('toll')}<h3>Passagens</h3><div class="r"><span class="muted" style="font-size:12px">${qtd} passagem(ns) · ${money(total)} · ${esc(_pedPeriodoLabel())}</span></div></div>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Data</th><th>Hora</th><th>Veículo</th><th>Praça</th><th>Concessionária</th><th>Cat</th><th>Tipo</th><th>Viagem</th><th class="ta-r">Valor</th></tr></thead>
       <tbody>${lista.length? lista.slice().sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora)).map(linha).join('') : `<tr><td colspan="9">${emptyState('Nenhuma passagem neste filtro.')}</td></tr>`}</tbody>
@@ -4323,6 +4363,7 @@ function _pedParseSemParar(txt){
 
 /* Count-up dos KPIs (roda no pexAfterRender p/ a rota pedagios) */
 function pedCountUp(){
+  _pexRedeContadores();
   document.querySelectorAll('#view[data-route="pedagios"] .k-val[data-count]').forEach(function(el){
     if(_pexSemAnimacao()){ _pexEscreverContador(el); return; }
     var alvo=parseFloat(el.getAttribute('data-count'))||0, isM=el.getAttribute('data-money')==='1', t0=null, dur=850;
@@ -4681,6 +4722,7 @@ function _licCasa(l, q){
   return t.split(/\s+/).every(p=>alvo.indexOf(p)>=0);
 }
 function licCountUp(){
+  _pexRedeContadores();
   document.querySelectorAll('#view[data-route="licencas"] .k-val[data-count]').forEach(function(el){
     if(_pexSemAnimacao()){ _pexEscreverContador(el); return; }
     var alvo=parseFloat(el.getAttribute('data-count'))||0, t0=null, dur=850;
