@@ -251,6 +251,8 @@ Relato do cliente: *"na aba financeira, em Gastos, não fazer a quebra para segu
 
 **Validado no Chrome headless — 56 asserções, zero falha:** 17 rotas varridas, 9 tabelas com a melhoria (4 delas passavam de 12 linhas: **Pedágios 101, CT-e 36, Gastos 31, Documentos 13**), todas mostrando 100% das linhas; **zero** botão de página e zero "1 / 3" em todo o sistema; no caso exato do cliente, o **TOTAL do rodapé passou a bater com a soma do que está na tela**; busca acha 1 entre 31 e volta para 31 ao limpar; ordenar duas vezes mantém as 31 e põe o maior valor em cima.
 
+⚠️ **O arquivo do celular NÃO entra no repositório.** Ele voltou por engano no commit `b42886b` — e voltou **velho** (build v6.95, ainda com a paginação). O lugar dele é a **pasta da empresa**, um nível acima; dentro do repo são 3,5 MB que o GitHub Pages não serve e que envelhecem a cada versão. Uma limpeza antiga (`3c10cbe`) já o tinha removido pelo mesmo motivo, então agora ele está no **`.gitignore`** para não haver uma terceira vez (`30f9d68`).
+
 ⚠️ **Armadilha nova registrada — `build_celular.sh` truncava o celular.** Os passos de `perl` leem os data URIs por `$ENV{T}`, mas o `TMP` do topo cai num caminho antigo quando `T` não está exportado: rodar sem `export T` matava o perl **depois** de o arquivo do celular já ter sido zerado (aconteceu aqui: 0 byte). O script agora faz `export T="$TMP"` e confere a pasta **antes** de escrever qualquer coisa — testado rodando com `env -u T`, sai o arquivo completo de 3,58 MB.
 
 ### ✅ ESTADO EM 21/08/2026 — v6.95 (a parte da fatura que não é pedágio, sem contar duas vezes)
