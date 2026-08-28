@@ -3638,6 +3638,19 @@ body:has(#pexCmd.show) .ia-fab{ opacity:0; pointer-events:none; transform:scale(
   font-size:9pt; color:#7d99ad; background:#f7fafc }
 
 /* ---------- gráfico de barras para papel ---------- */
+/* CARTÕES COM FOTO no relatório (v6.98) — o "Saldo por motorista" da tela,
+   agora no papel. Cores sóbrias e foto em cinza-claro de fundo, para o cartão
+   continuar legível mesmo impresso em preto e branco. */
+.rel-cards{ margin-top:10px; break-inside:avoid; page-break-inside:avoid }
+.rel-cards-g{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px }
+.rel-cd{ display:flex; align-items:center; gap:7px; border:1px solid #d8e2ea; border-radius:7px; padding:6px 8px; break-inside:avoid; page-break-inside:avoid }
+.rel-cd-f{ width:30px; height:30px; flex:none; border-radius:50%; overflow:hidden; background:#eef3f7; display:flex; align-items:center; justify-content:center }
+.rel-cd-f img{ width:100%; height:100%; object-fit:cover; display:block }
+.rel-cd-ini{ font-size:8pt; font-weight:800; color:#5b7d95 }
+.rel-cd-n{ flex:1; min-width:0; font-size:8pt; font-weight:700; color:#22323f; overflow-wrap:anywhere }
+.rel-cd-n i{ display:block; font-style:normal; font-size:6.8pt; font-weight:600; color:#7d99ad; text-transform:uppercase; letter-spacing:.4px }
+.rel-cd-v{ font-size:9pt; font-weight:800; color:#22323f; font-variant-numeric:tabular-nums; white-space:nowrap }
+@media(max-width:640px){ .rel-cards-g{ grid-template-columns:repeat(2,1fr) } }
 .rel-graf{ margin-bottom:12px; break-inside:avoid; page-break-inside:avoid }
 .rel-graf-t{ font-size:7.6pt; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:#7d99ad; margin-bottom:5px }
 .rel-gb{ display:flex; flex-direction:column; gap:3px }

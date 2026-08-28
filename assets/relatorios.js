@@ -96,6 +96,29 @@ function relGraficoBarras(g){
   return '<div class="rel-graf"><div class="rel-graf-t">'+esc(g.titulo||'')+'</div>'
        + '<div class="rel-gb">'+linhas+'</div></div>';
 }
+/* ------------------------------------------------------------------
+   CARTÕES COM FOTO (v6.98) — pedido do cliente: o "Saldo por motorista"
+   que existe na tela precisa sair IGUAL no papel, com a foto de cada um.
+   Genérico de propósito: qualquer relatório pode mandar `cartoes` com
+   {foto, iniciais, nome, valor, sub, sinal}. Sem foto, cai nas iniciais —
+   a mesma degradação do avatarFoto() da tela.
+   `sinal` ('+' devedor / '-' a favor) só muda o rótulo, nunca o número.
+   ------------------------------------------------------------------ */
+function relCartoesHTML(cartoes, titulo){
+  if(!cartoes || !cartoes.length) return '';
+  const cs = cartoes.map(function(c){
+    const foto = c.foto
+      ? '<span class="rel-cd-f"><img src="'+esc(c.foto)+'" alt=""></span>'
+      : '<span class="rel-cd-f rel-cd-ini">'+esc(String(c.iniciais||'').toUpperCase())+'</span>';
+    return '<div class="rel-cd">'+foto
+      + '<span class="rel-cd-n">'+esc(String(c.nome||''))+(c.sub?'<i>'+esc(String(c.sub))+'</i>':'')+'</span>'
+      + '<span class="rel-cd-v">'+esc(String(c.valor==null?'—':c.valor))+'</span>'
+      + '</div>';
+  }).join('');
+  return '<section class="rel-cards">'
+    + (titulo? '<div class="rel-sec-t">'+esc(titulo)+'</div>' : '')
+    + '<div class="rel-cards-g">'+cs+'</div></section>';
+}
 
 /* ================================================================== */
 /*  3. BLOCOS DO DOCUMENTO                                             */
@@ -276,6 +299,27 @@ function relMontarPaginas(spec){
                    + '<td class="rel-r">'+esc(String(t.valor))+'</td></tr>'; }).join('')
           + '</tbody></table>');
       }
+    }
+  }
+
+  /* ---- cartões com foto: entram DEPOIS da tabela ("embaixo", como na tela).
+     Quebram por cartão, medindo o acumulado da página igual à tabela — um
+     grid solto estouraria a folha quando houvesse muito motorista. ---- */
+  const cartoes = spec.cartoes||[];
+  if(cartoes.length){
+    let i = 0, primeiro = true, guarda = 0;
+    while(i < cartoes.length && guarda++ < 500){
+      const tit = primeiro ? (spec.tituloCartoes||'') : (spec.tituloCartoes? spec.tituloCartoes+' (continuação)' : '');
+      const base = atual || '';
+      let n = 1;
+      /* cresce enquanto o acumulado ainda couber na folha */
+      while(i+n < cartoes.length
+            && medir(base + relCartoesHTML(cartoes.slice(i,i+n+1), tit)) <= disponivel){ n++; }
+      /* nem um cartão coube e a página já tem coisa: abre folha nova */
+      if(base && medir(base + relCartoesHTML(cartoes.slice(i,i+n), tit)) > disponivel && n===1){ fechar(); continue; }
+      atual = base + relCartoesHTML(cartoes.slice(i,i+n), tit);
+      i += n; primeiro = false;
+      if(i < cartoes.length) fechar();
     }
   }
 
@@ -820,10 +864,21 @@ const PEX_RELATORIOS = [
       const vales = v.filter(function(x){ return x.tipo!=='Pagamento'; });
       const pagos = v.filter(function(x){ return x.tipo==='Pagamento'; });
       const sv=_relSoma(vales,'valor'), sp=_relSoma(pagos,'valor');
-      /* saldo por motorista — mesma conta da tela (valeSaldo) */
-      const saldos = (DB.motoristas||[]).map(function(m){
-        return {rotulo:m.nome, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
+      /* saldo por motorista — mesma conta da tela (valeSaldo), inclusive o
+         mesmo filtro "só quem tem saldo diferente de zero". Se o número da
+         tela e o do papel saíssem de contas diferentes, um dia discordariam. */
+      const comSaldo = (DB.motoristas||[]).map(function(m){
+        return {m:m, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
       }).filter(function(s){ return s.valor!==0; }).sort(function(a,b){ return b.valor-a.valor; });
+      const saldos = comSaldo.map(function(s){ return {rotulo:s.m.nome, valor:s.valor}; });
+      /* os mesmos saldos como cartão com foto, como o cliente vê na tela */
+      const cartoes = comSaldo.map(function(s){
+        return { foto: s.m.foto||'',
+                 iniciais: (typeof initials==='function')? initials(s.m.nome) : '',
+                 nome: s.m.nome,
+                 sub: s.valor>0 ? 'saldo devedor' : 'a favor do motorista',
+                 valor: relMoney(Math.abs(s.valor)) };
+      });
       return {
         tituloTabela:'Lançamentos',
         colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Motorista',larg:'32%'},{rotulo:'Tipo'},{rotulo:'Valor',tipo:'moeda'}],
@@ -835,7 +890,9 @@ const PEX_RELATORIOS = [
                nota:'devedor dos motoristas'}],
         totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)},{rotulo:'PAGAMENTOS', valor:relMoney(sp)},
                            {rotulo:'DIFERENÇA', valor:relMoney(sv-sp)}] : [],
-        graficos: saldos.length? [{titulo:'Saldo por motorista', dados:saldos.map(_relMoneyBar)}] : []
+        graficos: saldos.length? [{titulo:'Saldo por motorista', dados:saldos.map(_relMoneyBar)}] : [],
+        tituloCartoes:'Saldo de vales por motorista',
+        cartoes: cartoes
       };
     }},
   { id:'fin-gastos', modulo:'financeiro', nome:'Gastos',

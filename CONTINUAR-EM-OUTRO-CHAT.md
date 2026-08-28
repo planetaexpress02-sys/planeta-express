@@ -237,6 +237,26 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 27/08/2026 — v6.98 (saldo com foto no relatório + gasto de descarga entra em Descargas)
+
+**1. "Saldo por motorista" com FOTO no relatório de Vales.** O cliente pediu que o bloco que existe na tela saísse igual no papel. O relatório já tinha o saldo, mas só como **gráfico de barras** — agora tem também os **cartões com foto**, embaixo, depois da tabela de lançamentos.
+
+Feito na **engine** (`relatorios.js`), não na tela — vale a regra da v6.77: *nenhuma tela monta a própria folha*. Bloco novo e genérico: `spec.cartoes` = `{foto, iniciais, nome, valor, sub}` + `spec.tituloCartoes`, renderizado por **`relCartoesHTML()`**. Qualquer relatório pode usar. Sem foto, cai nas iniciais — a mesma degradação do `avatarFoto()` da tela. A foto sai de `m.foto`, então funciona na pasta **e** no arquivo único do celular (lá vira base64 no build).
+
+⚠️ **Os cartões PAGINAM medindo o acumulado**, igual à tabela — um grid solto estouraria a folha. Testado com 60 cartões: quebra em mais de uma página, sem vazar.
+
+O saldo sai da **mesma `valeSaldo()`** da tela, com o mesmo filtro "só quem tem saldo ≠ 0" — se o papel tivesse conta própria, um dia discordaria da tela. No papel o valor sai **sem sinal**, e quem explica é o rótulo: *saldo devedor* ou *a favor do motorista*.
+
+**2. Gasto de categoria "Descarga" entra sozinho na aba Descargas.** O formulário de gasto ganhou **Veículo (opcional)** e a categoria **"Descarga"** na lista. Lançou gasto de Descarga com veículo → nasce a descarga com **data, placa e valor** (`_pagSincronizarDescarga`).
+
+O **gasto é o dono**; a descarga é o espelho, marcado com **`origemPagamento`**. Os dois andam juntos: editar o gasto atualiza a descarga; **editar a descarga escreve de volta no gasto** (senão os dois números discordariam do mesmo fato); tirar a categoria ou o veículo remove o espelho; apagar o gasto (inclusive em lote) apaga a descarga; e apagar a descarga espelhada avisa que **apaga o gasto também**. Na aba, o espelho leva o selo **"do Financeiro"**.
+
+🚨 **A ARMADILHA — e a trava:** `pagamentos` e `descargas` são **as duas fontes da Contabilidade**. Sem cuidado o mesmo dinheiro entraria duas vezes. Por isso a fonte `descarga` **ignora quem tem `origemPagamento`** (o dinheiro já entra pelo gasto). E `_contabContaPorCategoria` aprendeu `descarga` → **`c.descarga`**, senão o gasto cairia em "Outras despesas".
+
+**3. Defeito antigo corrigido de passagem:** o formulário de gasto mostrava **"Valor (R197609"** no lugar de "Valor (R$)". Conferido que estava igual na v6.97 publicada — não foi desta sessão.
+
+**Validado no Chrome headless — 51 asserções, zero falha:** cartões batendo com `valeSaldo()`, quem quitou fora da lista, saldo negativo como "a favor", os cartões saindo **depois** da tabela no documento impresso, 60 cartões paginando; e no lado do gasto: descarga criada com data/placa/valor, **1 lançamento contábil e não 2**, custo de descargas subindo **450 e não 900**, conta `c.descarga`, edição nos dois sentidos, remoção em cascata, descarga digitada na aba **continuando** a contar normalmente, e o banco voltando ao estado original no fim.
+
 ### ✅ ESTADO EM 22/08/2026 — v6.97 (escolher o mês nos Pedágios + contador que ficava em ZERO)
 
 Pedido do cliente: *"em pedágios, opção de selecionar por mês o que quer ver"*.

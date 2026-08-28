@@ -196,6 +196,9 @@ const CONTAB_FONTES = [
   { id:'descarga', modulo:'Descargas', rota:'descargas', colecao:'descargas', tipo:'custo',
     mapear:function(d){
       const v=_contabNum(d.valor); if(!v) return null;
+      /* descarga espelhada de um gasto do Financeiro (v6.98): o dinheiro já
+         entra pela fonte 'pagamento'. Contar aqui também dobraria o custo. */
+      if(d.origemPagamento) return null;
       return { data:d.data, valor:v, conta:'c.descarga', descricao:'Descarga'+(d.local?' — '+d.local:''),
         placa:d.placa||'', documento:d.transporte||'' };
     }},
@@ -226,6 +229,7 @@ function _contabContaPorCategoria(cat){
   if(/combust|diesel/.test(c)) return 'c.diesel';
   if(/manuten|oficina|pe[çc]a/.test(c)) return 'c.manutencao';
   if(/pedagio|pedágio/.test(c)) return 'c.pedagio';
+  if(/descarga/.test(c)) return 'c.descarga';   /* v6.98: gasto de descarga vai para a conta de descargas, não para "outras despesas" */
   if(/pneu/.test(c)) return 'c.pneus';
   if(/seguro/.test(c)) return 'c.seguros';
   if(/salario|motorista|folha/.test(c)) return 'c.motorista';

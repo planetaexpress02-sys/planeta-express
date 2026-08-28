@@ -5509,7 +5509,7 @@ function descMonthsHTML(){
         <td class="mono">${esc(d.transporte||'—')}</td>
         <td class="mono muted">${esc(d.senha||'—')}</td>
         <td class="mono"><b>${money(d.valor)}</b></td>
-        <td>${esc(d.local||'—')}</td>
+        <td>${esc(d.local||'—')}${d.origemPagamento?' <span class="st neutro" title="Lançado como gasto no Financeiro; os dois andam juntos">do Financeiro</span>':''}</td>
         <td class="muted">${esc(d.pago||'—')}</td>
         <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalDescarga('${d.id}')">${svg('edit')}</button></td></tr>`;
     }).join('');
@@ -5609,8 +5609,23 @@ function modalDescarga(id){
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarDescarga('${id||''}')">Salvar</button></div>`);
 }
 function salvarDescarga(id){ const d={data:val('f_data'),placa:val('f_placa'),transporte:val('f_transp'),senha:val('f_senha'),valor:parseBRL(val('f_valor')),pago:val('f_pago'),local:val('f_local')};
-  if(id)Object.assign(DB.descargas.find(x=>x.id===id),d); else{ d.id=uid('dc'); DB.descargas.push(d); } saveDB(); closeModal(); toast('Descarga salva.'); router(); }
-function excluirDescarga(id){ if(!confirm('Excluir esta descarga?'))return; DB.descargas=DB.descargas.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
+  let eco='';
+  if(id){ const atual=DB.descargas.find(x=>x.id===id); Object.assign(atual,d);
+    /* veio de um gasto do Financeiro: escreve de volta lá, senão os dois
+       números passariam a discordar sobre o mesmo lançamento */
+    if(atual.origemPagamento){ const p=(DB.pagamentos||[]).find(x=>x.id===atual.origemPagamento);
+      if(p){ p.data=atual.data; p.placa=atual.placa; p.valor=atual.valor; eco=' O gasto no Financeiro foi atualizado junto.'; }
+      else atual.origemPagamento=''; }
+  } else { d.id=uid('dc'); DB.descargas.push(d); }
+  saveDB(); closeModal(); toast('Descarga salva.'+eco); router(); }
+function excluirDescarga(id){
+  const d=(DB.descargas||[]).find(x=>x.id===id);
+  const p=d&&d.origemPagamento? (DB.pagamentos||[]).find(x=>x.id===d.origemPagamento) : null;
+  if(!confirm(p? 'Esta descarga veio do gasto "'+(p.descricao||'sem descrição')+'" no Financeiro.\n\nExcluir apaga os DOIS — a descarga e o gasto. Continuar?'
+             : 'Excluir esta descarga?')) return;
+  if(p){ marcarRemovido('pagamentosRemovidos',p.id); DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==p.id); }
+  DB.descargas=DB.descargas.filter(x=>x.id!==id); saveDB(); closeModal();
+  toast(p?'Descarga e gasto excluídos.':'Excluída.'); router(); }
 
 /* ================================================================== */
 /*  IMPORTAÇÃO INTELIGENTE DE PLANILHA (Descargas) — v6.29             */
@@ -6392,6 +6407,9 @@ function pagExcluirSel(){
   const alvo=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)>=0; });
   const tot=alvo.reduce(function(s,p){ return s+(Number(p.valor)||0); },0);
   if(!confirm('Excluir '+ids.length+' gasto(s), somando '+money(tot)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  ids.forEach(function(i){ marcarRemovido('pagamentosRemovidos', i); });
+  /* as descargas espelhadas saem junto (mesma regra do excluirPagamento) */
+  DB.descargas=(DB.descargas||[]).filter(function(d){ return ids.indexOf(d.origemPagamento)<0; });
   DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)<0; });
   PAG_SEL={}; saveDB(); toast(ids.length+' gasto(s) excluído(s).'); router();
 }
@@ -6679,30 +6697,85 @@ function excluirVale(id){ if(!confirm('Excluir este lançamento?'))return; DB.va
 function modalPagamento(id){
   const p=id?(DB.pagamentos||[]).find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),descricao:'',categoria:'',forma:'',valor:'',obs:''};
   if(!p){ toast('Gasto não encontrado.','err'); return; }
-  const cats=['Combustível','Manutenção','Pedágio','Pneus','Peças','Fornecedor','Salário','Imposto/Taxa','Aluguel','Financiamento/Parcela','Seguro','Escritório','Outros'];
+  const cats=['Combustível','Manutenção','Pedágio','Descarga','Pneus','Peças','Fornecedor','Salário','Imposto/Taxa','Aluguel','Financiamento/Parcela','Seguro','Escritório','Outros'];
   const formas=['Pix','Dinheiro','Boleto','Cartão','Débito automático','Transferência','Cheque'];
+  const placas=(DB.veiculos||[]).filter(v=>v.status!=='Arquivado').map(v=>v.placa);
   openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar gasto':'Novo gasto'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fldR$('Valor (R197609','f_valor',p.valor)}</div>
+      <div class="field-row">${fld('Data','f_data',p.data,'date')}${fldR$('Valor (R$)','f_valor',p.valor)}</div>
       ${fld('Descrição','f_desc',p.descricao,'text','O que foi pago (ex.: Diesel Posto X, Boleto fornecedor...)')}
       <div class="field-row">
         <div class="field"><label>Categoria</label><input id="f_cat" list="pagCats" value="${esc(p.categoria||'')}" placeholder="Escolha ou digite"><datalist id="pagCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
         <div class="field"><label>Forma de pagamento</label><input id="f_forma" list="pagFormas" value="${esc(p.forma||'')}" placeholder="Escolha ou digite"><datalist id="pagFormas">${formas.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
       </div>
-      <div class="field"><label>Observações</label><input id="f_obs" value="${esc(p.obs||'')}"></div>
+      <div class="field-row">
+        <div class="field"><label>Veículo (opcional)</label>
+          <select id="f_placa"><option value="">— nenhum —</option>
+          ${placas.map(pl=>`<option value="${esc(pl)}" ${p.placa===pl?'selected':''}>${esc(pl)}</option>`).join('')}
+          ${(p.placa&&placas.indexOf(p.placa)<0)?`<option value="${esc(p.placa)}" selected>${esc(p.placa)} (fora da frota)</option>`:''}
+          </select></div>
+        <div class="field"><label>Observações</label><input id="f_obs" value="${esc(p.obs||'')}"></div>
+      </div>
+      <div class="hint">Gasto de categoria <b>Descarga</b> com veículo escolhido entra sozinho na aba <b>Descargas</b>, com data, placa e valor — sem precisar lançar de novo lá.</div>
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirPagamento('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="salvarPagamento('${id||''}')">Salvar</button></div>`);
 }
+/* ------------------------------------------------------------------
+   GASTO DE DESCARGA → ABA DESCARGAS (v6.98)
+   Pedido do cliente: lançar um gasto de categoria "Descarga" de um veículo
+   tem que aparecer sozinho em Descargas, com data, placa e valor.
+
+   O gasto é o DONO do lançamento; a descarga é o espelho dele, marcado com
+   `origemPagamento`. Assim não existe digitar duas vezes e não existem dois
+   números para a mesma coisa.
+
+   ⚠️ A ARMADILHA: `pagamentos` e `descargas` são as DUAS fontes da
+   Contabilidade. Sem cuidado, o mesmo dinheiro entraria duas vezes — uma
+   pelo gasto e outra pela descarga espelhada. Por isso a fonte 'descarga'
+   ignora quem tem `origemPagamento` (o dinheiro já entrou pelo gasto), e
+   `_contabContaPorCategoria` aprendeu "descarga" para o gasto cair na conta
+   c.descarga, e não em "Outras despesas".
+   ------------------------------------------------------------------ */
+function _pagEhDescarga(p){ return /descarga/i.test((p&&p.categoria)||''); }
+function _descargaDoPagamento(pid){ return (DB.descargas||[]).find(d=>d.origemPagamento===pid); }
+function _pagSincronizarDescarga(p){
+  if(!p) return '';
+  const atual=_descargaDoPagamento(p.id);
+  /* deixou de ser descarga (ou tiraram o veículo): o espelho vai embora */
+  if(!_pagEhDescarga(p) || !p.placa){
+    if(atual){ DB.descargas=(DB.descargas||[]).filter(d=>d.id!==atual.id); return 'removida'; }
+    return '';
+  }
+  const campos={ data:p.data, placa:p.placa, valor:Number(p.valor)||0,
+                 local:p.descricao||'Descarga', pago:p.forma||'', origemPagamento:p.id };
+  if(atual){ Object.assign(atual, campos); return 'atualizada'; }
+  const nova=Object.assign({ id:uid('dc'), transporte:'', senha:'' }, campos);
+  (DB.descargas=DB.descargas||[]).push(nova);
+  return 'criada';
+}
 function salvarPagamento(id){
   if(!val('f_desc') && !val('f_valor')){ toast('Informe pelo menos a descrição e o valor.','err'); return; }
-  const d={ data:val('f_data'), descricao:val('f_desc'), categoria:val('f_cat'), forma:val('f_forma'), valor:parseBRL(val('f_valor')), obs:val('f_obs') };
-  if(id){ Object.assign((DB.pagamentos||[]).find(x=>x.id===id), d); }
-  else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); }
-  saveDB(); closeModal(); toast('Gasto salvo.'); router();
+  const d={ data:val('f_data'), descricao:val('f_desc'), categoria:val('f_cat'), forma:val('f_forma'),
+            valor:parseBRL(val('f_valor')), placa:val('f_placa'), obs:val('f_obs') };
+  let alvo;
+  if(id){ alvo=(DB.pagamentos||[]).find(x=>x.id===id); Object.assign(alvo, d); }
+  else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); alvo=d; }
+  const eco=_pagSincronizarDescarga(alvo);
+  saveDB(); closeModal();
+  if(eco==='criada') toast('Gasto salvo e lançado também em Descargas.');
+  else if(eco==='atualizada') toast('Gasto salvo — a descarga foi atualizada junto.');
+  else if(eco==='removida') toast('Gasto salvo — saiu da aba Descargas.');
+  else if(_pagEhDescarga(alvo) && !alvo.placa) toast('Gasto salvo. Escolha o veículo para ele entrar em Descargas.','warn');
+  else toast('Gasto salvo.');
+  router();
 }
-function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; marcarRemovido('pagamentosRemovidos',id); DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
+function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; marcarRemovido('pagamentosRemovidos',id);
+  /* leva junto a descarga espelhada — senão ficaria um lançamento órfão em
+     Descargas, sem gasto por trás, e o cliente não teria como apagar */
+  DB.descargas=(DB.descargas||[]).filter(d=>d.origemPagamento!==id);
+  DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
 
 /* ================================================================== */
 /*  CT-e (Conhecimento de Transporte Eletrônico)                      */
