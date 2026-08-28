@@ -870,8 +870,11 @@ const PEX_RELATORIOS = [
       const comSaldo = (DB.motoristas||[]).map(function(m){
         return {m:m, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
       }).filter(function(s){ return s.valor!==0; }).sort(function(a,b){ return b.valor-a.valor; });
-      const saldos = comSaldo.map(function(s){ return {rotulo:s.m.nome, valor:s.valor}; });
-      /* os mesmos saldos como cartão com foto, como o cliente vê na tela */
+      const emAberto = comSaldo.reduce(function(s,x){ return s+Math.max(0,x.valor); },0);
+      /* os mesmos saldos como cartão com foto, como o cliente vê na tela.
+         ⚠️ Havia também um gráfico de barras "Saldo por motorista" no topo.
+         Saiu na v7.0 a pedido do cliente: com os cartões embaixo virou o
+         mesmo número duas vezes na mesma folha. */
       const cartoes = comSaldo.map(function(s){
         return { foto: s.m.foto||'',
                  iniciais: (typeof initials==='function')? initials(s.m.nome) : '',
@@ -886,11 +889,10 @@ const PEX_RELATORIOS = [
         kpis:[{rotulo:'Lançamentos',valor:relNum(v.length)},
               {rotulo:'Vales adiantados',valor:relMoney(sv),nota:vales.length+' lançamento(s)'},
               {rotulo:'Pagamentos',valor:relMoney(sp),nota:pagos.length+' lançamento(s)'},
-              {rotulo:'Saldo em aberto',valor:relMoney(saldos.reduce(function(s,x){ return s+Math.max(0,x.valor); },0)),
+              {rotulo:'Saldo em aberto',valor:relMoney(emAberto),
                nota:'devedor dos motoristas'}],
         totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)},{rotulo:'PAGAMENTOS', valor:relMoney(sp)},
                            {rotulo:'DIFERENÇA', valor:relMoney(sv-sp)}] : [],
-        graficos: saldos.length? [{titulo:'Saldo por motorista', dados:saldos.map(_relMoneyBar)}] : [],
         tituloCartoes:'Saldo de vales por motorista',
         cartoes: cartoes
       };

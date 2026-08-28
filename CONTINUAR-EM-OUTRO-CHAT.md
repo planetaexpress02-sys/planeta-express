@@ -237,6 +237,14 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 27/08/2026 — v7.0 (saiu o gráfico de barras do saldo, que virou repetição)
+
+O cliente riscou no print o bloco **"Saldo por motorista"** (as barras azuis no topo) e pediu para tirar. Com os cartões com foto embaixo, era **o mesmo número duas vezes na mesma folha** — e a versão com foto é a que ele pediu.
+
+Removido o `graficos` do `fin-vales`. O `comSaldo` continua (é dele que saem os cartões **e** o KPI "Saldo em aberto"), agora somado em `emAberto`. Nada mais mudou na folha: KPIs, tabela, totais e cartões seguem iguais.
+
+**Validado pelo caminho real — 17 asserções, zero falha:** as barras sumiram (nem `rel-graf` nem `rel-gb` na folha), os cartões e as 3 fotos ficaram, o KPI "Saldo em aberto" continua em R$ 4.400,00, a tabela e os totais intactos, a folha segue com 1 página, **os 21 relatórios abrem sem erro** e os outros 4 que têm gráfico **continuam com o deles** (a remoção foi só neste relatório).
+
 ### 🚨 ESTADO EM 27/08/2026 — v6.99 (a foto da v6.98 não chegava na folha — erro meu de teste)
 
 O cliente mandou o print: *"NÃO ESTÁ APARECENDO COMO EU PEDI A FOTO IGUAL NO SISTEMA"*. Estava certo — a v6.98 saiu **sem o bloco funcionando** para quem usa o sistema.
