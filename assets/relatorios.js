@@ -1157,6 +1157,11 @@ function PEXRelExecutar(){
     kpis: ds.kpis, resumo: ds.resumo, graficos: ds.graficos,
     tituloTabela: ds.tituloTabela, colunas: ds.colunas, linhas: ds.linhas,
     totais: ds.totais, analise: ds.analise,
+    /* ⚠️ ESTA LISTA É FIXA: o que o `gerar()` devolve e NÃO estiver aqui é
+       jogado fora silenciosamente. Foi o que aconteceu com os cartões na
+       v6.98 — o renderizador funcionava, a folha nunca recebia os dados.
+       Campo novo no `gerar()` tem que ser acrescentado AQUI também. */
+    cartoes: ds.cartoes, tituloCartoes: ds.tituloCartoes,
     orientacao: ds.orientacao || r.orientacao
   });
 }

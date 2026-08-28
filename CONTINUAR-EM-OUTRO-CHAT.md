@@ -237,6 +237,22 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### 🚨 ESTADO EM 27/08/2026 — v6.99 (a foto da v6.98 não chegava na folha — erro meu de teste)
+
+O cliente mandou o print: *"NÃO ESTÁ APARECENDO COMO EU PEDI A FOTO IGUAL NO SISTEMA"*. Estava certo — a v6.98 saiu **sem o bloco funcionando** para quem usa o sistema.
+
+**A CAUSA:** `PEXRelExecutar()` chama `r.gerar(f)` e depois monta o spec copiando uma **LISTA FIXA de campos** (`kpis, resumo, graficos, tituloTabela, colunas, linhas, totais, analise, orientacao`). O que o `gerar()` devolve e não está nessa lista é **jogado fora em silêncio**. Meus `cartoes`/`tituloCartoes` caíam ali. O renderizador (`relCartoesHTML`) e a paginação funcionavam — a folha é que nunca recebia os dados.
+
+**POR QUE OS 51 TESTES DA v6.98 NÃO PEGARAM:** eu montei o spec **na mão** no teste (`Object.assign({...}, spec, dados)`) e chamei `relMontarPaginas` direto. Isso **pula exatamente a função que descartava os campos**. Testei o renderizador, não o caminho do cliente.
+
+> **REGRA QUE FICA:** relatório se testa **pelo caminho real** — `PEXRelAbrirId(id)` + `PEXRelExecutar()` — e conferindo o HTML de `#pexRelOv`. Nunca montando o spec à mão. O mesmo vale para qualquer tela: se o teste constrói o objeto que o sistema construiria, ele não está testando o sistema.
+>
+> E **campo novo no `gerar()` tem que ser acrescentado na lista de `PEXRelExecutar`** — hoje há um comentário em maiúsculas lá avisando disso.
+
+**Correção:** duas linhas (`cartoes: ds.cartoes, tituloCartoes: ds.tituloCartoes`) + o aviso no código.
+
+**Revalidado pelo caminho real — 19 asserções, zero falha:** com os dados do print do cliente (12 vales, 3 motoristas em 1.800/1.800/800), a folha sai com o bloco, o título, **as 3 fotos como `<img>`**, os três nomes, os valores, e os cartões **depois** da tabela; alternar retrato/paisagem não perde o bloco; sem ninguém devendo o bloco simplesmente não aparece; e **os 21 relatórios do catálogo abrem pelo caminho real** sem erro.
+
 ### ✅ ESTADO EM 27/08/2026 — v6.98 (saldo com foto no relatório + gasto de descarga entra em Descargas)
 
 **1. "Saldo por motorista" com FOTO no relatório de Vales.** O cliente pediu que o bloco que existe na tela saísse igual no papel. O relatório já tinha o saldo, mas só como **gráfico de barras** — agora tem também os **cartões com foto**, embaixo, depois da tabela de lançamentos.
