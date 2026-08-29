@@ -767,8 +767,6 @@ function pexAfterRender(rota){
     document.body.classList.toggle('pex-home', rota==='inicio'||rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
     /* Monitoramento: liga a simulação só na Início e desliga ao sair (performance) */
-    if(rota==='inicio'){ if(typeof monMontar==='function') monMontar(); }
-    else if(typeof monParar==='function') monParar();
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
@@ -2575,11 +2573,42 @@ function _impISO(s){
       return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
   return '';
 }
+/* Acha o motorista pelo nome escrito de qualquer jeito num documento
+   ("RENATO C. DA SILVA", "renato carlos"). Basta um pedaço do nome com 3+
+   letras bater. Vivia no assistente.js; ficou aqui quando o chatbot saiu
+   (v7.1), porque quem usa isso é a leitura de planilhas e a Central.
+   ⚠️ Casamento FROUXO de propósito — é o mesmo do assistente, já validado
+   com os documentos reais do cliente. O preço: um sobrenome comum sozinho
+   ("da Silva") casa com quem tiver Silva no nome. Se um dia isso vincular
+   documento ao motorista errado, apertar aqui (exigir 2 pedaços, ou palavra
+   inteira) e revalidar a importação com os arquivos reais — não no escuro. */
+function motoristaPorNome(txt){
+  const n=_impNorm(txt);
+  if(!n) return null;
+  for(const m of (DB.motoristas||[])){
+    for(const p of _impNorm(m.nome).split(/\s+/)){
+      if(p.length>=3 && n.indexOf(p)>=0) return m;
+    }
+  }
+  return null;
+}
+/* Acha o veículo pela placa escrita no texto (com ou sem hífen) */
+function veiculoPorTexto(txt){
+  const U=String(txt||'').toUpperCase();
+  const m=U.match(/\b([A-Z]{3})[- ]?(\d[A-Z0-9]\d{2})\b/);
+  if(m){ const v=veiculoByPlaca(m[1]+m[2]); if(v) return v; }
+  const strip=U.replace(/[^A-Z0-9]/g,'');
+  for(const v of (DB.veiculos||[])){
+    const p=String(v.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(p && strip.indexOf(p)>=0) return v;
+  }
+  return null;
+}
 /* resolve o registro (motorista/veículo) a partir do texto lido */
 function _impRef(vinculo, chave){
   if(vinculo==='empresa') return 'empresa';
-  if(vinculo==='veiculo'){ const v=(typeof _iaVeiculo==='function'?_iaVeiculo(chave):null)||veiculoByPlaca(chave); return v?v.id:''; }
-  const m=(typeof _iaMotorista==='function')?_iaMotorista(chave):DB.motoristas.find(x=>_impNorm(x.nome)===_impNorm(chave));
+  if(vinculo==='veiculo'){ const v=veiculoPorTexto(chave)||veiculoByPlaca(chave); return v?v.id:''; }
+  const m=motoristaPorNome(chave);
   return m?m.id:'';
 }
 function _impNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').trim(); }
@@ -3538,22 +3567,26 @@ function viewInicio(){
   const cteK=Math.round(cteSum/1000);
   const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
-  /* O mapa de monitoramento vive no arquivo monitoramento.js (dados, simulação e desenho separados) */
+  /* O mapa de monitoramento saiu na v7.1 (o cliente disse que não usava).
+     A tela ficaria com dois números só, então os valores que já eram
+     calculados aqui e não apareciam viraram cartões — todos clicáveis,
+     levando para a tela que abre o número. */
+  const venc=contadores();
   return `<div class="ini-cmd">
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>
     <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
   </div>
 
-  <div class="grid ini-mon2">
-    <div class="ini-left">
-      ${kt('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
-      ${kt('user','', mot, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
-    </div>
-    <div class="ini-stage card">
-      <div class="ini-stage-h"><b>Monitoramento</b><div class="r"><span class="pex-live">● AO VIVO</span><a class="btn sm" href="#viagens">Viagens</a></div></div>
-      ${typeof monComponenteHTML==='function'? monComponenteHTML() : ''}
-    </div>
+  <div class="ini-painel">
+    ${kt('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+    ${kt('user','', mot, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
+    ${kt('route','', vgMes, '', '', 'Viagens no mês', 'viagens', '#8b9dff', '0,19 16,14 32,16 48,11 64,12 80,7')}
+    ${kt('clock','', emViagem, '', '', 'Viagens pendentes', 'viagens', '#e0b354', '0,14 16,17 32,12 48,15 64,10 80,13')}
+    ${kt('doc','', (DB.ctes||[]).length, '', '', 'CT-e emitidos', 'ctes', '#37e3d0', '0,21 16,17 32,14 48,12 64,9 80,6')}
+    ${kt('coins','', cteK, 'R$ ', ' mil', 'Total em CT-e', 'contabilidade', '#e0b354', '0,20 16,15 32,13 48,10 64,8 80,5')}
+    ${kt('bell','', venc.total, '', '', 'Vencimentos a vigiar', 'vencimentos', '#f2686b', '0,10 16,12 32,9 48,14 64,11 80,15')}
+    ${kt('wrench','', (DB.veiculos||[]).filter(v=>isReb(v)&&v.status!=='Arquivado').length, '', '', 'Reboques ativos', 'frota', '#5cc8ff', '0,16 16,14 32,15 48,12 64,13 80,10')}
   </div>
   </div>`;
 }
@@ -7156,7 +7189,6 @@ async function aposLogin(){
   }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
   esconderLogin();
   renderSidebar('inicio'); router(); hideSplash(); updateUserBadge();
-  if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();   /* libera a IA só depois do login */
   toast('Bem-vindo, '+(nomeUsuario()||'')+'!');
 }
 async function logoutNuvem(){ if(!confirm('Sair da sua conta?'))return; await nuvemLogout(); location.reload(); }
@@ -7218,7 +7250,6 @@ async function init(){
     if(typeof navVoltar==='function') navVoltar();                        // nada aberto → volta uma tela
   });
   document.addEventListener('input', aplicarMascaraInput);   /* pontuação automática (CPF, RG, telefone…) */
-  if(typeof iaAtualizarAcesso==='function') iaAtualizarAcesso();  /* IA: aparece offline; online só após login */
   const s=document.getElementById('gsearch'); if(s) s.addEventListener('keydown',e=>{ if(e.key==='Enter') buscaGlobal(s.value); });
   if(typeof pexCockInit==='function') pexCockInit();
   // Sincronização: salva na hora ao fechar/minimizar; ao voltar, puxa o mais recente da nuvem

@@ -41,7 +41,7 @@ awk '
 
 # ---------- 3. CSS e JS concatenados ----------
 cat assets/estilo.css assets/estilo2.css > "$TMP/all.css"
-cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/monitoramento.js assets/contabilidade.js assets/aniversarios.js assets/relatorios.js assets/assistente.js > "$TMP/all.js"
+cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/contabilidade.js assets/aniversarios.js assets/relatorios.js > "$TMP/all.js"
 
 # ---------- 4. monta o arquivo do CELULAR (com <head>/<body>) ----------
 {
@@ -116,6 +116,5 @@ ls -la "$ART"     | awk '{print $5, $NF}'
 echo "--- checagens celular ---"
 echo -n "assets/ restantes (deve ser 0): "; grep -o "assets/" "$OUT_CEL" | wc -l
 echo -n "data:image no celular (deve ser >6): "; grep -o "data:image" "$OUT_CEL" | wc -l
-echo -n "iaMontarFab presente: "; grep -c "iaMontarFab" "$OUT_CEL"
 echo -n "chkResultadoBadge presente: "; grep -c "chkResultadoBadge" "$OUT_CEL"
 echo -n "supabase (deve ser 0): "; grep -c "supabase" "$OUT_CEL" || true

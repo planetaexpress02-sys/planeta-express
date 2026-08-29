@@ -237,6 +237,26 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 28/08/2026 — v7.1 (saíram o chatbot e o monitoramento)
+
+O cliente: *"chatbot não está tendo uso, pode removê-lo, 'monitoramento' também"*.
+
+**Apagados:** `assets/assistente.js` (~55 KB) e `assets/monitoramento.js` (~52 KB), os `<script>` do `index.html`, as entradas do `build_celular.sh` (e a checagem `iaMontarFab` de lá), e **797 linhas de CSS morto** em 6 blocos (`ASSISTENTE INTELIGENTE`, `IA PLANETA` v6.40/6.69/6.70, `MONITORAMENTO` v6.60/6.64/6.65/6.76). **Celular: 3,60 MB → 3,44 MB.**
+
+**⚠️ Duas funções do assistente NÃO eram do chatbot** — eram utilitário da leitura de documentos: `_iaMotorista` (acha o motorista pelo nome escrito de qualquer jeito) e `_iaVeiculo` (acha o veículo pela placa no texto). O `_impRef` e a Central (`cpidRelacionar`) dependiam delas. Viraram **`motoristaPorNome()`** e **`veiculoPorTexto()`** no `app.js`, com o **mesmo casamento frouxo de antes** (de propósito: é o que já foi validado com os documentos reais). O limite está escrito no código: um sobrenome comum sozinho ("da Silva") casa com quem tiver Silva. Apertar isso um dia exige revalidar a importação com os arquivos do cliente.
+
+**A tela Início foi refeita.** O mapa era o elemento principal; sem ele sobrariam **dois números**. Os valores que a `viewInicio` já calculava e não mostrava viraram **8 cartões clicáveis** (`.ini-painel`, classe nova — `.ini-kpis` já existia com outro comportamento e reaproveitar quebraria as duas): conjuntos, motoristas, viagens no mês, viagens pendentes, CT-e emitidos, total em CT-e, vencimentos a vigiar e reboques.
+
+**⚠️ Duas coisas quase foram junto no CSS — e é a lição desta versão:**
+1. **`.antt-acoes`** (tela ANTT, viva) morava **no meio** do CSS do monitoramento e foi apagada. Restaurada.
+2. Dois cortes saíram **uma linha adiantados** e levaram `.cp-previa pre` e `.cb-pconta.off`. Restauradas.
+
+> **Como cortar CSS com segurança (o que funcionou):** guardar cópia antes; `diff` do antes/depois; extrair **toda classe** das linhas removidas; e cruzar cada uma com `class="..."` do JS. Foi assim que `.antt-acoes` apareceu. Só confiar em "o bloco está marcado com comentário" **não basta** — havia regra viva dentro do bloco.
+
+**Mobile:** com 2 colunas o cartão da direita era cortado (o `.ini-cmd` é full-bleed, mais largo que a janela, e o `.content` tem `overflow-x:clip` — o corte da v6.72). Passou a **1 coluna a partir de 620px**. Medido em 375/390/414/768/1024/1440: nada escapa da tela.
+
+**Validado no Chrome headless:** 38 asserções na remoção (as funções sumiram, os utilitários seguem achando motorista/veículo, o Início com 8 cartões todos apontando para rota existente, o 1º cartão batendo com a frota) + 8 na varredura final depois da limpeza de CSS — **30 rotas limpas, 21 relatórios abrindo, CSS do ANTT vivo, zero erro de console.**
+
 ### ✅ ESTADO EM 27/08/2026 — v7.0 (saiu o gráfico de barras do saldo, que virou repetição)
 
 O cliente riscou no print o bloco **"Saldo por motorista"** (as barras azuis no topo) e pediu para tirar. Com os cartões com foto embaixo, era **o mesmo número duas vezes na mesma folha** — e a versão com foto é a que ele pediu.

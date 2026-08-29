@@ -639,7 +639,7 @@ function cpidRelacionar(ex, ct){
     else { liga.avisos.push('Placa '+placa+' não está na frota'); if(ex.campos) ex.campos.placa=placa; }
   }
   const nomeMot=(ex.campos&&ex.campos.motorista)||'';
-  if(nomeMot && typeof _iaMotorista==='function'){ try{ const m=_iaMotorista(nomeMot); if(m) liga.motorista=m; }catch(e){} }
+  if(nomeMot && typeof motoristaPorNome==='function'){ try{ const m=motoristaPorNome(nomeMot); if(m) liga.motorista=m; }catch(e){} }
   return liga;
 }
 
