@@ -255,7 +255,7 @@ function aplicarRemoto(obj){
   DB=obj; ensureCollections(); saveLocal();
   _applyingRemote=false;
   const ov=document.getElementById('overlay');
-  if(!ov || !ov.classList.contains('show')){ renderSidebar((location.hash||'#inicio').slice(1).split('/')[0]); router(); }
+  if(!ov || !ov.classList.contains('show')){ renderSidebar((location.hash||'#dashboard').slice(1).split('/')[0]); router(); }
   toast('Dados atualizados (outro aparelho).');
 }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -591,7 +591,6 @@ function radar(axes, opts){ opts=opts||{}; const size=opts.size||220, cx=size/2,
 /*  6. ROTEADOR                                                        */
 /* ================================================================== */
 const ROTAS = {
-  inicio:{t:'Início', s:'Página inicial da empresa', ico:'home'},
   dashboard:{t:'Painel de Controle', s:'Visão geral da operação', ico:'dash'},
   frota:{t:'Frota', s:'Cavalos e reboques frigoríficos', ico:'truck'},
   motoristas:{t:'Motoristas', s:'Colaboradores e documentação', ico:'user'},
@@ -626,11 +625,15 @@ function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
 const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, contabilidade:1};
 function router(){
-  const h = (location.hash||'#inicio').slice(1);
+  const h = (location.hash||'#dashboard').slice(1);
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
   const [rota, arg] = h.split('/');
   renderSidebar(rota);
-  const meta = ROTAS[rota] || ROTAS.inicio;
+  /* A aba Início saiu na v7.2 e o Painel virou a tela de entrada. Quem tiver
+     `#inicio` nos favoritos, ou qualquer endereço que não exista mais, cai
+     aqui — e `ROTAS.inicio` não existe: sem esta reserva o sistema travava
+     antes de desenhar a tela. */
+  const meta = ROTAS[rota] || ROTAS.dashboard;
   let titulo = meta.t, sub = meta.s;
   const el = document.getElementById('view');
   el.style.opacity=0; setTimeout(()=>{ el.style.opacity=1; },20);
@@ -664,10 +667,9 @@ function router(){
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
-  else if(rota==='inicio') el.innerHTML=viewInicio();
   else if(rota==='config') el.innerHTML=viewConfig();
   else if(rota==='dashboard') el.innerHTML=viewDashboard();
-  else el.innerHTML=viewInicio();
+  else el.innerHTML=viewDashboard();
 
   /* Nestas rotas o argumento do endereço é um FILTRO (e não o id de um
      registro). Depois de aplicado, ele SAI do endereço — senão, ao clicar
@@ -702,14 +704,13 @@ function pexMobileBottomNav(rota){
   var menuSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
   var it=function(on,ico,label,onclk){ return '<button class="mob-nav-b'+(on?' on':'')+'" onclick="'+onclk+'">'+ico+'<span>'+label+'</span></button>'; };
   nav.innerHTML =
-      it(rota==='inicio',    svg('home'),   'Início', "location.hash='#inicio'")
-    + it(rota==='dashboard', svg('dash'),   'Painel', "location.hash='#dashboard'")
+      it(rota==='dashboard', svg('dash'),   'Painel', "location.hash='#dashboard'")
     + it(false,              svg('search'), 'Buscar', "pexCmdOpen()")
     + it(false,              menuSvg,       'Menu',   "toggleSidebar()");
 }
 /* Barra de contexto: seta Voltar (sempre no mesmo lugar) + título da tela; some na home */
 function pexMobileCtx(rota){
-  var home = rota==='inicio' || rota==='dashboard';
+  var home = rota==='dashboard';
   var ctx=document.getElementById('mobCtx');
   if(home){ if(ctx) ctx.remove(); return; }
   var pt=document.getElementById('pageTitle');
@@ -763,9 +764,9 @@ function pexAfterRender(rota){
   try{ var _vw=document.getElementById('view'); if(_vw){ _vw.setAttribute('data-route',rota);
       /* tema CYBER global: liga em todas as telas, EXCETO Início/Painel/Manutenção
          (já têm bloco cyber próprio scoped). Viagens/Descargas também são cyber. */
-      var _noCy={inicio:1,dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
-    document.body.classList.toggle('pex-home', rota==='inicio'||rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
-    pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if((rota==='inicio'||rota==='dashboard') && typeof iniCountUp==='function') iniCountUp();
+      var _noCy={dashboard:1,manutencao:1}; _vw.classList.toggle('cyber', !_noCy[rota]); }
+    document.body.classList.toggle('pex-home', rota==='dashboard');  // esconde o Voltar (mobile) nas telas iniciais
+    pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if(rota==='dashboard' && typeof iniCountUp==='function') iniCountUp();
     /* Monitoramento: liga a simulação só na Início e desliga ao sair (performance) */
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
@@ -881,7 +882,7 @@ function renderSidebar(rota){
     const b = badge?`<span class="badge ${badge.cls}">${badge.n}</span>`:'';
     return `<a href="#${k}" data-label="${esc(m.t)}" class="${rota===k?'active':''}">${svg(m.ico,'ico')}<span>${m.t}</span>${b}</a>`; };
   document.getElementById('nav').innerHTML =
-    `<div class="group">Principal</div>`+ item('inicio')+ item('dashboard')+
+    `<div class="group">Principal</div>`+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
@@ -3551,45 +3552,6 @@ function iniCountUp(){
   });
 }
 
-/* ---------- PÁGINA INICIAL ---------- */
-function viewInicio(){
-  const cavalos=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado').length;
-  const reb=DB.veiculos.filter(v=>isReb(v)&&v.status!=='Arquivado').length;
-  const mot=DB.motoristas.filter(m=>m.status==='Ativo').length;
-  const h=hoje();
-  const vgMes=DB.viagens.filter(v=>{ const d=parseD(v.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
-  const emViagem=DB.viagens.filter(v=>v.status==='Pendente').length;
-  const nfOrd=DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
-  const fat=nfOrd[0]?totalNota(nfOrd[0]):0;
-  const viagens=DB.viagens.length;
-  const cteSum=(DB.ctes||[]).reduce((s,c)=>{ const v=(c.valor!=null&&c.valor!=='')?c.valor:(c.vTPrest||0);
-    const n=(typeof v==='number')?v:(parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\./g,'').replace(',','.'))||0); return s+n; },0);
-  const cteK=Math.round(cteSum/1000);
-  const spark=(color,pts)=>`<svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const kt=(ico,cls,val,pre,suf,label,href,color,pts)=>`<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${pre||''}0${suf||''}</span><span class="l">${label}</span>${spark(color,pts)}</a>`;
-  /* O mapa de monitoramento saiu na v7.1 (o cliente disse que não usava).
-     A tela ficaria com dois números só, então os valores que já eram
-     calculados aqui e não apareciam viraram cartões — todos clicáveis,
-     levando para a tela que abre o número. */
-  const venc=contadores();
-  return `<div class="ini-cmd">
-  <div class="ini-top">
-    <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PLANETA EXPRESS</b><span>Centro de Comando Operacional</span></div></div>
-    <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
-  </div>
-
-  <div class="ini-painel">
-    ${kt('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
-    ${kt('user','', mot, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
-    ${kt('route','', vgMes, '', '', 'Viagens no mês', 'viagens', '#8b9dff', '0,19 16,14 32,16 48,11 64,12 80,7')}
-    ${kt('clock','', emViagem, '', '', 'Viagens pendentes', 'viagens', '#e0b354', '0,14 16,17 32,12 48,15 64,10 80,13')}
-    ${kt('doc','', (DB.ctes||[]).length, '', '', 'CT-e emitidos', 'ctes', '#37e3d0', '0,21 16,17 32,14 48,12 64,9 80,6')}
-    ${kt('coins','', cteK, 'R$ ', ' mil', 'Total em CT-e', 'contabilidade', '#e0b354', '0,20 16,15 32,13 48,10 64,8 80,5')}
-    ${kt('bell','', venc.total, '', '', 'Vencimentos a vigiar', 'vencimentos', '#f2686b', '0,10 16,12 32,9 48,14 64,11 80,15')}
-    ${kt('wrench','', (DB.veiculos||[]).filter(v=>isReb(v)&&v.status!=='Arquivado').length, '', '', 'Reboques ativos', 'frota', '#5cc8ff', '0,16 16,14 32,15 48,12 64,13 80,10')}
-  </div>
-  </div>`;
-}
 
 /* ================================================================== */
 /*  SEGUROS / APÓLICES                                                 */
@@ -6921,7 +6883,7 @@ function tick(){ const d=new Date(); const el=document.getElementById('clock'); 
    Se a tela atual não tem relatório no catálogo, cai na impressão simples
    da própria tela (o comportamento antigo), para nada ficar sem saída. */
 function imprimirRelatorio(){
-  const rota=(location.hash||'#inicio').slice(1).split('/')[0];
+  const rota=(location.hash||'#dashboard').slice(1).split('/')[0];
   if(typeof PEXRelAbrir==='function' && typeof relPorModulo==='function'){
     if(relPorModulo(rota).length){ PEXRelAbrir(rota); return; }
     PEXRelAbrirTodos(); return;
@@ -6929,7 +6891,7 @@ function imprimirRelatorio(){
   imprimirTelaAtual();
 }
 function imprimirTelaAtual(){
-  const h=(location.hash||'#inicio').slice(1).split('/'); const meta=(typeof ROTAS!=='undefined'&&ROTAS[h[0]])||{};
+  const h=(location.hash||'#dashboard').slice(1).split('/'); const meta=(typeof ROTAS!=='undefined'&&ROTAS[h[0]])||{};
   let tit=meta.t||'Relatório';
   if(h[1]){ const v=veiculo(h[1]); const m=motorista(h[1]); if(v) tit+=' — '+v.placa; else if(m) tit+=' — '+m.nome; }
   const ph=document.getElementById('printHead');
@@ -6948,7 +6910,7 @@ function closeSidebar(){ document.querySelector('.sidebar')?.classList.remove('o
 /* ---- Navegação mobile: pilha de histórico para o botão Voltar ---- */
 var PEX_NAV=[]; var _pexNavBack=false;
 function _pexTrackNav(){
-  var h=location.hash||'#inicio';
+  var h=location.hash||'#dashboard';
   if(_pexNavBack){ _pexNavBack=false; return; }           // veio do "Voltar": não re-empilha
   if(PEX_NAV[PEX_NAV.length-1]!==h) PEX_NAV.push(h);       // ignora repetição da mesma tela
   if(PEX_NAV.length>60) PEX_NAV.shift();
@@ -6957,11 +6919,11 @@ function navVoltar(){
   closeSidebar();
   if(PEX_NAV.length>1){
     PEX_NAV.pop();                                          // remove a tela atual
-    var alvo=PEX_NAV[PEX_NAV.length-1]||'#inicio';
+    var alvo=PEX_NAV[PEX_NAV.length-1]||'#dashboard';
     _pexNavBack=true;
-    if((location.hash||'#inicio')===alvo){ router(); } else { location.hash=alvo; }
+    if((location.hash||'#dashboard')===alvo){ router(); } else { location.hash=alvo; }
   } else {                                                  // sem histórico → Início (nunca prende o usuário)
-    if((location.hash||'#inicio')!=='#inicio') location.hash='#inicio'; else router();
+    if((location.hash||'#dashboard')!=='#dashboard') location.hash='#dashboard'; else router();
   }
 }
 /* Recolher menu para "trilho" só-ícones (desktop). Estado salvo no aparelho. */
@@ -7188,7 +7150,7 @@ async function aposLogin(){
     nuvemRealtime(aplicarRemoto);
   }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
   esconderLogin();
-  renderSidebar('inicio'); router(); hideSplash(); updateUserBadge();
+  renderSidebar('dashboard'); router(); hideSplash(); updateUserBadge();
   toast('Bem-vindo, '+(nomeUsuario()||'')+'!');
 }
 async function logoutNuvem(){ if(!confirm('Sair da sua conta?'))return; await nuvemLogout(); location.reload(); }

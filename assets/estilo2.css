@@ -1536,21 +1536,6 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
    INÍCIO (v6.24) — Monitoramento meia tela à direita, KPIs à esquerda,
    mapa com mais vida (radar, anéis pulsando, caminhões com brilho).
    ========================================================================== */
-/* PAINEL DA INÍCIO (v7.1) — o mapa de monitoramento saiu a pedido do
-   cliente e a tela ficaria com dois números. Agora são 8 cartões clicáveis
-   em grade. Classe própria (`ini-painel`) de propósito: `.ini-kpis` já
-   existe com outro comportamento (coluna) e reaproveitar quebraria os dois. */
-.ini-painel{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:stretch;margin-top:16px}
-.ini-painel .ini-kpi{min-width:0;display:flex;flex-direction:column;justify-content:center}
-.ini-painel .ini-kpi .num{font-size:38px}
-.ini-painel .ini-kpi .ic{width:42px;height:42px}.ini-painel .ini-kpi .ic svg{width:21px;height:21px}
-@media(max-width:1100px){ .ini-painel{grid-template-columns:repeat(3,1fr)} }
-@media(max-width:860px){ .ini-painel{grid-template-columns:repeat(2,1fr)} .ini-painel .ini-kpi .num{font-size:32px} }
-/* ⚠️ Uma coluna já a partir de 620px, não de 420px. O `.ini-cmd` é full-bleed
-   (margin negativa), então ele é MAIS LARGO que a janela; com 2 colunas o
-   cartão da direita ficava cortado pelo `overflow-x:clip` do `.content` —
-   o mesmo corte da v6.72. Medido no celular: nada mais escapa da tela. */
-@media(max-width:620px){ .ini-painel{grid-template-columns:1fr} .ini-painel .ini-kpi .num{font-size:34px} }
 
 /* cidades: anel pulsando */
 .pex-map-hero .ini-cityring{fill:none;stroke:#5cc8ff;stroke-width:1.4;opacity:.6;animation:iniCityPulse 3s ease-out infinite}

@@ -237,6 +237,22 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 28/08/2026 — v7.2 (a aba Início saiu; o Painel virou a entrada)
+
+O cliente: *"remova a aba início e o que tem nela"*. Um dia depois da v7.1, que tinha acabado de refazer essa tela — ela era o resto do monitoramento e ele decidiu não querer nenhuma das duas.
+
+**Removidos:** `viewInicio()`, a entrada `inicio` em `ROTAS`, o item do menu lateral, o **botão "Início" da barra do celular** (sobraram Painel · Buscar · Menu) e o bloco CSS `.ini-painel` criado na v7.1.
+
+**O Painel de Controle (`#dashboard`) virou a tela de entrada.** Todo `'#inicio'` padrão virou `'#dashboard'`: o `router()`, o `renderSidebar` da abertura, o `navVoltar`, o link da logo na topbar (`index.html`) e o `pex-home` que esconde o Voltar no celular.
+
+**⚠️ NÃO confundir: o Painel usa as MESMAS peças da Início** — `iniKpiTile()`, `iniCountUp()`, `#iniClock` e todo o CSS `.ini-cmd`/`.ini-kpi`/`.ini-spark`. **Nada disso pode ser apagado** achando que é "coisa da Início"; só o `.ini-painel` (exclusivo da v7.1) saiu.
+
+**🚨 DEFEITO QUE O TESTE PEGOU:** o `router()` fazia `ROTAS[rota] || ROTAS.inicio`. Com a `inicio` fora do catálogo, **qualquer endereço desconhecido travava o sistema** (`Cannot read properties of undefined`) — e o mais provável de acontecer é justo o cliente ter `#inicio` nos favoritos, ou o navegador restaurar essa aba. Virou `|| ROTAS.dashboard`. Conferidos os outros 3 pontos que leem `ROTAS[...]`: já eram guardados.
+
+**Validado no Chrome headless — 19 asserções, zero falha:** a rota e a função sumiram; menu lateral e barra do celular sem Início; **abrir sem endereço cai no Painel**; **`#inicio` antigo abre o Painel em vez de travar**; o Painel intacto (10 cartões, números fora do zero, relógio, CSS `.ini-kpi` vivo); 29 rotas limpas; 21 relatórios abrindo; zero erro. Medida a barra do celular: os 3 botões cabem (Menu termina em 488 de 504).
+
+**Celular: 3,44 MB → 3,39 MB.**
+
 ### ✅ ESTADO EM 28/08/2026 — v7.1 (saíram o chatbot e o monitoramento)
 
 O cliente: *"chatbot não está tendo uso, pode removê-lo, 'monitoramento' também"*.
