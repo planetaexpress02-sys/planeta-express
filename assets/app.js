@@ -594,7 +594,6 @@ const ROTAS = {
   dashboard:{t:'Painel de Controle', s:'Visão geral da operação', ico:'dash'},
   frota:{t:'Frota', s:'Cavalos e reboques frigoríficos', ico:'truck'},
   motoristas:{t:'Motoristas', s:'Colaboradores e documentação', ico:'user'},
-  exames:{t:'Exames', s:'ASO, Toxicológico e Opentech', ico:'clinic'},
   direcao:{t:'Direção Defensiva', s:'Certificados dos motoristas', ico:'wheel'},
   tacografos:{t:'Tacógrafos', s:'Aferição dos veículos', ico:'taco'},
   vencimentos:{t:'Vencimentos', s:'Agenda de validades e alertas', ico:'bell'},
@@ -642,7 +641,6 @@ function router(){
   else if(rota==='motoristas' && arg){ const m=motorista(arg); if(m){ titulo=m.nome; sub=m.funcao; } el.innerHTML=viewMotorista(arg); }
   else if(rota==='frota') el.innerHTML=viewFrota();
   else if(rota==='motoristas') el.innerHTML=viewMotoristas();
-  else if(rota==='exames') el.innerHTML=viewExames();
   else if(rota==='direcao') el.innerHTML=viewDirecao();
   else if(rota==='tacografos') el.innerHTML=viewTacografos();
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
@@ -771,8 +769,7 @@ function pexAfterRender(rota){
     if(rota==='descargas' && typeof descInit==='function') descInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
-    if(typeof pexMobileInit==='function') pexMobileInit(rota);
-    if(typeof pexNotifBadge==='function') pexNotifBadge(); }catch(e){}
+    if(typeof pexMobileInit==='function') pexMobileInit(rota); }catch(e){}
 }
 /* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */
 function pexEnhanceCharts(){
@@ -884,7 +881,7 @@ function renderSidebar(rota){
   document.getElementById('nav').innerHTML =
     `<div class="group">Principal</div>`+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
-    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('exames')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
+    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
     `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
@@ -1298,7 +1295,15 @@ function viewMotorista(id){
   const procs=(DB.processos||[]).filter(p=>p.entidade==='motorista'&&p.refId===m.id);
   const docsCrim=motDocsCat(m,/criminal|antecedente|processo|senten|declara/i);
 
+  /* Exames do colaborador (v7.3): a aba "Exames" do menu saiu e virou esta.
+     NÃO existe coleção nova — os exames sempre foram vencimentos do próprio
+     motorista (DB.vencimentos, entidade 'motorista'). Aqui só olhamos para
+     eles de perto. Por isso nada se perdeu ao tirar a tela antiga, e o que
+     for lançado aqui continua aparecendo em Vencimentos. */
+  const exFeitos=vencs.filter(v=>EXAMES_TIPOS.some(t=>t[0]===v.tipo)).length;
+
   const abas=[['resumo','Resumo',null],
+              ['exames','Exames',exFeitos||null],
               ['contrato','Contrato de Trabalho',docsContrato.length||null],
               ['criminal','Ficha Criminal',procs.length||null],
               ['docs','Documentos',docsTodos.length||null]];
@@ -1308,7 +1313,8 @@ function viewMotorista(id){
     `<button class="cb-aba${motAba===a[0]?' on':''}" onclick="motSetAba('${a[0]}')">${esc(a[1])}${a[2]?` <span class="cb-n">${a[2]}</span>`:''}</button>`).join('')}</div>`;
 
   let corpo='';
-  if(motAba==='contrato')      corpo=viewMotContrato(m,docsContrato);
+  if(motAba==='exames')        corpo=viewMotExames(m,vencs);
+  else if(motAba==='contrato') corpo=viewMotContrato(m,docsContrato);
   else if(motAba==='criminal') corpo=viewMotCriminal(m,procs,docsCrim);
   else if(motAba==='docs')     corpo=viewMotDocs(m,docsTodos);
   else                         corpo=viewMotResumo(m,vencs,info);
@@ -1436,6 +1442,70 @@ function viewMotContrato(m,docs){
 /* ---------- ABA: FICHA CRIMINAL ----------
    Guarda o que o colaborador APRESENTOU (declaração, sentença, certidão).
    O sistema não julga nada: só mostra o que o documento diz. */
+/* ==================================================================
+   EXAMES DO COLABORADOR (v7.3)
+   A aba "Exames" do menu (matriz de todo mundo) saiu a pedido do cliente e
+   virou esta aba, dentro da ficha de cada motorista.
+   ⚠️ NÃO há coleção nova: exame SEMPRE foi um vencimento do motorista
+   (`DB.vencimentos`, entidade 'motorista', tipo ASO/Toxicológico/Opentech).
+   Por isso a troca não perdeu nada, e o que for lançado aqui aparece em
+   Vencimentos, no Painel e nos alertas — um dado só, num lugar só.
+   Reaproveita `modalVencimento` (inserir/modificar), `excluirVencimento`
+   (remover) e `badgeAnexo`/`uploadPara` (anexar), que já são validados.
+   ================================================================== */
+const EXAMES_TIPOS=[
+  ['ASO', /\baso\b/i, 'Atestado de Saúde Ocupacional'],
+  ['Toxicológico', /tox/i, 'Exame toxicológico de larga janela'],
+  ['Opentech Funcionário', /opentech/i, 'Cadastro Opentech (exigência BRF)']
+];
+function viewMotExames(m,vencs){
+  const cartao=function(tipo,re,desc){
+    const v=vencs.find(x=>x.tipo===tipo);
+    const s=v?situacao(v.validade):null;
+    const anexo=badgeAnexo('motorista', m.id, re, tipo);
+    if(!v){
+      return `<div class="card"><div class="card-b">
+        <div class="ex-h"><b>${esc(tipo)}</b><span class="st neutro">Não lançado</span></div>
+        <div class="muted" style="font-size:12px;margin:4px 0 12px">${esc(desc)}</div>
+        <button class="btn primary sm no-print" onclick="modalVencimento(null,'motorista','${m.id}','${esc(tipo)}')">${svg('plus')} Lançar exame</button>
+        <div class="ex-anexo">${anexo}</div>
+      </div></div>`;
+    }
+    return `<div class="card"><div class="card-b">
+      <div class="ex-h"><b>${esc(tipo)}</b><span class="st ${s.cls}">${esc(s.label)}</span></div>
+      <div class="muted" style="font-size:12px;margin:4px 0 10px">${esc(desc)}</div>
+      <div class="ex-grid">
+        <div><small>Validade</small><b class="mono">${fmtD(v.validade)}</b></div>
+        <div><small>Emissão</small><b class="mono">${v.emissao?fmtD(v.emissao):'—'}</b></div>
+      </div>
+      ${v.obs?`<div class="ex-obs">${esc(v.obs)}</div>`:''}
+      <div class="ex-anexo">${anexo}</div>
+      <div class="ex-acoes no-print">
+        <button class="btn sm" onclick="modalVencimento('${v.id}')">${svg('edit')} Modificar</button>
+        <button class="btn ghost sm" onclick="excluirVencimento('${v.id}')">${svg('trash')} Remover</button>
+      </div>
+    </div></div>`;
+  };
+  const outros=vencs.filter(v=>!EXAMES_TIPOS.some(t=>t[0]===v.tipo) && /exame|saude|saúde|clinic|medic/i.test(v.tipo||''));
+  return `
+  <div class="hint no-print">Os exames deste colaborador. O que você lançar aqui é o mesmo que aparece em <b>Vencimentos</b> e nos alertas do Painel — não é preciso lançar duas vezes.</div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:16px">
+    ${EXAMES_TIPOS.map(t=>cartao(t[0],t[1],t[2])).join('')}
+  </div>
+  ${outros.length?`<div class="card" style="margin-top:16px"><div class="card-h">${svg('clinic')}<h3>Outros exames lançados</h3></div>
+    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Tipo</th><th>Validade</th><th>Situação</th><th class="no-print"></th></tr></thead>
+      <tbody>${outros.map(v=>{ const s=situacao(v.validade);
+        return `<tr class="clickable" onclick="modalVencimento('${v.id}')"><td><b>${esc(v.tipo)}</b></td>
+          <td class="mono">${fmtD(v.validade)}</td><td><span class="st ${s.cls}">${esc(s.label)}</span></td>
+          <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();excluirVencimento('${v.id}')">${svg('trash')}</button></td></tr>`;
+      }).join('')}</tbody></table></div></div></div>`:''}
+  <div class="toolbar no-print" style="margin-top:16px">
+    <button class="btn" onclick="modalVencimento(null,'motorista','${m.id}','')">${svg('plus')} Outro exame</button>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="uploadPara('motorista','${m.id}','Exame')">${svg('upload')} Anexar arquivo</button>
+  </div>`;
+}
 function viewMotCriminal(m,procs,docs){
   const sit=m.criminalSituacao||'Não informado';
   const cor = sit==='Nada consta' ? '#2ecc71' : (sit==='Não informado' ? 'var(--text-soft)' : '#f0a13a');
@@ -1538,53 +1608,6 @@ function viewMotDocs(m,docs){
       ${docs.length? ordem.map(c=>`<div class="sectitulo">${svg(tipoIcone(c))} ${esc(c)} <span class="muted">(${cats[c].length})</span></div>${motDocsGrid(cats[c])}`).join('')
         : emptyState('Nenhum documento. Use "Anexar" para enviar.')}
     </div>
-  </div>`;
-}
-
-/* ================================================================== */
-/*  12. EXAMES (matriz ASO / Toxicológico / Opentech)                 */
-/* ================================================================== */
-function viewExames(){
-  const tipos=['ASO','Toxicológico','Opentech Funcionário'];
-  const reDe={'ASO':/\baso\b/i,'Toxicológico':/tox/i,'Opentech Funcionário':/opentech/i};
-  const cel=(m,tipo)=>{
-    const v=DB.vencimentos.find(x=>x.entidade==='motorista'&&x.refId===m.id&&x.tipo===tipo);
-    const bg=`<div style="margin-top:5px">${badgeAnexo('motorista', m.id, reDe[tipo]||new RegExp(tipo,'i'), tipo)}</div>`;
-    if(!v) return `<td><button class="btn ghost sm" onclick="modalVencimento(null,'motorista','${m.id}','${tipo}')">${svg('plus')} Add</button>${bg}</td>`;
-    const s=situacao(v.validade);
-    return `<td><div class="clickable" onclick="modalVencimento('${v.id}')"><div class="st ${s.cls}">${s.label}</div><div class="muted mono" style="font-size:11.5px;margin-top:3px">${fmtD(v.validade)}</div></div>${bg}</td>`;
-  };
-  const rows=DB.motoristas.map(m=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:10px">${avatarFoto(m,36)}<div><b>${esc(m.nome)}</b><div class="muted" style="font-size:11.5px">${esc(m.funcao)}</div></div></div></td>
-    ${tipos.map(t=>cel(m,t)).join('')}</tr>`).join('');
-
-  // resumo por tipo
-  const resumo=tipos.map(t=>{
-    const arr=DB.vencimentos.filter(x=>x.tipo===t).map(x=>situacao(x.validade));
-    const venc=arr.filter(s=>s.ord===0).length, crit=arr.filter(s=>s.ord===1).length;
-    return {t, total:arr.length, venc, crit};
-  });
-
-  return `
-  <div class="toolbar"><div class="spacer"></div>${docBtn('Exames')}</div>
-  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    ${resumo.map(r=>`<div class="card"><div class="card-b">
-      <div style="font-size:12.5px;color:var(--text-soft);font-weight:600">${esc(r.t)}</div>
-      <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
-        <span style="font-size:26px;font-weight:800">${r.total}</span>
-        <span class="muted" style="font-size:12px">registros</span></div>
-      <div style="margin-top:8px;display:flex;gap:6px">
-        ${r.venc?`<span class="st vencido">${r.venc} vencido(s)</span>`:''}
-        ${r.crit?`<span class="st crit">${r.crit} crítico(s)</span>`:''}
-        ${!r.venc&&!r.crit?'<span class="st ok">Tudo em dia</span>':''}</div>
-    </div></div>`).join('')}
-  </div>
-  <div class="card">
-    <div class="card-h">${svg('stetho')}<h3>Matriz de exames por colaborador</h3>
-      <div class="r no-print"><button class="btn sm" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div></div>
-    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl matrix">
-      <thead><tr><th>Colaborador</th><th>ASO</th><th>Toxicológico</th><th>Opentech (BRF)</th></tr></thead>
-      <tbody>${rows}</tbody></table></div></div>
   </div>`;
 }
 
@@ -7022,53 +7045,9 @@ function pexCmdKey(e){ const n=PEXCMD.items.length;
 function pexCmdDo(i){ const it=PEXCMD.items[i]; if(!it) return; pexCmdClose();
   if(it.hash){ location.hash=it.hash; } else if(it.fn){ try{ it.fn(); }catch(e){} } }
 
-/* ---- Central de notificações ---- */
+/* Nome de quem é o vencimento (placa ou motorista). O sino de notificações
+   saiu na v7.3, mas isto continua sendo usado na linha do tempo do Painel. */
 function _vencNome(x){ if(x.entidade==='veiculo'){ const v=veiculo(x.refId); return v?v.placa:''; } if(x.entidade==='motorista'){ const m=motorista(x.refId); return m?m.nome:''; } return x.nome||''; }
-function pexNotifData(){ const crit=[],avi=[],info=[];
-  (todosVencimentos()||[]).forEach(function(x){ const s=situacao(x.validade); const nome=_vencNome(x); const t=(x.tipo||'Documento')+(nome?' — '+nome:'');
-    if(s.ord===0) crit.push({t:t, s:'Documento vencido', when:fmtD(x.validade), hash:'#vencimentos/vencido'});
-    else if(s.ord===1) avi.push({t:t, s:'Vence em '+s.dias+' dia(s)', when:fmtD(x.validade), hash:'#vencimentos/critico'}); });
-  const ver=(document.querySelector('.sidebar .foot b')||{}).textContent||'';
-  info.push({t:'Sistema atualizado', s:'Versão '+ver+' instalada', when:''});
-  info.push({t:'Backup automático', s:'Programado para 03:00', when:''});
-  const pend=(DB.viagens||[]).filter(function(v){ return v.status==='Pendente'; }).length;
-  if(pend) info.push({t:pend+' viagem(ns) pendente(s)', s:'Aguardando baixa', when:'', hash:'#viagens'});
-  /* Aniversários: quem faz hoje vira aviso; os próximos, informativo */
-  if(typeof anivNotificacoes==='function'){ anivNotificacoes().forEach(function(a){ (a.hoje?avi:info).push(a); }); }
-  return {crit:crit, avi:avi, info:info}; }
-function pexNotifBadge(){ const d=pexNotifData(); const n=d.crit.length+d.avi.length; const b=document.getElementById('cockBadge');
-  if(b){ b.textContent=n>99?'99+':(n||''); b.style.display=n?'flex':'none'; b.classList.toggle('crit',d.crit.length>0); } }
-function pexNotifToggle(ev){ if(ev) ev.stopPropagation();
-  let el=document.getElementById('cockNotif');
-  if(el && el.classList.contains('show')){ pexNotifClose(); return; }
-  if(!el){ el=document.createElement('div'); el.id='cockNotif'; el.className='cock-notif'; document.body.appendChild(el); }
-  const d=pexNotifData();
-  const sec=function(title,arr,cls){ return arr.length? `<div class="cn-cat ${cls}">${title}<span>${arr.length}</span></div>`+arr.slice(0,10).map(function(x){ return `<div class="cn-row"${x.hash?` onclick="location.hash='${x.hash}';pexNotifClose()"`:''}><span class="cn-dot ${cls}"></span><div class="cn-main"><b>${esc(x.t)}</b><span>${esc(x.s)}</span></div>${x.when?`<div class="cn-when">${esc(x.when)}</div>`:''}</div>`; }).join('') : ''; };
-  const body=sec('Críticos',d.crit,'crit')+sec('Avisos',d.avi,'warn')+sec('Informativos',d.info,'info');
-  el.innerHTML=`<div class="cn-h">${svg('bell')}<b>Central de notificações</b></div><div class="cn-body">${body||'<div class="cn-empty">Tudo em dia ✓</div>'}</div>`;
-  requestAnimationFrame(function(){ el.classList.add('show'); });
-  setTimeout(function(){ document.addEventListener('click', pexNotifOutside); },10);
-}
-function pexNotifOutside(e){ const el=document.getElementById('cockNotif'), bell=document.getElementById('cockBell');
-  if(el && !el.contains(e.target) && bell && !bell.contains(e.target)) pexNotifClose(); }
-function pexNotifClose(){ const el=document.getElementById('cockNotif'); if(el) el.classList.remove('show'); document.removeEventListener('click', pexNotifOutside); }
-
-/* ---- Clima (Londrina) — melhor-esforço online, degrada offline ---- */
-function _wxInfo(code){ code=+code;
-  if(code===0) return ['☀️','Céu limpo']; if(code<=2) return ['🌤️','Parcialmente nublado']; if(code===3) return ['☁️','Nublado'];
-  if(code>=45&&code<=48) return ['🌫️','Névoa']; if(code>=51&&code<=67) return ['🌦️','Garoa/chuva']; if(code>=71&&code<=77) return ['❄️','Neve'];
-  if(code>=80&&code<=82) return ['🌧️','Pancadas']; if(code>=95) return ['⛈️','Tempestade']; return ['🌡️','—']; }
-function pexWeatherRender(temp,code){ const el=document.getElementById('cockWeather'); if(!el) return; const wi=_wxInfo(code);
-  el.style.display='flex'; el.title='Clima em Londrina — '+wi[1]; el.innerHTML=`<span class="wx-ic">${wi[0]}</span><span class="wx-tx"><b>${temp}°</b><small>Londrina</small></span>`; }
-function pexWeather(){ const el=document.getElementById('cockWeather'); if(!el) return;
-  try{ const c=JSON.parse(localStorage.getItem('pex_weather')||'null'); if(c && (Date.now()-c.t)<1800000){ pexWeatherRender(c.temp,c.code); return; } }catch(e){}
-  if(!navigator.onLine){ el.style.display='none'; return; }
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.31&longitude=-51.16&current=temperature_2m,weather_code&timezone=America%2FSao_Paulo')
-    .then(function(r){ return r.json(); })
-    .then(function(j){ const temp=Math.round(j.current.temperature_2m), code=j.current.weather_code;
-      try{ localStorage.setItem('pex_weather', JSON.stringify({t:Date.now(),temp:temp,code:code})); }catch(e){}
-      pexWeatherRender(temp,code); })
-    .catch(function(){ el.style.display='none'; }); }
 
 /* ---- Relógio em tempo real ---- */
 function cockTick(){ const d=new Date();
@@ -7086,10 +7065,8 @@ function pexCockStatus(){ const el=document.getElementById('cockStatus'); if(!el
 /* ---- Inicialização do cockpit ---- */
 function pexCockInit(){
   cockTick(); setInterval(cockTick,1000);
-  pexWeather(); setInterval(pexWeather,1800000);
   pexCockStatus(); setInterval(pexCockStatus,15000);
-  pexNotifBadge();
-  window.addEventListener('online', function(){ pexCockStatus(); pexWeather(); });
+  window.addEventListener('online', pexCockStatus);
   window.addEventListener('offline', pexCockStatus);
   document.addEventListener('keydown', function(e){ if(!(e.ctrlKey||e.metaKey)) return; const k=(e.key||'').toLowerCase();
     if(k==='k'){ e.preventDefault(); pexCmdOpen(); }

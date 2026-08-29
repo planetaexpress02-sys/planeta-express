@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=195">
-  <link rel="stylesheet" href="assets/estilo2.css?v=195">
+  <link rel="stylesheet" href="assets/estilo.css?v=196">
+  <link rel="stylesheet" href="assets/estilo2.css?v=196">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -46,7 +46,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v7.2</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v7.3</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -72,11 +72,6 @@
           <button class="cock-ico" id="cockNew" onclick="pexCmdOpen('new')" title="Ações rápidas (Ctrl + N)" aria-label="Ações rápidas">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           </button>
-          <button class="cock-ico" id="cockBell" onclick="pexNotifToggle(event)" title="Central de notificações" aria-label="Notificações">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            <span class="cock-badge" id="cockBadge"></span>
-          </button>
-          <div class="cock-weather" id="cockWeather"></div>
           <div class="cock-clock" title="Data e hora"><b id="cockTime">--:--:--</b><span id="cockDate"></span></div>
           <div class="cock-status on" id="cockStatus"><i></i><span>Online</span></div>
           <button class="btn sm relbtn" onclick="imprimirRelatorio()" title="Tirar relatório desta tela (imprimir ou salvar em PDF)">
@@ -104,16 +99,16 @@
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script src="assets/viagens.js?v=195"></script>
-  <script src="assets/dados.js?v=195"></script>
-  <script src="assets/alarmes.js?v=195"></script>
-  <script src="assets/arquivos.js?v=195"></script>
-  <script src="assets/importar.js?v=195"></script>
-  <script src="assets/app.js?v=195"></script>
-  <script src="assets/central.js?v=195"></script>
-  <script src="assets/contabilidade.js?v=195"></script>
-  <script src="assets/aniversarios.js?v=195"></script>
-  <script src="assets/relatorios.js?v=195"></script>
+  <script src="assets/viagens.js?v=196"></script>
+  <script src="assets/dados.js?v=196"></script>
+  <script src="assets/alarmes.js?v=196"></script>
+  <script src="assets/arquivos.js?v=196"></script>
+  <script src="assets/importar.js?v=196"></script>
+  <script src="assets/app.js?v=196"></script>
+  <script src="assets/central.js?v=196"></script>
+  <script src="assets/contabilidade.js?v=196"></script>
+  <script src="assets/aniversarios.js?v=196"></script>
+  <script src="assets/relatorios.js?v=196"></script>
   <script>
     /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
     if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){

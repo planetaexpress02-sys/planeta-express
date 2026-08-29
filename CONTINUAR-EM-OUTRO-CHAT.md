@@ -237,6 +237,22 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 29/08/2026 — v7.3 (fora clima e sino; Exames virou aba de cada motorista)
+
+Três pedidos do cliente numa mensagem: tirar a **temperatura de Londrina** e o **sino de alertas** do topo, e tirar a **aba Exames** — mas com os exames indo para o cadastro de cada motorista, com os mesmos dados, mais anexo e inserir/modificar/remover.
+
+**1. Topo limpo.** Saíram o chip do clima (`cockWeather` + `pexWeather`/`pexWeatherRender`/`_wxInfo`, que buscava na open-meteo) e o sino (`cockBell`/`cockBadge` + `pexNotifData`/`pexNotifBadge`/`pexNotifToggle`/`pexNotifOutside`/`pexNotifClose`). Relógio, status e Ações rápidas continuam. ⚠️ **`_vencNome()` ficou**: morava no bloco do sino mas quem usa é a **linha do tempo do Painel** — o comentário acima dela foi corrigido para não enganar a próxima leitura.
+
+**2. 🔑 A aba Exames NÃO tinha dado próprio.** `viewExames` era só uma *matriz* lendo `DB.vencimentos` (entidade `motorista`, tipos ASO/Toxicológico/Opentech). Por isso removê-la **não perdeu nada** — os 17 exames continuam onde sempre estiveram, aparecendo em Vencimentos, no Painel e nos alertas.
+
+**3. Aba "Exames" na ficha do motorista** (`viewMotExames`, entre Resumo e Contrato, com contador). Três cartões — **ASO, Toxicológico, Opentech** — cada um com situação colorida, validade, emissão, observação, **anexo** (`badgeAnexo`) e os botões **Modificar** / **Remover**. Quem não tem o exame mostra "Não lançado" + **Lançar exame**. Embaixo, "Outro exame" e "Anexar arquivo". Tudo reaproveitando `modalVencimento`, `excluirVencimento` e `uploadPara` — **nenhuma coleção nova, nenhum CRUD novo**: o que se lança aqui é o mesmo registro que aparece em Vencimentos, e a tela diz isso ao usuário.
+
+⚠️ **Detalhe que confundiu o teste (e é comportamento ANTIGO, não defeito):** a tela **Vencimentos só lista vencidos + próximos 30 dias**; o que está "Em dia" fica na faixa própria (`vencFiltro='emdia'`). Exame com validade em 2027 não aparece na lista padrão — o que torna a aba nova ainda mais útil, porque ela mostra os três sempre.
+
+**Validado no Chrome headless — 49 asserções, zero falha:** as 7 funções do clima/sino sumiram e o cockpit inicia sem erro (relógio segue); a rota `exames` saiu e o endereço antigo `#exames` não trava; **os 17 exames continuam na fonte única** e na faixa Em dia; a ficha mostra validade e situação de cada exame; e o ciclo completo **inserir → aparecer na ficha → aparecer em Vencimentos → modificar → remover** rodou de verdade (Opentech do Wesley, o único faltando), com o banco voltando ao tamanho original. Mais 28 rotas limpas, **as 5 abas das 6 fichas** e os 21 relatórios.
+
+**Celular: 3,39 MB → 3,38 MB.**
+
 ### ✅ ESTADO EM 28/08/2026 — v7.2 (a aba Início saiu; o Painel virou a entrada)
 
 O cliente: *"remova a aba início e o que tem nela"*. Um dia depois da v7.1, que tinha acabado de refazer essa tela — ela era o resto do monitoramento e ele decidiu não querer nenhuma das duas.
