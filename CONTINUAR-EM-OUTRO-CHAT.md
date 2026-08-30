@@ -237,6 +237,27 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 30/08/2026 — v7.7 (o ouro saiu; fica a base escura com as cores originais)
+
+O cliente viu a v7.6 e foi direto: *"não gostei do dourado, utilize somente o fundo mais escuro como fez e volte a cor dos ícones e botões como estava antes"*.
+
+**A volta custou 3 linhas de CSS** — e é a prova de que a tokenização da v7.6 valeu:
+```css
+--au:#00e5ff;  --au2:#00e5ff;  --au3:#0077ff;
+--au-rgb:0,229,255;  --au3-rgb:0,119,255;
+```
+Nenhum hex foi caçado no meio do arquivo. **Trocar o tema de novo é mexer só aqui.**
+
+**O que FICOU da v7.6** (o cliente pediu para manter): a base escura inteira (`--void #050609` … `--surf3 #161C27`), o `body` escuro, a `theme-color` do celular, o brilho de vidro dos cards em `.05` (em `.55` virava faixa cinza) e os tokens `--text/--card/--content` apontando para a base escura.
+
+**O que VOLTOU ao original:** o acento ciano/azul em botões, ícones, gráficos e bordas; os gradientes dos gráficos no JS; e as **barrinhas coloridas do topo dos KPIs** (azul/verde/laranja/vermelho por posição) — eu as tinha unificado em ouro por conta própria na v7.6 e ele pediu as cores de antes.
+
+**Como o JS voltou sem risco:** o backup pré-v7.6 do `app.js`/`contabilidade.js` foi conferido com um `diff` que **apaga todas as cores dos dois lados** — o resultado veio vazio, provando que a v7.6 só tinha mexido em cor. Aí deu para restaurar os arquivos inteiros sem perder nada da v7.5.
+
+**⚠️ O dourado que sobra é da LOGO** (5 ocorrências, `#c9a227` e vizinhas no splash/login): já existia antes da v7.6, não é resto da repintura.
+
+**Validado no Chrome headless — 20 asserções, zero falha:** os 5 tokens da base escura no valor exato e `body` escuro por luminância; os 4 tokens de acento de volta no ciano/azul; botão e ícone em ciano e **sem ouro**; a barrinha do 1º KPI de volta ao azul; varredura de contraste nas 26 rotas (zero texto escuro no escuro); 26 rotas e 21 relatórios limpos.
+
 ### ✅ ESTADO EM 30/08/2026 — v7.6 (novo tom do sistema: base quase preta + acento OURO)
 
 O cliente pediu troca estética com um conceito — *precisão, tecnologia, exclusividade, requinte* — e passou a **base escura** pronta (`--void #050609` … `--surf3 #161C27`) mais a **alternativa violeta**. Faltava o acento principal; ele escolheu **ouro** (`--au #C9A227`, `--au2 #E8C766`, `--au3 #8F7318`) e **sem botão de troca** — o violeta fica escrito no CSS, pronto, mas desligado.

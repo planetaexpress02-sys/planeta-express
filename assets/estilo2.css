@@ -159,15 +159,13 @@ body{background:
 /* KPIs — faixa de acento + brilho */
 .kpi{position:relative;overflow:hidden}
 .kpi::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,transparent)}
-/* v7.6: estas quatro barras eram azul/verde/laranja/vermelho POR POSIÇÃO —
-   cor decorativa, sem significado. Num tema de acento único isso vira ruído
-   (e competia com o vermelho/verde que de fato querem dizer algo). Agora são
-   variações do ouro; quem carrega significado continua sendo o selo de
-   status e o ícone do próprio KPI. */
-.kpi:nth-child(1)::after{background:linear-gradient(90deg,var(--au),transparent)}
-.kpi:nth-child(2)::after{background:linear-gradient(90deg,var(--au2),transparent)}
-.kpi:nth-child(3)::after{background:linear-gradient(90deg,var(--au3),transparent)}
-.kpi:nth-child(4)::after{background:linear-gradient(90deg,var(--au),transparent)}
+/* As quatro barrinhas do topo dos KPIs, como sempre foram. (Na v7.6 eu as
+   tinha unificado em ouro por conta própria; o cliente pediu as cores de
+   antes de volta na v7.7.) */
+.kpi:nth-child(1)::after{background:linear-gradient(90deg,var(--au3),#60a5fa)}
+.kpi:nth-child(2)::after{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.kpi:nth-child(3)::after{background:linear-gradient(90deg,#ea580c,#fb923c)}
+.kpi:nth-child(4)::after{background:linear-gradient(90deg,#dc2626,#f87171)}
 .kpi .k-val{background:linear-gradient(180deg,var(--surf3),#33415c);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* Cartões — cantos e sombra mais suaves */
@@ -449,9 +447,13 @@ body{background:
   --surf:#0C1017;  --surf2:#11161F; --surf3:#161C27;
   /* os mesmos, em componentes, para uso dentro de rgba() */
   --surf-rgb:12,16,23;  --surf2-rgb:17,22,31;  --surf3-rgb:22,28,39;
-  /* acento OURO */
-  --au:#C9A227;  --au2:#E8C766;  --au3:#8F7318;
-  --au-rgb:201,162,39;  --au3-rgb:143,115,24;
+  /* ACENTO — ciano/azul, o original do sistema.
+     ⚠️ A v7.6 tinha trocado por ouro; o cliente não gostou e pediu a base
+     escura COM as cores de antes (v7.7). Como tudo passa por estes tokens,
+     a volta foi mudar só estas linhas — é para isso que a tokenização serve.
+     Trocar o tema de novo = mexer AQUI, não caçar hex no meio do CSS. */
+  --au:#00e5ff;  --au2:#00e5ff;  --au3:#0077ff;
+  --au-rgb:0,229,255;  --au3-rgb:0,119,255;
   /* texto */
   --tx:#E8EAEE;  --tx2:#A8B0BD;  --tx3:#6E7686;  --tx3-rgb:110,118,134;
 
