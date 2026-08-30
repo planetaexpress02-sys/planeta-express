@@ -237,6 +237,25 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 30/08/2026 — v7.6 (novo tom do sistema: base quase preta + acento OURO)
+
+O cliente pediu troca estética com um conceito — *precisão, tecnologia, exclusividade, requinte* — e passou a **base escura** pronta (`--void #050609` … `--surf3 #161C27`) mais a **alternativa violeta**. Faltava o acento principal; ele escolheu **ouro** (`--au #C9A227`, `--au2 #E8C766`, `--au3 #8F7318`) e **sem botão de troca** — o violeta fica escrito no CSS, pronto, mas desligado.
+
+**Como foi feito (importa para as próximas):** o sistema tinha **~1.000 cores fixas** espalhadas (ciano `#00e5ff`, azuis-petróleo de superfície, azuis-claros de texto). Elas foram trocadas **de uma vez** por tokens, por famílias: acento → `--au/--au2/--au3`, texto → `--tx/--tx2/--tx3`, superfície → `--surf/--surf2/--surf3`, e os `rgba()` correspondentes por `rgba(var(--*-rgb), …)`. Foram **924 trocas no CSS** e as de acento no JS (gráficos, KPIs, donuts).
+
+> **Daqui em diante, mudar a cara do sistema é mexer no `:root` do `estilo2.css`** — não caçar hex no meio do arquivo.
+
+**⚠️ O RELATÓRIO A4 FICOU DE FORA de propósito** (linhas do bloco `.rel-*`): é documento em papel branco e não acompanha o tema. O teste confirma que a folha continua clara com texto escuro.
+
+**🚨 TRÊS COISAS QUE A TROCA EM MASSA QUEBROU — e é a lição:**
+1. **`--text` virou superfície.** `#0e1a2c` estava no mapa de superfícies e `--text` usava esse valor → o token de TEXTO passou a apontar para uma cor escura; texto sumiria no escuro em qualquer canto que ainda leia `--text`. Corrigido e comentado no código.
+2. **Faixa cinza no topo de todo card.** `.card::before` tinha um brilho de vidro em `rgba(255,255,255,.55)` — discreto no tema claro/azul, mas sobre quase-preto virava uma **barra cinza**. Baixado para `.05`.
+3. **O fundo da aplicação continuava CLARO.** O `body` era `--content:#e9edf3` e só não aparecia porque o `.main` cobria — bastou um card translúcido para vazar. Agora o `body` é o `--void` da paleta (e a `theme-color` do celular também).
+
+**Também tirei o arco-íris decorativo:** `.kpi:nth-child(1..4)::after` pintava azul/verde/laranja/vermelho **por posição**, sem significado — competia com o vermelho/verde que de fato querem dizer algo. Viraram variações do ouro. **As cores de status (verde/vermelho/âmbar) foram MANTIDAS** em todo o sistema: elas são dado, não decoração.
+
+**Validado no Chrome headless — 22 asserções, zero falha:** os 9 tokens da paleta com o valor exato; `body` escuro medido por luminância; **varredura de contraste nas 26 rotas** procurando texto escuro sobre fundo escuro (zero); o botão principal saindo em ouro; zero `#00e5ff` na tela; a folha A4 clara com texto escuro; 26 rotas e 21 relatórios limpos.
+
 ### ✅ ESTADO EM 30/08/2026 — v7.5 (Direção Defensiva e Tacógrafos viram parte das fichas; Frota separada)
 
 Três pedidos: tirar a aba **Direção Defensiva** (só dentro do cadastro do motorista), tirar a aba **Tacógrafos** (só dentro do cadastro do cavalo), e na **Frota → Todos** separar em cavalos/carretas.

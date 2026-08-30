@@ -664,9 +664,9 @@ function contabPainel(lanc, dre, dreAnt, todos){
     + kpi('Despesas', money(dre.despesa), '#f2a44e','')
     + kpi('Resultado operacional', money(dre.operacional), dre.operacional>=0?'#4bd6a0':'#f2686b','', _cbVarHTML(dre.operacional,dreAnt.operacional))
     + kpi(dre.resultado>=0?'Lucro do período':'Prejuízo do período', money(dre.resultado), dre.resultado>=0?'#4bd6a0':'#f2686b', 'margem '+dre.margem.toFixed(1)+'%')
-    + kpi('EBITDA', money(dre.ebitda), '#5cc8ff','antes de depreciação')
+    + kpi('EBITDA', money(dre.ebitda), '#E8C766','antes de depreciação')
     + kpi('Impostos', money(dre.imposto), '#8ea3bf','')
-    + kpi('Contas a receber', money(rec), '#5cc8ff','CT-e em aberto')
+    + kpi('Contas a receber', money(rec), '#E8C766','CT-e em aberto')
     + kpi('Contas a pagar', money(pag), '#f2a44e','tributos + financiamentos')
   +'</div>'
   +'<div class="grid two-col" style="margin-bottom:16px">'

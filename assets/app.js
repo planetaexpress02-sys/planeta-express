@@ -540,7 +540,7 @@ function barChart(data, opts){
     </g>`;
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" class="barchart" preserveAspectRatio="xMidYMid meet">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22a7ff"/><stop offset="1" stop-color="#0062e0"/></linearGradient></defs>
+    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8C766"/><stop offset="1" stop-color="#8F7318"/></linearGradient></defs>
     <g class="bc-grids">${grid}</g>${bars}</svg>`;
 }
 /* ---- Linha / Área (desenha sozinha) ---- */
@@ -559,7 +559,7 @@ function lineChart(data, opts){
   const dots=pts.map((p,i)=>`<circle class="ln-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" data-tip="${esc(data[i].label)}: ${data[i].vtxt!=null?esc(data[i].vtxt):(data[i].value||0)}"${data[i].js?` style="cursor:pointer" onclick="${data[i].js}"`:''}/>`).join('');
   const labels=data.map((d,i)=>`<text x="${X(i).toFixed(1)}" y="${h-6}" text-anchor="middle" class="bar-lbl">${esc(d.label)}</text>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" class="linechart" preserveAspectRatio="xMidYMid meet">
-    <defs><linearGradient id="lnf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(0,170,255,.34)"/><stop offset="1" stop-color="rgba(0,119,255,0)"/></linearGradient></defs>
+    <defs><linearGradient id="lnf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(201,162,39,.30)"/><stop offset="1" stop-color="rgba(201,162,39,0)"/></linearGradient></defs>
     <g class="bc-grids">${grid}</g>
     <path class="ln-area" d="${area}" fill="url(#lnf)"/>${cmp}
     <path class="ln-line" d="${line}" fill="none" pathLength="1"/>${dots}${labels}</svg>`;
@@ -568,7 +568,7 @@ function lineChart(data, opts){
 function sparkline(values, opts){ opts=opts||{}; const w=opts.w||80, h=opts.h||26, n=(values||[]).length; if(!n) return '';
   const max=Math.max(...values), min=Math.min(...values), rng=(max-min)||1;
   const pts=values.map((v,i)=>[(n<=1?w/2:i/(n-1)*w),(h-3)-((v-min)/rng)*(h-6)]);
-  return `<svg class="ini-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" pathLength="1" fill="none" stroke="${opts.color||'#00e5ff'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+  return `<svg class="ini-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" pathLength="1" fill="none" stroke="${opts.color||'#C9A227'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
 /* ---- Heatmap (intensidade por célula) ---- */
 function heatmap(cells, opts){ opts=opts||{}; const max=Math.max(1,...cells.map(c=>c.value||0));
   return `<div class="heatmap">${cells.map(c=>{ const t=(c.value||0)/max; const op=(0.10+t*0.9).toFixed(2);
@@ -1041,12 +1041,12 @@ function viewDashboard(){
   </div>
 
   <div class="ini-kstrip4">
-    ${iniKpiTile('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
+    ${iniKpiTile('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#E8C766', '0,20 16,16 32,18 48,10 64,13 80,6')}
     ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
     ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
     ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
     ${iniKpiTile('umbrella', segCrit?'crit':'', segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9')}
-    ${iniKpiTile('stamp', licVencidas?'crit':'', licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#5cc8ff', '0,15 16,13 32,17 48,12 64,15 80,10')}
+    ${iniKpiTile('stamp', licVencidas?'crit':'', licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#E8C766', '0,15 16,13 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
     ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
@@ -1095,10 +1095,10 @@ function viewDashboard(){
     <div class="card">
       <div class="card-h">${svg('truck')}<h3>Composição da frota</h3></div>
       <div class="card-b"><div class="donut-wrap">
-        ${donut([{label:'Cavalos',value:cavalos,color:'#2563eb'},{label:'Carretas',value:reb,color:'#38bdf8'}],{center:cavalos+reb,sub:'veículos'})}
+        ${donut([{label:'Cavalos',value:cavalos,color:'#C9A227'},{label:'Carretas',value:reb,color:'#8F7318'}],{center:cavalos+reb,sub:'veículos'})}
         <div class="legend">
-          <div class="li clk" onclick="frotaFiltro='cavalo';location.hash='frota'"><span class="dot" style="background:#2563eb"></span>Cavalos<b>${cavalos}</b></div>
-          <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Carretas<b>${reb}</b></div>
+          <div class="li clk" onclick="frotaFiltro='cavalo';location.hash='frota'"><span class="dot" style="background:#C9A227"></span>Cavalos<b>${cavalos}</b></div>
+          <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#8F7318"></span>Carretas<b>${reb}</b></div>
           <div class="li clk" onclick="location.hash='pneus'"><span class="dot" style="background:#94a3b8"></span>Pneus no total<b>${_pneus.total}</b></div>
         </div>
       </div></div>
@@ -2917,14 +2917,14 @@ let alarmeCat='todos';
 const ALARME_CATS=[
   {key:'controle', label:'Controlador', ico:'chip',    cor:'#b18cff', re:/micro|processad|controlad|display|hmi|memoria|reset|software|comunica|\bplaca\b|rele|relay|cpu|firmware/},
   {key:'energia',  label:'Energia',     ico:'battery', cor:'#ffc061', re:/bateria|batter|voltag|tensao|\bvolt|alternador|\bcarga|energia|fusivel|corrente|amper/},
-  {key:'sensor',   label:'Sensor',      ico:'gauge',   cor:'#00e5ff', re:/sensor|bobina|termistor|sonda|leitura|probe/},
+  {key:'sensor',   label:'Sensor',      ico:'gauge',   cor:'#C9A227', re:/sensor|bobina|termistor|sonda|leitura|probe/},
   {key:'temp',     label:'Temperatura', ico:'alarm',   cor:'#ff9d5c', re:/temp|ambient|degelo|defrost|aquec|\bfrio|quente|setpoint|set\s*point|calor/},
   {key:'motor',    label:'Motor / Refrigeração', ico:'wrench', cor:'#ff6b6b', re:/motor|engine|\brpm|rota[çc]|oleo|\boil|arrefec|radiador|combust|fuel|diesel|pressao|compressor|\bgas|refriger|condensad|evaporad|correia|ventilad|damper/},
 ];
 function _alarmeCat(a){
   const t=_dnorm((a.d||'')+' '+(a.ex||''));
   for(const c of ALARME_CATS){ if(c.re.test(t)) return c; }
-  return {key:'geral', label:'Geral', ico:'alarm', cor:'#7fe0ff'};
+  return {key:'geral', label:'Geral', ico:'alarm', cor:'#E8C766'};
 }
 function _alarmesFiltrados(){
   const q=_dnorm(alarmeBusca);
@@ -2941,7 +2941,7 @@ function viewAlarmes(){
   const cont={}; todos.forEach(a=>{ const k=_alarmeCat(a).key; cont[k]=(cont[k]||0)+1; });
   const chip=(key,label,cor)=>`<button class="alm-chip ${alarmeCat===key?'on':''}" style="--ac:${cor}" onclick="alarmeCat='${key}';renderAlarmesList();alarmeSyncChips()">
     ${key!=='todos'?`<i class="alm-chip-dot"></i>`:''}${label}<b>${key==='todos'?todos.length:(cont[key]||0)}</b></button>`;
-  const chips=`<button class="alm-chip ${alarmeCat==='todos'?'on':''}" style="--ac:#00e5ff" onclick="alarmeCat='todos';renderAlarmesList();alarmeSyncChips()">Todos<b>${todos.length}</b></button>`
+  const chips=`<button class="alm-chip ${alarmeCat==='todos'?'on':''}" style="--ac:#C9A227" onclick="alarmeCat='todos';renderAlarmesList();alarmeSyncChips()">Todos<b>${todos.length}</b></button>`
     + ALARME_CATS.map(c=>chip(c.key,c.label,c.cor)).join('');
   return `
   <div class="banner">${svg('alarm')}<div><b>Tabela de Alarmes Thermo King</b><span>Referência dos códigos das unidades SB III / Super II / 190 / 210 / 210+ / 310 / 310+ / 400. Digite o número que aparece no visor para encontrar o significado.</span></div></div>
@@ -3258,7 +3258,7 @@ function pneuDiagramaSVG(v, pl){ const cavalo=v.tipo==='Cavalo'; const H=cavalo?
       <text x="${s.x}" y="${s.y+3}" text-anchor="middle" class="pn-tlbl">${esc(s.cod)}</text></g>`;
   }).join('');
   return `<svg viewBox="0 0 300 ${H}" class="pn-diagram" preserveAspectRatio="xMidYMid meet">
-    <defs><linearGradient id="pnBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="rgba(0,55,95,.5)"/><stop offset=".5" stop-color="rgba(0,95,155,.62)"/><stop offset="1" stop-color="rgba(0,55,95,.5)"/></linearGradient></defs>
+    <defs><linearGradient id="pnBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="rgba(60,52,26,.55)"/><stop offset=".5" stop-color="rgba(96,82,36,.66)"/><stop offset="1" stop-color="rgba(60,52,26,.55)"/></linearGradient></defs>
     ${body}${axles}${tires}</svg>`;
 }
 /* Detalhe: pneus de UM veículo — diagrama inteligente + painel + ficha */
@@ -3661,7 +3661,7 @@ function iniCountUp(){
 /* ================================================================== */
 let segFiltro='todos';
 let APOLICE_FILA=[];   // arquivos aguardando anexar (envio de apólice)
-const RAMO_COR={carga:'#f2a44e',frota:'#5cc8ff',auto:'#8b9dff',vida:'#4bd6a0'};
+const RAMO_COR={carga:'#f2a44e',frota:'#C9A227',auto:'#8b9dff',vida:'#4bd6a0'};
 function segCor(r){ return RAMO_COR[r]||'#8b9dff'; }
 /* Prêmio em texto (apólices de averbação não têm prêmio anual fixo) */
 function segPremioTxt(s){ if(s.premio==null||s.premio==='') return 'Averbação'; return money(s.premio); }
@@ -4000,7 +4000,7 @@ let pedFiltro='todos';      // todos | mes | ano | mesEsp | personalizado
 let pedTipo='todos';        // todos | Pedágio | Vale-pedágio
 let pedDe='', pedAte='';
 let pedMes='todos';         // AAAA-MM escolhido na lista de meses (pedFiltro='mesEsp')
-const PED_CONC_COR={ 'PRVIAS':'#00e5ff', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e', 'VIA CAMPO':'#c58bff' };
+const PED_CONC_COR={ 'PRVIAS':'#C9A227', 'EPR PARANÁ':'#4bd6a0', 'VIA ARAUCÁRIA':'#f2a44e', 'CCR':'#8b9dff', 'VIA ARAUCARIA':'#f2a44e', 'VIA CAMPO':'#c58bff' };
 function _pedConcCor(c){ return PED_CONC_COR[c]||'#5c99ff'; }
 function _pedNorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
 /* Extrai rodovia/km/sentido/cidade do texto da praça */
@@ -4137,16 +4137,16 @@ function viewPedagios(){
   </div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
-    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens · '+esc(_pedPeriodoLabel())+' · custo real '+money(pago+valeSobra), '#00e5ff', 1)}
+    ${kp('coins', Math.round(total), 'Total em pedágios', qtd+' passagens · '+esc(_pedPeriodoLabel())+' · custo real '+money(pago+valeSobra), '#C9A227', 1)}
     ${kp('wallet', Math.round(pago), 'Pago pela empresa', 'débito direto', '#f2686b', 1, "pedTipo='Pedágio';router()")}
     ${kp('shield', Math.round(vale), 'Vale-pedágio (BRF)', valeSobra>0? money(valeSobra)+' NÃO reembolsado' : 'reembolsado por inteiro', '#4bd6a0', 1, "pedTipo='Vale-pedágio';router()")}
-    ${kp('toll', qtd, 'Passagens', pracas.length+' praças', '#8b9dff', 0)}
+    ${kp('toll', qtd, 'Passagens', pracas.length+' praças', '#8F7318', 0)}
   </div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
-    ${kp('trend', Math.round(ticket), 'Ticket médio', 'por passagem', '#5cc8ff', 1)}
+    ${kp('trend', Math.round(ticket), 'Ticket médio', 'por passagem', '#E8C766', 1)}
     ${kp('truck', Math.round(custoVeic), 'Custo médio', 'por veículo', '#e0b354', 1)}
-    ${kp('map', pracas.length, 'Praças distintas', '', '#37e3d0', 0)}
-    ${kp('clients', concs.length, 'Concessionárias', concs.join(' · '), '#8b9dff', 0)}
+    ${kp('map', pracas.length, 'Praças distintas', '', '#E8C766', 0)}
+    ${kp('clients', concs.length, 'Concessionárias', concs.join(' · '), '#8F7318', 0)}
   </div>
 
   <div class="grid two-col">
@@ -4159,7 +4159,7 @@ function viewPedagios(){
           <div class="li"><span class="dot" style="background:#f2686b"></span>Pago pela empresa<b>${money(pago)}</b></div>
           <div class="li"><span class="dot" style="background:#4bd6a0"></span>Vale-pedágio (BRF)<b>${money(vale)}</b></div>
           <div class="li"><span class="dot" style="background:#ffb020"></span>Do vale, sobrou p/ a empresa<b>${money(valeSobra)}</b></div>
-          <div class="li" style="border-top:1px solid rgba(255,255,255,.12);margin-top:4px;padding-top:6px"><span class="dot" style="background:#00e5ff"></span><b>Custo real da empresa</b><b>${money(pago+valeSobra)}</b></div>
+          <div class="li" style="border-top:1px solid rgba(255,255,255,.12);margin-top:4px;padding-top:6px"><span class="dot" style="background:#C9A227"></span><b>Custo real da empresa</b><b>${money(pago+valeSobra)}</b></div>
         </div></div></div></div>
   </div>
 
@@ -4213,7 +4213,7 @@ function _pedMapa(lista){
       <text x="${q[0]}" y="${(q[1]-r-7).toFixed(1)}" text-anchor="middle" class="pdm-lbl ${isBase?'base':''}">${isBase?'LONDRINA · BASE':esc(a.cid)}</text>
     </g>`; }).join('');
   return `<svg viewBox="0 0 720 360" class="pdm-map" preserveAspectRatio="xMidYMid meet">
-    <defs><linearGradient id="pdmr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient></defs>
+    <defs><linearGradient id="pdmr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C9A227"/><stop offset="1" stop-color="#8F7318"/></linearGradient></defs>
     <g class="pdm-routes">${routes}</g>${marks}</svg>
     ${fora.length?`<div class="muted" style="font-size:11.5px;margin-top:6px">Fora do desenho (praça sem posição no mapa): ${fora.map(a=>esc(a.cid)+' — '+a.n+'× '+money(a.v)).join(' · ')}</div>`:''}`;
 }
@@ -4583,7 +4583,7 @@ const LIC_CATS=[
   {k:'sanitaria', n:'Vigilância Sanitária',    ico:'clinic', c:'#16c98d'},
   {k:'estadual',  n:'Inscrição Estadual',      ico:'doc',    c:'#f2a44e'},
   {k:'municipal', n:'Inscrição Municipal',     ico:'doc',    c:'#b98cff'},
-  {k:'certidao',  n:'Certidões',               ico:'shield', c:'#37e3d0'},
+  {k:'certidao',  n:'Certidões',               ico:'shield', c:'#E8C766'},
   {k:'cadastro',  n:'Cadastro',                ico:'idcard', c:'#8ea3bf'},
   {k:'ambiental', n:'Licença Ambiental',       ico:'shield', c:'#4bd6a0'},
   {k:'bombeiros', n:'Bombeiros (AVCB)',        ico:'shield', c:'#f2686b'},
@@ -4783,7 +4783,7 @@ function viewLicencas(){
     ${kp('bell',   '#f2c14e', vencendo,     'Licenças vencendo', 'próximos 60 dias', 'vencendo')}
     ${kp('alarm',  '#f2686b', vencidas,     'Vencidas', 'regularizar já', 'vencidas')}
     ${kp('clock',  '#f2a44e', protocolos,   'Protocolos em andamento', 'renovações abertas', 'protocolos')}
-    ${kp('clip',   '#37e3d0', anexados,     'Documentos anexados', 'arquivos guardados', 'anexados')}
+    ${kp('clip',   '#E8C766', anexados,     'Documentos anexados', 'arquivos guardados', 'anexados')}
   </div>
 
   ${renovBox}
@@ -5976,7 +5976,7 @@ async function abastecNfUpload(ev){
 /* ---------- ALARME: detalhe (causa e solução) ---------- */
 function modalAlarme(code){
   const a=(typeof ALARMES_TK!=='undefined'?ALARMES_TK:[]).find(x=>x.c===code); if(!a) return;
-  const cat=(typeof _alarmeCat==='function')?_alarmeCat(a):{label:'Geral',ico:'alarm',cor:'#7fe0ff'};
+  const cat=(typeof _alarmeCat==='function')?_alarmeCat(a):{label:'Geral',ico:'alarm',cor:'#E8C766'};
   openModal(`<div class="m-h">${svg('alarm')}<h3>Alarme ${esc(a.c)}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b alarme-modal">
       <div class="alarme-hero">

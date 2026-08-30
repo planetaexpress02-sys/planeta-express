@@ -4,10 +4,10 @@
    ========================================================================== */
 
 :root{
-  --brand:#0b1220;
+  --brand:var(--bg);
   --brand-2:#111c33;
-  --sidebar:#0c1526;
-  --sidebar-hover:#16233f;
+  --sidebar:var(--surf);
+  --sidebar-hover:var(--surf3);
   --content:#eef2f7;
   --card:#ffffff;
   --line:#e2e8f0;
@@ -15,7 +15,7 @@
   --text:#0f1b2d;
   --text-soft:#5a6b82;
   --text-mute:#8a99ad;
-  --accent:#2563eb;
+  --accent:var(--au3);
   --accent-2:#1d4ed8;
   --accent-soft:#e8f0ff;
   --ok:#16a34a;      --ok-bg:#e7f6ec;
@@ -52,7 +52,7 @@ button{font-family:inherit;cursor:pointer}
 /* ---------- Sidebar ---------- */
 .sidebar{
   width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
-  background:linear-gradient(180deg,#0c1526 0%,#0a1120 100%);
+  background:linear-gradient(180deg,var(--surf) 0%,#0a1120 100%);
   color:#cdd6e6;position:sticky;top:0;height:100vh;
   display:flex;flex-direction:column;z-index:40;
   border-right:1px solid rgba(255,255,255,.05);
