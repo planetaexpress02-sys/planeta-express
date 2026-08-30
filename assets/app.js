@@ -594,8 +594,6 @@ const ROTAS = {
   dashboard:{t:'Painel de Controle', s:'Visão geral da operação', ico:'dash'},
   frota:{t:'Frota', s:'Cavalos e reboques frigoríficos', ico:'truck'},
   motoristas:{t:'Motoristas', s:'Colaboradores e documentação', ico:'user'},
-  direcao:{t:'Direção Defensiva', s:'Certificados dos motoristas', ico:'wheel'},
-  tacografos:{t:'Tacógrafos', s:'Aferição dos veículos', ico:'taco'},
   vencimentos:{t:'Vencimentos', s:'Agenda de validades e alertas', ico:'bell'},
   km:{t:'KM / Horas', s:'Atualize e acompanhe as próximas trocas', ico:'gauge'},
   oleo:{t:'Trocas de Óleo', s:'Óleo e filtros por veículo', ico:'wrench'},
@@ -641,8 +639,6 @@ function router(){
   else if(rota==='motoristas' && arg){ const m=motorista(arg); if(m){ titulo=m.nome; sub=m.funcao; } el.innerHTML=viewMotorista(arg); }
   else if(rota==='frota') el.innerHTML=viewFrota();
   else if(rota==='motoristas') el.innerHTML=viewMotoristas();
-  else if(rota==='direcao') el.innerHTML=viewDirecao();
-  else if(rota==='tacografos') el.innerHTML=viewTacografos();
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
   else if(rota==='km'){ if(arg) kmFiltro=arg; el.innerHTML=viewKM(); }
   else if(rota==='oleo') el.innerHTML=viewOleo();
@@ -881,8 +877,8 @@ function renderSidebar(rota){
   document.getElementById('nav').innerHTML =
     `<div class="group">Principal</div>`+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
-    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('direcao')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
-    `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+ item('tacografos')+
+    `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
+    `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
@@ -1019,7 +1015,7 @@ function viewDashboard(){
   const pneusAlerta = _pneus.noLimite;          // pneus no limite (somando qtd, não linhas)
   const chkMes = DB.checklists.filter(c=>{ const d=parseD(c.data),h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
   const chkUlt = DB.checklists.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).slice(0,5);
-  const tipos={Cavalos:cavalos,Reboques:reb};
+  const tipos={Cavalos:cavalos,Carretas:reb};
   // Últimos 6 meses (viagens e despesas) — para gráficos clicáveis
   const now2=hoje(); const ult6=[];
   for(let i=5;i>=0;i--){ const d=new Date(now2.getFullYear(),now2.getMonth()-i,1); ult6.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:MESES[d.getMonth()]}); }
@@ -1099,10 +1095,10 @@ function viewDashboard(){
     <div class="card">
       <div class="card-h">${svg('truck')}<h3>Composição da frota</h3></div>
       <div class="card-b"><div class="donut-wrap">
-        ${donut([{label:'Cavalos',value:cavalos,color:'#2563eb'},{label:'Reboques',value:reb,color:'#38bdf8'}],{center:cavalos+reb,sub:'veículos'})}
+        ${donut([{label:'Cavalos',value:cavalos,color:'#2563eb'},{label:'Carretas',value:reb,color:'#38bdf8'}],{center:cavalos+reb,sub:'veículos'})}
         <div class="legend">
           <div class="li clk" onclick="frotaFiltro='cavalo';location.hash='frota'"><span class="dot" style="background:#2563eb"></span>Cavalos<b>${cavalos}</b></div>
-          <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Reboques<b>${reb}</b></div>
+          <div class="li clk" onclick="frotaFiltro='reboque';location.hash='frota'"><span class="dot" style="background:#38bdf8"></span>Carretas<b>${reb}</b></div>
           <div class="li clk" onclick="location.hash='pneus'"><span class="dot" style="background:#94a3b8"></span>Pneus no total<b>${_pneus.total}</b></div>
         </div>
       </div></div>
@@ -1136,14 +1132,14 @@ function viewFrota(){
   else if(frotaFiltro==='arquivado') lista=lista.filter(v=>v.status==='Arquivado');
   if(frotaFiltro!=='arquivado') lista=lista.filter(v=>v.status!=='Arquivado');
 
-  const cards = lista.map(v=>{
+  const cardDe = v=>{
     const vencs=todosVencimentos().filter(x=>x.entidade==='veiculo'&&x.refId===v.id);
     const pior=vencs.map(x=>situacao(x.validade)).sort((a,b)=>a.ord-b.ord)[0];
     const p=primaryItem(v); const info=p?manutInfo(p,v):null;
     return `<div class="vcard" onclick="location.hash='frota/${v.id}'">
       <div class="vcard-top">
         <div class="vplate">${plate(v.placa,v.tipo)}</div>
-        <span class="tag ${v.tipo==='Cavalo'?'cavalo':'rebo'}">${v.tipo==='Cavalo'?'Cavalo':'Reboque'}</span>
+        <span class="tag ${v.tipo==='Cavalo'?'cavalo':'rebo'}">${v.tipo==='Cavalo'?'Cavalo':'Carreta'}</span>
       </div>
       <div class="vcard-body">
         <div class="vcard-model">${esc(v.marca||'—')} ${esc(v.modelo||'')}</div>
@@ -1154,23 +1150,38 @@ function viewFrota(){
         ${info&&info.ok?`<span class="st ${info.st}" title="Próxima troca">${svg('gauge')} ${info.restante<=0?'troca vencida':num(info.restante)+' '+info.un}</span>`:''}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  /* No "Todos", a lista sai SEPARADA em Cavalos e Carretas (pedido do
+     cliente) em vez de uma grade única misturada. Nos outros filtros a
+     lista já é de um tipo só, então continua grade simples. */
+  const secao=(titulo,arr)=> arr.length
+    ? `<div class="frt-sec"><div class="frt-sec-h">${titulo}<span>${arr.length}</span></div>
+       <div class="grid vgrid">${arr.map(cardDe).join('')}</div></div>` : '';
+  const cavalos=lista.filter(v=>v.tipo==='Cavalo');
+  const carretas=lista.filter(v=>isReb(v));
+  const outrosV=lista.filter(v=>v.tipo!=='Cavalo' && !isReb(v));
+  const corpo = (frotaFiltro==='todos')
+    ? (lista.length
+        ? secao('Cavalos',cavalos)+secao('Carretas',carretas)+secao('Outros',outrosV)
+        : emptyState('Nenhum veículo neste filtro.'))
+    : `<div class="grid vgrid">${lista.map(cardDe).join('')||emptyState('Nenhum veículo neste filtro.')}</div>`;
 
   return `
   <div class="toolbar">
-    <div class="seg">${fb('todos','Todos')}${fb('cavalo','Cavalos')}${fb('reboque','Reboques')}${fb('arquivado','Arquivados')}</div>
+    <div class="seg">${fb('todos','Todos')}${fb('cavalo','Cavalos')}${fb('reboque','Carretas')}${fb('arquivado','Arquivados')}</div>
     <div class="spacer"></div>
     <button class="btn primary" onclick="modalVeiculo()">${svg('plus')} Novo veículo</button>
     ${docBtn('Frota')}
   </div>
-  <div class="grid vgrid">${cards||emptyState('Nenhum veículo neste filtro.')}</div>`;
+  ${corpo}`;
 }
 
 /* --- Cards de veículo estilo Frota, reutilizados em Manutenção/Pneus/Baterias --- */
 function vcardMini(v, rota, footHtml){
   return `<div class="vcard" onclick="location.hash='${rota}/${v.id}'">
     <div class="vcard-top"><div class="vplate">${plate(v.placa,v.tipo)}</div>
-      <span class="tag ${v.tipo==='Cavalo'?'cavalo':'rebo'}">${v.tipo==='Cavalo'?'Cavalo':'Reboque'}</span></div>
+      <span class="tag ${v.tipo==='Cavalo'?'cavalo':'rebo'}">${v.tipo==='Cavalo'?'Cavalo':'Carreta'}</span></div>
     <div class="vcard-body"><div class="vcard-model">${esc(v.marca||'—')} ${esc(v.modelo||'')}</div>
       <div class="vcard-sub">${esc(v.anoModelo||'')}${v.renavam?' · Renavam '+esc(v.renavam):''}</div></div>
     <div class="vcard-foot">${footHtml||''}</div>
@@ -1256,6 +1267,7 @@ function viewVeiculo(id){
           <td style="text-align:right">${x._origem==='venc'?badgeAnexo('veiculo', v.id, new RegExp((x.tipo||'').replace(/[^\wçãáéíóúâê ]/gi,'').split(' ')[0],'i'), x.tipo):''}</td></tr>`).join('')}</tbody></table></div>` : emptyState('Sem vencimentos cadastrados.')}
       </div>
     </div>
+    ${_veicTacografo(v)}
     <div class="grid" style="gap:18px">
       <div class="card">
         <div class="card-h">${svg('wrench')}<h3>Manutenção</h3>
@@ -1358,10 +1370,10 @@ function viewMotorista(id){
      motorista (DB.vencimentos, entidade 'motorista'). Aqui só olhamos para
      eles de perto. Por isso nada se perdeu ao tirar a tela antiga, e o que
      for lançado aqui continua aparecendo em Vencimentos. */
-  const exFeitos=vencs.filter(v=>EXAMES_TIPOS.some(t=>t[0]===v.tipo)).length;
+  const exFeitos=vencs.filter(v=>EXAMES_TIPOS.concat(CERT_TIPOS).some(t=>t[0]===v.tipo)).length;
 
   const abas=[['resumo','Resumo',null],
-              ['exames','Exames',exFeitos||null],
+              ['exames','Exames e Certificados',exFeitos||null],
               ['contrato','Contrato de Trabalho',docsContrato.length||null],
               ['criminal','Ficha Criminal',procs.length||null],
               ['docs','Documentos',docsTodos.length||null]];
@@ -1516,16 +1528,37 @@ const EXAMES_TIPOS=[
   ['Toxicológico', /tox/i, 'Exame toxicológico de larga janela'],
   ['Opentech Funcionário', /opentech/i, 'Cadastro Opentech (exigência BRF)']
 ];
+/* Certificados do colaborador — mesma forma dos exames (validade + anexo),
+   mas NÃO são exame. Ficam numa lista separada de propósito: o bloco do
+   Painel usa `EXAMES_TIPOS`, e misturar mudaria aquele resumo sem o cliente
+   ter pedido. A aba "Direção Defensiva" do menu saiu na v7.5 e virou isto. */
+const CERT_TIPOS=[
+  ['Direção Defensiva', /defensiv|dire[çc][ãa]o/i, 'Certificado de direção defensiva']
+];
 function viewMotExames(m,vencs){
-  const cartao=function(tipo,re,desc){
+  /* `verbo` muda só o texto do botão: "Lançar exame" para exame, "Lançar
+     certificado" para os certificados. ⚠️ Direção Defensiva HOJE não tem
+     nenhum registro de validade na base — os certificados existem só como
+     ARQUIVO ANEXADO (era assim na tela antiga também, que mostrava "Não
+     cadastrado" e o selo do anexo). Por isso o cartão sem validade continua
+     útil: ele mostra o anexo e oferece lançar a validade quando houver. */
+  const cartao=function(tipo,re,desc,verbo){
     const v=vencs.find(x=>x.tipo===tipo);
     const s=v?situacao(v.validade):null;
-    const anexo=badgeAnexo('motorista', m.id, re, tipo);
+    /* ⚠️ `badgeAnexo` só enxerga arquivo ENVIADO pelo sistema (nuvem/IndexedDB).
+       Os certificados e laudos que o cliente já tem estão REGISTRADOS da pasta
+       (`DB.arquivos`), e só apareciam na aba Documentos. Aqui mostramos os dois:
+       primeiro o(s) arquivo(s) da pasta, depois o selo de enviar/ver. Sem isto,
+       o cartão pediria "Anexar" um documento que a empresa já tem. */
+    const daPasta=motDocsCat(m,re).filter(d=>d.tipo==='real');
+    const pastaHTML=daPasta.map(d=>
+      `<span class="st ok" style="cursor:pointer" title="Abrir ${esc(d.nome)}" onclick="abrirReal('${esc(d.path)}')">${svg('clip')} ${esc(d.nome)}</span>`).join(' ');
+    const anexo=pastaHTML+badgeAnexo('motorista', m.id, re, tipo);
     if(!v){
       return `<div class="card"><div class="card-b">
         <div class="ex-h"><b>${esc(tipo)}</b><span class="st neutro">Não lançado</span></div>
         <div class="muted" style="font-size:12px;margin:4px 0 12px">${esc(desc)}</div>
-        <button class="btn primary sm no-print" onclick="modalVencimento(null,'motorista','${m.id}','${esc(tipo)}')">${svg('plus')} Lançar exame</button>
+        <button class="btn primary sm no-print" onclick="modalVencimento(null,'motorista','${m.id}','${esc(tipo)}')">${svg('plus')} Lançar ${verbo||'exame'}</button>
         <div class="ex-anexo">${anexo}</div>
       </div></div>`;
     }
@@ -1544,11 +1577,15 @@ function viewMotExames(m,vencs){
       </div>
     </div></div>`;
   };
-  const outros=vencs.filter(v=>!EXAMES_TIPOS.some(t=>t[0]===v.tipo) && /exame|saude|saúde|clinic|medic/i.test(v.tipo||''));
+  const outros=vencs.filter(v=>!EXAMES_TIPOS.concat(CERT_TIPOS).some(t=>t[0]===v.tipo) && /exame|saude|saúde|clinic|medic/i.test(v.tipo||''));
   return `
   <div class="hint no-print">Os exames deste colaborador. O que você lançar aqui é o mesmo que aparece em <b>Vencimentos</b> e nos alertas do Painel — não é preciso lançar duas vezes.</div>
   <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:16px">
     ${EXAMES_TIPOS.map(t=>cartao(t[0],t[1],t[2])).join('')}
+  </div>
+  <div class="pn-sec" style="margin-top:18px">Certificados</div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:16px">
+    ${CERT_TIPOS.map(t=>cartao(t[0],t[1],t[2],'certificado')).join('')}
   </div>
   ${outros.length?`<div class="card" style="margin-top:16px"><div class="card-h">${svg('clinic')}<h3>Outros exames lançados</h3></div>
     <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
@@ -1672,68 +1709,53 @@ function viewMotDocs(m,docs){
 /* ================================================================== */
 /*  13. VENCIMENTOS                                                    */
 /* ================================================================== */
-/* ---------- DIREÇÃO DEFENSIVA (motoristas) ---------- */
-function viewDirecao(){
-  const rows=DB.motoristas.map(m=>{
-    const v=DB.vencimentos.find(x=>x.entidade==='motorista'&&x.refId===m.id&&x.tipo==='Direção Defensiva');
-    const s=v?situacao(v.validade):null;
-    return `<tr>
-      <td><div style="display:flex;align-items:center;gap:10px">${avatarFoto(m,36)}<div><b>${esc(m.nome)}</b><div class="muted" style="font-size:11.5px">${esc(m.funcao)}</div></div></div></td>
-      <td class="mono muted">${v?fmtD(v.emissao):'—'}</td>
-      <td class="mono">${v?fmtD(v.validade):'—'}</td>
-      <td>${v?`<span class="st ${s.cls}">${s.label}</span>`:'<span class="st neutro">Não cadastrado</span>'}</td>
-      <td>${badgeAnexo('motorista', m.id, /defensiv|dire[çc][ãa]o/i, 'Direção Defensiva')}</td>
-      <td class="no-print" style="text-align:right">${v?`<button class="btn ghost sm" onclick="modalVencimento('${v.id}')">${svg('edit')}</button>`:`<button class="btn sm" onclick="modalVencimento(null,'motorista','${m.id}','Direção Defensiva')">${svg('plus')} Add</button>`}</td></tr>`;
-  }).join('');
-  const arr=DB.vencimentos.filter(x=>x.tipo==='Direção Defensiva').map(x=>situacao(x.validade));
-  const comCert=DB.motoristas.filter(m=>anexoTipo('motorista',m.id,/defensiv|dire[çc][ãa]o/i)).length;
-  return `
-  <div class="banner">${svg('wheel')}<div><b>Direção Defensiva</b><span>Certificado de direção defensiva dos motoristas (válido por 1 ano). Anexe o certificado; ele aparece como "Anexado" e abre ao clicar.</span></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Direção Defensiva')}</div></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    ${kpi('wheel','i-blue', arr.length, 'Certificados cadastrados','')}
-    ${kpi('bell', arr.filter(s=>s.ord<=1).length?'i-red':'i-green', arr.filter(s=>s.ord<=1).length, 'Vencidos / críticos','')}
-    ${kpi('clip','i-green', comCert, 'Com certificado anexado','')}
-  </div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Motorista</th><th>Emissão</th><th>Validade</th><th>Situação</th><th>Certificado</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows}</tbody></table></div></div></div>`;
-}
 
 /* ---------- TACÓGRAFOS (somente cavalos) ---------- */
+/* ==================================================================
+   TACÓGRAFO NA FICHA DO CAVALO (v7.5)
+   A aba "Tacógrafos" (lista de todos os cavalos) saiu a pedido do cliente:
+   agora a aferição aparece na ficha do próprio veículo.
+   ⚠️ SÓ APARECE EM CAVALO — reboque/carreta não tem cronotacógrafo, era
+   assim na tela antiga (`DB.veiculos.filter(v=>v.tipo==='Cavalo')`).
+   ⚠️ NÃO há coleção nova: o tacógrafo sempre foi um vencimento do veículo
+   (`DB.vencimentos`, entidade 'veiculo', tipo 'Tacógrafo'). Continua
+   aparecendo em Vencimentos e no card "Vencimentos & documentos" acima —
+   este bloco é a mesma informação de perto, com o certificado à mão.
+   ================================================================== */
+function _veicTacografo(v){
+  if(!v || v.tipo!=='Cavalo') return '';
+  const t=(DB.vencimentos||[]).find(x=>x.entidade==='veiculo'&&x.refId===v.id&&x.tipo==='Tacógrafo');
+  const cert=tacoCertificado(v);
+  const certHTML = cert
+    ? `<span class="st ok" style="cursor:pointer" title="Ver ${esc(cert.nome||'certificado')}" onclick="verArquivo('${cert.id}')">${svg('clip')} Certificado anexado</span>`
+    : `<span class="st neutro">Sem certificado</span>`;
+  const s=t?situacao(t.validade):null;
+  return `<div class="card" style="margin-top:18px"><div class="card-h">${svg('taco')}<h3>Tacógrafo</h3>
+      <div class="r"><span class="muted" style="font-size:11.5px">aferição INMETRO</span></div></div>
+    <div class="card-b">
+      ${t?`<div class="ex-grid">
+        <div><small>Validade</small><b class="mono">${fmtD(t.validade)}</b></div>
+        <div><small>Emissão</small><b class="mono">${t.emissao?fmtD(t.emissao):'—'}</b></div>
+      </div>
+      <div class="dx-s" style="margin-bottom:10px"><span class="st ${s.cls}">${esc(s.label)}</span>${certHTML}</div>
+      ${t.obs?`<div class="ex-obs">${esc(t.obs)}</div>`:''}
+      <div class="ex-acoes no-print">
+        <button class="btn sm" onclick="modalVencimento('${t.id}')">${svg('edit')} Modificar</button>
+        <button class="btn ghost sm" onclick="excluirVencimento('${t.id}')">${svg('trash')} Remover</button>
+        <button class="btn ghost sm" onclick="uploadPara('veiculo','${v.id}','Tacógrafo')">${svg('upload')} Anexar certificado</button>
+      </div>`
+      :`<div class="dx-s" style="margin-bottom:10px"><span class="st neutro">Não cadastrado</span>${certHTML}</div>
+      <div class="ex-acoes no-print">
+        <button class="btn primary sm" onclick="modalVencimento(null,'veiculo','${v.id}','Tacógrafo')">${svg('plus')} Lançar aferição</button>
+        <button class="btn ghost sm" onclick="uploadPara('veiculo','${v.id}','Tacógrafo')">${svg('upload')} Anexar certificado</button>
+      </div>`}
+    </div></div>`;
+}
 function tacoCertificado(v){
   // Só conta certificado REALMENTE enviado/sincronizado na plataforma (não os arquivos da pasta)
   const up=todosArquivos().find(f=>f.entidade==='veiculo'&&f.refId===v.id&&/tac[óo]grafo|cronotac/i.test((f.categoria||'')+' '+(f.name||'')));
   if(up) return {tipo:'up', nome:up.name, id:up.id};
   return null;
-}
-function viewTacografos(){
-  const veics=DB.veiculos.filter(v=>v.tipo==='Cavalo'&&v.status!=='Arquivado');
-  const rows=veics.map(v=>{
-    const t=DB.vencimentos.find(x=>x.entidade==='veiculo'&&x.refId===v.id&&x.tipo==='Tacógrafo');
-    const s=t?situacao(t.validade):null; const cert=tacoCertificado(v);
-    const certBadge=cert?`<span class="st ok" style="cursor:pointer" onclick="event.stopPropagation();${cert.tipo==='real'?`abrirReal('${esc(cert.path)}')`:`verArquivo('${cert.id}')`}">${svg('clip')} Certificado anexado</span>`
-      :`<span class="muted" style="font-size:11.5px">sem certificado</span>`;
-    return `<tr>
-      <td>${plate(v.placa,v.tipo)} ${certBadge}</td><td>${esc(v.marca)} ${esc(v.modelo)}</td>
-      <td class="mono muted">${t?fmtD(t.emissao):'—'}</td>
-      <td class="mono">${t?fmtD(t.validade):'—'}</td>
-      <td>${t?`<span class="st ${s.cls}">${s.label}</span>`:'<span class="st neutro">Não cadastrado</span>'}</td>
-      <td class="no-print" style="text-align:right">
-        <button class="btn sm" title="Anexar certificado" onclick="uploadPara('veiculo','${v.id}','Tacógrafo')">${svg('upload')} Anexar</button>
-        ${t?`<button class="btn ghost sm" onclick="modalVencimento('${t.id}')">${svg('edit')}</button>`:`<button class="btn sm" onclick="modalVencimento(null,'veiculo','${v.id}','Tacógrafo')">${svg('plus')} Add</button>`}</td></tr>`;
-  }).join('');
-  const arr=veics.map(v=>DB.vencimentos.find(x=>x.entidade==='veiculo'&&x.refId===v.id&&x.tipo==='Tacógrafo')).filter(Boolean).map(x=>situacao(x.validade));
-  const comCert=veics.filter(v=>tacoCertificado(v)).length;
-  return `
-  <div class="banner">${svg('taco')}<div><b>Tacógrafos — Cavalos</b><span>Aferição do cronotacógrafo (INMETRO). Anexe o certificado; ele aparece como "Certificado anexado" ao lado da placa.</span></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Tacógrafos')}</div></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    ${kpi('taco','i-blue', arr.length, 'Aferições cadastradas','')}
-    ${kpi('bell', arr.filter(s=>s.ord<=1).length?'i-red':'i-green', arr.filter(s=>s.ord<=1).length, 'Vencidas / críticas','')}
-    ${kpi('clip','i-green', comCert, 'Com certificado anexado','')}
-  </div>
-  <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Placa / Certificado</th><th>Veículo</th><th>Aferição</th><th>Validade</th><th>Situação</th><th class="no-print"></th></tr></thead>
-    <tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 let vencFiltro='todos', vencTipo='todos';

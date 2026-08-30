@@ -237,6 +237,24 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 30/08/2026 — v7.5 (Direção Defensiva e Tacógrafos viram parte das fichas; Frota separada)
+
+Três pedidos: tirar a aba **Direção Defensiva** (só dentro do cadastro do motorista), tirar a aba **Tacógrafos** (só dentro do cadastro do cavalo), e na **Frota → Todos** separar em cavalos/carretas.
+
+**Como as anteriores, nenhuma das duas telas tinha dado próprio** — liam `DB.vencimentos`. Removê-las não perdeu nada.
+
+**1. Direção Defensiva → ficha do motorista.** Entrou como seção **"Certificados"** dentro da aba de exames, que passou a se chamar **"Exames e Certificados"**. Lista separada `CERT_TIPOS` **de propósito**: o bloco do Painel usa `EXAMES_TIPOS`, e misturar mudaria aquele resumo sem o cliente pedir (teste garante que o Painel segue com 3 cartões e sem "Defensiva").
+
+**2. 🔑 DESCOBERTA IMPORTANTE — `badgeAnexo` não enxerga os arquivos da pasta.** Direção Defensiva tem **ZERO registro de validade** na base: os certificados existem só como **arquivo registrado** (`DB.arquivos`/`ARQUIVOS_EMPRESA`, abertos com `abrirReal`). Mas `badgeAnexo`/`anexoTipo` só olham `todosArquivos()` = nuvem + IndexedDB. Resultado: o cartão pediria "Anexar" um documento que a empresa **já tem**. Corrigido — os cartões de exame/certificado agora mostram **primeiro os arquivos da pasta** (`motDocsCat`, clicáveis) e depois o selo de enviar. Ganho colateral: ASO e Toxicológico também passaram a mostrar o arquivo real na ficha.
+
+**3. Tacógrafo → ficha do cavalo** (`_veicTacografo`, card próprio com validade, emissão, situação, certificado, Modificar/Remover/Anexar). **Só em `tipo==='Cavalo'`** — carreta não tem cronotacógrafo, era assim na tela antiga. Teste confirma que a ficha da carreta **não** mostra o bloco.
+
+**4. Frota → "Todos" em duas seções** (`.frt-sec`): **Cavalos** e **Carretas**, cada uma com contador. Os outros filtros seguem grade simples. Rótulos alinhados ao vocabulário do cliente: o filtro e a etiqueta do cartão passaram de "Reboque(s)" para **"Carreta(s)"**, e o donut do Painel também.
+
+⚠️ **O que NÃO foi renomeado, de propósito:** `v.tipo` continua `"Reboque Frigorífico"` no banco, `isReb()` continua casando por `"Reboque"`, e o **cadastro de veículo ainda oferece "Reboque Frigorífico" no tipo**. Trocar isso mexeria em dado e exigiria migração — só rótulo de tela mudou. **Se um dia trocar o tipo no cadastro, `isReb()` para de reconhecer e a Frota inteira quebra a separação.**
+
+**Validado no Chrome headless — 47 asserções, zero falha:** as rotas antigas `#direcao`/`#tacografos` não travam; o certificado da pasta aparece na ficha; lançar validade → aparece → remover → banco volta; o Painel intacto; cavalo com bloco de tacógrafo e carreta sem; Frota com 5+5 = os 10 veículos ativos, contadores certos e nada fora de seção; 26 rotas, **as 10 fichas de veículo**, as 5 abas das 6 fichas de motorista e os 21 relatórios.
+
 ### ✅ ESTADO EM 30/08/2026 — v7.4 (resumo de exames no Painel, com regra própria de alerta)
 
 O cliente mandou o print do resumo que existia na aba Exames (removida na v7.3) e pediu que voltasse **no Painel de Controle** — com uma regra explícita: *"nada que **irá** vencer deve gerar crítico nesses, aparece 'tudo em dia'; o crítico somente em Vencimentos"*.
