@@ -1036,7 +1036,7 @@ function viewDashboard(){
 
   return `<div class="ini-cmd ini-dash">
   <div class="ini-top">
-    <div class="ini-brand"><div class="mk"><img src="assets/logo.png" alt=""></div><div class="tx"><b>PAINEL DE CONTROLE</b><span>Visão geral da operação</span></div></div>
+    <div class="ini-brand"><div class="mk"><img src="assets/logo-marca.png" alt=""></div><div class="tx"><b>PAINEL DE CONTROLE</b><span>Visão geral da operação</span></div></div>
     <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
   </div>
 
@@ -5309,7 +5309,7 @@ function viewEtica(){
   return `
   <div class="etica-doc">
     <div class="etica-head">
-      <div class="etica-logo"><img src="assets/logo.png" alt=""></div>
+      <div class="etica-logo"><img src="assets/logo-claro.png" alt=""></div>
       <div><h2>Código de Ética e Conduta</h2><p class="muted">Planeta Express Transportes</p></div>
       <div class="no-print" style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
@@ -7180,7 +7180,7 @@ function mostrarLogin(msg){
   const el=document.getElementById('loginScreen'); if(!el) return;
   el.style.display='flex';
   el.innerHTML=`<div class="login-box">
-    <div class="login-logo"><img src="assets/logo.png" alt="Planeta Express"></div>
+    <div class="login-logo"><img src="assets/logo-claro.png" alt="Planeta Express"></div>
     <h2>PLANETA EXPRESS</h2><p class="login-sub">Sistema de Gestão · acesso</p>
     <div class="field"><label>E-mail</label><input type="email" id="lg_email" autocomplete="username" placeholder="seu@email.com"></div>
     <div class="field"><label>Senha</label><input type="password" id="lg_senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>

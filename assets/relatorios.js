@@ -54,7 +54,11 @@ function relResponsavel(){
    a página já carregou. Assim funciona igual na pasta (assets/logo.png) e no
    arquivo único do celular, onde a logo vem embutida em base64. */
 function relLogoSrc(){
-  const img = document.querySelector('.logo-badge img, .sp-logo img, .tb-logo img');
+  /* ⚠️ A folha é BRANCA. Desde a v7.8 a logo da interface é CLARA (branca em
+     fundo transparente) — se o relatório usasse a mesma, sairia invisível no
+     papel. Por isso vem primeiro a logo ESCURA escondida no index.html; as
+     outras ficam de reserva para o caso de ela não existir. */
+  const img = document.querySelector('#relLogoDark, .logo-badge img, .sp-logo img, .tb-logo img');
   return (img && img.getAttribute('src')) || '';
 }
 function relAgora(){

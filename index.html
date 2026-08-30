@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=200">
-  <link rel="stylesheet" href="assets/estilo2.css?v=200">
+  <link rel="stylesheet" href="assets/estilo.css?v=202">
+  <link rel="stylesheet" href="assets/estilo2.css?v=202">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -24,7 +24,7 @@
     <div class="sp-orb sp-orb2"></div>
     <div class="sp-grid"></div>
     <div class="sp-core">
-      <div class="sp-logo"><img src="assets/logo.png" alt="Planeta Express"><i class="sp-shine"></i></div>
+      <div class="sp-logo"><img src="assets/logo-claro.png" alt="Planeta Express"><i class="sp-shine"></i></div>
       <div class="sp-title">PLANETA<b>EXPRESS</b></div>
       <div class="sp-line"></div>
       <div class="sp-tag">Sistema de Gestão Operacional</div>
@@ -35,18 +35,24 @@
   <!-- Cabeçalho que aparece só na impressão / PDF do relatório -->
   <div id="printHead" class="print-only"></div>
 
+  <!-- Logo ESCURA, só para o relatório A4 (papel branco). Fica escondida na
+       tela; o relLogoSrc() lê o src dela. Sem isto o relatório usaria a logo
+       CLARA da interface e sairia invisível no papel. No arquivo único do
+       celular ela também vira base64, então funciona nos dois. -->
+  <img id="relLogoDark" src="assets/logo-escuro.png" alt="" style="display:none" aria-hidden="true">
+
   <div class="app">
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="logo-badge"><img src="assets/logo.png" alt="Planeta Express"></div>
+        <div class="logo-badge"><img src="assets/logo-claro.png" alt="Planeta Express"></div>
         <div class="btxt"><b>PLANETA</b><span>Express</span></div>
       </div>
       <button class="rail-toggle no-print" onclick="toggleRail()" title="Recolher menu" aria-label="Recolher ou expandir o menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v7.7</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v7.9</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -60,7 +66,7 @@
           <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
         <a class="tb-brand no-print" href="#dashboard" aria-label="Painel de Controle — Planeta Express">
-          <span class="tb-logo"><img src="assets/logo.png" alt=""></span><span class="tb-word">PLANETA EXPRESS</span>
+          <span class="tb-logo"><img src="assets/logo-marca.png" alt=""></span><span class="tb-word">PLANETA EXPRESS</span>
         </a>
         <div class="page-title" id="pageTitle">Painel de Controle</div>
         <button class="cock-search no-print" id="cockSearch" onclick="pexCmdOpen()" title="Busca global e comandos (Ctrl + K)">
@@ -99,16 +105,16 @@
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script src="assets/viagens.js?v=200"></script>
-  <script src="assets/dados.js?v=200"></script>
-  <script src="assets/alarmes.js?v=200"></script>
-  <script src="assets/arquivos.js?v=200"></script>
-  <script src="assets/importar.js?v=200"></script>
-  <script src="assets/app.js?v=200"></script>
-  <script src="assets/central.js?v=200"></script>
-  <script src="assets/contabilidade.js?v=200"></script>
-  <script src="assets/aniversarios.js?v=200"></script>
-  <script src="assets/relatorios.js?v=200"></script>
+  <script src="assets/viagens.js?v=202"></script>
+  <script src="assets/dados.js?v=202"></script>
+  <script src="assets/alarmes.js?v=202"></script>
+  <script src="assets/arquivos.js?v=202"></script>
+  <script src="assets/importar.js?v=202"></script>
+  <script src="assets/app.js?v=202"></script>
+  <script src="assets/central.js?v=202"></script>
+  <script src="assets/contabilidade.js?v=202"></script>
+  <script src="assets/aniversarios.js?v=202"></script>
+  <script src="assets/relatorios.js?v=202"></script>
   <script>
     /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
     if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){

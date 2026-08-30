@@ -237,6 +237,40 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 30/08/2026 — v7.9 (agora o tom é MESMO quase preto)
+
+O cliente cobrou: *"você não usou o tom mais escuro no sistema, corrija, eu quero um tom quase preto como esse"*. **Ele tinha razão, e o diagnóstico interessa:** a base escura da v7.6 estava lá (`--void #050609` etc.) — mas **coberta por gradientes azuis** que pintavam por cima dela. O sistema continuava parecendo azul-petróleo.
+
+**Os culpados eram lavados de tela inteira** (não os detalhes): `.main`, `#view.cyber`, `.ini-cmd` (duas regras) e `.sidebar::after` tinham `radial-gradient` do acento em **.08 a .22 de opacidade**, mais fundos sólidos azuis (`#132433`, `#0b1522`, `#102a46`, `#020a14`). Agora o brilho do acento é **.025–.05** e o sólido é `var(--bg)`/`var(--void)`.
+
+> **A lição:** trocar o token da base não basta se houver camada por cima. Ao mudar o tom, **procure os `radial-gradient` de escala de página** — são eles que decidem a cor que o olho vê.
+
+**O acento ciano continua** nos botões, ícones, bordas, itens ativos e gráficos — só saiu do *fundo*.
+
+**Validado no Chrome headless — 18 asserções, zero falha:** `body`, `.main` e `.sidebar` medidos por **luminância < 0,08**; cada token da base conferido para o **azul não superar o vermelho em mais de 14** (é o que separa "quase preto" de "azul escuro"); os gradientes de página sem azul forte; o botão ainda ciano; contraste de texto nas 26 rotas; 26 rotas, 21 relatórios e a folha A4 branca.
+
+### ✅ ESTADO EM 30/08/2026 — v7.8 (a logo preenche o selo; acabou o quadrado branco)
+
+O cliente mandou print do splash e cobrou, com razão: *"essa logo tem que preencher esses quadros, olha que coisa amadora"*.
+
+**Eram DUAS causas somadas** (medidas, não chutadas — desenhei os PNG num canvas e li os pixels):
+1. **O arquivo era um quadrado branco OPACO.** `logo.png` e `logo-sm.png`: **0% de pixels transparentes**, cantos `#ffffff`. Não era o CSS.
+2. **A arte tinha margem enorme:** ocupava **828×627 dentro de 1024×1024** — ~50% da imagem era espaço vazio. Daí "não preencher".
+   E ainda: os contêineres (`.sp-logo`, `.logo-badge`, `.tb-logo`, `.mk`, `.login-logo`, `.etica-logo`) tinham `background:#fff`.
+
+**TRÊS ARQUIVOS NOVOS**, gerados da arte original por canvas (alpha = escuridão do pixel, então a antialiasing fica suave) e **recortados na caixa da tinta**:
+- **`logo-claro.png`** — arte BRANCA, fundo transparente → interface escura (splash, login, menu, Ética).
+- **`logo-escuro.png`** — arte ESCURA, fundo transparente → **relatório A4, que é papel BRANCO**.
+- **`logo-marca.png`** — só o monograma "P" → selos pequenos (topbar 36px, Painel 44px), onde o texto "PLANETA EXPRESS" saía ilegível.
+
+⚠️ **A ARMADILHA DO RELATÓRIO:** o `relLogoSrc()` pegava o `src` de uma `<img>` já carregada da interface. Com a logo da interface agora BRANCA, a folha A4 sairia com **logo invisível no papel**. Resolvido com uma `<img id="relLogoDark">` escondida no `index.html` (a primeira da lista do seletor), que o build também converte em base64 — funciona na pasta e no arquivo único.
+
+⚠️ **O ícone do app continua sendo o `logo.png` quadrado opaco** (`__LOGO__` no build, `uri_icon`): ícone de celular fica melhor opaco, e branco-sobre-transparente sumiria na tela inicial.
+
+**Se um dia trocar a arte da marca: gere as TRÊS versões**, sempre com fundo transparente e recortadas.
+
+**Validado no Chrome headless — 13 asserções, zero falha:** cada PNG conferido **por pixel** (transparência ≥ 25% e brilho médio da arte provando que a clara é clara e a escura é escura); o Painel usando o monograma; o Ética usando a clara; `relLogoSrc()` apontando para a escura e a folha trazendo a logo; 26 rotas e 21 relatórios limpos. Celular: 3,90 MB (subiu ~0,5 MB porque agora vão três marcas embutidas).
+
 ### ✅ ESTADO EM 30/08/2026 — v7.7 (o ouro saiu; fica a base escura com as cores originais)
 
 O cliente viu a v7.6 e foi direto: *"não gostei do dourado, utilize somente o fundo mais escuro como fez e volte a cor dos ícones e botões como estava antes"*.

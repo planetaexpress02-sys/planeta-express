@@ -23,7 +23,16 @@ ART="$TMP/planeta_artifact.html"      # corpo p/ publicar como Artifact (sem <he
 
 # ---------- 1. data URIs das imagens ----------
 duri(){ local mime="$2"; printf 'data:%s;base64,%s' "$mime" "$(base64 -w0 "$1")"; }
-printf '%s' "$(duri assets/logo-sm.png image/png)"  > "$TMP/uri_logo"
+# v7.8: tres versoes da marca.
+#  uri_logo      = logo-claro.png  -> a interface escura (arte branca, fundo transparente)
+#  uri_logo_dark = logo-escuro.png -> o relatorio A4, que e papel BRANCO
+#  uri_icon      = logo.png        -> icone do app (quadrado opaco fica melhor como icone)
+printf '%s' "$(duri assets/logo-claro.png image/png)"  > "$TMP/uri_logo"
+printf '%s' "$(duri assets/logo-escuro.png image/png)" > "$TMP/uri_logo_dark"
+printf '%s' "$(duri assets/logo-sm.png image/png)"     > "$TMP/uri_icon"
+#  uri_marca = logo-marca.png -> so o monograma "P", para os selos pequenos
+#              (topbar 36px e Painel 44px), onde o texto ficaria ilegivel
+printf '%s' "$(duri assets/logo-marca.png image/png)"  > "$TMP/uri_marca"
 printf '%s' "$(duri assets/fotos/m1.png image/png)" > "$TMP/uri_m1"
 printf '%s' "$(duri assets/fotos/m2.png image/png)" > "$TMP/uri_m2"
 printf '%s' "$(duri assets/fotos/m3.png image/png)" > "$TMP/uri_m3"
@@ -52,7 +61,7 @@ cat <<'HEAD'
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Planeta Express — Sistema de Gestão</title>
-<meta name="theme-color" content="#0b1424">
+<meta name="theme-color" content="#050609">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -73,12 +82,15 @@ echo "</script></body></html>"
 perl -pe '
   BEGIN{
     sub rd { local $/; open(my $f,"<",$_[0]) or die $_[0]; my $s=<$f>; close $f; return $s; }
-    $logo=rd($ENV{T}."/uri_logo");
+    $logo=rd($ENV{T}."/uri_logo"); $logod=rd($ENV{T}."/uri_logo_dark"); $icon=rd($ENV{T}."/uri_icon"); $marca=rd($ENV{T}."/uri_marca");
     $m1=rd($ENV{T}."/uri_m1"); $m2=rd($ENV{T}."/uri_m2"); $m3=rd($ENV{T}."/uri_m3");
     $m4=rd($ENV{T}."/uri_m4"); $m5=rd($ENV{T}."/uri_m5"); $m7=rd($ENV{T}."/uri_m7");
   }
-  s{__LOGO__}{$logo}g;
-  s{assets/logo-sm\.png}{$logo}g;
+  s{__LOGO__}{$icon}g;
+  s{assets/logo-claro.png}{$logo}g;
+  s{assets/logo-marca.png}{$marca}g;
+  s{assets/logo-escuro.png}{$logod}g;
+  s{assets/logo-sm.png}{$logo}g;
   s{assets/logo\.png}{$logo}g;
   s{assets/fotos/m1\.png}{$m1}g;
   s{assets/fotos/m2\.png}{$m2}g;
@@ -102,9 +114,12 @@ echo "</script>"
 perl -pe '
   BEGIN{
     sub rd { local $/; open(my $f,"<",$_[0]) or die $_[0]; my $s=<$f>; close $f; return $s; }
-    $logo=rd($ENV{T}."/uri_logo");
+    $logo=rd($ENV{T}."/uri_logo"); $logod=rd($ENV{T}."/uri_logo_dark"); $icon=rd($ENV{T}."/uri_icon"); $marca=rd($ENV{T}."/uri_marca");
   }
-  s{assets/logo-sm\.png}{$logo}g;
+  s{assets/logo-claro.png}{$logo}g;
+  s{assets/logo-marca.png}{$marca}g;
+  s{assets/logo-escuro.png}{$logod}g;
+  s{assets/logo-sm.png}{$logo}g;
   s{assets/logo\.png}{$logo}g;
   s{assets/fotos/m1\.png}{}g; s{assets/fotos/m2\.png}{}g; s{assets/fotos/m3\.png}{}g;
   s{assets/fotos/m4\.png}{}g; s{assets/fotos/m5\.jpg}{}g; s{assets/fotos/m7\.png}{}g;

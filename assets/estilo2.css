@@ -236,7 +236,7 @@ body{background:
    ========================================================================== */
 /* Página inicial */
 .ini-hero{position:relative;overflow:hidden;border-radius:20px;padding:32px 34px;display:flex;align-items:center;gap:26px;
-  background:linear-gradient(120deg,#0b1526 0%,#132443 55%,#1b3260 100%);box-shadow:0 20px 50px rgba(11,21,38,.25)}
+  background:linear-gradient(120deg,var(--void) 0%,var(--bg2) 55%,var(--surf2) 100%);box-shadow:0 20px 50px rgba(11,21,38,.25)}
 .ini-hero-bg{position:absolute;inset:0;opacity:.5;pointer-events:none;
   background:radial-gradient(500px 240px at 90% -20%,rgba(214,178,92,.25),transparent 60%),radial-gradient(420px 220px at 10% 120%,rgba(56,189,248,.22),transparent 60%)}
 .ini-hero-tag{display:inline-block;margin-top:12px;color:#cdd8ee;font-size:12px;letter-spacing:.4px}
@@ -634,7 +634,7 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .pex-map-hero{height:360px;background:
   radial-gradient(640px 360px at 76% 24%,rgba(var(--au-rgb),.22),transparent 60%),
   radial-gradient(520px 320px at 12% 84%,rgba(55,227,208,.13),transparent 62%),
-  linear-gradient(160deg,#102a46,#0a1626)}
+  linear-gradient(160deg,var(--surf),var(--void))}
 .pex-map-hero::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 100px rgba(4,10,20,.62);border-radius:inherit}
 .pex-map-hero .pex-mgrid line{stroke:rgba(120,180,255,.07)}
 .pex-map-hero .pex-corridor{stroke:rgba(120,180,255,.2);stroke-width:1.6}
@@ -655,10 +655,12 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
    HOME · CENTRO DE COMANDO EXECUTIVO (v6.11) — escopo só na Início (.ini-cmd)
    ========================================================================== */
 .ini-cmd{margin:-32px;padding:26px 32px 40px;min-height:calc(100vh - 66px);color:var(--tx);
+  /* v7.9: era `linear-gradient(160deg,#132433,#0b1522)` — azul-petróleo
+     bem claro, o que mais puxava o sistema para longe do quase preto. */
   background:
-   radial-gradient(720px 400px at 82% 4%,rgba(var(--au-rgb),.14),transparent 60%),
-   radial-gradient(560px 340px at 6% 98%,rgba(55,227,208,.08),transparent 60%),
-   linear-gradient(160deg,#132433,#0b1522)}
+   radial-gradient(720px 400px at 82% 4%,rgba(var(--au-rgb),.05),transparent 60%),
+   radial-gradient(560px 340px at 6% 98%,rgba(var(--au-rgb),.03),transparent 60%),
+   linear-gradient(160deg,var(--bg2),var(--void))}
 .ini-cmd .btn.sm{background:rgba(255,255,255,.06);border-color:rgba(var(--tx3-rgb),.18);color:var(--tx2)}
 .ini-cmd .btn.sm:hover{background:rgba(var(--au-rgb),.16);border-color:var(--au);color:#fff}
 .ini-cmd .pex-live{color:#4bd6a0}
@@ -783,9 +785,9 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
   color:var(--tx);letter-spacing:-.1px;
   font-family:'Inter','Sora','Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;
   background:
-    radial-gradient(1200px 720px at 16% 20%, rgba(var(--au3-rgb),.12), transparent 60%),
-    radial-gradient(900px 640px at 90% 6%, rgba(var(--au-rgb),.09), transparent 58%),
-    radial-gradient(circle at 20% 30%, var(--surf) 0%, var(--void) 82%);
+    radial-gradient(1200px 720px at 16% 20%, rgba(var(--au3-rgb),.035), transparent 60%),
+    radial-gradient(900px 640px at 90% 6%, rgba(var(--au-rgb),.025), transparent 58%),
+    radial-gradient(circle at 20% 30%, var(--bg) 0%, var(--void) 82%);
 }
 /* brilho de topo dos cards/kpis em neon (era um sheen branco no tema claro) */
 #view[data-route="manutencao"] .card::before,#view[data-route="manutencao"] .kpi::before{background:linear-gradient(180deg,rgba(var(--au-rgb),.05),transparent 42%)}
@@ -938,7 +940,7 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .sidebar{transition:width .28s cubic-bezier(.4,0,.2,1),flex-basis .28s cubic-bezier(.4,0,.2,1);
   background:linear-gradient(180deg,var(--bg) 0%,#070d18 100%)}
 .sidebar::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(440px 320px at 50% -8%,rgba(var(--au3-rgb),.10),transparent 62%)}
+  background:radial-gradient(440px 320px at 50% -8%,rgba(var(--au3-rgb),.04),transparent 62%)}
 .brand{position:relative;z-index:1}
 .brand .logo-badge{box-shadow:0 0 18px rgba(var(--au-rgb),.16),0 6px 16px rgba(0,0,0,.42)}
 
@@ -1126,9 +1128,9 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   color:var(--tx);letter-spacing:-.1px;
   font-family:'Inter','Sora','Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;
   background:
-    radial-gradient(1200px 720px at 16% 18%, rgba(var(--au3-rgb),.11), transparent 60%),
-    radial-gradient(900px 640px at 90% 4%, rgba(var(--au-rgb),.08), transparent 58%),
-    radial-gradient(circle at 20% 30%, var(--surf) 0%, var(--void) 82%);
+    radial-gradient(1200px 720px at 16% 18%, rgba(var(--au3-rgb),.035), transparent 60%),
+    radial-gradient(900px 640px at 90% 4%, rgba(var(--au-rgb),.025), transparent 58%),
+    radial-gradient(circle at 20% 30%, var(--bg) 0%, var(--void) 82%);
 }
 /* brilho de topo neon (era sheen branco no claro) */
 #view.cyber .card::before,#view.cyber .kpi::before{background:linear-gradient(180deg,rgba(var(--au-rgb),.05),transparent 42%)}
@@ -1302,9 +1304,9 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   font-family:'Inter','Sora','Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,sans-serif;
   color:var(--cy-txt);letter-spacing:-.1px;
   background:
-    radial-gradient(1200px 720px at 16% 20%, rgba(var(--au3-rgb),.12), transparent 60%),
-    radial-gradient(900px 640px at 90% 6%, rgba(var(--au-rgb),.09), transparent 58%),
-    radial-gradient(circle at 20% 30%, var(--surf) 0%, var(--void) 82%);
+    radial-gradient(1200px 720px at 16% 20%, rgba(var(--au3-rgb),.035), transparent 60%),
+    radial-gradient(900px 640px at 90% 6%, rgba(var(--au-rgb),.025), transparent 58%),
+    radial-gradient(circle at 20% 30%, var(--bg) 0%, var(--void) 82%);
 }
 /* fundo escuro do container tb (evita qualquer resquício claro nas bordas) */
 #view[data-route="inicio"],#view[data-route="dashboard"]{background:var(--void)}
@@ -1902,10 +1904,14 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
    suspensa sobre o painel. Mobile (v6.34) e funcionalidades ficam intactos.
    ========================================================================== */
 /* fundo cyber contínuo por trás do topbar (o .main deixa de mostrar o body claro) */
+/* v7.9: o fundo era lavado de AZUL por estes gradientes — a base escura da
+   v7.6 estava lá embaixo, mas coberta, e o sistema continuava parecendo
+   azul-petróleo. O cliente pediu quase preto. Agora o brilho do acento é
+   quase imperceptível e o que domina é o --void. */
 .main{background:
-  radial-gradient(1100px 700px at 14% 4%, rgba(var(--au3-rgb),.10), transparent 60%),
-  radial-gradient(820px 560px at 92% -6%, rgba(var(--au-rgb),.07), transparent 58%),
-  radial-gradient(circle at 22% 24%, var(--surf) 0%, #020a14 84%)}
+  radial-gradient(1100px 700px at 14% 4%, rgba(var(--au3-rgb),.035), transparent 60%),
+  radial-gradient(820px 560px at 92% -6%, rgba(var(--au-rgb),.025), transparent 58%),
+  radial-gradient(circle at 22% 24%, var(--bg) 0%, var(--void) 84%)}
 @media(min-width:861px){
   /* some a faixa: sem fundo, borda ou sombra */
   .topbar{background:transparent!important;border-bottom:none!important;box-shadow:none!important;
@@ -2743,7 +2749,7 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .rel-ov{ position:fixed; inset:0; z-index:9000; display:none; flex-direction:column; background:#20262e }
 .rel-ov.show{ display:flex }
 .rel-ov-bar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px;
-  background:linear-gradient(180deg,#0a1a2c,#061220); border-bottom:1px solid rgba(0,190,255,.24);
+  background:linear-gradient(180deg,var(--surf),var(--void)); border-bottom:1px solid rgba(0,190,255,.24);
   box-shadow:0 6px 22px rgba(0,8,26,.5) }
 .rel-ov-t{ display:flex; align-items:center; gap:9px; color:#eaf6ff; font-size:14.5px; font-weight:700; min-width:0 }
 .rel-ov-t svg{ width:18px; height:18px; color:#4fd0ff; flex:0 0 auto }
@@ -3050,4 +3056,42 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
 :root[data-acento="violeta"]{
   --au:#7B5CFA; --au2:#A78BFF; --au3:#5B3FD4;
   --au-rgb:123,92,250; --au3-rgb:91,63,212;
+}
+
+/* ==========================================================================
+   LOGO (v7.8) — a marca preenche o selo, sem quadrado branco
+   O cliente reclamou (com razão) de um QUADRADO BRANCO em volta da logo.
+   Eram DUAS causas somadas:
+     1) o PNG era branco OPACO (0% de transparência, cantos #fff) e ainda
+        tinha uma margem enorme: a arte ocupava 828x627 de 1024x1024;
+     2) o contêiner tinha `background:#fff`, então sobrava moldura branca.
+   Agora existem `logo-claro.png` (arte BRANCA, fundo transparente, já
+   recortada) para a interface escura e `logo-escuro.png` para o papel A4.
+   ⚠️ Se um dia trocar a arte: gere as DUAS e mantenha o fundo transparente.
+   ========================================================================== */
+.sp-logo,
+.login-logo,
+.brand .logo-badge,
+.ini-brand .mk,
+.tb-logo,
+.etica-logo{
+  background:linear-gradient(160deg, rgba(var(--au-rgb),.10), rgba(var(--surf3-rgb),.85))!important;
+  border:1px solid rgba(var(--au-rgb),.22);
+  padding:0!important;
+}
+/* a arte ocupa quase todo o selo — é o "preencher" que o cliente pediu */
+.sp-logo img,
+.login-logo img,
+.brand .logo-badge img,
+.ini-brand .mk img,
+.tb-logo img,
+.etica-logo img{
+  width:88%!important; height:88%!important; max-width:88%; max-height:88%;
+  object-fit:contain; display:block;
+}
+/* o selo da splash é o maior: pode respirar um pouco menos */
+.sp-logo img{ width:84%!important; height:84%!important }
+/* o brilho branco de vidro sumiu junto com o fundo branco */
+.sp-logo,.login-logo,.ini-logo,.etica-logo,.brand .logo-badge{
+  box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(var(--au-rgb),.18), inset 0 1px 0 rgba(255,255,255,.06)!important;
 }
