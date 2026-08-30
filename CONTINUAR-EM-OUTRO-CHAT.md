@@ -4,6 +4,30 @@
 
 ---
 
+## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v7.9)
+
+**Tudo publicado e sincronizado.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,9 MB) na mesma versão. Assets em `?v=202`, cache SW `planeta-express-v7-9`.
+
+**O que MUDOU muito nas últimas versões — leia antes de mexer:**
+
+| Saiu | Quando | Para onde foi |
+|---|---|---|
+| Chatbot (IA Planeta) | v7.1 | removido; `_iaMotorista`/`_iaVeiculo` viraram `motoristaPorNome()`/`veiculoPorTexto()` no app.js |
+| Monitoramento (mapa) | v7.1 | removido |
+| Aba **Início** | v7.2 | o **Painel de Controle** virou a tela de entrada |
+| Clima de Londrina + sino de alertas | v7.3 | removidos do topo |
+| Aba **Exames** | v7.3 | aba "Exames e Certificados" **dentro da ficha do motorista** |
+| Aba **Direção Defensiva** | v7.5 | seção "Certificados" na mesma aba da ficha |
+| Aba **Tacógrafos** | v7.5 | card na ficha do **cavalo** (só `tipo==='Cavalo'`) |
+
+**🔑 A regra que explica todas essas remoções:** essas telas **não tinham dado próprio** — eram *views* sobre `DB.vencimentos`. Por isso nada se perdeu. Antes de remover qualquer tela, **cheque se ela guarda dado ou só mostra**.
+
+**Visual (v7.6→7.9):** base **quase preta** (`--void #050609` … `--surf3 #161C27`) com acento **ciano/azul** (`--au #00e5ff`, `--au3 #0077ff`). O ouro foi testado na v7.6 e **o cliente não gostou** — não repetir sem ele pedir. **As ~1.000 cores fixas viraram tokens no `:root` do `estilo2.css`: mudar o tema é mexer LÁ.** O relatório A4 (`.rel-*`) fica de fora de propósito (papel branco).
+
+**Marca (v7.8):** três arquivos, todos transparentes e recortados — `logo-claro.png` (interface escura), `logo-escuro.png` (relatório A4) e `logo-marca.png` (monograma, selos pequenos). O `logo.png` original é quadrado branco opaco e só serve de ícone. **Trocou a arte? Gere as três.**
+
+---
+
 ## 1. O QUE É
 Sistema de Gestão Operacional feito sob medida para a **Planeta Express Transportes** (transportadora de cargas frigorificadas, CNPJ 26.126.673/0001-86, base em Londrina/PR). Cliente é **não-técnico**, fala **pt-BR**, quer tudo **pronto para usar**, design **moderno e profissional**. Trate sempre com linguagem simples e passo a passo.
 
@@ -22,11 +46,14 @@ Arquivos em `Sistema Planeta Express\`:
 - `assets/alarmes.js` — `const ALARMES_TK` (137 alarmes Thermo King, cada um com {c, d, ex, so} = código, descrição, o que significa, o que fazer).
 - `assets/arquivos.js` — `const ARQUIVOS_EMPRESA` (68 arquivos reais da pasta, com caminhos relativos `../...` — só abrem no modo LOCAL, não no site online).
 - `assets/app.js` — **o motor** (~2500 linhas). Toda a lógica, views, modais. Inclui máscaras `maskCPF/maskRG/maskFone/maskCEP/maskCNPJ`, `fldMask` + listener global de pontuação automática, `registrarLeitura` (histórico de KM/horas com data) e `modalHistLeitura`.
-- `assets/assistente.js` — **Assistente Inteligente (agente de comandos)**. Chatbot offline que interpreta português normal e cria/atualiza registros: pneus, KM/horas, troca de óleo, bateria, abastecimento, descarga, serviços/reparos. Botão flutuante (`iaMontarFab`, chamado no `init`) + painel de chat, com botão "Desfazer" (snapshot do DB). Parser em `iaResponder` → `iaCmd*`. Usa `veiculoByPlaca`, `registrarLeitura`, etc.
+- ~~`assets/assistente.js`~~ e ~~`assets/monitoramento.js`~~ — **APAGADOS na v7.1** (o cliente disse que não usava). Duas funções deles NÃO eram do chatbot e sobreviveram no `app.js` como **`motoristaPorNome()`** e **`veiculoPorTexto()`**: quem usa é a leitura de documentos (`_impRef`) e a Central (`cpidRelacionar`).
+- `assets/central.js` — Central de Processamento de Documentos: um pipeline só para todo documento (PDF/XML/Excel/imagem/DOCX/e-mail/ZIP).
+- `assets/contabilidade.js` — aba Contabilidade. **Deriva dos módulos, não duplica** (`CONTAB_FONTES`).
+- `assets/relatorios.js` — engine única dos relatórios A4 (`PEXRel`). ⚠️ `PEXRelExecutar` copia uma **lista fixa** de campos do `gerar()`; campo novo tem que ser acrescentado lá também.
 - `assets/importar.js` — leitor de planilhas .xlsx/.csv no navegador (module `PEXImport`). **NÃO está incluído no index.html** (recurso preparado, ainda não plugado numa tela de importação).
 - `assets/nuvem.js` — camada Supabase (login, carregar/salvar DB, realtime, storage de arquivos).
 - `assets/config-online.js` — lê a config online do localStorage OU usa a URL+key do Supabase embutidas (já preenchidas).
-- `assets/logo.png` (logo preta inteira), `assets/logo-sm.png` (versão pequena p/ builds), `assets/logo-gold.png` (dourada, NÃO usada no momento), `assets/fotos/m1..m6` (fotos dos motoristas).
+- **Marca (v7.8):** `assets/logo-claro.png` (arte branca, transparente → interface escura), `assets/logo-escuro.png` (arte escura → **relatório A4**), `assets/logo-marca.png` (só o "P" → selos de 36–44px). O `logo.png`/`logo-sm.png` são **quadrados brancos opacos** e servem só de **ícone do app**. `logo-gold.png` não é usada. `assets/fotos/m1..m7` (fotos dos motoristas).
 - `manifest.json` + `service-worker.js` — PWA instalável e **atualização automática** (SW é "network-first"; nome do cache muda a cada versão: `planeta-express-v4-4`).
 
 ## 4. DADOS (persistência)
@@ -35,10 +62,27 @@ Arquivos em `Sistema Planeta Express\`:
 - `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`. Roda também `importarCadastroSeed()`, que aplica **só a lista da versão** (`SEED_ENTREGAS`) e **uma vez por base** (`DB.seedAplicado`) — NUNCA varre a semente inteira, senão ressuscita o que o cliente apagou (foi o defeito da v6.91, corrigido na v6.92). Segunda trava: `DB.*Removidos` + `marcarRemovido`.
 - Funções-chave de dados: `loadDB`, `saveDB` (salva local + nuvem debounced), `saveLocal`, `ensureCollections`, `aplicarRemoto` (recebe realtime), `flushNuvem` (salva ao fechar/trocar aba).
 
-## 5. MÓDULOS (abas do menu, na ordem)
-Início → Painel de Controle → Vencimentos | Cadastros: Frota, Motoristas (form completo tipo "Condutor"; a ficha tem abas Resumo/Contrato de Trabalho/Ficha Criminal/Documentos), Exames (matriz ASO/Tox/Opentech), Direção Defensiva | Manutenção: KM/Horas, Trocas de Óleo, Relatório de Manutenção (serviços/reparos = `servicos`), Pneus, Baterias, Abastecimentos, Tacógrafos (só cavalos) | Operação: Viagens, Descargas, CT-e, Check-list (com mapa SVG do veículo p/ marcar pontos), Notas de Despesa, Alarmes Thermo King, Documentos | Financeiro (**SEM senha desde v6.21** — `viewFinanceiro` abre direto) | Empresa: Quadro Societário, Código de Ética | Sistema: Configurações.
+## 5. MÓDULOS (abas do menu, na ordem) — atualizado na v7.9
+**Principal:** Painel de Controle (é a tela de ENTRADA desde a v7.2), Vencimentos.
+**Cadastros:** Frota (o filtro "Todos" sai separado em **Cavalos** e **Carretas**), Motoristas, ANTT-RNTRC, Licenças e Alvarás.
+**Manutenção:** KM/Horas, Trocas de Óleo, Relatório de Manutenção (`servicos`), Pneus, Baterias, Abastecimentos.
+**Operação:** Viagens, Descargas, CT-e, Check-list (mapa SVG do veículo), Notas de Despesa, Pedágios, Alarmes Thermo King, Documentos.
+**Financeiro** (sem senha desde a v6.21) · **Contabilidade** · **Empresa:** Quadro Societário, Código de Ética · **Sistema:** Configurações.
+
+⚠️ **A ficha do MOTORISTA tem 5 abas:** Resumo · **Exames e Certificados** (ASO, Toxicológico, Opentech + Direção Defensiva) · Contrato de Trabalho · Ficha Criminal · Documentos.
+⚠️ **A ficha do VEÍCULO** tem o card **Tacógrafo** quando é cavalo.
+⚠️ **Não existem mais** as abas Início, Exames, Direção Defensiva, Tacógrafos e Monitoramento — ver a tabela no topo.
 
 ## 6. PADRÕES/CONVENÇÕES IMPORTANTES
+
+### 🔴 AS 6 REGRAS QUE MAIS CUSTARAM CARO (todas vieram de erro real)
+1. **Teste pelo CAMINHO REAL, não montando o objeto.** Entreguei um bloco no relatório com 51 asserções passando e **o cliente abriu e não estava lá**: eu montava o spec à mão e pulava justo a função que descartava o campo. Relatório se testa com `PEXRelAbrirId(id)` + `PEXRelExecutar()` conferindo o HTML de `#pexRelOv`. Formulário: abrir o modal, preencher por `getElementById().value`, chamar o `salvar…`.
+2. **Backfill NUNCA varre a semente.** Só a lista da versão em `SEED_ENTREGAS`, uma vez por base (`DB.seedAplicado`). Varrer ressuscita o que o cliente apagou — já trouxe um motorista demitido de volta.
+3. **Número derivado tem fonte única, e o KPI tem que bater com a tela que abre.** Se um cartão diz "Tudo em dia" e a tela que ele abre vem vazia, o cartão está errado (foi preciso escolher a *faixa* certa ao clicar).
+4. **Espelho entre módulos precisa de trava contábil.** Ao fazer um lançamento aparecer em dois lugares, marque a origem (`origemPagamento`) e faça a fonte do espelho devolver `null` em `CONTAB_FONTES` — senão o dinheiro conta duas vezes.
+5. **Remover recurso: `grep` das funções + `diff` das classes de CSS.** Funções guardadas por `typeof x==='function'` somem **em silêncio**; e havia regra viva (`.antt-acoes`) no meio do CSS "morto".
+6. **`requestAnimationFrame` anima; quem GARANTE o número é o `setTimeout`.** Sem a rede (`_pexRedeContadores`), os 8 KPIs ficavam em "R$ 0,00".
+
 - **Não dá para testar visualmente** no ambiente (o preview do Code fica congelado). Validar por: contagem balanceada de `{}`/`()`/backticks via grep + presença de funções + revisão. O cliente testa e manda print.
 - **Dinheiro:** usar `fldR$(label,id,valor)` no formulário e `parseBRL(val('id'))` ao salvar (aceita padrão BR "50.490,84"). Exibir com `money(v)`. NÃO usar type=number para dinheiro (bug: ponto de milhar vira decimal).
 - **Ícones:** `svg('nome')`; há `tipoIcone(tipo)` p/ ícone por tipo de documento. Ícones novos: idcard(CNH), flask(tox), clinic(exames), wheel(direção), taco(tacógrafo), tire(pneus).
@@ -56,9 +100,11 @@ Início → Painel de Controle → Vencimentos | Cadastros: Frota, Motoristas (f
 
 ## 8. BUILDS (arquivo de celular + link do artifact)
 **Script recriado e salvo permanentemente:** `build_celular.sh` na pasta da empresa (`...\Planeta Express Transportes\build_celular.sh`). Gera **os dois** de uma vez:
-- `Planeta Express - CELULAR.html` (na pasta da empresa) — arquivo único, 100% offline, tudo embutido em base64 (logo-sm + as 6 fotos). ~2,4 MB.
-- `planeta_artifact.html` (no scratchpad) — sem `<head>`/`<body>`, só `<style>`+markup+`<script>`, logo embutida, fotos viram iniciais — para publicar como Artifact.
-- **Como rodar:** no Git Bash, `export T="<pasta scratchpad>"` e `bash build_celular.sh` (ou ajuste a var TMP no topo). Extrai o corpo do index.html com `awk` (entre `<body>` e `<!-- Biblioteca da nuvem`), concatena `estilo.css`+`estilo2.css` e os JS na ordem (viagens, dados, alarmes, arquivos, app, **assistente**), e troca caminhos de imagem por data URIs com `perl`. **NÃO inclui** supabase/nuvem/config-online (single-file é offline por-aparelho).
+- `Planeta Express - CELULAR.html` (**na pasta da empresa, um nível ACIMA do repo**) — arquivo único, 100% offline, tudo em base64. **~3,9 MB** na v7.9.
+- `planeta_artifact.html` (no scratchpad) — sem `<head>`/`<body>`, para publicar como Artifact.
+- **Como rodar:** `bash build_celular.sh` (o script já faz `export T` sozinho desde a v6.96). Extrai o corpo do index.html com `awk`, concatena os CSS e os JS na ordem (viagens, dados, alarmes, arquivos, importar, app, central, contabilidade, aniversarios, relatorios) e troca caminhos de imagem por data URIs. **NÃO inclui** supabase/nuvem/config-online.
+- ⚠️ **DUAS ARMADILHAS JÁ VIVIDAS:** (1) rodar sem `T` **truncava o celular para 0 byte** — hoje o script confere antes de escrever; (2) o arquivo do celular **NÃO entra no repositório** (já entrou duas vezes, e velho) — está no `.gitignore`.
+- ⚠️ O build embute **três marcas** (`uri_logo` clara, `uri_logo_dark` escura, `uri_marca` monograma) e o **ícone** separado (`uri_icon`, o quadrado opaco).
 - **Link do sistema publicado (Artifact):** `https://claude.ai/code/artifact/b9498522-eeee-48ea-ad9d-c5fc06f505cf` (privado, do cliente; versão OFFLINE por-aparelho). Para atualizar no MESMO link: gere o `planeta_artifact.html` e chame a ferramenta Artifact passando `url=` esse link. **Já atualizado para v4.5.**
 
 ## 9. DEPLOY — GitHub Pages (Netlify aposentado)
@@ -70,9 +116,10 @@ Início → Painel de Controle → Vencimentos | Cadastros: Frota, Motoristas (f
 - Cliente NÃO tem GitHub Desktop (só git CLI 2.55). O celular (`Planeta Express - CELULAR.html`) e a pasta offline seguem atualizados localmente a cada versão.
 
 ## 10. PENDÊNCIAS / PRÓXIMOS PASSOS
-- Cliente concluir: criar bucket `arquivos` (Storage), criar os 2 usuários, desligar signups públicos, e finalizar GitHub→Netlify.
+- Cliente concluir: criar bucket `arquivos` (Storage), criar os 2 usuários, desligar signups públicos.
 - Validar login/sync/storage reais com o cliente (nunca foi testado de verdade aqui).
-- Possíveis próximos: importação automática por upload de planilha (xlsx/csv) extraindo datas/validades; usar `tipoIcone` nas linhas de vencimentos; mais relatórios/gráficos.
+- **Direção Defensiva não tem NENHUMA validade cadastrada** — os certificados existem só como arquivo na pasta. Ofereci lançar as validades a partir dos PDFs; o cliente ainda não respondeu.
+- **Perguntas em aberto que ele ainda não respondeu:** (a) o KPI arredonda (R$ 2.726,00 no cartão × R$ 2.725,84 na lista) — mudar para centavos seria decisão do sistema inteiro; (b) o cadastro de veículo ainda oferece o tipo **"Reboque Frigorífico"** enquanto a tela diz "Carreta" — trocar exigiria migrar dado; (c) o dourado do splash/login é da **logo** e continua lá.
 - **`_pedParseSemParar` precisa aprender o que a v6.94 descobriu:** ler o **par crédito/débito** do vale-pedágio (hoje ele pega só o débito e o vale entra como se fosse 100% reembolsado), o **nº da fatura** e os itens da capa (plano/estacionamento/créditos) para criar a entrada em `DB.pedFaturas`. Sem isso, fatura importada pela Central esconde a sobra do vale.
 - Faltam dados que o cliente ainda não passou: alguns campos de cadastro (CTPS/PIS, etc.).
 
