@@ -918,8 +918,13 @@ function avatarFoto(m, size){ size=size||56;
 /*  9. DASHBOARD                                                       */
 /* ================================================================== */
 /* KPI de vidro com count-up + sparkline (compartilhado Início/Painel) */
-function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
-  return `<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+/* O 10º argumento (`flag`) é o selo verde "Tudo em dia" no canto do cartão,
+   pedido na v8.2. Ele NÃO é decoração: só entra quando a conta daquele
+   cartão dá zero problema, e cada cartão tem a sua própria conta (ver
+   `okSe()` na viewDashboard). Cartão sem conta de "em dia" não recebe selo. */
+function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts,flag){
+  const selo = flag? `<span class="ini-flag"><i></i>${flag}</span>` : '';
+  return `<a class="ini-kpi ${cls}" href="#${href}">${selo}<span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
 }
 /* ==================================================================
    EXAMES NO PAINEL (v7.4)
@@ -966,6 +971,7 @@ function _dashExames(){
                       : (faltam>0 ? rot+' · '+faltam+' sem lançar' : rot);
     const cor = bad ? '#f2686b' : '#3fd68a';
     return `<a class="ini-kpi ${bad?'crit':'ok'}" style="cursor:pointer" onclick="vencVerTipo('${esc(tipo)}','${faixa}')" title="Ver ${esc(tipo)} em Vencimentos">
+      ${bad?'':'<span class="ini-flag"><i></i>Tudo em dia</span>'}
       <span class="ic">${svg(ICO[tipo]||'clinic')}</span>
       <span class="num" data-count="${arr.length}" data-pre="" data-suf="">0</span>
       <span class="l">${esc(label)}</span>
@@ -1007,6 +1013,28 @@ function viewDashboard(){
   const licVenc = licList.filter(l=>licSit(l).k==='breve').length;      // = o que abre em #licencas/vencendo
   const licVencidas = licList.filter(l=>licSit(l).k==='vencida').length; // = o que abre em #licencas/vencidas
 
+  /* ---- SELO "TUDO EM DIA" (v8.2) --------------------------------------
+     O cliente pediu que todo cartão que NÃO esteja com pendência mostre um
+     "tudo em dia" verdinho, "para dar a sensação de organizado".
+     A regra que segui, para o selo não virar enfeite: cada cartão tem a SUA
+     conta, e o selo só aparece quando essa conta dá ZERO problema. Onde não
+     existe uma conta de "em dia" que signifique alguma coisa (Notas Fiscais,
+     que é um total em dinheiro), o cartão fica SEM selo de propósito — selo
+     verde em número que não tem estado seria informação inventada. */
+  /* `temDado` NÃO é frescura: sem ele, um cartão de coleção VAZIA mostraria
+     "Tudo em dia" — zero check-list no mês viraria "organizado", zero apólice
+     cadastrada viraria "seguros em ordem". É verde mentindo, o mesmo defeito
+     de KPI que não bate com a tela que ele abre. Sem dado, cartão sem selo. */
+  const okSe = (semProblema, temDado)=> (temDado && semProblema)? 'Tudo em dia' : '';
+  /* Frota e Motoristas: "em dia" = nenhum documento VENCIDO naquele grupo —
+     a mesma fonte (todosVencimentos) e a mesma régua dos outros cartões. */
+  const veicVencidos = vs.filter(x=>x.v.entidade==='veiculo'   && x.s.ord===0).length;
+  const motVencidos  = vs.filter(x=>x.v.entidade==='motorista' && x.s.ord===0).length;
+  /* Check-lists: "em dia" = nenhum REPROVADO no mês (usa chkAprovado, o mesmo
+     que decide o selo APROVADO/REPROVADO dentro do módulo). */
+  const chkMesLista = DB.checklists.filter(c=>{ const d=parseD(c.data),h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); });
+  const chkReprov = chkMesLista.filter(c=>!chkAprovado(c)).length;
+
   const prox = vs.filter(x=>x.s.dias!==null && x.s.dias<=90).sort((a,b)=>a.s.dias-b.s.dias).slice(0,8);
 
   // Vencimentos próximos 6 meses (por mês)
@@ -1015,8 +1043,9 @@ function viewDashboard(){
   vs.forEach(x=>{ const d=parseD(x.v.validade); if(!d) return; meses.forEach(mm=>{ if(d.getFullYear()===mm.y && d.getMonth()===mm.m) mm.value++; }); });
 
   // Manutenções que precisam de atenção
-  const manutAlerta = DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>{ const p=primaryItem(v); if(!p) return null; const info=manutInfo(p,v); return info.ok?{v,p,info}:null; })
-    .filter(x=>x && (x.info.st==='vencido'||x.info.st==='crit')).sort((a,b)=>a.info.restante-b.info.restante);
+  const manutCalc = DB.veiculos.filter(v=>v.status!=='Arquivado').map(v=>{ const p=primaryItem(v); if(!p) return null; const info=manutInfo(p,v); return info.ok?{v,p,info}:null; }).filter(Boolean);
+  const manutTotal = manutCalc.length;   /* universo do cartão: quantas placas têm troca calculável */
+  const manutAlerta = manutCalc.filter(x=>x.info.st==='vencido'||x.info.st==='crit').sort((a,b)=>a.info.restante-b.info.restante);
 
   const alertIco=(cls)=>{ const map={vencido:['i-red','!'],crit:['i-orange','!'],warn:['i-amber','•'],ok:['i-green','✓'],neutro:['i-blue','•']}; const [c,e]=map[cls]||map.neutro; return `<div class="a-ico ${c}">${e}</div>`; };
 
@@ -1025,7 +1054,7 @@ function viewDashboard(){
   const ultNota = notasOrd[0]; const ultNotaTotal = ultNota? totalNota(ultNota):0;
   const _pneus = pneusResumo();                 // fonte única — ver pneusResumo()
   const pneusAlerta = _pneus.noLimite;          // pneus no limite (somando qtd, não linhas)
-  const chkMes = DB.checklists.filter(c=>{ const d=parseD(c.data),h=hoje(); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
+  const chkMes = chkMesLista.length;   /* mesma lista que o selo usa — uma conta só */
   const chkUlt = DB.checklists.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).slice(0,5);
   const tipos={Cavalos:cavalos,Carretas:reb};
   // Últimos 6 meses (viagens e despesas) — para gráficos clicáveis
@@ -1054,17 +1083,17 @@ function viewDashboard(){
   </div>
 
   <div class="ini-kstrip4">
-    ${iniKpiTile('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
-    ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
-    ${iniKpiTile('check','ok', fEmDia.length, '', '', 'Documentos em dia', 'vencimentos/emdia', '#3fd68a', '0,20 16,17 32,18 48,12 64,10 80,6')}
-    ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
-    ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
-    ${iniKpiTile('umbrella', segCrit?'crit':'', segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9')}
-    ${iniKpiTile('stamp', licVencidas?'crit':'', licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#5cc8ff', '0,15 16,13 32,17 48,12 64,15 80,10')}
-    ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Despesas', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
-    ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
-    ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
-    ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
+    ${iniKpiTile('truck', (cavalos&&!veicVencidos)?'ok':'', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6', okSe(!veicVencidos, cavalos>0))}
+    ${iniKpiTile('user', (motAtivos&&!motVencidos)?'ok':'', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11', okSe(!motVencidos, motAtivos>0))}
+    ${iniKpiTile('check','ok', fEmDia.length, '', '', 'Documentos em dia', 'vencimentos/emdia', '#3fd68a', '0,20 16,17 32,18 48,12 64,10 80,6', okSe(true, fEmDia.length>0))}
+    ${iniKpiTile('shield', fVenc.length?'crit':(fGeral?'ok':''), fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20', okSe(!fVenc.length, fGeral>0))}
+    ${iniKpiTile('bell', fD10.length?'crit':(fGeral?'ok':''), fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18', okSe(!fD10.length, fGeral>0))}
+    ${iniKpiTile('umbrella', segCrit?'crit':((segList.length&&!segAv)?'ok':''), segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9', okSe(!segAv, segList.length>0))}
+    ${iniKpiTile('stamp', licVencidas?'crit':((licList.length&&!licVenc)?'ok':''), licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#5cc8ff', '0,15 16,13 32,17 48,12 64,15 80,10', okSe(!licVenc && !licVencidas, licList.length>0))}
+    ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Notas Fiscais', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
+    ${iniKpiTile('gauge', manutAlerta.length?'crit':(manutTotal?'ok':''), manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10', okSe(!manutAlerta.length, manutTotal>0))}
+    ${iniKpiTile('tire', pneusAlerta?'crit':(_pneus.total?'ok':''), pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9', okSe(!pneusAlerta, _pneus.total>0))}
+    ${iniKpiTile('check', chkReprov?'crit':(chkMes?'ok':''), chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8', okSe(!chkReprov, chkMes>0))}
     ${/* ASO · Toxicológico · Opentech — na MESMA tira desde a v8.1 */ _dashExames()}
   </div>
 

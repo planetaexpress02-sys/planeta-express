@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.1)
+## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.2)
 
-**v8.1 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=204`, cache SW `planeta-express-v8-1`, rodapé `v8.1`.
+**v8.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=205`, cache SW `planeta-express-v8-2`, rodapé `v8.2`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,34 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 30/08/2026 — v8.2 (o selo verde "Tudo em dia" no Painel + Despesas vira Notas Fiscais)
+
+**Pedido:** *"onde tem 'Despesa' no painel, renomear para 'Notas Fiscais'; quero que cada um que não for 'vencidos' tenha ao lado 'tudo em dia' em verdinho, assim como tem em frota ou exames, para dar aquela sensação de estar tudo em dia, organizado"*.
+
+**(1) "Despesas" → "Notas Fiscais"** no cartão do Painel. Só o rótulo; a conta (total da última nota) e o destino (`#notas`) não mudaram.
+
+**(2) Selo `.ini-flag`.** `iniKpiTile()` ganhou um **10º argumento** (`flag`): quando vem preenchido, sai um selo verde escrito **"Tudo em dia"** no canto superior direito do cartão, com bolinha pulsante. O ponto verde solto da v8.0 (`.ini-kpi.ok::after`) **foi substituído** por ele — o cliente quis a frase, não só o sinal. O texto sai do **JS**, não do `content:` do CSS (frase em português dentro de folha de estilo não se lê por leitor de tela).
+
+**🔴 A DECISÃO QUE IMPORTA — o selo NÃO é enfeite.** Ele só aparece quando **a conta daquele cartão dá zero problema**, e **cada cartão tem a sua conta**:
+
+| Cartão | "Tudo em dia" quando |
+|---|---|
+| Conjuntos ativos | nenhum documento de **veículo** vencido |
+| Motoristas ativos | nenhum documento de **motorista** vencido |
+| Documentos em dia / vencidos / ≤10 dias | a faixa correspondente está zerada |
+| Seguros · Licenças · Trocas · Pneus | zero na respectiva contagem de alerta |
+| Check-lists no mês | nenhum **REPROVADO** (usa `chkAprovado`, o mesmo do módulo) |
+| ASO · Toxicológico · Opentech | nenhum vencido |
+| **Notas Fiscais** | **nunca** — é um total em dinheiro, não tem estado de "em dia" |
+
+> **A trava que evitou verde mentindo (`temDado`):** na primeira versão, "Check-lists no mês = **0**" ganhou "Tudo em dia" — mas zero check-list não é estar em dia, é **não ter feito nenhum**. O mesmo valia para "Pneus no limite = 0" **sem nenhum pneu cadastrado**. O `okSe(semProblema, temDado)` exige as **duas** coisas: coleção com dado **e** sem problema. É a regra [[numeros-derivados-fonte-unica]] aplicada ao selo — e é por isso que o Painel do cliente hoje mostra **4 selos de 14**, não 14: os outros têm pendência de verdade. **Não afrouxar isso para "ficar mais verde".**
+
+**Brinde:** o rótulo do cartão (`.ini-kpi .l`) passava **por baixo da sparkline** e saía riscado em tela média — defeito antigo. Ganhou `padding-right:94px`; e entre **1100–1280px**, onde as 4 colunas ficam espremidas, a **sparkline some** (`display:none`) e o texto recupera a linha inteira, em vez de quebrar em três. Gráfico é enfeite, rótulo é informação.
+
+**Validado no Chrome headless, zero erro de JS:** "Despesas" fora do DOM e "Notas Fiscais" dentro; **4 selos em 14 cartões**; **zero selo em cartão `crit`** (verde nunca cobre problema); cartão de vencidos = **5** e a tela que ele abre = **5 linhas**; **25 rotas** varridas. Layout conferido em **1150px e 1440px**.
+
+**Versão:** assets `?v=205`, cache `planeta-express-v8-2`, rodapé `v8.2`, celular reconstruído (3,91 MB).
 
 ### ✅ ESTADO EM 30/08/2026 — v8.1 (duas abas a menos, o Painel mais limpo, e o óleo onde ele já morava)
 
