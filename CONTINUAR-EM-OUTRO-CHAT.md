@@ -6,7 +6,9 @@
 
 ## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.0)
 
-**⚠️ v8.0 PRONTA LOCALMENTE, AINDA NÃO PUBLICADA.** Pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) já na v8.0; assets em `?v=203`, cache SW `planeta-express-v8-0`, rodapé `v8.0`. **Falta `git commit` + `git push origin main`** — segurei porque o terceiro pedido da v8.0 (a logo nova) foi reprovado e ainda depende do arquivo do cliente. Ver a seção da v8.0 no histórico.
+**v8.0 publicada e sincronizada** (commit `919fbc4`). Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=203`, cache SW `planeta-express-v8-0`, rodapé `v8.0`.
+
+**🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
 **O que MUDOU muito nas últimas versões — leia antes de mexer:**
 
@@ -299,7 +301,7 @@ Três pedidos numa mensagem só. **Dois entregues, um recusado pelo cliente** �
 **O caminho certo:** pedir para ele **salvar o PNG na pasta** (ex.: `Sistema Planeta Express\assets\logo-original.png`) e gerar as **três** variantes a partir do arquivo dele — `logo-claro.png` (interface escura), `logo-escuro.png` (relatório A4, papel branco) e `logo-marca.png` (só o "P", selos de 36–44px) — mais o ícone quadrado (`logo.png`/`logo-sm.png`). Os pontos de troca são 8: `index.html` (ícone ×2, splash, `relLogoDark`, sidebar, topbar) e `app.js` (`ini-brand .mk` ~1039, `etica-logo` ~5312, `login-logo` ~7183).
 ⚠️ A arte é **ouro**, mas o tema do sistema é **ciano** desde a v7.7 (o ouro foi reprovado na v7.6). Ele quer o ouro **na marca**, não no tema — não repita a v7.6.
 
-**Versão:** assets `?v=203`, cache `planeta-express-v8-0`, rodapé `v8.0`, celular reconstruído (3,90 MB). **Ainda NÃO publicado** (aguardando a logo).
+**Versão:** assets `?v=203`, cache `planeta-express-v8-0`, rodapé `v8.0`, celular reconstruído (3,90 MB). **Publicada** no commit `919fbc4` — os itens (1) e (2) foram ao ar; o item (3), a logo, segue pendente do arquivo do cliente.
 
 ### ✅ ESTADO EM 30/08/2026 — v7.9 (agora o tom é MESMO quase preto)
 
