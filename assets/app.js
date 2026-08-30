@@ -596,7 +596,6 @@ const ROTAS = {
   motoristas:{t:'Motoristas', s:'Colaboradores e documentação', ico:'user'},
   vencimentos:{t:'Vencimentos', s:'Agenda de validades e alertas', ico:'bell'},
   km:{t:'KM / Horas', s:'Atualize e acompanhe as próximas trocas', ico:'gauge'},
-  oleo:{t:'Trocas de Óleo', s:'Óleo e filtros por veículo', ico:'wrench'},
   manutencao:{t:'Relatório de Manutenção', s:'Serviços e reparos', ico:'wrench'},
   pneus:{t:'Pneus', s:'Controle de pneus por posição', ico:'tire'},
   baterias:{t:'Baterias', s:'Controle e garantias', ico:'battery'},
@@ -641,7 +640,8 @@ function router(){
   else if(rota==='motoristas') el.innerHTML=viewMotoristas();
   else if(rota==='vencimentos'){ if(arg) vencFiltro=arg; el.innerHTML=viewVencimentos(); }
   else if(rota==='km'){ if(arg) kmFiltro=arg; el.innerHTML=viewKM(); }
-  else if(rota==='oleo') el.innerHTML=viewOleo();
+  /* A rota 'oleo' saiu na v8.1; quem tiver "#oleo" nos favoritos cai no
+     `else` do fim desta cadeia e abre o Painel, sem travar. */
   else if(rota==='manutencao'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Relatório de Manutenção'; } el.innerHTML=viewManutencaoVeiculo(arg); } else el.innerHTML=viewManutencao(); }
   else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { if(arg==='limite') pneusFiltro='limite'; el.innerHTML=viewPneus(); } }
   else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
@@ -878,7 +878,14 @@ function renderSidebar(rota){
     `<div class="group">Principal</div>`+ item('dashboard')+
     item('vencimentos', c.total?{n:c.total, cls:c.venc?'':'warn'}:null)+
     `<div class="group">Cadastros</div>`+ item('frota')+ item('motoristas')+ item('antt')+ item('licencas', c.lic?{n:c.lic, cls:'warn'}:null)+
-    `<div class="group">Manutenção</div>`+ item('km')+ item('oleo')+ item('manutencao')+ item('pneus')+ item('baterias')+ item('abastecimento')+
+    /* v8.1 — saíram duas abas daqui, a pedido do cliente:
+       • "Trocas de Óleo": era uma VISTA sobre DB.manutencoes, sem dado próprio.
+         O mesmo conteúdo virou o card "Trocas de Óleo e Filtros" dentro da
+         ficha de cada placa (Frota → placa), agora mais completo.
+       • "Abastecimentos": ele quer configurar depois. A TELA continua de pé
+         (rota 'abastecimento') porque a Contabilidade, a Central de Documentos
+         e o relatório do período apontam para ela — só saiu do menu. */
+    `<div class="group">Manutenção</div>`+ item('km')+ item('manutencao')+ item('pneus')+ item('baterias')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
@@ -933,13 +940,20 @@ function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
 function _dashExames(){
   const todos=todosVencimentos().filter(v=>v.entidade==='motorista');
   const ativos=(DB.motoristas||[]).filter(m=>m.status!=='Inativo').length;
-  const tile=function(tipo,desc){
+  /* v8.1 — o cliente pediu para tirar o quadro "Exames dos colaboradores" e
+     deixar ASO / Toxicológico / Opentech IGUAIS aos outros cartões. Então
+     estes três deixaram de ser `.dx-card` dentro de um card e passaram a ser
+     `.ini-kpi`, entrando na MESMA tira dos demais — mesma moldura, mesmo
+     número grande, mesmo sinal verde/vermelho.
+     Eles não usam `iniKpiTile` porque não abrem um endereço direto: precisam
+     de `vencVerTipo()`, que escolhe o tipo E a faixa certa antes de navegar. */
+  const ICO={'ASO':'clinic','Toxicológico':'flask','Opentech Funcionário':'idcard'};
+  const CURTO={'ASO':'ASO','Toxicológico':'Toxicológico','Opentech Funcionário':'Opentech'};
+  const LINHA={'ASO':'0,18 16,15 32,17 48,12 64,14 80,9','Toxicológico':'0,17 16,14 32,16 48,13 64,10 80,12','Opentech Funcionário':'0,19 16,16 32,14 48,15 64,11 80,8'};
+  const tile=function(tipo){
     const arr=todos.filter(v=>v.tipo===tipo);
     const vencidos=arr.filter(v=>situacao(v.validade).ord===0);
     const bad=vencidos.length>0;
-    const selo=bad
-      ? `<span class="st vencido">${vencidos.length} vencido(s)</span>`
-      : `<span class="st ok">Tudo em dia</span>`;
     /* quem ainda não tem o exame lançado — informação, não alarme */
     const faltam=ativos-arr.length;
     /* A faixa que abre é a que REALMENTE tem estes registros: a tela
@@ -947,20 +961,18 @@ function _dashExames(){
        Sem isto, clicar num cartão "Tudo em dia" abriria uma tela vazia —
        o número não bateria com o que aparece. */
     const faixa = bad ? 'venc' : 'emdia';
-    return `<div class="dx-card${bad?' bad':''}" onclick="vencVerTipo('${esc(tipo)}','${faixa}')" title="Ver ${esc(tipo)} em Vencimentos">
-      <div class="dx-t">${esc(tipo)}</div>
-      <div class="dx-n"><b>${arr.length}</b><span>registro(s)</span></div>
-      <div class="dx-s">${selo}${faltam>0?`<span class="st neutro">${faltam} sem lançar</span>`:''}</div>
-      <div class="dx-d">${esc(desc)}</div>
-    </div>`;
+    const rot = CURTO[tipo]||tipo;
+    const label = bad ? rot+' · '+vencidos.length+' vencido(s)'
+                      : (faltam>0 ? rot+' · '+faltam+' sem lançar' : rot);
+    const cor = bad ? '#f2686b' : '#3fd68a';
+    return `<a class="ini-kpi ${bad?'crit':'ok'}" style="cursor:pointer" onclick="vencVerTipo('${esc(tipo)}','${faixa}')" title="Ver ${esc(tipo)} em Vencimentos">
+      <span class="ic">${svg(ICO[tipo]||'clinic')}</span>
+      <span class="num" data-count="${arr.length}" data-pre="" data-suf="">0</span>
+      <span class="l">${esc(label)}</span>
+      <svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${LINHA[tipo]||'0,18 16,15 32,17 48,12 64,14 80,9'}" pathLength="1" fill="none" stroke="${cor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>`;
   };
-  return `<div class="card dx-wrap"><div class="card-h">${svg('clinic')}<h3>Exames dos colaboradores</h3>
-    <div class="r"><span class="muted" style="font-size:11.5px">clique para ver em Vencimentos</span></div></div>
-    <div class="card-b"><div class="dx-grid">
-      ${EXAMES_TIPOS.map(t=>tile(t[0],t[2])).join('')}
-    </div>
-    <div class="muted" style="font-size:11.5px;margin-top:10px">Aqui só entra o que <b>já venceu</b>. O aviso de documento prestes a vencer fica em <b>Vencimentos</b> e nos cartões de vencimento acima.</div>
-    </div></div>`;
+  return EXAMES_TIPOS.map(t=>tile(t[0])).join('');
 }
 /* Abre a tela Vencimentos já filtrada pelo tipo de exame E na faixa em que
    os registros realmente estão ('venc' quando há vencido, 'emdia' quando
@@ -1037,7 +1049,8 @@ function viewDashboard(){
   return `<div class="ini-cmd ini-dash">
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo-marca.png" alt=""></div><div class="tx"><b>PAINEL DE CONTROLE</b><span>Visão geral da operação</span></div></div>
-    <div class="ini-status"><span class="live"><i></i>Operação ativa</span><span class="clk" id="iniClock">--:--</span></div>
+    <!-- "Operação ativa" + relógio saíram na v8.1 (o cliente não quis): o
+         relógio já existe no alto da tela, na barra de cima. -->
   </div>
 
   <div class="ini-kstrip4">
@@ -1052,9 +1065,8 @@ function viewDashboard(){
     ${iniKpiTile('gauge', manutAlerta.length?'crit':'', manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10')}
     ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
     ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
+    ${/* ASO · Toxicológico · Opentech — na MESMA tira desde a v8.1 */ _dashExames()}
   </div>
-
-  ${_dashExames()}
 
   <div class="grid two-col">
     <div class="card">
@@ -1210,6 +1222,57 @@ function detalheVeiculoHead(v, acaoHtml){
   </div>`;
 }
 
+/* ---------- TROCAS DE ÓLEO da ficha da placa (v8.1) ----------
+   A aba "Trocas de Óleo" saiu do menu porque era uma VISTA sobre a mesma
+   coleção que já aparecia aqui (DB.manutencoes) — o cliente pediu para
+   aprimorar no lugar certo e apagar a aba. Este card ficou mais completo do
+   que a aba era: além de item/data/próxima, mostra o INTERVALO, em quanto foi
+   FEITA, a barra de desgaste, o VALOR de cada troca e o total gasto, e ordena
+   pelo que vence primeiro. Editar continua no mesmo modalManutencao(). */
+function _veicOleo(v, manut, cavalo){
+  const un = cavalo? 'km' : 'h';
+  const info = manut.map(m=>({m, i:manutInfo(m,v)}));
+  /* o que vence primeiro fica em cima; sem leitura de KM/horas vai para o fim */
+  info.sort((a,b)=>{
+    if(a.i.ok && b.i.ok) return a.i.restante - b.i.restante;
+    return a.i.ok? -1 : (b.i.ok? 1 : 0);
+  });
+  const gasto = manut.reduce((s,m)=>s+(Number(m.valor)||0),0);
+  const vencidas = info.filter(x=>x.i.ok && x.i.restante<=0).length;
+  const selo = vencidas
+    ? `<span class="st vencido">${vencidas} vencida(s)</span>`
+    : (info.some(x=>x.i.ok) ? `<span class="st ok">Em dia</span>` : '');
+
+  const linha = function(x){
+    const m=x.m, mi=x.i;
+    const feita = m.kmTroca!=null? num(m.kmTroca)+' km' : (m.horasTroca!=null? num(m.horasTroca)+' h' : '—');
+    const prox  = m.proxKm!=null? num(m.proxKm)+' km' : (m.proxHoras!=null? num(m.proxHoras)+' h' : '—');
+    const falta = mi.ok
+      ? `<div class="st ${mi.st}">${mi.restante<=0? 'vencida há '+num(-mi.restante)+' '+mi.un : 'faltam '+num(mi.restante)+' '+mi.un}</div>
+         <div class="bt" style="margin-top:5px"><i class="fill-${mi.st}" style="width:${mi.pct}%"></i></div>`
+      : `<div class="muted" style="font-size:11.5px">atualize o ${cavalo?'KM':'horas'} para calcular</div>`;
+    return `<tr class="clickable" onclick="modalManutencao('${m.id}')">
+      <td><b>${esc(m.item)}</b><div class="muted" style="font-size:11.5px">${esc(m.intervalo||'sem intervalo')} · ${fmtD(m.data)}</div></td>
+      <td class="mono muted" data-th="Feita em">${feita}</td>
+      <td class="mono" data-th="Próxima"><b>${prox}</b></td>
+      <td data-th="Situação" style="min-width:150px">${falta}</td>
+      <td class="mono" data-th="Valor">${Number(m.valor)>0? money(m.valor):'<span class="muted">—</span>'}</td>
+      <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalManutencao('${m.id}')">${svg('edit')}</button></td>
+    </tr>`;
+  };
+
+  return `<div class="card">
+    <div class="card-h">${svg('wrench')}<h3>Trocas de Óleo e Filtros</h3>${selo}
+      <div class="r no-print"><a class="btn sm" href="#km">${svg('gauge')} ${cavalo?'KM':'Horas'}</a>
+        <button class="btn sm" onclick="modalManutencao(null,'${v.id}')">${svg('plus')} Nova troca</button></div></div>
+    <div class="card-b p0">${info.length? `<div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Item / intervalo</th><th>Feita em</th><th>Próxima</th><th>Situação</th><th>Valor</th><th class="no-print"></th></tr></thead>
+      <tbody>${info.map(linha).join('')}</tbody></table></div>
+      ${gasto>0? `<div class="muted" style="padding:10px 14px;font-size:12px;border-top:1px solid var(--line)">Total gasto em trocas: <b>${money(gasto)}</b> · o que tem valor também entra no Relatório de Manutenção como preventiva.</div>`:''}`
+      : emptyState('Nenhuma troca lançada para esta placa. Use "Nova troca" para começar.')}</div>
+  </div>`;
+}
+
 function viewVeiculo(id){
   const v=veiculo(id); if(!v) return emptyState('Veículo não encontrado.');
   const vencs=todosVencimentos().filter(x=>x.entidade==='veiculo'&&x.refId===v.id).sort((a,b)=>situacao(a.validade).ord-situacao(b.validade).ord);
@@ -1270,16 +1333,7 @@ function viewVeiculo(id){
     </div>
     ${_veicTacografo(v)}
     <div class="grid" style="gap:18px">
-      <div class="card">
-        <div class="card-h">${svg('wrench')}<h3>Manutenção</h3>
-          <div class="r no-print"><button class="btn sm" onclick="modalManutencao(null,'${v.id}')">${svg('plus')}</button></div></div>
-        <div class="card-b p0">${manut.length? `<div class="tbl-wrap"><table class="tbl"><tbody>${manut.map(m=>{ const mi=manutInfo(m,v);
-          return `<tr class="clickable" onclick="modalManutencao('${m.id}')"><td><b>${esc(m.item)}</b><div class="muted" style="font-size:12px">${esc(m.intervalo||'')}</div></td>
-          <td class="mono">${fmtD(m.data)}</td>
-          <td class="mono"><b>${m.proxKm!=null?num(m.proxKm)+' km':(m.proxHoras!=null?num(m.proxHoras)+' h':'—')}</b>
-          ${mi.ok?`<div class="st ${mi.st}" style="margin-top:3px">${mi.restante<=0?'vencida':num(mi.restante)+' '+mi.un}</div>`:''}</td></tr>`;
-        }).join('')}</tbody></table></div>` : emptyState('Sem registros.')}</div>
-      </div>
+      ${_veicOleo(v, manut, cavalo)}
       <div class="card">
         <div class="card-h">${svg('battery')}<h3>Baterias</h3></div>
         <div class="card-b p0">${bats.length? `<div class="tbl-wrap"><table class="tbl"><tbody>${bats.map(b=>`
@@ -1909,34 +1963,6 @@ function modalHistLeitura(id){ const v=veiculo(id); if(!v)return; const cavalo=v
 /* ================================================================== */
 /*  15. MANUTENÇÃO                                                     */
 /* ================================================================== */
-function manutBloco(v){ const ms=DB.manutencoes.filter(m=>m.veiculoId===v.id);
-  return `<div class="card"><div class="card-h">${plate(v.placa,v.tipo)}<h3 style="font-size:14px">${esc(v.marca)} ${esc(v.modelo)}</h3>
-    <div class="r no-print"><a class="btn sm" href="#km">${svg('gauge')} KM/Horas</a><button class="btn sm" onclick="modalManutencao(null,'${v.id}')">${svg('plus')}</button></div></div>
-    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Item</th><th>Intervalo</th><th>Feita em</th><th>Próxima</th><th>Faltam</th><th class="no-print"></th></tr></thead>
-      <tbody>${ms.map(m=>{ const mi=manutInfo(m,v);
-        return `<tr class="clickable" onclick="modalManutencao('${m.id}')"><td><b>${esc(m.item)}</b><div class="muted" style="font-size:11px">${fmtD(m.data)}</div></td><td class="muted">${esc(m.intervalo||'—')}</td>
-        <td class="mono muted">${m.kmTroca!=null?num(m.kmTroca)+' km':(m.horasTroca!=null?num(m.horasTroca)+' h':'—')}</td>
-        <td class="mono"><b>${m.proxKm!=null?num(m.proxKm)+' km':(m.proxHoras!=null?num(m.proxHoras)+' h':'—')}</b></td>
-        <td>${mi.ok?`<span class="st ${mi.st}">${mi.restante<=0?'vencida há '+num(-mi.restante)+' '+mi.un:num(mi.restante)+' '+mi.un}</span>`:'<span class="muted">—</span>'}</td>
-        <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalManutencao('${m.id}')">${svg('edit')}</button></td></tr>`;
-      }).join('')}</tbody></table></div></div></div>`;
-}
-function viewOleo(){
-  const ativos=DB.veiculos.filter(v=>v.status!=='Arquivado'&&DB.manutencoes.some(m=>m.veiculoId===v.id));
-  const cavalos=ativos.filter(v=>v.tipo==='Cavalo');
-  const carretas=ativos.filter(v=>isReb(v));
-  return `
-  <div class="banner">${svg('wrench')}<div><b>Trocas de Óleo</b><span>Óleo e filtros por veículo. A coluna "Faltam" usa o KM/Horas atual (aba KM / Horas).</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalManutencao()">${svg('plus')} Nova troca</button></div>
-
-  <div class="sectitulo">${svg('truck')} Cavalos (por quilometragem)<div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Trocas de Óleo')}</div></div>
-  <div class="grid" style="gap:18px">${cavalos.length?cavalos.map(manutBloco).join(''):emptyState('Sem trocas de óleo de cavalos.')}</div>
-
-  <div class="sectitulo" style="margin-top:24px">${svg('battery')} Carretas (horas do Thermo King)</div>
-  <div class="grid" style="gap:18px">${carretas.length?carretas.map(manutBloco).join(''):emptyState('Sem trocas de óleo de carretas.')}</div>`;
-}
-
 /* ---------- RELATÓRIO DE MANUTENÇÃO (serviços / reparos) ---------- */
 let manutFiltro='todas';
 function manutTipoTag(t){ return (t==='Preventiva')
@@ -1977,7 +2003,7 @@ function viewManutencao(){
     const mix=s.length?`<div class="mnt-mix" data-tip="${c} corretiva(s) · ${p} preventiva(s)"><i style="flex:${c||0.001}"></i><b style="flex:${p||0.001}"></b></div>`:'';
     return `<div class="mnt-cardfoot"><div class="r"><span class="st neutro">${s.length} serviço(s)</span><span class="mnt-cost ${g>0?'has':''}">${money(g)}</span></div>${mix}</div>`; };
   return `
-  <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na aba "Trocas de Óleo".</span></div>
+  <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na ficha de cada placa, em <b>Frota</b> — e as que têm valor entram aqui como preventiva.</span></div>
     <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Manutenção')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kpiF('coins','i-blue',money(total),'Gasto total',todos.length+' lançamentos','todas')}
@@ -3594,7 +3620,7 @@ function iniAbrirVeic(placa){ const v=DB.veiculos.find(x=>x.placa===placa); cons
     <div class="vp-links">
       <a href="#frota/${v.id}" onclick="iniFecharVeic()">${svg('truck')} Ficha do veículo</a>
       <a href="#pneus/${v.id}" onclick="iniFecharVeic()">${svg('tire')} Pneus</a>
-      <a href="#abastecimento" onclick="iniFecharVeic()">${svg('fuel')} Abastecimentos</a>
+      <a href="#manutencao/${v.id}" onclick="iniFecharVeic()">${svg('wrench')} Manutenção</a>
       <a href="#viagens" onclick="iniFecharVeic()">${svg('route')} Viagens</a>
     </div>`;
   p.classList.add('show');
@@ -3645,7 +3671,6 @@ function _pexRedeContadores(){
 function iniCountUp(){
   _pexRedeContadores();
   const els=document.querySelectorAll('.ini-cmd .num[data-count]');
-  const ic=document.getElementById('iniClock'); if(ic){ const d=new Date(); ic.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   const reduce=_pexSemAnimacao();
   els.forEach(function(el){ const target=+el.getAttribute('data-count')||0, pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
     if(reduce){ el.textContent=pre+target.toLocaleString('pt-BR')+suf; return; }
@@ -7071,7 +7096,10 @@ const PEX_CMDS=[
   {label:'Novo veículo', ico:'truck', fn:function(){ modalVeiculo(); }},
   {label:'Novo motorista', ico:'user', fn:function(){ modalMotorista(); }},
   {label:'Nova viagem', ico:'route', fn:function(){ modalViagem(); }},
-  {label:'Novo abastecimento', ico:'fuel', fn:function(){ modalAbastec(); }},
+  /* "Novo abastecimento" saiu daqui na v8.1 junto com a aba: sem a tela no
+     menu, o lançamento ficaria sem lugar para ser conferido. A função
+     modalAbastec() continua existindo para quando a aba voltar. */
+  {label:'Nova troca de óleo', ico:'wrench', fn:function(){ modalManutencao(); }},
   {label:'Novo serviço de manutenção', ico:'wrench', fn:function(){ modalServico(); }},
   {label:'Novo CT-e', ico:'ctedoc', fn:function(){ modalCte(); }},
   {label:'Novo check-list', ico:'check', fn:function(){ modalChecklist(); }},

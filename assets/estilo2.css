@@ -86,7 +86,12 @@ tr.imp-off{opacity:.45}
 .sectitulo svg{width:17px;height:17px;color:var(--accent)}
 
 /* ---------- Gauge / barras de progresso ---------- */
-.bt{height:9px;background:#eef1f6;border-radius:6px;overflow:hidden}
+/* O trilho era #eef1f6 — cinza do tema CLARO, que sobrou da repintura e
+   virava uma barra branca no escuro. Aparecia pouco (só na régua do topo da
+   ficha); com as barras novas das trocas de óleo (v8.1) ficou gritante.
+   Token, não hex solto — a regra do projeto. A barra não é usada no
+   relatório A4, então não há efeito no papel. */
+.bt{height:9px;background:rgba(var(--tx3-rgb),.16);border-radius:6px;overflow:hidden}
 .bt.big{height:12px;margin:2px 0}
 .bt i{display:block;height:100%;border-radius:6px;transition:width .5s ease}
 .fill-ok{background:linear-gradient(90deg,#16a34a,#4ade80)}
@@ -672,11 +677,6 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .ini-brand .mk img{width:80%;height:80%;object-fit:contain}
 .ini-brand .tx b{font-size:15px;font-weight:800;letter-spacing:3px;color:#f2f7fb;display:block;line-height:1.1}
 .ini-brand .tx span{font-family:"Consolas",monospace;font-size:9.5px;letter-spacing:2.4px;text-transform:uppercase;color:#7d93a8}
-.ini-status{margin-left:auto;display:flex;align-items:center;gap:18px;font-family:"Consolas",monospace}
-.ini-status .live{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#9fb4c6}
-.ini-status .live i{width:7px;height:7px;border-radius:50%;background:#4bd6a0;box-shadow:0 0 9px #4bd6a0;animation:iniPulse 1.8s infinite}
-.ini-status .clk{font-size:17px;letter-spacing:2px;color:var(--tx)}
-@keyframes iniPulse{50%{opacity:.35}}
 
 /* card escuro (mapa protagonista) */
 .ini-cmd .card{background:rgba(18,34,48,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(var(--tx3-rgb),.12);box-shadow:0 24px 60px rgba(0,0,0,.42)}
@@ -738,7 +738,7 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .ini-kpi.gold .num{background:linear-gradient(180deg,#f0d488,#c99f45);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 .ini-kpi .l{font-family:"Consolas",monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--tx3);margin-top:7px;display:block}
 .ini-spark{position:absolute;right:14px;bottom:14px;width:78px;height:24px;opacity:.85}
-@media(prefers-reduced-motion:reduce){.ini-kpi,.ini-kpi.ok::after,.ini-status .live i,.ini-veh .ring{animation:none}}
+@media(prefers-reduced-motion:reduce){.ini-kpi,.ini-kpi.ok::after,.ini-veh .ring{animation:none}}
 
 /* ===== PAINEL DE CONTROLE no estilo Comando (v6.14) ===== */
 .ini-kstrip4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -1324,9 +1324,6 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .ini-cmd .ini-brand .mk{box-shadow:0 0 18px rgba(var(--au-rgb),.25),0 6px 18px rgba(0,0,0,.5)}
 .ini-cmd .ini-brand .tx b{color:var(--tx);letter-spacing:2.6px}
 .ini-cmd .ini-brand .tx span{color:var(--cy-txt2)}
-.ini-cmd .ini-status .live{color:#8fbfe0}
-.ini-cmd .ini-status .live i{background:#00ff88;box-shadow:0 0 10px #00ff88}
-.ini-cmd .ini-status .clk{color:var(--cy-neon);text-shadow:0 0 12px rgba(var(--au-rgb),.5)}
 
 /* ---- Cards: borda iluminada + glow + hover que intensifica ---- */
 .ini-cmd .card,.ini-cmd .ini-stage{
@@ -1383,6 +1380,11 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(9){animation-delay:.48s}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(10){animation-delay:.54s}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(11){animation-delay:.60s}
+/* v8.1: os três cartões de exame (ASO, Toxicológico, Opentech) entraram na
+   mesma tira — sem estas três a cascata parava neles. */
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(12){animation-delay:.66s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(13){animation-delay:.72s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(14){animation-delay:.78s}
 
 /* ---- Sparkline que se desenha ao carregar (pathLength=1) + glow ---- */
 .ini-cmd .cy-spark-line{
@@ -3038,18 +3040,7 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
    o que apenas "vai vencer" continua como "Tudo em dia" aqui — o alerta de
    proximidade fica na tela Vencimentos.
    ========================================================================== */
-.dx-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px }
-.dx-card{ position:relative; cursor:pointer; border:1px solid rgba(var(--au3-rgb),.16); border-radius:14px;
-  background:rgba(var(--surf-rgb),.45); padding:14px 16px; transition:border-color .16s ease, transform .12s ease }
-.dx-card:hover{ border-color:rgba(var(--au-rgb),.5); transform:translateY(-2px) }
-.dx-card.bad{ border-color:rgba(255,77,77,.45); background:rgba(48,10,14,.35) }
-.dx-t{ font-size:12.5px; font-weight:700; color:var(--tx2); letter-spacing:.2px }
-.dx-n{ display:flex; align-items:baseline; gap:7px; margin:6px 0 9px }
-.dx-n b{ font-size:30px; font-weight:800; line-height:1; color:var(--tx); font-variant-numeric:tabular-nums }
-.dx-n span{ font-size:11.5px; color:var(--text-mute) }
 .dx-s{ display:flex; gap:6px; flex-wrap:wrap }
-.dx-d{ margin-top:9px; font-size:11px; color:var(--text-mute); overflow-wrap:anywhere }
-@media(max-width:900px){ .dx-grid{ grid-template-columns:1fr } }
 
 /* ==========================================================================
    FROTA — "Todos" separado em Cavalos e Carretas (v7.5)

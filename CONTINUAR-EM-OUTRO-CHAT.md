@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.0)
+## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.1)
 
-**v8.0 publicada e sincronizada** (commit `919fbc4`). Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=203`, cache SW `planeta-express-v8-0`, rodapé `v8.0`.
+**v8.1 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=204`, cache SW `planeta-express-v8-1`, rodapé `v8.1`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -21,6 +21,8 @@
 | Aba **Exames** | v7.3 | aba "Exames e Certificados" **dentro da ficha do motorista** |
 | Aba **Direção Defensiva** | v7.5 | seção "Certificados" na mesma aba da ficha |
 | Aba **Tacógrafos** | v7.5 | card na ficha do **cavalo** (só `tipo==='Cavalo'`) |
+| Aba **Trocas de Óleo** | v8.1 | card **"Trocas de Óleo e Filtros"** na ficha da placa (`_veicOleo`), mais completo que a aba era |
+| Aba **Abastecimentos** | v8.1 | **só saiu do menu** — a tela e a rota `abastecimento` continuam vivas (Contabilidade, Central e relatório apontam para lá). Volta devolvendo `item('abastecimento')` na `renderSidebar` |
 
 **🔑 A regra que explica todas essas remoções:** essas telas **não tinham dado próprio** — eram *views* sobre `DB.vencimentos`. Por isso nada se perdeu. Antes de remover qualquer tela, **cheque se ela guarda dado ou só mostra**.
 
@@ -64,16 +66,16 @@ Arquivos em `Sistema Planeta Express\`:
 - `ensureCollections()` faz backfill de coleções novas ao carregar (não perde dados) e roda `corrigirValoresAntigos()`. Roda também `importarCadastroSeed()`, que aplica **só a lista da versão** (`SEED_ENTREGAS`) e **uma vez por base** (`DB.seedAplicado`) — NUNCA varre a semente inteira, senão ressuscita o que o cliente apagou (foi o defeito da v6.91, corrigido na v6.92). Segunda trava: `DB.*Removidos` + `marcarRemovido`.
 - Funções-chave de dados: `loadDB`, `saveDB` (salva local + nuvem debounced), `saveLocal`, `ensureCollections`, `aplicarRemoto` (recebe realtime), `flushNuvem` (salva ao fechar/trocar aba).
 
-## 5. MÓDULOS (abas do menu, na ordem) — atualizado na v7.9
+## 5. MÓDULOS (abas do menu, na ordem) — atualizado na v8.1
 **Principal:** Painel de Controle (é a tela de ENTRADA desde a v7.2), Vencimentos.
 **Cadastros:** Frota (o filtro "Todos" sai separado em **Cavalos** e **Carretas**), Motoristas, ANTT-RNTRC, Licenças e Alvarás.
-**Manutenção:** KM/Horas, Trocas de Óleo, Relatório de Manutenção (`servicos`), Pneus, Baterias, Abastecimentos.
+**Manutenção:** KM/Horas, Relatório de Manutenção (`servicos`), Pneus, Baterias. *(Trocas de Óleo e Abastecimentos saíram do menu na v8.1 — ver a tabela no topo.)*
 **Operação:** Viagens, Descargas, CT-e, Check-list (mapa SVG do veículo), Notas de Despesa, Pedágios, Alarmes Thermo King, Documentos.
 **Financeiro** (sem senha desde a v6.21) · **Contabilidade** · **Empresa:** Quadro Societário, Código de Ética · **Sistema:** Configurações.
 
 ⚠️ **A ficha do MOTORISTA tem 5 abas:** Resumo · **Exames e Certificados** (ASO, Toxicológico, Opentech + Direção Defensiva) · Contrato de Trabalho · Ficha Criminal · Documentos.
 ⚠️ **A ficha do VEÍCULO** tem o card **Tacógrafo** quando é cavalo.
-⚠️ **Não existem mais** as abas Início, Exames, Direção Defensiva, Tacógrafos e Monitoramento — ver a tabela no topo.
+⚠️ **Não existem mais** as abas Início, Exames, Direção Defensiva, Tacógrafos, Monitoramento, Trocas de Óleo e Abastecimentos — ver a tabela no topo.
 
 ## 6. PADRÕES/CONVENÇÕES IMPORTANTES
 
@@ -285,6 +287,27 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 30/08/2026 — v8.1 (duas abas a menos, o Painel mais limpo, e o óleo onde ele já morava)
+
+Quatro pedidos do cliente na mesma leva. **Nenhum deles perdeu dado** — os quatro eram tela, não conteúdo.
+
+**(1) Aba "Trocas de Óleo" REMOVIDA; o conteúdo aprimorado na ficha da placa.** Motivo dele: *"ele já está constando em cada placa quando clica em frota, aprimore lá e exclua a aba"*. Ele tinha razão — a aba era **vista pura** sobre `DB.manutencoes`, a mesma coleção que a ficha já listava. Saíram `ROTAS.oleo`, o ramo do router, `viewOleo()` e `manutBloco()` (que só ela usava). O card da ficha virou **`_veicOleo()`** e ficou **mais completo do que a aba era**: intervalo, **feita em**, próxima, **barra de desgaste**, **valor de cada troca**, total gasto, botão "Nova troca" e ordenação **pelo que vence primeiro**.
+⚠️ `contabilidade.js` tinha `{id:'oleo', rota:'oleo'}` em `CONTAB_FONTES` — passou a `rota:'frota'`, senão o link da fonte cairia em rota inexistente. A coleção **não** mudou. O texto do banner do Relatório de Manutenção, que mandava o usuário para "a aba Trocas de Óleo", também foi corrigido.
+
+**(2) Aba "Abastecimentos" REMOVIDA DO MENU — mas a TELA continua de pé.** Ele disse *"deixaremos para outra hora configurar"*, ou seja: **volta depois**. Então só saiu `item('abastecimento')` do menu; `ROTAS.abastecimento`, o ramo do router e `viewAbastecimento()` seguem vivos — **de propósito**, porque três coisas apontam para lá: `CONTAB_FONTES` (`id:'abastec'`), a **Central de Documentos** (`_alvo:'abastecimentos'`, que lança cupom de posto) e o relatório `abast-periodo`. Saíram junto o atalho `#abastecimento` do painel rápido do veículo e o "Novo abastecimento" da paleta Ctrl+N (lançar sem ter onde conferir seria pior). **Para trazer a aba de volta: basta devolver `item('abastecimento')` na `renderSidebar`.**
+
+**(3) Saiu a faixa "Operação ativa" + relógio** do alto do Painel. O relógio já existe na barra de cima — era repetição. Removidos o markup, as regras `.ini-status*` (base e neon), o `@keyframes iniPulse` e a linha morta do `#iniClock` no `iniCountUp()`. **`.ini-top` FICOU** — o cabeçalho "PAINEL DE CONTROLE" ainda usa.
+
+**(4) O quadro "Exames dos colaboradores" virou três cartões iguais aos outros.** Pedido: *"retire o quadro grande e deixe somente o ASO / TOX e OPENTECH igualmente aos outros"*. `_dashExames()` deixou de devolver um `.card` com `.dx-card` dentro e passou a devolver **três `.ini-kpi`**, que entram na **mesma tira** (`.ini-kstrip4`) — agora com **14 cartões**. Verde quando está tudo em dia (a classe `.ini-kpi.ok` da v8.0), vermelho quando há vencido, e o que era selo virou complemento do rótulo ("ASO · 1 vencido(s)", "Toxicológico · 2 sem lançar"). Não usam `iniKpiTile` porque precisam de `vencVerTipo()`, que escolhe **tipo e faixa** antes de navegar. Stagger estendido até `nth-child(14)`.
+
+> **A armadilha do CSS morto pegou de novo — e foi evitada:** ao apagar o bloco `.dx-*`, a regra **`.dx-s` estava viva** na aba de exames da ficha do motorista (`app.js` ~1741 e ~1748). Foi a única preservada. É exatamente o caso do `.antt-acoes` da v7.1 — ver [[remover-recurso-com-seguranca]].
+
+**Brinde:** a barra de desgaste (`.bt`) tinha trilho `#eef1f6` — cinza do **tema claro** sobrado da repintura, que virava uma **barra branca** no escuro. Aparecia pouco (só na régua do topo da ficha); com as barras novas ficou gritante. Virou `rgba(var(--tx3-rgb),.16)` — token, não hex solto. Não afeta o relatório A4 (a barra não é usada lá).
+
+**Validado no Chrome headless, pelo caminho real, zero erro de JS:** menu com **24 itens** e sem `#oleo`/`#abastecimento`; tira com **14 cartões** e os três exames no fim; quadro de exames e faixa "Operação ativa" ausentes do DOM; **`#oleo` nos favoritos cai no Painel** (não trava — é o `else` do fim do router); ficha da placa com o card "Trocas de Óleo e Filtros" (7 linhas, 5 barras); tela de Abastecimentos ainda respondendo fora do menu; **24 rotas** varridas.
+
+**Versão:** assets `?v=204`, cache `planeta-express-v8-1`, rodapé `v8.1`, celular reconstruído (3,90 MB).
 
 ### 🟡 ESTADO EM 30/08/2026 — v8.0 (sinal verde no Painel + a marca sai de cena na abertura) — **LOGO AINDA PENDENTE**
 

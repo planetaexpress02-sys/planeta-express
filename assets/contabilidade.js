@@ -172,7 +172,10 @@ const CONTAB_FONTES = [
         descricao:(s.descricao||'Serviço')+(s.oficina?' — '+s.oficina:''),
         placa:veic?veic.placa:'', fornecedor:s.oficina||'' };
     }},
-  { id:'oleo', modulo:'Trocas de Óleo', rota:'oleo', colecao:'manutencoes', tipo:'custo',
+  /* A aba "Trocas de Óleo" saiu do menu na v8.1 e o conteúdo virou card na
+     ficha da placa — por isso a rota daqui aponta para Frota, senão o link
+     desta fonte cairia numa rota que não existe mais. A coleção não mudou. */
+  { id:'oleo', modulo:'Trocas de Óleo', rota:'frota', colecao:'manutencoes', tipo:'custo',
     mapear:function(m){
       const v=_contabNum(m.valor); if(!v) return null;
       const veic=(DB.veiculos||[]).find(function(x){ return x.id===m.veiculoId; });
