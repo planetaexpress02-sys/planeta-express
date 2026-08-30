@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=202">
-  <link rel="stylesheet" href="assets/estilo2.css?v=202">
+  <link rel="stylesheet" href="assets/estilo.css?v=203">
+  <link rel="stylesheet" href="assets/estilo2.css?v=203">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -24,8 +24,10 @@
     <div class="sp-orb sp-orb2"></div>
     <div class="sp-grid"></div>
     <div class="sp-core">
+      <!-- A escrita "PLANETA EXPRESS" saiu daqui (v8.0): a própria logo já traz
+           o nome, então o texto repetia a marca. Ficam a logo, a linha, a
+           assinatura e a barra carregando. -->
       <div class="sp-logo"><img src="assets/logo-claro.png" alt="Planeta Express"><i class="sp-shine"></i></div>
-      <div class="sp-title">PLANETA<b>EXPRESS</b></div>
       <div class="sp-line"></div>
       <div class="sp-tag">Sistema de Gestão Operacional</div>
       <div class="sp-loader"><span></span></div>
@@ -52,7 +54,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v7.9</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v8.0</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -105,16 +107,16 @@
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script src="assets/viagens.js?v=202"></script>
-  <script src="assets/dados.js?v=202"></script>
-  <script src="assets/alarmes.js?v=202"></script>
-  <script src="assets/arquivos.js?v=202"></script>
-  <script src="assets/importar.js?v=202"></script>
-  <script src="assets/app.js?v=202"></script>
-  <script src="assets/central.js?v=202"></script>
-  <script src="assets/contabilidade.js?v=202"></script>
-  <script src="assets/aniversarios.js?v=202"></script>
-  <script src="assets/relatorios.js?v=202"></script>
+  <script src="assets/viagens.js?v=203"></script>
+  <script src="assets/dados.js?v=203"></script>
+  <script src="assets/alarmes.js?v=203"></script>
+  <script src="assets/arquivos.js?v=203"></script>
+  <script src="assets/importar.js?v=203"></script>
+  <script src="assets/app.js?v=203"></script>
+  <script src="assets/central.js?v=203"></script>
+  <script src="assets/contabilidade.js?v=203"></script>
+  <script src="assets/aniversarios.js?v=203"></script>
+  <script src="assets/relatorios.js?v=203"></script>
   <script>
     /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
     if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){

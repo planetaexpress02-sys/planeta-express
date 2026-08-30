@@ -21,15 +21,15 @@
 .sp-logo img{width:76%;height:76%;object-fit:contain}
 .sp-logo .sp-shine{position:absolute;top:0;left:-140%;width:70%;height:100%;transform:skewX(-20deg);
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:shine 3.6s ease-in-out 1s infinite}
-.sp-title{margin-top:34px;font-size:38px;font-weight:800;letter-spacing:9px;display:flex;flex-direction:column;gap:4px;
-  background:linear-gradient(180deg,#fbf3df 0%,#e7c983 45%,#c9a227 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-  opacity:0;animation:spUp 1.1s .7s cubic-bezier(.16,1,.3,1) forwards;filter:drop-shadow(0 2px 10px rgba(201,162,39,.25))}
-.sp-title b{font-weight:300;letter-spacing:16px;font-size:17px;color:#b79148;-webkit-text-fill-color:#b79148}
-.sp-line{width:0;height:1px;margin-top:22px;background:linear-gradient(90deg,transparent,#c9a227,transparent);animation:spLine 1.4s 1.1s cubic-bezier(.16,1,.3,1) forwards}
+/* A regra .sp-title saiu na v8.0 junto com o elemento: a logo já traz o nome.
+   Sem o texto no meio, os tempos de entrada foram encurtados (a linha, a
+   assinatura e a barra não precisam mais esperar a palavra aparecer) e a
+   linha ganhou o respiro que era do texto. */
+.sp-line{width:0;height:1px;margin-top:44px;background:linear-gradient(90deg,transparent,#c9a227,transparent);animation:spLine 1.4s .55s cubic-bezier(.16,1,.3,1) forwards}
 .sp-tag{margin-top:18px;color:#8a7a4e;font-size:11.5px;letter-spacing:4px;text-transform:uppercase;font-weight:600;
-  opacity:0;animation:spUp 1.1s 1.3s cubic-bezier(.16,1,.3,1) forwards}
+  opacity:0;animation:spUp 1.1s .75s cubic-bezier(.16,1,.3,1) forwards}
 .sp-loader{margin-top:40px;width:210px;height:2px;border-radius:3px;background:rgba(214,178,92,.14);overflow:hidden;
-  opacity:0;animation:spUp .9s 1.5s forwards}
+  opacity:0;animation:spUp .9s .95s forwards}
 .sp-loader span{display:block;height:100%;width:35%;border-radius:3px;
   background:linear-gradient(90deg,#e7c983,#c9a227);box-shadow:0 0 14px rgba(214,178,92,.8);animation:loader 2s ease infinite}
 @keyframes spLogo{0%{transform:translateY(34px) scale(.68);opacity:0;filter:blur(8px)}100%{transform:none;opacity:1;filter:blur(0)}}
@@ -225,8 +225,8 @@ body{background:
   .banner{flex-wrap:wrap}
   .gauge-strip{flex-direction:column;align-items:stretch}
   .kpis{grid-template-columns:1fr 1fr}
-  .sp-title{font-size:27px;letter-spacing:5px}
   .sp-logo{width:112px;height:112px}
+  .sp-line{margin-top:32px}
   .chk-row{flex-wrap:wrap;gap:7px}
   .chk-name{flex-basis:100%}
 }
@@ -358,10 +358,10 @@ body{background:
 .login-screen{position:fixed;inset:0;z-index:450;display:none;align-items:center;justify-content:center;padding:20px;
   background:radial-gradient(1200px 700px at 50% 28%,#12161d 0%,#0a0d13 55%,#05070b 100%)}
 .login-box{background:#0f1626;border:1px solid rgba(214,178,92,.20);border-radius:20px;padding:36px 30px;max-width:390px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.55);animation:pop .25s ease}
-.login-logo{width:78px;height:78px;border-radius:18px;background:linear-gradient(160deg,#fff,var(--surf3));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+/* O <h2> "PLANETA EXPRESS" saiu na v8.0, pelo mesmo motivo do splash: a logo
+   já traz o nome. Sem ele, a logo cresce um pouco e a assinatura encosta nela. */
+.login-logo{width:96px;height:96px;border-radius:22px;background:linear-gradient(160deg,#fff,var(--surf3));display:flex;align-items:center;justify-content:center;margin:0 auto 14px;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.4)}
 .login-logo img{width:76%;height:76%;object-fit:contain}
-.login-box h2{color:#fff;font-size:20px;font-weight:800;letter-spacing:5px;
-  background:linear-gradient(180deg,#fbf3df,#c9a227);-webkit-background-clip:text;background-clip:text;color:transparent}
 .login-sub{color:#8a7a4e;font-size:11.5px;letter-spacing:1.5px;margin-bottom:22px;text-transform:uppercase}
 .login-box .field{text-align:left}
 .login-box .field label{color:#9fb0cc;font-size:12px}
@@ -738,7 +738,7 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 .ini-kpi.gold .num{background:linear-gradient(180deg,#f0d488,#c99f45);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 .ini-kpi .l{font-family:"Consolas",monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--tx3);margin-top:7px;display:block}
 .ini-spark{position:absolute;right:14px;bottom:14px;width:78px;height:24px;opacity:.85}
-@media(prefers-reduced-motion:reduce){.ini-kpi,.ini-status .live i,.ini-veh .ring{animation:none}}
+@media(prefers-reduced-motion:reduce){.ini-kpi,.ini-kpi.ok::after,.ini-status .live i,.ini-veh .ring{animation:none}}
 
 /* ===== PAINEL DE CONTROLE no estilo Comando (v6.14) ===== */
 .ini-kstrip4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -746,6 +746,15 @@ g.bar-clk[onclick],.pex-veh,.donut-seg[data-tip]{cursor:pointer}
 @media(max-width:520px){.ini-kstrip4{grid-template-columns:1fr}}
 .ini-kpi.crit::before{background:#f2686b}
 .ini-kpi.crit .ic{background:rgba(242,104,107,.16);color:#f2686b}
+/* "Em dia" — o SINAL VERDE que o cliente pediu no Painel (v8.0).
+   É o contrário do .crit: barra e ícone verdes + um ponto verde vivo no canto
+   do cartão, para se enxergar de longe sem precisar ler o número. */
+.ini-kpi.ok::before{background:#22c55e}
+.ini-kpi.ok .ic{background:rgba(34,197,94,.16);color:#3fd68a}
+.ini-kpi.ok::after{content:"";position:absolute;top:16px;right:16px;width:9px;height:9px;border-radius:50%;
+  background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.16),0 0 12px rgba(34,197,94,.85);
+  animation:okPulse 2.4s ease-in-out infinite}
+@keyframes okPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.86)}}
 .ini-dash{padding-top:24px}
 .ini-dash .grid{margin-top:16px}
 /* gráficos e listas legíveis no tema escuro do painel */
@@ -1358,6 +1367,10 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .ini-cmd .ini-kpi.crit::before{background:linear-gradient(180deg,#ff5a52,#ff3b30);box-shadow:0 0 12px rgba(255,59,48,.7)}
 .ini-cmd .ini-kpi.crit .ic{background:rgba(255,59,48,.15);color:#ff6b6b}
 .ini-cmd .ini-kpi.crit .ic svg{filter:drop-shadow(0 0 5px rgba(255,59,48,.5))}
+/* o mesmo sinal verde, no acabamento neon do Painel */
+.ini-cmd .ini-kpi.ok::before{background:linear-gradient(180deg,#5ef2a5,#12b76a);box-shadow:0 0 12px rgba(34,197,94,.7)}
+.ini-cmd .ini-kpi.ok .ic{background:rgba(34,197,94,.15);color:#4ade80}
+.ini-cmd .ini-kpi.ok .ic svg{filter:drop-shadow(0 0 5px rgba(34,197,94,.5))}
 @keyframes cyIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
 /* entrada em cascata (stagger) */
 .ini-cmd .ini-kstrip .ini-kpi:nth-child(2),.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(2){animation-delay:.06s}
@@ -1367,6 +1380,9 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(6){animation-delay:.30s}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(7){animation-delay:.36s}
 .ini-cmd .ini-kstrip4 .ini-kpi:nth-child(8){animation-delay:.42s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(9){animation-delay:.48s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(10){animation-delay:.54s}
+.ini-cmd .ini-kstrip4 .ini-kpi:nth-child(11){animation-delay:.60s}
 
 /* ---- Sparkline que se desenha ao carregar (pathLength=1) + glow ---- */
 .ini-cmd .cy-spark-line{

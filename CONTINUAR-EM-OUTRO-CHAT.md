@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v7.9)
+## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.0)
 
-**Tudo publicado e sincronizado.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,9 MB) na mesma versão. Assets em `?v=202`, cache SW `planeta-express-v7-9`.
+**⚠️ v8.0 PRONTA LOCALMENTE, AINDA NÃO PUBLICADA.** Pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) já na v8.0; assets em `?v=203`, cache SW `planeta-express-v8-0`, rodapé `v8.0`. **Falta `git commit` + `git push origin main`** — segurei porque o terceiro pedido da v8.0 (a logo nova) foi reprovado e ainda depende do arquivo do cliente. Ver a seção da v8.0 no histórico.
 
 **O que MUDOU muito nas últimas versões — leia antes de mexer:**
 
@@ -283,6 +283,23 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### 🟡 ESTADO EM 30/08/2026 — v8.0 (sinal verde no Painel + a marca sai de cena na abertura) — **LOGO AINDA PENDENTE**
+
+Três pedidos numa mensagem só. **Dois entregues, um recusado pelo cliente** — leia o terceiro antes de mexer na marca.
+
+**(1) Cartão "Documentos em dia" no Painel, com sinal verde.** Entrou como **3º cartão** da tira, logo depois de *Conjuntos ativos* e *Motoristas ativos*, exatamente onde ele pediu. Fonte: `fEmDia` (`diasAte > 30`), a mesma fatia verde do donut. Abre `#vencimentos/emdia`. A classe nova é **`.ini-kpi.ok`** — o espelho do `.crit`: barra e ícone verdes **mais um ponto verde pulsante no canto** (`::after`), que é o "sinal" que se enxerga sem ler o número. Tem par no acabamento neon (`.ini-cmd .ini-kpi.ok`) e o stagger foi estendido até `nth-child(11)`, senão os 3 cartões novos entrariam sem cascata.
+
+> **Regra nº 3 do projeto conferida de verdade:** cartão = **50**, tela que ele abre = **50 linhas** e rodapé **"50 documento(s) em dia"**. Medido pelo caminho real: cliquei no `href` do próprio cartão e li o `#view` (não montei o objeto à mão).
+
+**(2) A escrita "PLANETA EXPRESS" saiu da abertura.** O cliente mandou print com um X por cima do letreiro dourado: **a logo já traz o nome**, então o texto repetia a marca. Saíram o `<div class="sp-title">` do `index.html` e a regra `.sp-title` do `estilo2.css` (inclusive a do `@media 700px`). Ficam **logo, linha, "Sistema de Gestão Operacional" e a barra carregando**. Sem o texto no meio, os tempos de entrada encurtaram (linha `1.1s → .55s`, tag `1.3s → .75s`, barra `1.5s → .95s`) e a linha herdou o respiro do texto (`margin-top 22 → 44px`).
+**O mesmo defeito estava na tela de LOGIN** (`<h2>PLANETA EXPRESS</h2>` embaixo da logo, em `mostrarLogin()`): saiu junto, e a `.login-logo` cresceu `78 → 96px` para ocupar o lugar. A regra `.login-box h2` foi removida do CSS.
+
+**(3) 🚫 A LOGO NOVA — NÃO REFIZ, E NÃO TENTE REDESENHAR.** O cliente anexou uma arte **preta e dourada** (monograma "P" em ouro + PLANETA EXPRESS em serifa dourada sobre fundo quase preto) e pediu para trocar em todo o sistema. **O anexo do chat não vira arquivo em disco.** Eu reconstruí a arte em vetor (SVG: "P" geométrico com bisel + Cinzel do Google Fonts, renderizado a PNG pelo Chrome headless) e **o cliente reprovou na hora: "não mude para essa logo, ficou horrível"**. Nenhum arquivo de marca foi tocado — a reprodução morreu no rascunho.
+**O caminho certo:** pedir para ele **salvar o PNG na pasta** (ex.: `Sistema Planeta Express\assets\logo-original.png`) e gerar as **três** variantes a partir do arquivo dele — `logo-claro.png` (interface escura), `logo-escuro.png` (relatório A4, papel branco) e `logo-marca.png` (só o "P", selos de 36–44px) — mais o ícone quadrado (`logo.png`/`logo-sm.png`). Os pontos de troca são 8: `index.html` (ícone ×2, splash, `relLogoDark`, sidebar, topbar) e `app.js` (`ini-brand .mk` ~1039, `etica-logo` ~5312, `login-logo` ~7183).
+⚠️ A arte é **ouro**, mas o tema do sistema é **ciano** desde a v7.7 (o ouro foi reprovado na v7.6). Ele quer o ouro **na marca**, não no tema — não repita a v7.6.
+
+**Versão:** assets `?v=203`, cache `planeta-express-v8-0`, rodapé `v8.0`, celular reconstruído (3,90 MB). **Ainda NÃO publicado** (aguardando a logo).
 
 ### ✅ ESTADO EM 30/08/2026 — v7.9 (agora o tom é MESMO quase preto)
 

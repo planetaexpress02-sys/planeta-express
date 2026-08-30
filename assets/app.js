@@ -1043,6 +1043,7 @@ function viewDashboard(){
   <div class="ini-kstrip4">
     ${iniKpiTile('truck','', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6')}
     ${iniKpiTile('user','', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11')}
+    ${iniKpiTile('check','ok', fEmDia.length, '', '', 'Documentos em dia', 'vencimentos/emdia', '#3fd68a', '0,20 16,17 32,18 48,12 64,10 80,6')}
     ${iniKpiTile('shield', fVenc.length?'crit':'', fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20')}
     ${iniKpiTile('bell', fD10.length?'crit':'', fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18')}
     ${iniKpiTile('umbrella', segCrit?'crit':'', segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9')}
@@ -7181,7 +7182,7 @@ function mostrarLogin(msg){
   el.style.display='flex';
   el.innerHTML=`<div class="login-box">
     <div class="login-logo"><img src="assets/logo-claro.png" alt="Planeta Express"></div>
-    <h2>PLANETA EXPRESS</h2><p class="login-sub">Sistema de Gestão · acesso</p>
+    <p class="login-sub">Sistema de Gestão · acesso</p>
     <div class="field"><label>E-mail</label><input type="email" id="lg_email" autocomplete="username" placeholder="seu@email.com"></div>
     <div class="field"><label>Senha</label><input type="password" id="lg_senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
     <button class="btn primary" style="width:100%" id="lg_btn" onclick="fazerLogin()">${svg('lock')} Entrar</button>
