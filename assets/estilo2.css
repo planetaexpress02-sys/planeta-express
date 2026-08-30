@@ -2964,3 +2964,22 @@ tr.sel-on td{ background:rgba(0,170,255,.12)!important }
    que já existe (v6.72) — não criar outra aqui, senão passam a existir dois
    critérios para a mesma coisa. */
 @media(max-width:1000px) and (min-width:861px){ .ex-grid{ grid-template-columns:1fr } }
+
+/* ==========================================================================
+   EXAMES NO PAINEL (v7.4)
+   Resumo por tipo de exame. Regra do cliente: só VENCIDO pinta de vermelho;
+   o que apenas "vai vencer" continua como "Tudo em dia" aqui — o alerta de
+   proximidade fica na tela Vencimentos.
+   ========================================================================== */
+.dx-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px }
+.dx-card{ position:relative; cursor:pointer; border:1px solid rgba(0,170,255,.16); border-radius:14px;
+  background:rgba(0,20,38,.45); padding:14px 16px; transition:border-color .16s ease, transform .12s ease }
+.dx-card:hover{ border-color:rgba(0,229,255,.5); transform:translateY(-2px) }
+.dx-card.bad{ border-color:rgba(255,77,77,.45); background:rgba(48,10,14,.35) }
+.dx-t{ font-size:12.5px; font-weight:700; color:#cfe0f5; letter-spacing:.2px }
+.dx-n{ display:flex; align-items:baseline; gap:7px; margin:6px 0 9px }
+.dx-n b{ font-size:30px; font-weight:800; line-height:1; color:#eaf6ff; font-variant-numeric:tabular-nums }
+.dx-n span{ font-size:11.5px; color:var(--text-mute) }
+.dx-s{ display:flex; gap:6px; flex-wrap:wrap }
+.dx-d{ margin-top:9px; font-size:11px; color:var(--text-mute); overflow-wrap:anywhere }
+@media(max-width:900px){ .dx-grid{ grid-template-columns:1fr } }

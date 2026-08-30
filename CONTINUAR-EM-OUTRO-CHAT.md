@@ -237,6 +237,22 @@ v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
 
+### ✅ ESTADO EM 30/08/2026 — v7.4 (resumo de exames no Painel, com regra própria de alerta)
+
+O cliente mandou o print do resumo que existia na aba Exames (removida na v7.3) e pediu que voltasse **no Painel de Controle** — com uma regra explícita: *"nada que **irá** vencer deve gerar crítico nesses, aparece 'tudo em dia'; o crítico somente em Vencimentos"*.
+
+**O bloco "Exames dos colaboradores"** (`_dashExames`) entra no Painel logo abaixo da faixa de KPIs: um cartão por tipo (**ASO · Toxicológico · Opentech**) com a quantidade de registros e o selo de situação.
+
+> **⚠️ REGRA QUE VALE SÓ AQUI:** o cartão olha **`situacao().ord===0`** — ou seja, **apenas o que JÁ venceu**. Documento que *vai* vencer não pinta nada: o cartão continua dizendo "Tudo em dia". O aviso de proximidade não sumiu do sistema, ele mora nos KPIs "Documentos vencidos"/"Vencem em ≤10 dias" e na tela Vencimentos. A própria tela explica isso numa linha abaixo dos cartões, para ninguém achar que o Painel está escondendo alerta.
+
+Isso muda o que o cliente reclamou: no print dele o Opentech dizia **"1 crítico(s)"** por causa de documentos que ainda não venceram. Com os dados reais de hoje o cartão passa a mostrar **"1 vencido(s)"** (o do Renato, vencido há 10 dias) e ignora os dois que vencem em 5 e 10 dias.
+
+Acrescentei um selo neutro **"N sem lançar"** quando há colaborador ativo sem aquele exame — informação, não alarme (o Opentech tem 5 registros para 6 motoristas).
+
+⚠️ **Clique leva à faixa certa** (`vencVerTipo(tipo, faixa)`): a tela Vencimentos, no filtro padrão, **só lista vencidos + próximos 30 dias**. Sem cuidado, clicar num cartão "Tudo em dia" abriria uma tela **vazia** e o número não bateria com o que aparece. Então o cartão abre em `venc` quando há vencido e em `emdia` quando não há. Faixa desconhecida cai em `todos` sem quebrar.
+
+**Validado no Chrome headless — 29 asserções, zero falha:** a contagem de cada cartão bate com `todosVencimentos()`; os três estados testados um a um (**longe de vencer → "Tudo em dia"**; **prestes a vencer, com `ord===1` confirmado → continua "Tudo em dia" e sem vermelho**; **já vencido → "1 vencido(s)" e vermelho**); com os dados reais de volta, o ASO mostra o vencido e ignora o que vence em 20 dias; o clique abre Vencimentos filtrado e **com registros na tela**; 28 rotas limpas e a aba Exames da ficha intacta.
+
 ### ✅ ESTADO EM 29/08/2026 — v7.3 (fora clima e sino; Exames virou aba de cada motorista)
 
 Três pedidos do cliente numa mensagem: tirar a **temperatura de Londrina** e o **sino de alertas** do topo, e tirar a **aba Exames** — mas com os exames indo para o cadastro de cada motorista, com os mesmos dados, mais anexo e inserir/modificar/remover.

@@ -918,6 +918,62 @@ function avatarFoto(m, size){ size=size||56;
 function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts){
   return `<a class="ini-kpi ${cls}" href="#${href}"><span class="ic">${svg(ico)}</span><span class="num" data-count="${val}" data-pre="${pre||''}" data-suf="${suf||''}">${(pre||'')}0${(suf||'')}</span><span class="l">${label}</span><svg class="ini-spark" viewBox="0 0 80 26" preserveAspectRatio="none"><polyline class="cy-spark-line" points="${pts}" pathLength="1" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
 }
+/* ==================================================================
+   EXAMES NO PAINEL (v7.4)
+   O resumo que existia na aba Exames (removida na v7.3) voltou aqui, a
+   pedido do cliente.
+
+   ⚠️ REGRA QUE ELE PEDIU, E QUE VALE SÓ PARA ESTES CARTÕES:
+   documento que **vai** vencer NÃO é problema aqui — só conta o que já
+   está **VENCIDO**. Enquanto não vencer, o cartão diz "Tudo em dia".
+   O aviso de "vence em X dias" (o crítico) continua existindo, mas no
+   lugar dele: a tela Vencimentos e os KPIs de vencimento acima.
+   Por isso aqui olhamos `situacao().ord===0` (vencido) e mais nada.
+
+   O total de registros e o de vencidos saem de `todosVencimentos()` — a
+   mesma fonte da tela Vencimentos e da ficha do motorista — para os três
+   lugares nunca discordarem.
+   ================================================================== */
+function _dashExames(){
+  const todos=todosVencimentos().filter(v=>v.entidade==='motorista');
+  const ativos=(DB.motoristas||[]).filter(m=>m.status!=='Inativo').length;
+  const tile=function(tipo,desc){
+    const arr=todos.filter(v=>v.tipo===tipo);
+    const vencidos=arr.filter(v=>situacao(v.validade).ord===0);
+    const bad=vencidos.length>0;
+    const selo=bad
+      ? `<span class="st vencido">${vencidos.length} vencido(s)</span>`
+      : `<span class="st ok">Tudo em dia</span>`;
+    /* quem ainda não tem o exame lançado — informação, não alarme */
+    const faltam=ativos-arr.length;
+    /* A faixa que abre é a que REALMENTE tem estes registros: a tela
+       Vencimentos, no filtro padrão, só lista vencidos + próximos 30 dias.
+       Sem isto, clicar num cartão "Tudo em dia" abriria uma tela vazia —
+       o número não bateria com o que aparece. */
+    const faixa = bad ? 'venc' : 'emdia';
+    return `<div class="dx-card${bad?' bad':''}" onclick="vencVerTipo('${esc(tipo)}','${faixa}')" title="Ver ${esc(tipo)} em Vencimentos">
+      <div class="dx-t">${esc(tipo)}</div>
+      <div class="dx-n"><b>${arr.length}</b><span>registro(s)</span></div>
+      <div class="dx-s">${selo}${faltam>0?`<span class="st neutro">${faltam} sem lançar</span>`:''}</div>
+      <div class="dx-d">${esc(desc)}</div>
+    </div>`;
+  };
+  return `<div class="card dx-wrap"><div class="card-h">${svg('clinic')}<h3>Exames dos colaboradores</h3>
+    <div class="r"><span class="muted" style="font-size:11.5px">clique para ver em Vencimentos</span></div></div>
+    <div class="card-b"><div class="dx-grid">
+      ${EXAMES_TIPOS.map(t=>tile(t[0],t[2])).join('')}
+    </div>
+    <div class="muted" style="font-size:11.5px;margin-top:10px">Aqui só entra o que <b>já venceu</b>. O aviso de documento prestes a vencer fica em <b>Vencimentos</b> e nos cartões de vencimento acima.</div>
+    </div></div>`;
+}
+/* Abre a tela Vencimentos já filtrada pelo tipo de exame E na faixa em que
+   os registros realmente estão ('venc' quando há vencido, 'emdia' quando
+   está tudo em dia) — senão o cartão levaria a uma tela vazia. */
+function vencVerTipo(tipo, faixa){
+  vencTipo=tipo;
+  vencFiltro=VENC_SEC[faixa]?faixa:'todos';
+  if(location.hash.slice(1).split('/')[0]!=='vencimentos') location.hash='#vencimentos'; else router();
+}
 function viewDashboard(){
   const vs = todosVencimentos().map(v=>({v, s:situacao(v.validade)}));
   const venc = vs.filter(x=>x.s.ord===0), crit = vs.filter(x=>x.s.ord===1), aten = vs.filter(x=>x.s.ord===2), emdia=vs.filter(x=>x.s.ord===3);
@@ -1000,6 +1056,8 @@ function viewDashboard(){
     ${iniKpiTile('tire', pneusAlerta?'crit':'', pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9')}
     ${iniKpiTile('check','', chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8')}
   </div>
+
+  ${_dashExames()}
 
   <div class="grid two-col">
     <div class="card">
