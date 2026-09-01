@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.3)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.4)
 
-**v8.3 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=206`, cache SW `planeta-express-v8-3`, rodapé `v8.3`.
+**v8.4 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=207`, cache SW `planeta-express-v8-4`, rodapé `v8.4`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,35 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.4 (relatórios centralizados, em ordem, e o vale virando gasto)
+
+Cinco pedidos numa sequência. **Os relatórios foram o tema.**
+
+**(1) Escritas CENTRALIZADAS em todos os relatórios.** Cobrança dele: *"centralize essas escritas em todos os relatórios, está muito ruim"* — texto colado à esquerda deixava buracos enormes, ainda mais nas colunas cheias de "—". O ponto único é **`relClasseCol()`**: texto passou de `''` (esquerda) para **`rel-m`**. Classe NOVA, separada da `.rel-c`, porque aquela tem `nowrap` e uma descrição longa não poderia quebrar linha. Vale para `<th>` e `<td>`, então cabeçalho e corpo andam juntos. **Dinheiro continua à DIREITA de propósito** — é o que faz a vírgula alinhar em coluna; centralizar valor embaralha a leitura de uma tabela de 24 linhas.
+
+**(2) CATEGORIA fora do relatório de Gastos.** *"categoria aí não precisa existir"* — e ele tinha razão: nenhum gasto tem categoria preenchida, então a coluna só imprimia "—", o gráfico "Gasto por categoria" virava **uma barra sem rótulo** e a análise dizia *"Maior categoria: —"*. Saíram os **quatro**: coluna, filtro `categoriaGasto`, gráfico e análise. A Descrição herdou a largura (34% → 46%).
+
+**(3) 🔴 REGRA NOVA E DURA: todo relatório do MAIS ANTIGO para o MAIS NOVO.** *"nunca erre isso"*. Nasceu o **`_relCrono(arr, campo, desempate)`**, e ele conserta dois defeitos que o `.sort` solto tinha:
+- registro **sem data** virava string vazia e ia para o **TOPO**, como se fosse o mais antigo — agora vai para o fim;
+- **sem desempate**, duas linhas da mesma data trocavam de lugar a cada abertura: o mesmo PDF saía diferente duas vezes.
+
+**Sete relatórios não tinham ordem NENHUMA** (saíam na ordem de cadastro): `frota-geral` (por ano/modelo), `frota-km` (pela data da última leitura, que mora no fim do `histKm` e precisou ser calculada antes), `mot-cadastro`, `mot-cnh` (validade), `manut-proximas` (juntava linha a linha sem ordenar), `seguros-apolices` (início da vigência), `licencas-geral` (emissão). `baterias-frota` era por placa → virou cronológico com a placa de desempate. `pneus-frota` é o único **sem coluna de data** (é fotografia do estado atual): ordenado por data de instalação quando existe, para pelo menos sair igual em toda impressão.
+
+> ⚠️ **`mot-cadastro`:** ordena por **nascimento**, não por admissão. A admissão seria o natural para lista de pessoal, mas **só 1 dos 6 cadastros tem essa data** — ordenar por campo quase vazio deixaria a folha com cara de bagunça. Se as admissões forem preenchidas, troque o campo lá.
+> ⚠️ **`mot-aniversarios` é a ÚNICA exceção, e é de propósito:** a cronologia dele é o **próximo aniversário** (quem vem primeiro no calendário), não o ano de nascimento — ordenar por ano devolveria uma lista de idades, que não serve para nada. **Não "consertar".**
+
+**(4) Responsável do relatório: só "Uilian".** Ele achou o nome completo pesado no cabeçalho. `pexResponsavel()` passou a devolver o **primeiro nome**; o que ele escrever à mão em `DB.config.responsavel` sai como escreveu, sem encurtar.
+
+**(5) Vale de motorista agora entra em GASTOS.** *"os vales para os motoristas também deve ser lançado na planilha de gastos"*. Espelho no mesmo desenho do par gasto↔descarga da v6.98, **com a ponta dona invertida**: o **VALE é o dono**, o gasto é o espelho marcado com **`origemVale`**.
+- **Só espelha `tipo:'Vale'`** — adiantamento, dinheiro saindo. `tipo:'Pagamento'` é o motorista devolvendo: virar gasto inflaria a despesa. Trocar o tipo para 'Pagamento' **remove** o espelho.
+- **🔴 TRAVA CONTÁBIL:** `vales` e `pagamentos` são DUAS fontes da Contabilidade. A fonte `'pagamento'` devolve **`null`** quando há `origemVale` — quem conta o vale continua sendo a fonte `'vale'`, na conta `c.motorista`. **Medido:** lançar um vale de R$ 500 fez o custo contábil subir **500, não 1.000**.
+- Cobertos **todos** os caminhos: `salvarVale`, `excluirVale`, `valeExcluirSel` (lote), `finImportConfirmar` (importação de planilha), e do outro lado `excluirPagamento` e `pagExcluirSel` — apagar o gasto espelhado apaga o vale, senão o espelho voltaria na próxima edição e pareceria que o sistema não obedece. Selo **"do Vale"** na lista de gastos.
+- **Backfill `espelharValesEmGastos()`**, carimbado em `DB.seedAplicado` como `espelho-vales-v84`: **uma vez por base**. Varrer a cada carregamento faria o gasto ressuscitar toda vez que ele apagasse um — o defeito da v6.91.
+
+**Validado no Chrome headless, zero erro de JS:** os **21 relatórios** abertos pelo caminho real (`PEXRelAbrirId` + `PEXRelExecutar`), **10 com 2+ datas conferidas linha a linha — NENHUM fora de ordem**; Gastos sem Categoria; responsável "Uilian" com o Marcelo logado; vale→gasto criado, contabilidade sem dobrar, e o espelho sumindo ao virar 'Pagamento'.
+
+**Versão:** assets `?v=207`, cache `planeta-express-v8-4`, rodapé `v8.4`, celular reconstruído (3,92 MB).
 
 ### ✅ ESTADO EM 30/08/2026 — v8.3 (o relatório assinava com quem clicou; agora assina o responsável)
 

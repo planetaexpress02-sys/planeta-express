@@ -197,12 +197,19 @@ function relAnaliseHTML(spec){
     + spec.analise.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')
     + '</ul></section>';
 }
-/* alinhamento por tipo de coluna: texto à esquerda, número/dinheiro à direita, data ao centro */
+/* Alinhamento por tipo de coluna. v8.4: o cliente mandou CENTRALIZAR as
+   escritas ("está muito ruim") — texto colado à esquerda deixava buracos
+   enormes na folha, ainda mais nas colunas com "—".
+   • texto  → CENTRO (`rel-m`, que quebra linha: descrição longa precisa)
+   • data   → centro (`rel-c`, sem quebra)
+   • dinheiro/número → CONTINUA à DIREITA, de propósito: é o que faz a
+     vírgula dos valores alinhar em coluna. Centralizar dinheiro embaralha a
+     leitura de uma tabela de 24 linhas. Se ele pedir, muda aqui e só aqui. */
 function relClasseCol(c){
-  if(!c) return '';
+  if(!c) return 'rel-m';
   if(c.tipo==='moeda' || c.tipo==='numero') return 'rel-r';
   if(c.tipo==='data') return 'rel-c';
-  return '';
+  return 'rel-m';
 }
 
 /* ================================================================== */
@@ -494,6 +501,28 @@ function _relPorChave(arr, chave, valor){
   });
   return Object.keys(m).map(function(k){ return {rotulo:k, valor:m[k]}; }).sort(function(a,b){ return b.valor-a.valor; });
 }
+/* ORDEM CRONOLÓGICA — regra dura do cliente (v8.4):
+   "todo os relatórios devem ser do mais antigo para o mais novo, nunca erre".
+   Passa a valer para TODO relatório que tenha data, e é por aqui que se
+   garante — não espalhado em cada `gerar`.
+
+   Duas coisas que o `.sort` solto que existia antes errava:
+   • Data ISO (AAAA-MM-DD) compara bem como texto, mas registro SEM data
+     virava string vazia e ia para o TOPO — aparecia como se fosse o mais
+     antigo de todos. Aqui ele vai para o FIM.
+   • Sem desempate, duas linhas da mesma data trocavam de lugar a cada
+     abertura do relatório; o mesmo PDF saía diferente duas vezes. */
+function _relCrono(arr, campo, desempate){
+  const dz=function(x){ return desempate? String((x&&x[desempate])||'') : ''; };
+  return arr.sort(function(a,b){
+    const A=String((a&&a[campo])||''), B=String((b&&b[campo])||'');
+    if(!A && !B) return dz(a).localeCompare(dz(b));
+    if(!A) return 1;               /* sem data vai para o fim */
+    if(!B) return -1;
+    const r=A.localeCompare(B);    /* antigo → novo */
+    return r? r : dz(a).localeCompare(dz(b));
+  });
+}
 function _relDias(iso){ return (typeof diasAte==='function') ? diasAte(iso) : null; }
 function _relMoneyBar(d){ return {rotulo:d.rotulo, valor:d.valor, texto:relMoney(d.valor)}; }
 
@@ -507,6 +536,7 @@ const PEX_RELATORIOS = [
       if(f.tipoVeiculo==='cavalo') vs = vs.filter(function(v){ return v.tipo==='Cavalo'; });
       if(f.tipoVeiculo==='reboque') vs = vs.filter(function(v){ return typeof isReb==='function' && isReb(v); });
       if(f.situacaoVeiculo && f.situacaoVeiculo!=='todos') vs = vs.filter(function(v){ return (v.status||'Ativo')===f.situacaoVeiculo; });
+      _relCrono(vs,'anoModelo','placa');            /* v8.4: mais antigo → mais novo */
       const cav = vs.filter(function(v){ return v.tipo==='Cavalo'; }).length;
       return {
         tituloTabela:'Veículos cadastrados',
@@ -524,15 +554,23 @@ const PEX_RELATORIOS = [
       let vs = (DB.veiculos||[]).filter(function(v){ return v.status!=='Arquivado'; });
       if(f.tipoVeiculo==='cavalo') vs = vs.filter(function(v){ return v.tipo==='Cavalo'; });
       if(f.tipoVeiculo==='reboque') vs = vs.filter(function(v){ return typeof isReb==='function' && isReb(v); });
+      /* v8.4 — ordem pela DATA DA ÚLTIMA LEITURA, da mais antiga para a mais
+         nova. A data não está solta no veículo: mora no fim do histórico
+         (`histKm`), então é calculada aqui antes de ordenar. Efeito colateral
+         útil: quem está há mais tempo sem leitura aparece primeiro. */
+      const linhas = vs.map(function(v){
+        const hk=(v.histKm||[]); const ult=hk.length? hk[hk.length-1] : null;
+        return { _d:(ult && ult.data) || v.kmData || '', _p:v.placa||'', v:v, ult:ult };
+      });
+      _relCrono(linhas,'_d','_p');
       return {
         tituloTabela:'Leituras da frota',
         colunas:[{rotulo:'Placa'},{rotulo:'Tipo'},{rotulo:'Marca / Modelo'},{rotulo:'KM atual',tipo:'numero'},
                  {rotulo:'Horas',tipo:'numero'},{rotulo:'Última leitura',tipo:'data'}],
-        linhas: vs.map(function(v){
-          const hk=(v.histKm||[]); const ult=hk.length? hk[hk.length-1] : null;
+        linhas: linhas.map(function(r){ const v=r.v;
           return [v.placa, v.tipo, ((v.marca||'')+' '+(v.modelo||'')).trim(),
                   v.kmAtual!=null? relNum(v.kmAtual):'—', v.horaAtual!=null? relNum(v.horaAtual):'—',
-                  ult && ult.data? relData(ult.data) : (v.kmData? relData(v.kmData) : '—')];
+                  r._d? relData(r._d) : '—'];
         })
       };
     }},
@@ -544,6 +582,13 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let ms = (DB.motoristas||[]).slice();
       if(f.situacaoMotorista && f.situacaoMotorista!=='todos') ms = ms.filter(function(m){ return (m.status||'Ativo')===f.situacaoMotorista; });
+      /* v8.4 — ordena pelo NASCIMENTO, que é a primeira coluna de data da
+         folha: assim a cronologia que o olho confere está certa. Não usei a
+         admissão (que seria o mais natural para uma lista de pessoal) porque
+         só 1 dos 6 cadastros tem essa data preenchida — ordenar por um campo
+         quase todo vazio deixaria a folha com cara de bagunçada. Se um dia as
+         admissões forem preenchidas, vale trocar o campo aqui. */
+      _relCrono(ms,'nascimento','nome');
       return {
         tituloTabela:'Motoristas',
         colunas:[{rotulo:'Matrícula'},{rotulo:'Nome',larg:'22%'},{rotulo:'CPF'},{rotulo:'Nascimento',tipo:'data'},
@@ -559,6 +604,7 @@ const PEX_RELATORIOS = [
     filtros:[],
     gerar:function(){
       const ms = (DB.motoristas||[]).filter(function(m){ return (m.status||'Ativo')==='Ativo'; });
+      _relCrono(ms,'cnhValidade','nome');          /* v8.4: vence antes vem antes */
       return {
         tituloTabela:'Habilitação dos motoristas',
         colunas:[{rotulo:'Motorista',larg:'30%'},{rotulo:'Nº da CNH'},{rotulo:'Categoria'},
@@ -607,7 +653,7 @@ const PEX_RELATORIOS = [
       let s = (DB.servicos||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.veiculo && f.veiculo!=='todos') s = s.filter(function(x){ return x.veiculoId===f.veiculo; });
       if(f.tipoManut && f.tipoManut!=='todos') s = s.filter(function(x){ return (x.tipo||'Corretiva')===f.tipoManut; });
-      s.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(s,'data');
       const total = _relSoma(s,'valor');
       const corr = s.filter(function(x){ return (x.tipo||'Corretiva')==='Corretiva'; });
       const prev = s.filter(function(x){ return x.tipo==='Preventiva'; });
@@ -631,16 +677,21 @@ const PEX_RELATORIOS = [
     desc:'Situação de cada veículo em relação à próxima troca programada.',
     filtros:[],
     gerar:function(){
-      const linhas = [];
+      /* v8.4 — junta primeiro guardando a DATA da última troca, ordena da mais
+         antiga para a mais nova e só então vira linha da tabela. Antes saía na
+         ordem em que os veículos estavam cadastrados. */
+      const reg = [];
       (DB.veiculos||[]).filter(function(v){ return v.status!=='Arquivado'; }).forEach(function(v){
         (DB.manutencoes||[]).filter(function(m){ return m.veiculoId===v.id; }).forEach(function(m){
           const atual = (typeof isReb==='function' && isReb(v)) ? v.horaAtual : v.kmAtual;
           const falta = (m.proxKm!=null && atual!=null) ? (m.proxKm-atual) : null;
-          linhas.push([v.placa, m.item, relData(m.data), m.kmTroca!=null? relNum(m.kmTroca):'—',
+          reg.push({ _d:m.data||'', _p:v.placa||'', linha:[v.placa, m.item, relData(m.data), m.kmTroca!=null? relNum(m.kmTroca):'—',
             m.proxKm!=null? relNum(m.proxKm):'—',
-            falta==null? '—' : (falta<0? 'Vencida em '+relNum(Math.abs(falta)) : 'Faltam '+relNum(falta))]);
+            falta==null? '—' : (falta<0? 'Vencida em '+relNum(Math.abs(falta)) : 'Faltam '+relNum(falta))] });
         });
       });
+      _relCrono(reg,'_d','_p');
+      const linhas = reg.map(function(r){ return r.linha; });
       return {
         tituloTabela:'Trocas programadas',
         colunas:[{rotulo:'Placa'},{rotulo:'Item',larg:'26%'},{rotulo:'Última troca',tipo:'data'},
@@ -657,6 +708,11 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let p = (DB.pneus||[]).slice();
       if(f.veiculo && f.veiculo!=='todos') p = p.filter(function(x){ return x.veiculoId===f.veiculo; });
+      /* v8.4 — único relatório SEM coluna de data: o pneu é fotografia do
+         estado atual, não linha do tempo. Para não sair em ordem aleatória,
+         ordena pela data de instalação quando existe e cai na placa quando
+         não existe — assim a folha sai igual em toda impressão. */
+      _relCrono(p,'data','posicao');
       const R = (typeof pneusResumo==='function') ? pneusResumo() : {total:p.length, estoque:0};
       return {
         tituloTabela:'Pneus instalados',
@@ -678,7 +734,7 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let a = (DB.abastecimentos||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.veiculo && f.veiculo!=='todos') a = a.filter(function(x){ return x.veiculoId===f.veiculo; });
-      a.sort(function(x,y){ return String(x.data||'').localeCompare(String(y.data||'')); });
+      _relCrono(a,'data');
       const litros = _relSoma(a,'litros'), valor = _relSoma(a,'valor');
       return {
         tituloTabela:'Abastecimentos',
@@ -703,7 +759,7 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let p = (DB.pedagios||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.veiculo && f.veiculo!=='todos'){ const pl=_relPlaca(f.veiculo); p = p.filter(function(x){ return x.placa===pl; }); }
-      p.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(p,'data');
       const total=_relSoma(p,'valor');
       const pago=p.filter(function(x){ return !/vale/i.test(x.tipo||''); });
       const vale=p.filter(function(x){ return /vale/i.test(x.tipo||''); });
@@ -733,6 +789,7 @@ const PEX_RELATORIOS = [
     filtros:[], orientacao:'paisagem',
     gerar:function(){
       const s = (DB.seguros||[]).filter(function(x){ return x && x.status!=='Cancelado'; });
+      _relCrono(s,'inicio','fim');                 /* v8.4: mais antigo → mais novo */
       const total=_relSoma(s,'premio');
       return {
         tituloTabela:'Apólices',
@@ -754,7 +811,7 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let c = (DB.ctes||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.statusCte && f.statusCte!=='todos') c = c.filter(function(x){ return (x.status||'Emitido')===f.statusCte; });
-      c.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(c,'data');
       const total=_relSoma(c,'valor');
       return {
         tituloTabela:'Conhecimentos de transporte',
@@ -776,7 +833,7 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let v = (DB.viagens||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.statusViagem && f.statusViagem!=='todos') v = v.filter(function(x){ return (x.status||'')===f.statusViagem; });
-      v.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(v,'data');
       return {
         tituloTabela:'Viagens',
         colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Placa'},{rotulo:'Motorista',larg:'18%'},{rotulo:'Transporte'},
@@ -794,8 +851,7 @@ const PEX_RELATORIOS = [
     desc:'Senhas, locais e valores de descarga.',
     filtros:['periodo'],
     gerar:function(f){
-      const d = (DB.descargas||[]).filter(function(x){ return _relNoPeriodo(x.data, f); })
-        .sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      const d = _relCrono((DB.descargas||[]).filter(function(x){ return _relNoPeriodo(x.data, f); }),'data');
       const total=_relSoma(d,'valor');
       return {
         tituloTabela:'Descargas',
@@ -812,7 +868,8 @@ const PEX_RELATORIOS = [
     desc:'Baterias por placa, com garantia e valor.',
     filtros:[],
     gerar:function(){
-      const b = (DB.baterias||[]).slice().sort(function(a,c){ return String(a.placa||'').localeCompare(String(c.placa||'')); });
+      /* v8.4: era por placa; agora cronológico, com a placa só de desempate */
+      const b = _relCrono((DB.baterias||[]).slice(),'data','placa');
       return {
         tituloTabela:'Baterias',
         colunas:[{rotulo:'Placa'},{rotulo:'Data',tipo:'data'},{rotulo:'Marca'},{rotulo:'Local da compra',larg:'26%'},
@@ -829,6 +886,7 @@ const PEX_RELATORIOS = [
     filtros:[], orientacao:'paisagem',
     gerar:function(){
       const l = (DB.licencas||[]).filter(function(x){ return x && x.situacao!=='arquivada'; });
+      _relCrono(l,'emissao','validade');            /* v8.4: mais antigo → mais novo */
       return {
         tituloTabela:'Licenças',
         colunas:[{rotulo:'Licença',larg:'24%'},{rotulo:'Categoria'},{rotulo:'Nº'},{rotulo:'Órgão',larg:'18%'},
@@ -846,8 +904,7 @@ const PEX_RELATORIOS = [
     desc:'Despesas somadas por período.',
     filtros:['periodo'],
     gerar:function(f){
-      const n = (DB.notas||[]).filter(function(x){ return _relNoPeriodo(x.fim, f); })
-        .sort(function(a,b){ return String(a.fim||'').localeCompare(String(b.fim||'')); });
+      const n = _relCrono((DB.notas||[]).filter(function(x){ return _relNoPeriodo(x.fim, f); }),'fim','inicio');
       const tot = function(x){ return (Number(x.alexandria)||0)+(Number(x.notasGerais)||0)+(Number(x.combustivel)||0); };
       const total = n.reduce(function(s,x){ return s+tot(x); },0);
       return {
@@ -867,7 +924,7 @@ const PEX_RELATORIOS = [
     gerar:function(f){
       let v = (DB.vales||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
       if(f.motorista && f.motorista!=='todos') v = v.filter(function(x){ return x.motoristaId===f.motorista; });
-      v.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(v,'data');
       const nome = function(id){ const m=(typeof motorista==='function')? motorista(id):null; return m? m.nome : '—'; };
       const vales = v.filter(function(x){ return x.tipo!=='Pagamento'; });
       const pagos = v.filter(function(x){ return x.tipo==='Pagamento'; });
@@ -905,24 +962,27 @@ const PEX_RELATORIOS = [
         cartoes: cartoes
       };
     }},
+  /* v8.4 — CATEGORIA saiu deste relatório inteiro, a pedido do cliente
+     ("categoria aí não precisa existir"). Ele tinha razão: nenhum gasto tem
+     categoria preenchida, então a coluna só imprimia "—", o gráfico "Gasto
+     por categoria" virava uma barra única sem rótulo e a análise dizia
+     "Maior categoria: —". Saíram os quatro: coluna, filtro, gráfico e
+     análise. Se um dia ele começar a categorizar, é só devolver. */
   { id:'fin-gastos', modulo:'financeiro', nome:'Gastos',
-    desc:'Gastos lançados por período, categoria e forma de pagamento.',
-    filtros:['periodo','categoriaGasto'],
+    desc:'Gastos lançados por período e forma de pagamento.',
+    filtros:['periodo'],
     gerar:function(f){
       let p = (DB.pagamentos||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
-      if(f.categoriaGasto && f.categoriaGasto!=='todos') p = p.filter(function(x){ return (x.categoria||'')===f.categoriaGasto; });
-      p.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      _relCrono(p,'data');
       const total=_relSoma(p,'valor');
       return {
         tituloTabela:'Gastos',
-        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Descrição',larg:'34%'},{rotulo:'Categoria'},
+        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Descrição',larg:'46%'},
                  {rotulo:'Forma de pagamento'},{rotulo:'Valor',tipo:'moeda'}],
-        linhas: p.map(function(x){ return [relData(x.data), x.descricao, x.categoria, x.forma, relMoney(x.valor)]; }),
+        linhas: p.map(function(x){ return [relData(x.data), x.descricao, x.forma, relMoney(x.valor)]; }),
         kpis:[{rotulo:'Gastos',valor:relNum(p.length)},{rotulo:'Total',valor:relMoney(total)},
               {rotulo:'Gasto médio',valor: p.length? relMoney(total/p.length):'—'}],
-        totais: p.length? [{rotulo:'TOTAL DO PERÍODO', valor:relMoney(total)}] : [],
-        graficos: p.length? [{titulo:'Gasto por categoria', dados:_relPorChave(p,'categoria','valor').slice(0,10).map(_relMoneyBar)}] : [],
-        analise: p.length? ['Maior categoria: '+(_relPorChave(p,'categoria','valor')[0]||{}).rotulo+'.'] : []
+        totais: p.length? [{rotulo:'TOTAL DO PERÍODO', valor:relMoney(total)}] : []
       };
     }},
 
@@ -932,8 +992,7 @@ const PEX_RELATORIOS = [
     filtros:['periodo'], orientacao:'paisagem',
     gerar:function(f){
       let l = (typeof contabLancamentos==='function')? contabLancamentos() : [];
-      l = l.filter(function(x){ return _relNoPeriodo(x.data, f); })
-           .sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      l = _relCrono(l.filter(function(x){ return _relNoPeriodo(x.data, f); }),'data');
       const rec = l.filter(function(x){ return x.grupo==='receita'; });
       const cus = l.filter(function(x){ return x.grupo!=='receita'; });
       const sr=_relSoma(rec,'valor'), sc=_relSoma(cus,'valor');
@@ -959,6 +1018,11 @@ const PEX_RELATORIOS = [
     desc:'Data de nascimento dos motoristas, idade e quantos dias faltam.',
     filtros:[],
     gerar:function(){
+      /* ⚠️ ÚNICO relatório que NÃO se ordena pelo ano da data, e é de propósito:
+         a cronologia aqui é a do PRÓXIMO aniversário (quem vem primeiro no
+         calendário), não a do ano de nascimento. Ordenar por ano de nascimento
+         devolveria uma lista de idades, que não serve para nada — a coluna
+         "Próximo aniversário" é que sai em ordem. Não "consertar". */
       const l = (DB.motoristas||[]).filter(function(m){ return (m.status||'Ativo')==='Ativo'; })
         .map(function(m){ return {m:m, d:(typeof anivDiasAte==='function')? anivDiasAte(m.nascimento) : null}; })
         .sort(function(a,b){ return (a.d==null?9e9:a.d)-(b.d==null?9e9:b.d); });

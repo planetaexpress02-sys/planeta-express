@@ -208,6 +208,10 @@ const CONTAB_FONTES = [
   { id:'pagamento', modulo:'Pagamentos', rota:'financeiro', colecao:'pagamentos', tipo:'despesa',
     mapear:function(p){
       const v=_contabNum(p.valor); if(!v) return null;
+      /* gasto espelhado de um VALE de motorista (v8.4): o dinheiro já entra
+         pela fonte 'vale', na conta c.motorista. Contar aqui também dobraria
+         a despesa — mesma armadilha da descarga espelhada, logo acima. */
+      if(p.origemVale) return null;
       return { data:p.data, valor:v, conta:_contabContaPorCategoria(p.categoria),
         descricao:p.descricao||'Pagamento', fornecedor:p.categoria||'' };
     }},

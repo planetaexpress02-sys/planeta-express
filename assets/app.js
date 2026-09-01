@@ -35,6 +35,27 @@ function ensureCollections(){
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
+  espelharValesEmGastos();
+}
+/* Os vales que JÁ existiam antes da v8.4 não têm gasto espelhado — sem isto,
+   o pedido do cliente ("vale também nos gastos") só valeria para vale novo.
+
+   ⚠️ UMA VEZ POR BASE, carimbado em `DB.seedAplicado`. É a regra dura do
+   projeto: varrer a coleção a cada carregamento faria o gasto VOLTAR toda vez
+   que ele apagasse um — foi assim que um motorista demitido ressuscitou na
+   v6.91. Depois deste carimbo, quem cria espelho é só o `salvarVale`. */
+function espelharValesEmGastos(){
+  const tag='espelho-vales-v84';
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  if(DB.seedAplicado.indexOf(tag)>=0) return;
+  let n=0;
+  (DB.vales||[]).forEach(function(v){
+    if(v && v.tipo==='Vale' && (Number(v.valor)||0)>0 && !_gastoDoVale(v.id)){
+      if(_valeSincronizarGasto(v)==='criado') n++;
+    }
+  });
+  DB.seedAplicado.push(tag);
+  if(n) try{ saveLocal(); }catch(e){}
 }
 /* ENTREGAS ANTIGAS (licenças/alvarás e CT-e). Durante várias versões elas
    foram repostas a CADA carregamento, varrendo a semente inteira — o mesmo
@@ -6515,7 +6536,9 @@ function finImportConfirmar(){
   let nv=0, ng=0;
   sel.forEach(function(x){
     if(x.destino==='vale'){
-      DB.vales.push({id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor});
+      const nv2={id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor};
+      DB.vales.push(nv2);
+      _valeSincronizarGasto(nv2);   /* v8.4: vale importado também vira gasto */
       nv++;
     } else {
       (DB.pagamentos=DB.pagamentos||[]).push({id:uid('pg'), data:x.data, descricao:x.desc,
@@ -6550,7 +6573,11 @@ function valeExcluirSel(){
   if(!ids.length) return;
   const alvo=(DB.vales||[]).filter(function(v){ return ids.indexOf(v.id)>=0; });
   const tot=alvo.reduce(function(s,v){ return s+(Number(v.valor)||0); },0);
-  if(!confirm('Excluir '+ids.length+' lançamento(s) de vale, somando '+money(tot)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  const comGasto=alvo.filter(function(v){ return !!_gastoDoVale(v.id); }).length;
+  if(!confirm('Excluir '+ids.length+' lançamento(s) de vale, somando '+money(tot)+'?'
+     +(comGasto? '\n\n'+comGasto+' deles também estão lançados em Gastos e serão apagados junto.' : '')
+     +'\n\nEssa ação não pode ser desfeita.')) return;
+  ids.forEach(_valeApagarGasto);          /* v8.4: leva o espelho junto */
   DB.vales=(DB.vales||[]).filter(function(v){ return ids.indexOf(v.id)<0; });
   VALE_SEL={}; saveDB(); toast(ids.length+' lançamento(s) excluído(s).'); router();
 }
@@ -6559,10 +6586,16 @@ function pagExcluirSel(){
   if(!ids.length) return;
   const alvo=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)>=0; });
   const tot=alvo.reduce(function(s,p){ return s+(Number(p.valor)||0); },0);
-  if(!confirm('Excluir '+ids.length+' gasto(s), somando '+money(tot)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  const deVale=alvo.filter(function(p){ return !!p.origemVale; });
+  if(!confirm('Excluir '+ids.length+' gasto(s), somando '+money(tot)+'?'
+     +(deVale.length? '\n\n'+deVale.length+' deles vieram de VALES de motorista e os vales serão apagados junto.' : '')
+     +'\n\nEssa ação não pode ser desfeita.')) return;
   ids.forEach(function(i){ marcarRemovido('pagamentosRemovidos', i); });
   /* as descargas espelhadas saem junto (mesma regra do excluirPagamento) */
   DB.descargas=(DB.descargas||[]).filter(function(d){ return ids.indexOf(d.origemPagamento)<0; });
+  /* v8.4: e os vales que originaram estes gastos também */
+  const vIds=deVale.map(function(p){ return p.origemVale; });
+  if(vIds.length) DB.vales=(DB.vales||[]).filter(function(v){ return vIds.indexOf(v.id)<0; });
   DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)<0; });
   PAG_SEL={}; saveDB(); toast(ids.length+' gasto(s) excluído(s).'); router();
 }
@@ -6582,7 +6615,8 @@ function viewFinConteudo(){
   const pagMesTot=pagAll.filter(p=>{ const d=parseD(p.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).reduce((s,p)=>s+(Number(p.valor)||0),0);
   const pagRows=pagLista.map(p=>`<tr class="clickable${PAG_SEL[p.id]?' sel-on':''}" onclick="modalPagamento('${p.id}')">
     <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" ${PAG_SEL[p.id]?'checked':''} onchange="pagSel('${p.id}',this.checked)"></td>
-    <td class="mono">${fmtD(p.data)}</td><td>${esc(p.descricao||'—')}</td>
+    <td class="mono">${fmtD(p.data)}</td>
+    <td>${esc(p.descricao||'—')}${p.origemVale?' <span class="st neutro" title="Veio do módulo Vales; os dois andam juntos">do Vale</span>':''}</td>
     <td>${p.categoria?`<span class="st neutro">${esc(p.categoria)}</span>`:'—'}</td>
     <td>${esc(p.forma||'—')}</td>
     <td class="ta-r mono"><b>${money(p.valor)}</b></td>
@@ -6842,9 +6876,63 @@ function modalVale(id){
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirVale('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarVale('${id||''}')">Salvar</button></div>`);
 }
+/* ------------------------------------------------------------------
+   VALE DO MOTORISTA ↔ GASTO (v8.4)
+   Pedido do cliente: "os vales para os motoristas também deve ser lançado
+   na planilha de gastos".
+
+   O DONO aqui é o VALE (é na tela de Vales que ele lança); o gasto é o
+   ESPELHO, marcado com `origemVale`. É o mesmo desenho do par
+   gasto↔descarga da v6.98, só que com a ponta dona invertida.
+
+   ⚠️ SÓ espelha `tipo:'Vale'` — adiantamento, dinheiro SAINDO. O tipo
+   'Pagamento' é o motorista devolvendo/quitando: não é gasto, e lançar como
+   gasto inflaria a despesa do mês.
+
+   ⚠️ TRAVA CONTÁBIL — a parte que já custou caro antes: `vales` e
+   `pagamentos` são DUAS fontes da Contabilidade. Sem cuidado o mesmo vale
+   entraria duas vezes. Por isso a fonte 'pagamento' devolve `null` quando o
+   gasto tem `origemVale`; quem conta o vale continua sendo a fonte 'vale',
+   na conta c.motorista.
+   ------------------------------------------------------------------ */
+function _gastoDoVale(vid){ return (DB.pagamentos||[]).find(p=>p.origemVale===vid); }
+function _valeSincronizarGasto(v){
+  if(!v) return '';
+  const atual=_gastoDoVale(v.id);
+  const ehGasto = v.tipo==='Vale' && (Number(v.valor)||0)>0;
+  if(!ehGasto){                       /* virou 'Pagamento' ou zerou: espelho sai */
+    if(atual){ marcarRemovido('pagamentosRemovidos',atual.id);
+      DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==atual.id); return 'removido'; }
+    return '';
+  }
+  const m=(DB.motoristas||[]).find(x=>x.id===v.motoristaId);
+  const campos={ data:v.data, descricao:'Vale — '+((m&&m.nome)||'motorista'), categoria:'Vale',
+                 valor:Number(v.valor)||0, obs:v.obs||'', origemVale:v.id };
+  if(atual){ Object.assign(atual,campos); return 'atualizado'; }
+  (DB.pagamentos=DB.pagamentos||[]).push(Object.assign({id:uid('pg'), forma:'', placa:''},campos));
+  return 'criado';
+}
+function _valeApagarGasto(vid){
+  const g=_gastoDoVale(vid);
+  if(g){ marcarRemovido('pagamentosRemovidos',g.id); DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==g.id); }
+}
 function salvarVale(id){ const d={data:val('f_data'),motoristaId:val('f_mot'),tipo:val('f_tipo'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
-  if(id)Object.assign(DB.vales.find(x=>x.id===id),d); else{ d.id=uid('vl'); DB.vales.push(d); } saveDB(); closeModal(); toast('Lançamento salvo.'); router(); }
-function excluirVale(id){ if(!confirm('Excluir este lançamento?'))return; DB.vales=DB.vales.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
+  let alvo;
+  if(id){ alvo=DB.vales.find(x=>x.id===id); Object.assign(alvo,d); }
+  else { d.id=uid('vl'); DB.vales.push(d); alvo=d; }
+  const eco=_valeSincronizarGasto(alvo);
+  saveDB(); closeModal();
+  if(eco==='criado') toast('Vale salvo e lançado também em Gastos.');
+  else if(eco==='atualizado') toast('Vale salvo — o gasto foi atualizado junto.');
+  else if(eco==='removido') toast('Salvo — como é "Pagamento", saiu dos Gastos.');
+  else toast('Lançamento salvo.');
+  router(); }
+function excluirVale(id){
+  const g=_gastoDoVale(id);
+  if(!confirm(g? 'Este vale também está lançado em Gastos.\n\nExcluir apaga os DOIS. Continuar?' : 'Excluir este lançamento?')) return;
+  _valeApagarGasto(id);
+  DB.vales=DB.vales.filter(x=>x.id!==id); saveDB(); closeModal();
+  toast(g?'Vale e gasto excluídos.':'Excluído.'); router(); }
 
 /* ---------- PLANILHA DE PAGAMENTOS (separada dos vales) ---------- */
 function modalPagamento(id){
@@ -6924,11 +7012,20 @@ function salvarPagamento(id){
   else toast('Gasto salvo.');
   router();
 }
-function excluirPagamento(id){ if(!confirm('Excluir este gasto?'))return; marcarRemovido('pagamentosRemovidos',id);
+function excluirPagamento(id){
+  /* v8.4 — o gasto pode ser o ESPELHO de um vale; quem manda é o vale.
+     Apagar só o gasto faria o espelho voltar na próxima edição do vale, e o
+     cliente ficaria achando que o sistema não obedece. */
+  const p=(DB.pagamentos||[]).find(x=>x.id===id);
+  const vale=p&&p.origemVale? (DB.vales||[]).find(v=>v.id===p.origemVale) : null;
+  if(!confirm(vale? 'Este gasto veio de um VALE de motorista.\n\nExcluir apaga os DOIS — o gasto e o vale. Continuar?' : 'Excluir este gasto?')) return;
+  if(vale) DB.vales=(DB.vales||[]).filter(v=>v.id!==vale.id);
+  marcarRemovido('pagamentosRemovidos',id);
   /* leva junto a descarga espelhada — senão ficaria um lançamento órfão em
      Descargas, sem gasto por trás, e o cliente não teria como apagar */
   DB.descargas=(DB.descargas||[]).filter(d=>d.origemPagamento!==id);
-  DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Gasto excluído.'); router(); }
+  DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal();
+  toast(vale?'Gasto e vale excluídos.':'Gasto excluído.'); router(); }
 
 /* ================================================================== */
 /*  CT-e (Conhecimento de Transporte Eletrônico)                      */
@@ -7241,15 +7338,20 @@ function nomeUsuario(){
 
    ⚠️ Onde o registro é AUDITORIA — o `por:` do histórico de licenças, o
    `usuario:` da Central e dos fechamentos da Contabilidade — continua sendo
-   quem estava logado. Ali trocar por "Uilian" seria falsear o registro. */
+   quem estava logado. Ali trocar por "Uilian" seria falsear o registro.
+
+   v8.4: sai só o PRIMEIRO NOME ("Uilian"), não o nome completo — o cliente
+   achou o nome inteiro pesado no cabeçalho do relatório. O que ele mesmo
+   escrever em `DB.config.responsavel` sai como escreveu, sem encurtar. */
 function pexResponsavel(){
   try{
     const c=((DB&&DB.config&&DB.config.responsavel)||'').trim();
-    if(c) return c;
+    if(c) return c;                                   /* escrito à mão: respeita */
     const m=(DB.motoristas||[]).find(x=>x && x.status!=='Inativo' && /respons[aá]vel/i.test(x.funcao||''));
-    if(m && m.nome) return m.nome;
+    const n=(m&&m.nome||'').trim();
+    if(n) return n.split(/\s+/)[0];                   /* "Uilian Marcelo Moreira" → "Uilian" */
   }catch(e){}
-  return 'Uilian Marcelo Moreira';
+  return 'Uilian';
 }
 function updateUserBadge(){
   const el=document.getElementById('userbadge'); if(!el) return;

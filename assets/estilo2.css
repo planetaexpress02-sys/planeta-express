@@ -2849,11 +2849,15 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .rel-tab{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:9px }
 .rel-tab th{ background:#0b2a44; color:#fff; font-size:7.3pt; font-weight:700; letter-spacing:.5px;
   text-transform:uppercase; text-align:left; padding:5px 6px; border:1px solid #0b2a44; vertical-align:middle }
-.rel-tab td{ font-size:8.2pt; padding:4px 6px; border:1px solid #e2eaf1; vertical-align:top; color:#1d3348;
+.rel-tab td{ font-size:8.2pt; padding:4px 6px; border:1px solid #e2eaf1; vertical-align:middle; color:#1d3348;
   word-wrap:break-word; overflow-wrap:anywhere }
 .rel-tab tbody tr:nth-child(even) td{ background:#f7fafc }
 .rel-tab .rel-r{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap }
 .rel-tab .rel-c{ text-align:center; white-space:nowrap }
+/* v8.4 — centro para coluna de TEXTO. Separado do `.rel-c` porque aquele tem
+   `nowrap`: numa descrição longa a linha não poderia quebrar e estouraria a
+   coluna. Vale para <th> e <td>, então o cabeçalho acompanha o corpo. */
+.rel-tab .rel-m{ text-align:center }
 .rel-tab tr{ break-inside:avoid; page-break-inside:avoid }
 .rel-tot td{ font-weight:800; background:#eef4f9!important; border-color:#c9d9e6; font-size:8.6pt; color:#0b2a44 }
 .rel-tot .rel-tot-l{ text-align:right; letter-spacing:.5px }
