@@ -2920,14 +2920,27 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
   .rel-ops{ grid-template-columns:1fr }
   .rel-ov-bar{ padding:9px 11px; gap:8px }
   .rel-ov-t{ width:100%; font-size:13.5px }
+  /* v8.5 — os quatro botões dividiam a mesma linha e o rótulo mais longo
+     ("Imprimir / Salvar PDF") saía CORTADO no celular. Agora os três
+     secundários dividem uma linha e o principal, que é o que o cliente
+     realmente usa, ocupa a linha inteira embaixo. `min-width:0` é o que
+     permite o botão encolher dentro do flex; sem ele o texto continuaria
+     empurrando a caixa para fora da tela. */
   .rel-ov-acoes{ margin-left:0; width:100% }
-  .rel-ov-acoes .btn{ flex:1; justify-content:center; font-size:12px; padding:8px 6px }
+  .rel-ov-acoes .btn{ flex:1 1 0; min-width:0; justify-content:center; white-space:nowrap;
+    font-size:12px; padding:9px 6px }
+  .rel-ov-acoes .btn.primary{ flex:1 1 100%; order:9 }
   .rel-ov-scroll{ padding:12px 6px 30px }
   /* A folha é maior que a tela: encolhe para caber, sem deixar de ser A4.
      Usa `zoom` e NÃO `transform:scale` — o scale só encolhe o desenho, o
-     elemento continua ocupando 1123px e o painel passa a rolar de lado. */
-  .rel-doc{ zoom:.45 }
-  .rel-doc.rel-paisagem{ zoom:.32 }
+     elemento continua ocupando 1123px e o painel passa a rolar de lado.
+
+     v8.5: o quanto encolher deixou de ser número fixo. Quem escreve
+     `--rel-zoom` é o `relAjustarEscala()`, com a largura real do aparelho —
+     .45/.32 ficam só como reserva para o primeiro quadro, antes do JS medir.
+     Sem isso a folha estourava em tela de 360px e sobrava metade do tablet. */
+  .rel-doc{ zoom:var(--rel-zoom,.45) }
+  .rel-doc.rel-paisagem{ zoom:var(--rel-zoom,.32) }
 }
 
 /* ==========================================================================

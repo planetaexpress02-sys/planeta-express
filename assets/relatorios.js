@@ -405,11 +405,64 @@ function PEXRelGerar(spec){
   try{ history.pushState({pexRel:1}, '', location.href); }catch(e){}
   PEXRelRedesenhar();
   ov.classList.add('show');
+  /* ⚠️ A escala PRECISA ser medida DEPOIS do `.show`: antes disso o painel
+     ainda está `display:none` e `clientWidth` devolve 0 — a conta sairia
+     zerada e a folha ficaria do tamanho errado justamente na primeira vez
+     que o cliente abre o relatório. */
+  relAjustarEscala();
+}
+/* ------------------------------------------------------------------
+   ESCALA DA PRÉVIA NO CELULAR (v8.5)
+   Até a v8.4 o encolhimento era um número FIXO no CSS: `zoom:.45` em pé e
+   `.32` deitado. Era um chute, e chute erra dos dois lados:
+     • A4 em pé tem 794px; .45 dá 357px. Num telefone de 375px sobrava 6px —
+       e num de 360px a folha ESTOURAVA: saía cortada e o painel rolava de
+       lado. Foi o "desenquadramento" que o cliente viu.
+     • Num tablet de 768px a folha ficava com 357px e sobrava METADE da tela.
+
+   Agora a escala é calculada com a largura REAL disponível, na hora de
+   desenhar e de novo ao girar o aparelho. Nunca passa de 1 (não faz sentido
+   ampliar a folha além do tamanho real).
+
+   ⚠️ Isto mexe SÓ no tamanho em que a folha é MOSTRADA. A paginação é medida
+   pela régua invisível, que é sempre 1:1 (`.rel-regua`), e a impressão zera a
+   escala (`body.rel-aberto .rel-doc{ zoom:1!important }`) — ou seja, o PDF
+   sai idêntico ao do computador, com as mesmas quebras de página.
+   ------------------------------------------------------------------ */
+function relAjustarEscala(){
+  const ov = document.getElementById('pexRelOv');
+  if(!ov || !ov.classList.contains('show')) return;
+  const box = document.getElementById('relOvScroll');
+  const doc = document.getElementById('pexRelDoc');
+  if(!box || !doc) return;
+  const paisagem = doc.classList.contains('rel-paisagem');
+  const larguraFolha = (paisagem? PEXREL_PG.paisagem.larg : PEXREL_PG.retrato.larg) * PEXREL_MM;
+  /* clientWidth inclui o padding do painel: desconta, senão a conta sobra */
+  let disp = box.clientWidth;
+  try{ const cs=getComputedStyle(box);
+       disp -= (parseFloat(cs.paddingLeft)||0) + (parseFloat(cs.paddingRight)||0); }catch(e){}
+  disp -= 4;                                   /* respiro para a sombra da folha */
+  if(!(disp>0) || !(larguraFolha>0)) return;
+  let z = disp/larguraFolha;
+  /* ⚠️ Quando cabe inteira, escreve 1 — NÃO apaga a variável. Apagar faria
+     cair na reserva do CSS (.45) e a folha encolheria à toa justamente no
+     tablet deitado (~820px), onde ela caberia em tamanho real. */
+  if(z>=1) z=1;
+  doc.style.setProperty('--rel-zoom', String(Math.floor(z*1000)/1000));
+}
+/* Girar o aparelho muda a largura: refaz a conta (com folga, para não recalcular
+   a cada pixel de uma barra de navegador aparecendo/sumindo) */
+let _relEscalaT=null;
+if(typeof window!=='undefined'){
+  window.addEventListener('resize', function(){
+    clearTimeout(_relEscalaT); _relEscalaT=setTimeout(relAjustarEscala, 120);
+  });
 }
 function PEXRelRedesenhar(){
   if(!PEXRel_estado) return;
   const box = document.getElementById('relOvScroll'); if(!box) return;
   box.innerHTML = relDocumentoHTML(PEXRel_estado.spec);
+  relAjustarEscala();
   const n = box.querySelectorAll('.rel-pg').length;
   const lb = document.getElementById('relOvPg');
   if(lb) lb.textContent = n + (n===1? ' página' : ' páginas') + ' · A4 ' + (PEXRel_estado.spec.orientacao==='paisagem'?'paisagem':'retrato');

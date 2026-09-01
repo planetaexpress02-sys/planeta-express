@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.4)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.5)
 
-**v8.4 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=207`, cache SW `planeta-express-v8-4`, rodapé `v8.4`.
+**v8.5 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=208`, cache SW `planeta-express-v8-5`, rodapé `v8.5`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,29 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.5 (relatório no celular: cabe em qualquer tela, e é a MESMA folha do computador)
+
+Cobrança dele: *"CORRIJA OS RELATÓRIOS DA VERSÃO MOBILE, ELES PRECISAM FUNCIONAR PERFEITAMENTE, SEM DESENQUADRAMENTO, TEM QUE SER IGUAL A VERSÃO DESKTOP"*.
+
+**O defeito era um número CHUTADO no CSS.** A prévia encolhia com `zoom:.45` (retrato) e `.32` (paisagem) — valores **fixos**, que erravam nos dois sentidos:
+- A4 em pé tem **794px**; `.45` dá **357px**. Num telefone de 375px sobravam **6px**; num de **360px a folha ESTOURAVA** — saía cortada e o painel rolava de lado. Era o "desenquadramento".
+- Num **tablet de 768px** a folha continuava com 357px e **sobrava metade da tela vazia**.
+
+**Agora a escala é calculada com a largura REAL** — `relAjustarEscala()` mede o painel na hora de desenhar e de novo ao **girar o aparelho** (`resize`, com 120ms de folga para não recalcular a cada pixel da barra do navegador). Escreve `--rel-zoom`, que o CSS consome; os `.45/.32` viraram só **reserva do primeiro quadro**, antes do JS medir.
+
+**Duas armadilhas encontradas fazendo, não previstas:**
+1. **Medir antes do `.show`.** O `PEXRelRedesenhar()` roda **antes** de o painel virar visível — ali `clientWidth` é **0** e a conta sairia zerada justamente na primeira abertura. A medição foi para **depois** do `classList.add('show')`.
+2. **`z>=1` apagando a variável.** Na primeira versão eu removia `--rel-zoom` quando a folha cabia inteira — o que fazia **cair na reserva de .45** e encolher à toa no **tablet deitado (~820px)**, onde ela caberia em tamanho real. Agora escreve `1` explicitamente.
+
+**A barra de ações também estava cortada:** os quatro botões dividiam uma linha e **"Imprimir / Salvar PDF" saía truncado**. Os três secundários dividem uma linha e o principal ocupa a linha inteira (`flex:1 1 100%`). O `min-width:0` é o que deixa o botão encolher dentro do flex — sem ele o texto empurra a caixa para fora da tela.
+
+> **Por que continua "igual ao desktop":** a escala mexe **só no tamanho em que a folha é MOSTRADA**. A paginação é medida pela régua invisível, que é **sempre 1:1** (`.rel-regua`), e a impressão zera a escala (`body.rel-aberto .rel-doc{ zoom:1!important }` dentro do `@media print`). O PDF sai idêntico ao do computador.
+
+**Validado no Chrome headless (o headless não desce de 504px de janela, então a largura do aparelho foi emulada apertando o próprio `#pexRelOv`, com a media query de 860px ATIVA — sem isso a regra do zoom nem se aplica e o teste mente):**
+`320px z=.37 · 360 z=.433 · 375 z=.452 · 390 z=.471 · 414 z=.501 · 540 z=.66 · 768 z=.934 · 820 e 860 z=1` — **retrato e paisagem: NENHUM fora de quadro, nenhum rolando de lado**. E a prova do "igual ao desktop": **paginação igual em 21/21 relatórios** comparando 360px × 1400px. Régua 1:1 confirmada. Zero erro de JS.
+
+**Versão:** assets `?v=208`, cache `planeta-express-v8-5`, rodapé `v8.5`, celular reconstruído (3,92 MB).
 
 ### ✅ ESTADO EM 31/08/2026 — v8.4 (relatórios centralizados, em ordem, e o vale virando gasto)
 
