@@ -46,9 +46,13 @@ function relPct(v, casas){
 }
 function relData(iso){ return (typeof fmtD==='function') ? fmtD(iso) : (iso||'—'); }
 function relEmpresa(){ return (typeof DB!=='undefined' && DB.empresa) ? DB.empresa : {nome:'Planeta Express Transportes'}; }
+/* Quem assina o relatório é o RESPONSÁVEL da empresa, não quem apertou o
+   botão. Até a v8.2 isto devolvia `nomeUsuario()`, então um relatório tirado
+   pelo Marcelo saía assinado "Marcelo". O cliente cobrou: o responsável é o
+   Uilian. Ver `pexResponsavel()` no app.js — é lá que a regra mora. */
 function relResponsavel(){
-  try{ const n = (typeof nomeUsuario==='function') ? nomeUsuario() : ''; if(n) return n; }catch(e){}
-  return '—';
+  try{ if(typeof pexResponsavel==='function'){ const n=pexResponsavel(); if(n) return n; } }catch(e){}
+  return 'Uilian Marcelo Moreira';
 }
 /* Logo do cabeçalho. Não usa um caminho fixo: pega o src de uma imagem que
    a página já carregou. Assim funciona igual na pasta (assets/logo.png) e no

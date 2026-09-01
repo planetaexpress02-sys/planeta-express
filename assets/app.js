@@ -7226,6 +7226,31 @@ function nomeUsuario(){
   if(NOMES_USUARIO[local]) return NOMES_USUARIO[local];
   return local? local.charAt(0).toUpperCase()+local.slice(1) : '';
 }
+/* ---------- Responsável da EMPRESA (v8.3) ----------
+   NÃO confundir com `nomeUsuario()`, logo acima. O relatório assinava com o
+   usuário LOGADO: quando o Marcelo tirava um relatório, saía "Responsável:
+   Marcelo". Está errado — o responsável da Planeta Express é um CARGO
+   (Sócio · Responsável Técnico), não quem clicou no botão.
+
+   Fonte única, nesta ordem:
+     1) `DB.config.responsavel`, se um dia houver esse campo nas Configurações;
+     2) o cadastro de motorista/sócio que tem "Responsável" na função — hoje o
+        Uilian Marcelo Moreira (m5). Sai do DADO, não de texto fixo, então
+        acompanha se o cadastro for corrigido;
+     3) o nome fixo, só como última reserva.
+
+   ⚠️ Onde o registro é AUDITORIA — o `por:` do histórico de licenças, o
+   `usuario:` da Central e dos fechamentos da Contabilidade — continua sendo
+   quem estava logado. Ali trocar por "Uilian" seria falsear o registro. */
+function pexResponsavel(){
+  try{
+    const c=((DB&&DB.config&&DB.config.responsavel)||'').trim();
+    if(c) return c;
+    const m=(DB.motoristas||[]).find(x=>x && x.status!=='Inativo' && /respons[aá]vel/i.test(x.funcao||''));
+    if(m && m.nome) return m.nome;
+  }catch(e){}
+  return 'Uilian Marcelo Moreira';
+}
 function updateUserBadge(){
   const el=document.getElementById('userbadge'); if(!el) return;
   const online=(typeof nuvemAtiva==='function'&&nuvemAtiva()&&nuvemUser&&nuvemUser());

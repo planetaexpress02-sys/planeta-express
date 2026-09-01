@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.2)
+## ⚡ ONDE O PROJETO ESTÁ (30/08/2026 — v8.3)
 
-**v8.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=205`, cache SW `planeta-express-v8-2`, rodapé `v8.2`.
+**v8.3 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=206`, cache SW `planeta-express-v8-3`, rodapé `v8.3`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,22 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 30/08/2026 — v8.3 (o relatório assinava com quem clicou; agora assina o responsável)
+
+**O defeito, na palavra do cliente:** *"em outros usuários o responsável nos relatórios sai como o próprio emitente; o responsável é Uilian"*. `relResponsavel()` devolvia **`nomeUsuario()`** — o usuário LOGADO. Relatório tirado pelo Marcelo saía assinado *"Responsável: Marcelo"*.
+
+**A distinção que resolve:** "responsável" no cabeçalho do relatório é um **CARGO** da empresa (Sócio · Responsável Técnico), não quem apertou o botão. São duas informações diferentes que estavam usando a mesma fonte.
+
+**Fonte única nova — `pexResponsavel()` no `app.js`** (ao lado do `nomeUsuario()`, de propósito, para a diferença ficar documentada onde alguém vai procurar). Ordem: (1) `DB.config.responsavel`, se um dia existir esse campo nas Configurações; (2) o **cadastro** cuja `funcao` casa com `/respons[aá]vel/i` — hoje o **Uilian Marcelo Moreira** (`m5`), então sai do DADO e acompanha correção de cadastro; (3) o nome fixo como última reserva. `relResponsavel()` virou só um invólucro dela.
+
+> ⚠️ **Onde é AUDITORIA, continua sendo quem estava logado** — e isso é intencional: o `por:` do histórico de licenças (`app.js` ~4707) e o `usuario:` da Central (`central.js` ~827) e dos fechamentos da Contabilidade (`contabilidade.js` ~490 e ~1146). Trocar aqueles por "Uilian" seria **falsear registro**. Só o cabeçalho do relatório mudou.
+
+**Validado pelo caminho real (regra nº 1), com o defeito reproduzido:** troquei o `nuvemUser()` para `marcelo@planetaexpress.com`, confirmei `nomeUsuario()==='Marcelo'`, abri o relatório com **`PEXRelAbrirId('venc-faixa')` + `PEXRelExecutar()`** e li o `#pexRelOv`: saiu **"Responsável: Uilian Marcelo Moreira"**, e a busca por `Responsável Marcelo` deu **false**. Zero erro de JS.
+
+**Não mexi** no campo "Responsável" das **Licenças e Alvarás**: lá é um dado **por registro**, editável, que o cliente pode querer diferente em cada licença — e já vinha preenchido como "Uilian".
+
+**Versão:** assets `?v=206`, cache `planeta-express-v8-3`, rodapé `v8.3`, celular reconstruído (3,91 MB).
 
 ### ✅ ESTADO EM 30/08/2026 — v8.2 (o selo verde "Tudo em dia" no Painel + Despesas vira Notas Fiscais)
 
