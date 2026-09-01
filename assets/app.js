@@ -743,10 +743,17 @@ function pexMobileBottomNav(rota){
   if(!nav){ nav=document.createElement('nav'); nav.id='mobNav'; nav.className='mob-nav no-print'; document.body.appendChild(nav); }
   var menuSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
   var it=function(on,ico,label,onclk){ return '<button class="mob-nav-b'+(on?' on':'')+'" onclick="'+onclk+'">'+ico+'<span>'+label+'</span></button>'; };
+  /* v8.7 — "Relatório" entrou aqui. No celular a barra de baixo é o que o
+     polegar alcança, e tirar relatório para mandar em PDF pelo WhatsApp é o
+     que o cliente mais faz no telefone. O botão do alto continua existindo
+     (voltou a aparecer nesta versão), mas fica pequeno e longe do dedo.
+     `imprimirRelatorio()` é a MESMA função do botão do computador: abre a
+     Central da tela em que ele está, ou a lista completa. */
   nav.innerHTML =
-      it(rota==='dashboard', svg('dash'),   'Painel', "location.hash='#dashboard'")
-    + it(false,              svg('search'), 'Buscar', "pexCmdOpen()")
-    + it(false,              menuSvg,       'Menu',   "toggleSidebar()");
+      it(rota==='dashboard', svg('dash'),   'Painel',    "location.hash='#dashboard'")
+    + it(false,              svg('print'),  'Relatório', "imprimirRelatorio()")
+    + it(false,              svg('search'), 'Buscar',    "pexCmdOpen()")
+    + it(false,              menuSvg,       'Menu',      "toggleSidebar()");
 }
 /* Barra de contexto: seta Voltar (sempre no mesmo lugar) + título da tela; some na home */
 function pexMobileCtx(rota){

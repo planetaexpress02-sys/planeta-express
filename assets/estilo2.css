@@ -1137,7 +1137,11 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 @media(max-width:1240px){ .cock-weather{display:none!important} }
 @media(max-width:1080px){ .cock-clock span{display:none} .cock-status span{display:none} .cock-status{padding:9px} }
 @media(max-width:900px){ .cock-search span,.cock-kbd{display:none} .cock-search{flex:0 0 42px;max-width:42px;width:42px;padding:0;justify-content:center;margin-left:auto} .cock-clock,.cock-status{display:none} .relbtn span{display:none} }
-@media(max-width:560px){ .relbtn{display:none} .cock-cluster{gap:4px} }
+/* v8.7 — o `.relbtn{display:none}` que estava aqui ESCONDIA o botão Relatório
+   em toda tela de telefone (≤560px). Era justamente o que o cliente mais usa
+   no celular: tirar o relatório e mandar o PDF no WhatsApp. Agora ele fica,
+   só que compacto — o rótulo já sai a partir de 900px, então sobra o ícone. */
+@media(max-width:560px){ .cock-cluster{gap:4px} .relbtn{padding:8px 9px} }
 @media(prefers-reduced-motion:reduce){ .cock-badge.crit,.cock-status.on i,.cmdk.show .cmdk-box{animation:none} }
 
 /* ==========================================================================
@@ -2213,6 +2217,17 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
     background:rgba(6,15,27,.9)!important; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border-bottom:1px solid rgba(var(--au3-rgb),.14)!important; position:sticky; top:0; }
   .topbar .cock-cluster, .topbar .page-title, .topbar .back-btn{ display:none!important; }
+  /* v8.7 — era a regra acima que sumia com o botão RELATÓRIO no celular: ele
+     mora dentro da `.cock-cluster`, que a barra enxuta esconde inteira. O
+     cliente cobrou o botão no telefone ("assim posso tirar e enviar direto no
+     WhatsApp em PDF"), então a cluster volta a aparecer com TUDO escondido
+     por dentro, menos ele — o relógio, o status, o "+" e o usuário continuam
+     fora, que é o que mantém a barra enxuta. */
+  .topbar .cock-cluster{ display:flex!important; gap:6px; margin-left:0; flex:0 0 auto; }
+  .topbar .cock-cluster > *{ display:none!important; }
+  .topbar .cock-cluster > .relbtn{ display:inline-flex!important; width:52px; min-width:52px; height:52px;
+    padding:0; justify-content:center; border-radius:15px; }
+  .topbar .cock-cluster > .relbtn svg{ width:22px; height:22px; }
   .tb-brand{ flex:1 1 auto; justify-content:flex-start; min-width:0; }
   body:not(.pex-home) .tb-word{ display:inline-block; }         /* nome sempre visível (o Voltar sai da barra) */
   .topbar .cock-search{ display:flex!important; width:52px; min-width:52px; height:52px; padding:0; margin-left:auto; justify-content:center; border-radius:15px; }
@@ -2350,8 +2365,10 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
     padding:6px calc(6px + var(--safe-r)) calc(6px + var(--safe-b)) calc(6px + var(--safe-l));
     background:rgba(6,15,27,.93); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
     border-top:1px solid rgba(var(--au3-rgb),.16); box-shadow:0 -10px 34px rgba(0,8,26,.44); }
-  .mob-nav-b{ flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 4px; border:0; background:transparent;
-    color:#7fa6c8; font-size:10.5px; font-weight:600; border-radius:14px; position:relative; overflow:hidden; cursor:pointer;
+  /* v8.7: com "Relatório" a barra passou a ter 4 itens — `nowrap` e `min-width:0`
+     impedem o rótulo mais longo de quebrar em duas linhas e desalinhar a fila. */
+  .mob-nav-b{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 3px; border:0; background:transparent;
+    color:#7fa6c8; font-size:10.5px; font-weight:600; white-space:nowrap; border-radius:14px; position:relative; overflow:hidden; cursor:pointer;
     -webkit-tap-highlight-color:transparent; transition:color .18s, transform .1s; }
   .mob-nav-b svg{ width:23px; height:23px; }
   .mob-nav-b:active{ transform:scale(.9); }

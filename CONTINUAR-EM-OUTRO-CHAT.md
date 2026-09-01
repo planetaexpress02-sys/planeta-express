@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.6)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.7)
 
-**v8.6 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=209`, cache SW `planeta-express-v8-6`, rodapé `v8.6`.
+**v8.7 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=210`, cache SW `planeta-express-v8-7`, rodapé `v8.7`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,26 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.7 (o botão Relatório volta ao celular)
+
+Cobrança dele, com print circulando o botão do computador: *"NO MOBILE DEVE TER ESSA MESMA OPÇÃO PARA TIRAR RELATÓRIO DE TODO O SISTEMA, NÃO SEI PORQUE NÃO FEZ AINDA, POIS ASSIM POSSO TIRAR E ENVIAR DIRETO NO WHATSAPP EM PDF"*.
+
+**Ele estava certo, e a causa eram DUAS regras de CSS, não uma:**
+1. `@media(max-width:560px){ .relbtn{display:none} }` — escondia o botão em telefone.
+2. E a que realmente mandava: **`.topbar .cock-cluster{ display:none!important }`** dentro da camada mobile (≤860px). O botão mora **dentro** da cluster, e a "barra superior enxuta" (☰ · marca · 🔍) esconde a cluster **inteira**. Mesmo desfazendo a primeira regra o botão continuava invisível — foi o que o teste mostrou: `display:inline-flex` mas `offsetParent = NAO`, tamanho `0x0`.
+
+> **Lição de teste:** `getComputedStyle(el).display !== 'none'` **NÃO** prova que o elemento aparece — o pai pode estar escondido. Quem responde é **`el.offsetParent`** (ou o retângulo com tamanho > 0). A primeira rodada deu "visível=true" com o botão invisível na tela; só o print denunciou.
+
+**Agora ele aparece em DOIS lugares no celular:**
+- **Barra de cima**, ao lado da busca: a cluster volta a ser exibida com **tudo escondido por dentro menos o `.relbtn`** — relógio, status, "+" e usuário continuam fora, que é o que mantém a barra enxuta. Botão de 52×52, do tamanho do alvo de dedo dos outros.
+- **Barra de baixo** (`pexMobileBottomNav`): entrou **"Relatório"** entre Painel e Buscar. É onde o polegar alcança, e é o caminho que ele mais vai usar. Com 4 itens, `white-space:nowrap` + `min-width:0` evitam o rótulo mais longo quebrar em duas linhas.
+
+Os dois chamam **`imprimirRelatorio()`**, a MESMA função do botão do computador: abre a Central já na tela em que ele está (ex.: "Relatório — Descargas") ou, se a tela não tiver relatório próprio, a lista completa dos 21.
+
+**Validado a 504px (a menor janela que o headless aceita), zero erro de JS:** botão do topo **realmente** visível (`offsetParent` presente, 52×52) enquanto relógio/status/"+"/usuário seguem escondidos; barra de cima **não** rola de lado; clique real no botão da barra de baixo abre a Central com **21 relatórios**; executar gera a folha A4 com **2 páginas** e a escala responsiva da v8.5 (0.425); pelo botão do topo em Descargas abre **"Relatório — Descargas"**; tela sem relatório próprio (Alarmes) **cai na lista completa** em vez de dar erro.
+
+**Versão:** assets `?v=210`, cache `planeta-express-v8-7`, rodapé `v8.7`, celular reconstruído (3,93 MB).
 
 ### ✅ ESTADO EM 31/08/2026 — v8.6 (escreveu "Descarga QIO", o sistema guarda "Descarga QIO-9J07")
 
