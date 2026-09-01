@@ -36,6 +36,31 @@ function ensureCollections(){
   importarCtesSeed();
   corrigirValoresAntigos();
   espelharValesEmGastos();
+  completarPlacasNosTextos();
+}
+/* Lançamentos que já existiam antes da v8.6 continuariam com "Descarga QIO".
+   Completa os que já existem — mas SÓ os que não têm ambiguidade: aqui é
+   carregamento de sistema, não dá para abrir uma pergunta na cara do cliente.
+   O que for ambíguo fica como está e será completado quando ele editar.
+
+   ⚠️ UMA VEZ POR BASE (`DB.seedAplicado`). Varrer a cada carregamento
+   desfaria a correção manual dele no lançamento seguinte. */
+function completarPlacasNosTextos(){
+  const tag='placas-completas-v86';
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  if(DB.seedAplicado.indexOf(tag)>=0) return;
+  let n=0;
+  const passar=function(lista, campo){
+    (lista||[]).forEach(function(x){
+      if(!x || !x[campo]) return;
+      const r=pexPlacaExpandir(x[campo]);
+      if(!r.pendencias.length && r.texto!==x[campo]){ x[campo]=r.texto; n++; }
+    });
+  };
+  passar(DB.pagamentos,'descricao');
+  passar(DB.descargas,'local');
+  DB.seedAplicado.push(tag);
+  if(n) try{ saveLocal(); }catch(e){}
 }
 /* Os vales que JÁ existiam antes da v8.4 não têm gasto espelhado — sem isto,
    o pedido do cliente ("vale também nos gastos") só valeria para vale novo.
@@ -2784,6 +2809,108 @@ function veiculoPorTexto(txt){
     if(p && strip.indexOf(p)>=0) return v;
   }
   return null;
+}
+/* ==================================================================
+   COMPLETAR PLACA NO TEXTO (v8.6)
+   Pedido do cliente: escrever "Descarga QIO" e o sistema guardar
+   "Descarga QIO-9J07" — em Gastos, Descargas e, por consequência, em todo
+   relatório. Como a correção acontece ao SALVAR, o texto já nasce completo:
+   não existe uma segunda regra para o relatório, que só mostra o que está
+   guardado. Fonte única.
+
+   Duas formas são reconhecidas:
+     • "QIO"      → letras da placa, completa para QIO-9J07
+     • "QIO9J07"  → placa sem o traço, vira QIO-9J07
+
+   ⚠️ REGRA CONTRA FALSO POSITIVO — a parte que decide se isto ajuda ou
+   atrapalha. A descrição é texto livre ("Uber", "Aso Wesley", "Sem Parar"),
+   e trocar uma palavra comum por uma placa seria pior que não completar:
+     • 3 letras: aceita em qualquer caixa (placa brasileira TEM 3 letras, e
+       coincidir com palavra de 3 letras que também seja placa é remoto);
+     • 2 letras: SÓ em CAIXA ALTA. Sem isso, "de", "do", "da", "no", "na"
+       viravam candidatos a placa no meio da frase. Quem digita placa escreve
+       em maiúscula — é o que aparece nos lançamentos reais dele.
+   Nunca mexe em trecho que já é uma placa completa.
+
+   Devolve { texto, pendencias:[{trecho, opcoes:[placas]}] }. Quando um
+   trecho casa com MAIS DE UMA placa, ele NÃO adivinha: devolve a pendência
+   para quem chamou perguntar — foi o que o cliente pediu ("sempre
+   perguntar"). Hoje isso acontece de verdade: IPD-9036 e IPG-8A91
+   compartilham "IP".
+   ================================================================== */
+function _placasFrota(){
+  return (DB.veiculos||[]).map(function(v){ return String(v.placa||'').toUpperCase(); })
+    .filter(function(p){ return /^[A-Z]{3}-?[0-9A-Z]{4}$/.test(p); });
+}
+function pexPlacaExpandir(texto){
+  const orig=String(texto==null?'':texto);
+  const placas=_placasFrota();
+  const pend=[];
+  if(!orig || !placas.length) return {texto:orig, pendencias:pend};
+  const letras=function(p){ return p.slice(0,3); };
+  /* 1) placa colada, sem traço: QIO9J07 → QIO-9J07 */
+  let out=orig.replace(/\b([A-Za-z]{3})[-\s]?([0-9][0-9A-Za-z]{3})\b/g, function(todo,a,b){
+    const alvo=(a+b).toUpperCase();
+    const achou=placas.find(function(p){ return p.replace('-','')===alvo; });
+    return achou? achou : todo;
+  });
+  /* 2) só as letras: QIO → QIO-9J07 (e "IP" em caixa alta → pergunta) */
+  out=out.replace(/\b([A-Za-z]{2,3})\b(?![-\s]*[0-9])/g, function(todo, tok){
+    const T=tok.toUpperCase();
+    if(tok.length===2 && tok!==T) return todo;          /* 2 letras só em CAIXA ALTA */
+    const cand=placas.filter(function(p){ return letras(p).indexOf(T)===0; });
+    if(!cand.length) return todo;
+    if(cand.length===1) return cand[0];
+    pend.push({trecho:tok, opcoes:cand});
+    return todo;                                        /* ambíguo: quem chamou pergunta */
+  });
+  return {texto:out, pendencias:pend};
+}
+/* Resolve o texto completando as placas, PERGUNTANDO quando a inicial serve
+   para mais de um veículo. Uma pendência por vez, chamando-se de novo — assim
+   uma descrição com duas iniciais ambíguas pergunta as duas, em ordem.
+
+   ⚠️ Perguntar abre um modal, e o sistema só tem UM: o formulário que estava
+   aberto morre. Por isso quem chama tem que ter LIDO todos os campos antes —
+   é o que `salvarPagamento`/`salvarDescarga` fazem. */
+let _pexPlacaCtx=null;
+function _pexPlacaRe(t){ return new RegExp('\\b'+String(t).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b'); }
+/* `ignorar` guarda os trechos em que ele já respondeu "deixar como está".
+   Sem essa lista o mesmo trecho voltaria a ser perguntado para sempre: a
+   primeira versão marcava o texto com um caractere invisível, e não adiantou
+   porque `\b` casa igual ao lado dele. */
+function pexPlacaResolver(texto, aoConcluir, ignorar){
+  ignorar = ignorar || [];
+  const r=pexPlacaExpandir(texto);
+  const pend=r.pendencias.filter(function(x){ return ignorar.indexOf(x.trecho.toUpperCase())<0; });
+  if(!pend.length){ aoConcluir(r.texto); return; }
+  const p=pend[0];
+  _pexPlacaCtx={ texto:r.texto, trecho:p.trecho, fim:aoConcluir, ignorar:ignorar };
+  const botoes=p.opcoes.map(function(pl){
+    const v=veiculoByPlaca(pl);
+    return `<button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:8px"
+      onclick="_pexPlacaEscolher('${esc(pl)}')">${svg('truck')} <b>${esc(pl)}</b>`
+      +(v?` <span class="muted" style="margin-left:10px">${esc(v.marca||'')} ${esc(v.modelo||'')} · ${esc(v.tipo||'')}</span>`:'')
+      +`</button>`;
+  }).join('');
+  openModal(`<div class="m-h">${svg('truck')}<h3>Qual veículo é "${esc(p.trecho)}"?</h3></div>
+    <div class="m-b">
+      <p class="muted" style="margin-bottom:14px">Mais de um veículo começa com <b>${esc(p.trecho)}</b>. Escolha para eu completar a placa no texto.</p>
+      ${botoes}
+    </div>
+    <div class="m-f"><button class="btn" onclick="_pexPlacaEscolher('')">Deixar como está</button></div>`);
+}
+function _pexPlacaEscolher(placa){
+  const c=_pexPlacaCtx; if(!c) return;
+  _pexPlacaCtx=null;
+  closeModal();
+  if(placa){
+    /* troca só a PRIMEIRA ocorrência: se a mesma inicial aparecer de novo no
+       texto, ele volta a ser perguntado — podem ser veículos diferentes */
+    pexPlacaResolver(c.texto.replace(_pexPlacaRe(c.trecho), placa), c.fim, c.ignorar);
+  } else {
+    pexPlacaResolver(c.texto, c.fim, c.ignorar.concat([String(c.trecho).toUpperCase()]));
+  }
 }
 /* resolve o registro (motorista/veículo) a partir do texto lido */
 function _impRef(vinculo, chave){
@@ -5783,6 +5910,10 @@ function modalDescarga(id){
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarDescarga('${id||''}')">Salvar</button></div>`);
 }
 function salvarDescarga(id){ const d={data:val('f_data'),placa:val('f_placa'),transporte:val('f_transp'),senha:val('f_senha'),valor:parseBRL(val('f_valor')),pago:val('f_pago'),local:val('f_local')};
+  /* v8.6 — mesma regra do gasto: completa a placa escrita no texto do local */
+  pexPlacaResolver(d.local, function(t){ d.local=t; _salvarDescargaFim(id,d); });
+}
+function _salvarDescargaFim(id,d){
   let eco='';
   if(id){ const atual=DB.descargas.find(x=>x.id===id); Object.assign(atual,d);
     /* veio de um gasto do Financeiro: escreve de volta lá, senão os dois
@@ -7000,6 +7131,12 @@ function salvarPagamento(id){
   if(!val('f_desc') && !val('f_valor')){ toast('Informe pelo menos a descrição e o valor.','err'); return; }
   const d={ data:val('f_data'), descricao:val('f_desc'), categoria:val('f_cat'), forma:val('f_forma'),
             valor:parseBRL(val('f_valor')), placa:val('f_placa'), obs:val('f_obs') };
+  /* v8.6 — completa a placa citada na descrição ANTES de gravar ("Descarga
+     QIO" → "Descarga QIO-9J07"). Todos os campos já foram lidos acima, então
+     perguntar (que substitui este modal) não perde nada do formulário. */
+  pexPlacaResolver(d.descricao, function(desc){ d.descricao=desc; _salvarPagamentoFim(id,d); });
+}
+function _salvarPagamentoFim(id,d){
   let alvo;
   if(id){ alvo=(DB.pagamentos||[]).find(x=>x.id===id); Object.assign(alvo, d); }
   else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); alvo=d; }

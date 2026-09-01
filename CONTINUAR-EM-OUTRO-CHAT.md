@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.5)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.6)
 
-**v8.5 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=208`, cache SW `planeta-express-v8-5`, rodapé `v8.5`.
+**v8.6 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=209`, cache SW `planeta-express-v8-6`, rodapé `v8.6`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,35 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.6 (escreveu "Descarga QIO", o sistema guarda "Descarga QIO-9J07")
+
+Pedido dele: *"sempre que eu colocar em gastos ou descargas o que for a inicial de uma placa, complete-a automaticamente em todo o sistema; se tiver mais de uma opção com as mesmas iniciais sempre perguntar"*.
+
+**Onde a correção acontece decide tudo:** ela é feita **ao SALVAR**, não na hora de exibir. Assim o texto já **nasce completo** no banco e não existe uma segunda regra para o relatório — ele só mostra o que está guardado. Fonte única (a mesma disciplina do [[numeros-derivados-fonte-unica]]).
+
+**`pexPlacaExpandir(texto)`** reconhece duas formas: `QIO` → `QIO-9J07`, e `QIO9J07` (sem traço) → `QIO-9J07`.
+
+> 🔴 **A regra que decide se isto ajuda ou atrapalha é a do FALSO POSITIVO.** Descrição é texto livre — os lançamentos reais dele têm "Uber", "Aso Wesley", "Sem Parar", "Lourival", "borracharia calibragens". Trocar uma palavra comum por placa seria pior que não completar. Por isso:
+> • **3 letras**: aceita em qualquer caixa (placa brasileira TEM 3 letras; coincidir com palavra de 3 letras que também seja placa da frota é remoto);
+> • **2 letras**: **só em CAIXA ALTA**. Sem isso "de", "do", "da", "no", "na" viravam candidatos a placa no meio da frase.
+> Conferido contra os 14 textos reais dele: **os 6 com placa completaram, os 8 sem placa ficaram intactos.**
+
+**Ambiguidade → PERGUNTA, nunca chute.** `pexPlacaResolver()` abre um modal com os veículos candidatos (placa + marca/modelo/tipo) e resolve **uma pendência por vez**, chamando-se de novo — texto com duas iniciais ambíguas pergunta as duas, em ordem.
+
+⚠️ **Perguntar abre um modal, e o sistema só tem UM** — o formulário aberto morre. Por isso `salvarPagamento`/`salvarDescarga` foram divididos: leem **todos** os campos primeiro, e só depois resolvem a placa (`_salvarPagamentoFim`/`_salvarDescargaFim`).
+
+⚠️ **Armadilha do "deixar como está":** a primeira versão marcava o trecho com um caractere invisível para tirá-lo da fila — **não funcionou**, porque `\b` casa do mesmo jeito ao lado dele e a pergunta voltava em laço. Agora existe uma **lista de ignorados** que atravessa as chamadas.
+
+⚠️ **Não mexo no campo `placa` do gasto**, mesmo detectando a placa no texto: gasto de categoria "Descarga" **com placa** cria espelho em Descargas (v6.98) — preencher sozinho criaria descargas que ele não pediu.
+
+**Backfill `completarPlacasNosTextos()`** (carimbo `placas-completas-v86`): corrige os lançamentos que já existiam, **só os SEM ambiguidade** — carregamento de sistema não pode abrir pergunta na cara do cliente; o ambíguo fica como está e se resolve quando ele editar. **Uma vez por base**: varrer a cada carregamento desfaria a correção manual dele no lançamento seguinte.
+
+**Hoje a frota não tem inicial repetida** (10 veículos, todos os prefixos de 2 e 3 letras distintos), então o caminho da pergunta não dispara na prática. Ele foi **testado com ambiguidade criada de propósito** (IPD-9036 × IPG-8A91): pergunta, escolhe, aplica; "deixar como está" preserva e não repete; dois trechos ambíguos perguntam duas vezes.
+
+**Validado, zero erro de JS:** salvar um gasto **pelo caminho real** (abrir `modalPagamento`, escrever "Descarga QIO" no campo, chamar `salvarPagamento`) grava **"Descarga QIO-9J07"**; backfill completou gasto e descarga e **não tocou** em "Uber Reinaldo"; a 2ª rodada respeitou a edição manual; o relatório saiu com a placa completa.
+
+**Versão:** assets `?v=209`, cache `planeta-express-v8-6`, rodapé `v8.6`, celular reconstruído (3,93 MB).
 
 ### ✅ ESTADO EM 31/08/2026 — v8.5 (relatório no celular: cabe em qualquer tela, e é a MESMA folha do computador)
 
