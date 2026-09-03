@@ -1316,12 +1316,24 @@ function detalheVeiculoHead(v, acaoHtml){
    já está na ficha, e o cliente confirma. Documento de veículo lido errado e
    gravado calado é pior do que não ler. */
 let _crlvLido=null;
+/* Situação do CRLV pelo EXERCÍCIO — o ano do licenciamento. É isto que o
+   cliente entende por "em dia", e foi a correção que ele pediu na v9.0: o
+   selo verde na ficha tem que falar do DOCUMENTO, não de onde o arquivo está
+   guardado. Licenciado para o ano corrente (ou adiante) = em dia. */
+function _crlvSituacao(v){
+  const ano=parseInt(String((v&&v.crlvAno)||'').replace(/\D/g,''),10);
+  if(!ano) return {cls:'neutro', txt:'Sem exercício informado'};
+  const atual=hoje().getFullYear();
+  if(ano>=atual) return {cls:'ok', txt:'Em dia'};
+  return {cls:'vencido', txt:'Vencido — exercício '+ano};
+}
 function _veicCRLV(v){
   const arq=anexoTipo('veiculo', v.id, /crlv|licenciamento/i);
+  const sit=_crlvSituacao(v);
   const corpo = arq
     ? `<div class="tbl-wrap"><table class="tbl"><tbody><tr>
          <td><b>${esc(arq.name)}</b><div class="muted" style="font-size:11.5px">${esc(arq.categoria||'CRLV')} · ${fileSize(arq.size)}</div>
-             <div style="margin-top:5px">${fileSelo(arq)}</div></td>
+             <div style="margin-top:5px"><span class="st ${sit.cls}">${esc(sit.txt)}</span> ${fileSelo(arq)}</div></td>
          <td style="text-align:right;white-space:nowrap" class="no-print">
            <button class="btn ghost sm" title="Abrir" onclick="verArquivo('${arq.id}')">${svg('eye')}</button>
            <button class="btn ghost sm" title="Baixar" onclick="baixarArquivo('${arq.id}')">${svg('download')}</button>
@@ -2370,13 +2382,18 @@ function fileThumb(f){
   if(/xml|nf/i.test(t)) return '🧾';
   return '📄';
 }
-/* v8.8 — o selo diz onde o arquivo ESTÁ. Sem ele o cliente não tinha como
-   saber que um anexo estava preso num aparelho só, e descobria pelo pior
-   caminho: abrindo no celular e não achando. Verde = está na nuvem, abre em
-   qualquer lugar. Âmbar = ainda só neste aparelho. */
+/* Selo de SINCRONIZAÇÃO do arquivo.
+
+   ⚠️ v9.0 — só aparece quando há PROBLEMA. A v8.8 mostrava também um selo
+   verde "Em todos" no caso normal, e o cliente cobrou (com razão): num
+   documento, selo verde é lido como "documento em dia", não como "arquivo
+   guardado na nuvem". Eram dois assuntos com a mesma cara.
+   Regra que fica: estar sincronizado é o esperado — não merece selo. Selo é
+   para o que foge do esperado. Quem fala da VALIDADE do documento é outro
+   selo, ao lado (ver `_crlvSituacao`). */
 function fileSelo(f){
-  if(f && f.storagePath) return '<span class="st ok" style="font-size:10px" title="Está na nuvem: abre em qualquer aparelho">Em todos</span>';
-  return '<span class="st warn" style="font-size:10px" title="Ainda não subiu para a nuvem: por enquanto só abre neste aparelho">Só aqui</span>';
+  if(f && f.storagePath) return '';
+  return '<span class="st warn" style="font-size:10px" title="Ainda não subiu para a nuvem: por enquanto só abre neste aparelho">Só neste aparelho</span>';
 }
 function filesGrid(list){
   return `<div class="files">${list.map(f=>`<div class="filecard">

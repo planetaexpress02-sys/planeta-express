@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.9)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v9.0)
 
-**v8.9 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=212`, cache SW `planeta-express-v8-9`, rodapé `v8.9`.
+**v9.0 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=213`, cache SW `planeta-express-v9-0`, rodapé `v9.0`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,20 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v9.0 (o selo do CRLV fala do DOCUMENTO, não de onde o arquivo está)
+
+Print dele no card do CRLV, com o selo verde escrito "Em todos": *"aqui é para aparecer 'em dia' e não 'em todos', melhore tua programação para ser mais assertiva, corrija para todas as placas"*.
+
+**Ele está certo, e o erro é de conceito, não de texto.** Na v8.8 eu pus, embaixo do nome do arquivo, um selo que falava de **onde o arquivo está guardado** ("Em todos" = está na nuvem). Só que aquele lugar é a ficha de um **documento com validade** — e num documento, **selo verde é lido como "documento em dia"**. Dois assuntos diferentes com a mesma cara, no mesmo lugar.
+
+**Duas regras que ficam:**
+1. **Selo em documento fala do documento.** Nasceu `_crlvSituacao(v)`, que lê o **exercício** (o ano do licenciamento): ano corrente ou adiante = **"Em dia"**; anterior = **"Vencido — exercício 2025"**; vazio = **"Sem exercício informado"**.
+2. **Selo é para o que FOGE do esperado.** `fileSelo()` deixou de mostrar o verde "Em todos" no caso normal e agora **só aparece quando há problema**: âmbar **"Só neste aparelho"**. Arquivo sincronizado é o esperado — não merece selo. Isso limpou a tela Documentos junto.
+
+**Validado no Chrome headless, zero erro de JS:** exercício 2026 e 2027 → "Em dia"; 2025 → "Vencido — exercício 2025"; vazio → "Sem exercício informado"; `fileSelo` sincronizado devolve **string vazia** e pendente devolve o aviso; a ficha mostra "Em dia" e **não** mostra "Em todos"; exercício velho mostra "Vencido"; **varredura de TODAS as placas ativas: nenhuma com "Em todos"**; tela Documentos idem. No arquivo do celular a única ocorrência que sobrou de "Em todos" é o comentário que explica a correção.
+
+**Versão:** assets `?v=213`, cache `planeta-express-v9-0`, rodapé `v9.0`, celular reconstruído.
 
 ### ✅ ESTADO EM 31/08/2026 — v8.9 (a 4ª permissão do Storage, e o arquivo que não trava mais)
 
