@@ -1303,6 +1303,114 @@ function detalheVeiculoHead(v, acaoHtml){
     <div class="dh-actions no-print">${acaoHtml||''}</div>
   </div>`;
 }
+/* ---------- CRLV na ficha da placa (v8.8) ----------
+   O cliente pediu, dentro de cada placa, um lugar para anexar o CRLV que
+   "leia o PDF e retire dados".
+
+   ⚠️ A leitura NÃO é escrita aqui. Ela vai pelo pipeline da Central
+   (`cpidProcessar`), onde entrou o tipo `crlv` — é a regra do projeto: um
+   documento, um leitor. Se amanhã o CRLV mudar de desenho, conserta-se num
+   lugar só e a Central e a ficha melhoram juntas.
+
+   ⚠️ E nada é gravado sozinho: o que foi lido aparece lado a lado com o que
+   já está na ficha, e o cliente confirma. Documento de veículo lido errado e
+   gravado calado é pior do que não ler. */
+let _crlvLido=null;
+function _veicCRLV(v){
+  const arq=anexoTipo('veiculo', v.id, /crlv|licenciamento/i);
+  const corpo = arq
+    ? `<div class="tbl-wrap"><table class="tbl"><tbody><tr>
+         <td><b>${esc(arq.name)}</b><div class="muted" style="font-size:11.5px">${esc(arq.categoria||'CRLV')} · ${fileSize(arq.size)}</div>
+             <div style="margin-top:5px">${fileSelo(arq)}</div></td>
+         <td style="text-align:right;white-space:nowrap" class="no-print">
+           <button class="btn ghost sm" title="Abrir" onclick="verArquivo('${arq.id}')">${svg('eye')}</button>
+           <button class="btn ghost sm" title="Baixar" onclick="baixarArquivo('${arq.id}')">${svg('download')}</button>
+         </td></tr></tbody></table></div>`
+    : emptyState('Nenhum CRLV anexado nesta placa.');
+  return `<div class="card">
+    <div class="card-h">${svg('doc')}<h3>CRLV — documento do veículo</h3>
+      ${v.crlvAno?`<span class="st neutro">exercício ${esc(v.crlvAno)}</span>`:''}
+      <div class="r no-print"><button class="btn sm primary" onclick="veicAnexarCRLV('${v.id}')">${svg('upload')} Anexar CRLV</button></div></div>
+    <div class="card-b p0">${corpo}</div>
+    <div class="card-b" style="padding-top:0"><div class="muted" style="font-size:11.5px">Envie o PDF: eu leio e mostro o que encontrei (renavam, chassi, exercício, ano/modelo, cor) para você conferir antes de gravar na ficha.</div></div>
+  </div>`;
+}
+async function veicAnexarCRLV(vid){
+  const v=veiculo(vid); if(!v) return;
+  const inp=document.createElement('input'); inp.type='file';
+  inp.accept='.pdf,.jpg,.jpeg,.png,application/pdf,image/*';
+  inp.onchange=async function(e){
+    const file=(e.target.files||[])[0]; if(!file) return;
+    if(typeof pexBar==='function') pexBar(true);
+    try{
+      /* 1) guarda o arquivo (e sobe à nuvem, se der) — o anexo é o que o
+            cliente pediu primeiro; a leitura vem depois e é um bônus */
+      await subirUm(file,'veiculo',vid,'CRLV');
+      await reloadFiles(); saveDB();
+      /* 2) lê pelo pipeline da Central */
+      let campos=null, resumo='';
+      try{
+        if(typeof cpidProcessar==='function'){
+          const item={file:file};
+          await cpidProcessar(item, null);
+          campos=(item.ex&&item.ex.campos)||null; resumo=item.resumo||'';
+        }
+      }catch(err){ resumo='Não consegui ler o conteúdo: '+(err.message||''); }
+      if(!campos || !Object.keys(campos).length){
+        toast('CRLV anexado. Não consegui extrair os dados — se for um PDF digitalizado, o texto pode não estar legível.','warn');
+        router(); return;
+      }
+      _crlvLido={vid:vid, campos:campos};
+      modalCRLVConferir(vid, campos, resumo);
+    } finally { if(typeof pexBar==='function') pexBar(false); }
+  };
+  inp.click();
+}
+const _CRLV_CAMPOS=[
+  ['renavam',   'Renavam',          'renavam'],
+  ['chassi',    'Chassi',           'chassi'],
+  ['crlvAno',   'CRLV (exercício)', 'crlvAno'],
+  ['anoModelo', 'Ano/Modelo',       'anoModelo'],
+  ['cor',       'Cor',              'cor']
+];
+function modalCRLVConferir(vid, campos, resumo){
+  const v=veiculo(vid); if(!v) return;
+  const linhas=_CRLV_CAMPOS.map(function(c){
+    const lido=campos[c[0]]||''; if(!lido) return '';
+    const atual=v[c[2]]||'';
+    const igual=String(atual).trim().toUpperCase()===String(lido).trim().toUpperCase();
+    return `<tr><td><b>${esc(c[1])}</b></td>
+      <td class="mono">${esc(atual||'—')}</td>
+      <td class="mono"><b>${esc(lido)}</b></td>
+      <td>${igual?'<span class="st ok">igual</span>':(atual?'<span class="st warn">muda</span>':'<span class="st neutro">preenche</span>')}</td></tr>`;
+  }).filter(Boolean).join('');
+  const placaLida=(campos.placa||'').toUpperCase();
+  const alerta = placaLida && String(v.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'')!==placaLida.replace(/[^A-Z0-9]/g,'')
+    ? `<div class="hint" style="border-color:#f2686b;color:#f2686b">⚠️ A placa lida no documento é <b>${esc(placaLida)}</b>, diferente da placa desta ficha (<b>${esc(v.placa)}</b>). Confira se o CRLV é deste veículo antes de aplicar.</div>` : '';
+  openModal(`<div class="m-h">${svg('doc')}<h3>CRLV lido — ${esc(v.placa)}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="m-b">
+      <p class="muted" style="margin-bottom:12px">${esc(resumo||'')}</p>
+      ${alerta}
+      ${linhas? `<div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Campo</th><th>Na ficha hoje</th><th>No CRLV</th><th>—</th></tr></thead>
+        <tbody>${linhas}</tbody></table></div>`
+        : emptyState('Não achei nenhum campo aproveitável neste documento.')}
+      <div class="hint" style="margin-top:12px">O arquivo <b>já foi anexado</b> na placa. Aplicar só troca os campos da ficha.</div>
+    </div>
+    <div class="m-f"><button class="btn" onclick="closeModal();router()">Só anexar</button>
+      ${linhas?`<button class="btn primary" onclick="veicAplicarCRLV('${vid}')">${svg('check')} Aplicar na ficha</button>`:''}</div>`);
+}
+function veicAplicarCRLV(vid){
+  const v=veiculo(vid); const c=_crlvLido&&_crlvLido.vid===vid? _crlvLido.campos : null;
+  if(!v||!c){ closeModal(); return; }
+  let n=0;
+  _CRLV_CAMPOS.forEach(function(f){ const lido=c[f[0]]; if(!lido) return;
+    if(String(v[f[2]]||'').trim()!==String(lido).trim()){ v[f[2]]=lido; n++; } });
+  _crlvLido=null; saveDB(); closeModal();
+  toast(n? n+' campo(s) atualizado(s) na ficha pelo CRLV.' : 'A ficha já estava igual ao CRLV.');
+  router();
+}
+
 
 /* ---------- TROCAS DE ÓLEO da ficha da placa (v8.1) ----------
    A aba "Trocas de Óleo" saiu do menu porque era uma VISTA sobre a mesma
@@ -1415,6 +1523,7 @@ function viewVeiculo(id){
     </div>
     ${_veicTacografo(v)}
     <div class="grid" style="gap:18px">
+      ${_veicCRLV(v)}
       ${_veicOleo(v, manut, cavalo)}
       <div class="card">
         <div class="card-h">${svg('battery')}<h3>Baterias</h3></div>
@@ -2261,16 +2370,41 @@ function fileThumb(f){
   if(/xml|nf/i.test(t)) return '🧾';
   return '📄';
 }
+/* v8.8 — o selo diz onde o arquivo ESTÁ. Sem ele o cliente não tinha como
+   saber que um anexo estava preso num aparelho só, e descobria pelo pior
+   caminho: abrindo no celular e não achando. Verde = está na nuvem, abre em
+   qualquer lugar. Âmbar = ainda só neste aparelho. */
+function fileSelo(f){
+  if(f && f.storagePath) return '<span class="st ok" style="font-size:10px" title="Está na nuvem: abre em qualquer aparelho">Em todos</span>';
+  return '<span class="st warn" style="font-size:10px" title="Ainda não subiu para a nuvem: por enquanto só abre neste aparelho">Só aqui</span>';
+}
 function filesGrid(list){
   return `<div class="files">${list.map(f=>`<div class="filecard">
     <div class="fc-ico">${fileThumb(f)}</div>
     <div class="fc-main"><b title="${esc(f.name)}">${esc(f.name)}</b>
-      <div class="muted" style="font-size:11px">${esc(f.categoria||'Arquivo')} · ${fileSize(f.size)}${f.validade?' · vence '+fmtD(f.validade):''}</div></div>
+      <div class="muted" style="font-size:11px">${esc(f.categoria||'Arquivo')} · ${fileSize(f.size)}${f.validade?' · vence '+fmtD(f.validade):''}</div>
+      <div style="margin-top:5px">${fileSelo(f)}</div></div>
     <div class="fc-act no-print">
       <button class="btn ghost sm" title="Abrir" onclick="verArquivo('${f.id}')">${svg('eye')}</button>
       <button class="btn ghost sm" title="Baixar" onclick="baixarArquivo('${f.id}')">${svg('download')}</button>
       <button class="btn ghost sm" title="Excluir" onclick="excluirArquivo('${f.id}')">${svg('trash')}</button>
     </div></div>`).join('')}</div>`;
+}
+/* v8.8 — aviso de arquivo preso num aparelho só. Sem ele o cliente descobria
+   pelo pior caminho: abrindo no celular e não achando o documento. O botão
+   tenta o envio na hora; se estiver offline ou sem conta, o texto diz isso em
+   vez de fingir que tentou. */
+function _docAvisoPendentes(){
+  const p=arquivosPendentes();
+  if(!p.length) return '';
+  const on=_online();
+  return `<div class="banner" style="border-color:rgba(242,164,78,.5);background:rgba(242,164,78,.07)">
+    ${svg('upload')}<div><b>${p.length} arquivo(s) ainda não estão na nuvem</b>
+      <span>Eles só abrem no aparelho em que foram anexados. ${on
+        ? 'Clique para tentar enviar agora.'
+        : 'Entre na sua conta com internet para que eles subam e apareçam em todos os aparelhos.'}</span></div>
+    ${on?`<button class="btn primary no-print" style="margin-left:auto" onclick="sincronizarArquivosPendentes()">${svg('upload')} Enviar agora</button>`:''}
+  </div>`;
 }
 function viewDocumentos(){
   const fb=(k,l)=>`<button class="${docFiltroEnt===k?'active':''}" onclick="docFiltroEnt='${k}';router()">${l}</button>`;
@@ -2312,6 +2446,7 @@ function viewDocumentos(){
   }).join('');
 
   return `
+  ${_docAvisoPendentes()}
   <div class="banner">${svg('doc')}<div><b>Documentos da empresa</b><span>Todos os arquivos da pasta (CRLV, ASO, toxicológicos, CNH, jurídicos...) já ficam aqui para abrir e baixar. Você também pode enviar arquivos novos, que ficam guardados dentro do sistema.</span></div>
     <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Documentos')}</div></div>
 
@@ -2337,19 +2472,80 @@ function uploadPara(entidade, refId, categoria){ _uploadCtx={entidade,refId};
 function uploadGeral(ev){ processUpload(ev.target.files,'empresa','empresa'); ev.target.value=''; }
 function _online(){ return typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser(); }
 /* Envia UM arquivo: guarda cópia local (IndexedDB) e, se online, sobe para a nuvem + registra metadados sincronizados */
+/* ------------------------------------------------------------------
+   ARQUIVO ANEXADO — v8.8
+   Regra que o cliente cobrou: "todos os arquivos anexados no sistema devem
+   aparecer e ficar disponíveis para serem enviados, baixados e visualizados,
+   tanto em outro PC quanto no mobile".
+
+   Dois defeitos impediam isso, e os dois estavam AQUI:
+
+   1) 🔴 ANEXO OFFLINE SUMIA PARA O RESTO DO MUNDO. O `DB.anexos.push(meta)`
+      ficava DENTRO do `if(_online())`. Arquivo anexado sem internet — ou
+      antes de entrar na conta — era gravado só no IndexedDB daquele
+      navegador e **nunca mais** era mencionado em lugar nenhum: nem depois
+      de conectar. Nos outros aparelhos ele simplesmente não existia.
+
+   2) 🔴 ANEXO FANTASMA. Se o upload falhava (é o caso HOJE: o bucket
+      `arquivos` do Storage ainda não foi criado), o `storagePath` ficava
+      vazio, mas o registro entrava em `DB.anexos` assim mesmo. Nos outros
+      aparelhos o arquivo APARECIA na lista e não abria — e a mensagem ainda
+      dizia "ainda não sincronizou", quando na verdade ele nunca subiu.
+
+   Agora: o registro entra em `DB.anexos` SEMPRE (senão o arquivo não existe
+   para os outros aparelhos), mas carrega `pendente:true` enquanto não estiver
+   de fato na nuvem. Quem termina o serviço é `sincronizarArquivosPendentes()`.
+   ------------------------------------------------------------------ */
+function _arqCaminho(id, nome){ return id+'-'+String(nome||'arquivo').replace(/[^\w.\-]/g,'_'); }
 async function subirUm(file, entidade, refId, categoria){
   const id=uid('f');
   const meta={ id, name:file.name, type:file.type||'', size:file.size, categoria:categoria||guessCat(file.name),
-    entidade, refId, validade:'', obs:'', uploadedAt:Date.now(), storagePath:'' };
+    entidade, refId, validade:'', obs:'', uploadedAt:Date.now(), storagePath:'', pendente:true };
   try{ if(IDB) await idbPut(Object.assign({}, meta, {blob:file})); }catch(e){}
   if(_online()){
-    try{ const path=id+'-'+String(file.name).replace(/[^\w.\-]/g,'_'); await nuvemUpload(path, file); meta.storagePath=path; }
-    catch(e){ toast('Arquivo guardado, mas falhou o envio à nuvem: '+(e.message||''),'err'); }
-    if(!Array.isArray(DB.anexos)) DB.anexos=[];
-    DB.anexos.push(meta);
+    try{ const path=_arqCaminho(id, file.name); await nuvemUpload(path, file);
+         meta.storagePath=path; meta.pendente=false; }
+    catch(e){ toast('Arquivo guardado neste aparelho. O envio para a nuvem falhou — vou tentar de novo sozinho. ('+(e.message||'')+')','err'); }
   }
+  if(!Array.isArray(DB.anexos)) DB.anexos=[];
+  DB.anexos.push(meta);          /* SEMPRE: é isto que faz o arquivo existir para os outros aparelhos */
   return meta;
 }
+/* Sobe o que ficou para trás — anexado offline, ou com o upload falhado.
+
+   ⚠️ A fonte da verdade aqui é o **IndexedDB**, não o `DB`. Ao entrar na
+   conta, o `aposLogin()` faz `DB = remoto` e JOGA FORA o que foi anexado
+   offline; o IndexedDB não é tocado nessa troca. Por isso varremos os
+   arquivos locais e reconstruímos o registro que faltar. */
+async function sincronizarArquivosPendentes(silencioso){
+  if(!_online()) return {enviados:0, falharam:0};
+  try{ await reloadFiles(); }catch(e){}
+  if(!Array.isArray(DB.anexos)) DB.anexos=[];
+  const porId={}; DB.anexos.forEach(function(a){ porId[a.id]=a; });
+  let env=0, falha=0;
+  for(const f of (FILES||[])){
+    const a=porId[f.id];
+    if(a && a.storagePath) continue;                 /* já está na nuvem */
+    if(!f.blob) continue;                            /* sem o conteúdo não há o que subir */
+    try{
+      const path=_arqCaminho(f.id, f.name);
+      await nuvemUpload(path, f.blob);
+      if(a){ a.storagePath=path; a.pendente=false; }
+      else DB.anexos.push({ id:f.id, name:f.name, type:f.type||'', size:f.size,
+        categoria:f.categoria||'', entidade:f.entidade, refId:f.refId, validade:f.validade||'',
+        obs:f.obs||'', uploadedAt:f.uploadedAt||Date.now(), storagePath:path, pendente:false });
+      env++;
+    }catch(e){ falha++; }
+  }
+  if(env) saveDB();
+  if(!silencioso && (env||falha)){
+    if(env) toast(env+' arquivo(s) enviado(s) para a nuvem — já aparecem nos outros aparelhos.');
+    if(falha) toast(falha+' arquivo(s) ainda não subiram. Confira se o espaço de arquivos da nuvem existe (bucket "arquivos").','err');
+  }
+  if(env) router();
+  return {enviados:env, falharam:falha};
+}
+function arquivosPendentes(){ return (DB.anexos||[]).filter(function(a){ return a && !a.storagePath; }); }
 async function processUpload(files, entidade, refId, categoria){
   if(!files||!files.length) return;
   if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
@@ -2474,9 +2670,14 @@ async function _urlArquivo(id){
   return null;
 }
 /* mensagem clara quando um arquivo enviado não está acessível aqui */
+/* v8.8 — a mensagem antiga dizia "ainda não sincronizou" para TODO caso, e
+   isso mentia: quando `storagePath` está vazio o arquivo **nunca subiu**, e
+   mandar o cliente esperar a sincronização era mandá-lo esperar para sempre.
+   Agora cada situação diz o que realmente resolve. */
 function _msgArquivoIndisp(id){
   const a=(DB.anexos||[]).find(x=>x.id===id);
-  if(a) return 'Este arquivo foi enviado em outro aparelho e ainda não sincronizou. Entre na sua conta (nuvem) para vê-lo em qualquer lugar, ou reenvie-o aqui.';
+  if(a && !a.storagePath) return 'Este arquivo ainda NÃO subiu para a nuvem — por isso só abre no aparelho em que foi anexado. Abra o sistema naquele aparelho com internet e ele sobe sozinho; depois aparece aqui também.';
+  if(a) return 'O arquivo está na nuvem, mas não consegui baixá-lo agora. Confira a internet e tente de novo.';
   return 'Não consegui abrir este arquivo. Tente reenviá-lo pelo botão "Enviar arquivo".';
 }
 async function verArquivo(id){ let r; try{ r=await _urlArquivo(id); }catch(e){ r=null; }
@@ -7534,6 +7735,10 @@ async function aposLogin(){
     if(remoto){ DB=remoto; ensureCollections(); saveDB(); }
     else { await nuvemSalvar(DB); }            // primeira vez: envia a base atual p/ a nuvem
     nuvemRealtime(aplicarRemoto);
+    /* v8.8 — agora que há conta e internet, sobe o que foi anexado offline.
+       Tem que ser DEPOIS do `DB=remoto`: a troca descarta o `DB.anexos`
+       local, e é o IndexedDB (intocado) que devolve esses arquivos. */
+    try{ await sincronizarArquivosPendentes(true); }catch(e){}
   }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
   esconderLogin();
   renderSidebar('dashboard'); router(); hideSplash(); updateUserBadge();

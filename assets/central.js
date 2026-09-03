@@ -250,6 +250,11 @@ const CPID_TIPOS = [
   {k:'fatura',     n:'Fatura / Duplicata',        ico:'money',  destino:'Pagamentos'},
   {k:'apolice',    n:'Apólice de seguro',         ico:'umbrella',destino:'Seguros'},
   {k:'licenca',    n:'Licença / Alvará',          ico:'stamp',  destino:'Licenças e Alvarás'},
+  /* v8.8 — CRLV entrou AQUI, e não num leitor solto na ficha do veículo: a
+     regra do projeto é que todo documento passa por este pipeline. Assim o
+     mesmo CRLV é lido do mesmo jeito, venha ele pela Central ou pelo botão
+     "Anexar CRLV" da placa. */
+  {k:'crlv',       n:'CRLV do veículo',           ico:'doc',    destino:'Frota (ficha do veículo)'},
   {k:'planilha',   n:'Planilha',                  ico:'doc',    destino:'conforme as colunas'},
   {k:'documento',  n:'Documento',                 ico:'doc',    destino:'Arquivo'},
 ];
@@ -280,6 +285,11 @@ function cpidClassificar(ct, fmt, nome){
 
   /* (d) padrões por significado (não por posição) */
   const regras=[
+    /* CRLV vem ANTES dos fiscais: o documento traz "placa", "renavam" e
+       "chassi" juntos, e nenhum outro tipo tem esses três. Pôr depois faria
+       um CRLV com a palavra "licenciamento" cair na regra de licença. */
+    ['crlv',      97, /certificado de registro e licenciamento|licenciamento anual do ve[ií]culo|\bcrlv\b|crv\/crlv/, 'termos de CRLV'],
+    ['crlv',      92, /renavam[\s\S]{0,80}chassi|chassi[\s\S]{0,80}renavam/, 'renavam e chassi no mesmo documento'],
     ['pedagio',   96, /sem\s*parar|conectcar|veloe|vale.?ped[aá]gio|pra[cç]a de ped[aá]gio|concession[aá]ria/, 'menções a pedágio/praças'],
     ['fatur_rel', 97, /relatorio de faturamento|saidas r\$|servicos r\$|totais do periodo/, 'layout de relatório do contador'],
     ['abastec',   94, /diesel|arla|\bs-?10\b|gasolina|etanol|posto|combustivel|litros|abastecim/, 'produto de combustível'],
@@ -350,6 +360,7 @@ async function cpidExtrair(tipo, ct, file, cls){
     case 'fatur_rel':return cpidExtrFaturRelatorio(txt, ct);
     case 'apolice':  return cpidExtrApolice(txt, file);
     case 'licenca':  return cpidExtrLicenca(txt, file);
+    case 'crlv':     return cpidExtrCRLV(txt, file);
     case 'planilha': return cpidExtrPlanilha(ct.grid);
     case 'cte': case 'nfe': case 'nfse': case 'fatura': case 'boleto':
                      return cpidExtrNotaTexto(txt, tipo);
@@ -540,6 +551,52 @@ function cpidExtrLicenca(txt, file){
   return {campos:d, registros:[d], _alvo:'licencas',
     resumo:(d.categoria&&typeof licCatInfo==='function'? licCatInfo(d.categoria).n : 'Licença')
       +(d.numero?' nº '+d.numero:'')+(d.validade?' — vence '+fmtD(d.validade):'')};
+}
+
+/* ---- CRLV: lê os campos do documento do veículo (v8.8) ----
+   Lê por RÓTULO, nunca por posição: o CRLV muda de desenho entre estados e
+   entre exercícios, e uma leitura "3ª linha, 2ª coluna" quebraria no ano que
+   vem. Cada campo tem também um plano B por formato (a placa e o chassi têm
+   formato próprio e inconfundível), para o caso de o rótulo vir colado ou
+   quebrado pelo extrator de texto do PDF.
+
+   ⚠️ Não decide nada sozinho: devolve os campos e QUEM chamou confirma com o
+   cliente antes de gravar na ficha. Documento de veículo lido errado e
+   gravado calado seria pior do que não ler. */
+function cpidExtrCRLV(txt, file){
+  const T=String(txt||'');
+  const U=T.toUpperCase();
+  const N=_cpNorm(T);
+  const d={};
+  const pega=function(re, i){ const m=T.match(re); return m? String(m[i||1]).trim() : ''; };
+
+  /* placa: rótulo, senão o formato (3 letras + 4, com ou sem traço) */
+  d.placa = (pega(/PLACA[\s:]*([A-Z]{3}[-\s]?[0-9][0-9A-Z]{3})/i,1)
+          || pega(/\b([A-Z]{3}[-\s]?[0-9][0-9A-Z]{3})\b/,1)).toUpperCase().replace(/[\s-]/,'').replace(/^([A-Z]{3})/,'$1-');
+  /* renavam: 9 a 11 dígitos */
+  d.renavam = pega(/RENAVAM[\s:]*([0-9]{9,11})/i,1) || pega(/\b([0-9]{11})\b/,1);
+  /* chassi: 17 caracteres, sem I, O e Q por norma */
+  d.chassi  = (pega(/CHASSI[\s:]*([0-9A-HJ-NPR-Z]{17})/i,1) || pega(/\b([0-9A-HJ-NPR-Z]{17})\b/,1)).toUpperCase();
+  /* exercício: o ano do licenciamento */
+  d.crlvAno = pega(/EXERC[IÍ]CIO[\s:]*([0-9]{4})/i,1) || pega(/LICENCIAMENTO[\s\S]{0,30}?([2-9][0-9]{3})/i,1);
+  d.anoModelo = pega(/ANO\s*FABRICA[ÇC][ÃA]O\s*\/?\s*MODELO[\s:]*([0-9]{4}\s*\/\s*[0-9]{4})/i,1)
+             || pega(/\b([0-9]{4}\s*\/\s*[0-9]{4})\b/,1);
+  d.marcaModelo = pega(/MARCA\s*\/?\s*MODELO[\s\S]{0,3}[\s:]*([^\n\r]{4,60})/i,1);
+  d.cor = pega(/COR\s*(?:PREDOMINANTE)?[\s:]*([A-Za-zÀ-ÿ]{3,20})/i,1);
+  d.categoria = pega(/CATEGORIA[\s:]*([A-Za-zÀ-ÿ\/\s]{3,30})/i,1);
+  Object.keys(d).forEach(function(k){ if(!d[k]) delete d[k]; });
+
+  /* liga ao veículo já cadastrado, se a placa bater */
+  let veic=null;
+  if(d.placa && typeof veiculoByPlaca==='function'){ try{ veic=veiculoByPlaca(d.placa)||null; }catch(e){} }
+  if(!veic && typeof veiculoPorTexto==='function'){ try{ veic=veiculoPorTexto(T)||null; }catch(e){} }
+  if(veic){ d.veiculoId=veic.id; if(!d.placa) d.placa=veic.placa; }
+
+  const achou=Object.keys(d).filter(function(k){ return k!=='veiculoId'; }).length;
+  return {campos:d, registros:[d], _alvo:'veiculos',
+    resumo:'CRLV'+(d.placa?' — '+d.placa:'')+(d.crlvAno?' · exercício '+d.crlvAno:'')
+      +(veic?' · veículo encontrado na frota':(d.placa?' · placa NÃO cadastrada na frota':''))
+      +' · '+achou+' campo(s) lido(s)'};
 }
 
 /* ---- Planilha: descobre sozinho o que é, pelos cabeçalhos ---- */

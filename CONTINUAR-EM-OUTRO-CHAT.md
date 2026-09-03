@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.7)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.8)
 
-**v8.7 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=210`, cache SW `planeta-express-v8-7`, rodapé `v8.7`.
+**v8.8 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=211`, cache SW `planeta-express-v8-8`, rodapé `v8.8`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,40 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.8 (CRLV lido na ficha da placa + arquivo que existe em TODOS os aparelhos)
+
+Pedido dele: *"em frota, todos os veículos devem ter uma opção dentro da sua placa para anexar CRLV, que leia pdf e retire dados. Use como regra: todos os arquivos anexados no sistema devem aparecer e ficar disponíveis para serem enviados, baixados e visualizados, tanto em outro pc quanto no mobile"*.
+
+## A regra dos arquivos — dois defeitos, os dois no `subirUm()`
+
+**🔴 (1) Anexo OFFLINE sumia para o resto do mundo.** O `DB.anexos.push(meta)` estava **dentro** do `if(_online())`. Arquivo anexado sem internet — ou antes de entrar na conta — era gravado só no IndexedDB daquele navegador e **nunca mais** era mencionado: nem depois de conectar. Nos outros aparelhos ele simplesmente não existia. **Era isto que quebrava o pedido dele.**
+
+**🔴 (2) Anexo FANTASMA.** Quando o upload falhava — e **falha hoje**, porque o bucket `arquivos` do Storage nunca foi criado — o `storagePath` ficava vazio mas o registro entrava em `DB.anexos` assim mesmo. Nos outros aparelhos o arquivo **aparecia na lista e não abria**, e a mensagem ainda dizia *"ainda não sincronizou"*: mandava esperar uma sincronização que nunca viria.
+
+**Como ficou:** o registro entra em `DB.anexos` **sempre** (é isso que faz o arquivo existir para os outros aparelhos), com `pendente:true` enquanto não estiver de fato na nuvem. Quem termina é **`sincronizarArquivosPendentes()`**, chamado no `aposLogin()` e pelo botão do aviso.
+
+> ⚠️ **A fonte da verdade da fila é o IndexedDB, não o `DB`.** O `aposLogin()` faz `DB = remoto` e **descarta** o que foi anexado offline; o IndexedDB não é tocado nessa troca. Por isso a sincronização varre os arquivos locais e **reconstrói** o registro que faltar — e ela roda **depois** do `DB=remoto`, nunca antes.
+
+**Estado visível:** cada arquivo mostra selo **"Em todos"** (está na nuvem) ou **"Só aqui"** (preso neste aparelho), e a tela Documentos ganhou aviso com contagem e botão "Enviar agora". Antes o cliente só descobria o problema abrindo no celular e não achando o documento.
+
+> 🚧 **DEPENDE DE UMA AÇÃO DO CLIENTE — sem ela NADA sincroniza:** o bucket **`arquivos`** do Supabase Storage nunca foi criado (PASSO A2 do `SETUP-ONLINE.txt`). Enquanto não existir, todo upload falha e todo arquivo fica "Só aqui". O código já está pronto e sobe a fila sozinho no minuto em que o bucket existir.
+
+## CRLV na ficha da placa
+
+Card **"CRLV — documento do veículo"** em **toda** placa: mostra o CRLV anexado (abrir/baixar, com o selo de onde ele está) e o botão **"Anexar CRLV"**.
+
+**A leitura NÃO foi escrita na tela.** Entrou no pipeline da Central como o tipo **`crlv`** — classificador + `cpidExtrCRLV()`. É a regra do projeto ([[central-documentos-pipeline]]): um documento, um leitor. O mesmo CRLV é lido igual venha ele pela Central ou pelo botão da placa, e uma melhoria conserta os dois.
+
+O extrator lê **por rótulo, nunca por posição** (o CRLV muda de desenho entre estados e exercícios), com plano B por formato para placa e chassi. Campos: placa, renavam, chassi, exercício, ano/modelo, marca/modelo, cor, categoria — e liga ao veículo da frota pela placa.
+
+⚠️ **A regra do classificador vem ANTES das fiscais**, senão um CRLV com a palavra "licenciamento" cairia na regra de licença/alvará. Conferido: alvará continua alvará.
+
+⚠️ **Nada é gravado sozinho.** O modal mostra *na ficha hoje × no CRLV* campo a campo, marcando "igual / muda / preenche", e o cliente aplica. Se a placa lida for **diferente** da placa da ficha, sai aviso vermelho — anexar o CRLV do caminhão errado é o engano mais provável aqui.
+
+**Validado no Chrome headless, zero erro de JS:** card presente em **todas** as placas ativas; leitura de um texto de CRLV real devolveu placa/renavam/chassi/exercício/ano-modelo/cor e **ligou ao veículo**; classificador deu `crlv` com 97% e **alvará continuou licença**; aplicar gravou na ficha; anexo offline **entra** em `DB.anexos` como pendente e aparece na ficha e na lista geral; selo e mensagem dizem a verdade; sincronização offline não inventa envio (0/0); aviso de pendentes só aparece quando há pendência; 11 rotas varridas.
+
+**Versão:** assets `?v=211`, cache `planeta-express-v8-8`, rodapé `v8.8`, celular reconstruído (3,94 MB).
 
 ### ✅ ESTADO EM 31/08/2026 — v8.7 (o botão Relatório volta ao celular)
 
