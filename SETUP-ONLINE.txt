@@ -49,10 +49,20 @@ create policy "arq_logados_enviar" on storage.objects
   for insert to authenticated with check (bucket_id = 'arquivos');
 create policy "arq_logados_apagar" on storage.objects
   for delete to authenticated using (bucket_id = 'arquivos');
+create policy "arq_logados_atualizar" on storage.objects
+  for update to authenticated using (bucket_id = 'arquivos');
 --------------------- ATÉ AQUI ---------------------
 
    Pronto: os PDFs/fotos que você enviar passam a aparecer em
    qualquer aparelho.
+
+   OBS. (v8.8): a quarta permissão ("atualizar") foi acrescentada depois.
+   O sistema envia arquivo com "upsert" — regravar por cima. Isso só é
+   preciso quando um envio falha no meio (internet caiu na hora) e o
+   sistema tenta de novo: a segunda tentativa cai em cima do arquivo que
+   já existe e, sem esta permissão, é RECUSADA para sempre — o arquivo
+   ficaria eternamente com o selo "Só aqui". Se você rodou o bloco antes
+   desta observação existir, rode só esta última linha.
 
 
 PASSO C — SEGURANÇA: desligar cadastros públicos  (IMPORTANTE)

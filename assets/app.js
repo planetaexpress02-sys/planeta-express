@@ -2523,19 +2523,33 @@ async function sincronizarArquivosPendentes(silencioso){
   if(!Array.isArray(DB.anexos)) DB.anexos=[];
   const porId={}; DB.anexos.forEach(function(a){ porId[a.id]=a; });
   let env=0, falha=0;
+  const registrar=function(f, a, path){
+    if(a){ a.storagePath=path; a.pendente=false; }
+    else DB.anexos.push({ id:f.id, name:f.name, type:f.type||'', size:f.size,
+      categoria:f.categoria||'', entidade:f.entidade, refId:f.refId, validade:f.validade||'',
+      obs:f.obs||'', uploadedAt:f.uploadedAt||Date.now(), storagePath:path, pendente:false });
+  };
   for(const f of (FILES||[])){
     const a=porId[f.id];
     if(a && a.storagePath) continue;                 /* já está na nuvem */
     if(!f.blob) continue;                            /* sem o conteúdo não há o que subir */
     try{
-      const path=_arqCaminho(f.id, f.name);
-      await nuvemUpload(path, f.blob);
-      if(a){ a.storagePath=path; a.pendente=false; }
-      else DB.anexos.push({ id:f.id, name:f.name, type:f.type||'', size:f.size,
-        categoria:f.categoria||'', entidade:f.entidade, refId:f.refId, validade:f.validade||'',
-        obs:f.obs||'', uploadedAt:f.uploadedAt||Date.now(), storagePath:path, pendente:false });
-      env++;
-    }catch(e){ falha++; }
+      await nuvemUpload(_arqCaminho(f.id, f.name), f.blob);
+      registrar(f, a, _arqCaminho(f.id, f.name)); env++;
+    }catch(e){
+      /* ⚠️ Segunda tentativa com caminho NOVO, e o motivo é concreto: o envio
+         usa `upsert`, e regravar em cima de um arquivo que já existe exige a
+         permissão UPDATE no Storage. O guia de instalação só criava ver,
+         enviar e apagar (corrigido no SETUP-ONLINE.txt na v8.8). Sem esta
+         saída, um envio que caiu no meio deixaria o arquivo tentando o mesmo
+         caminho e sendo recusado PARA SEMPRE — preso em "Só aqui" sem o
+         cliente ter como descobrir por quê. */
+      try{
+        const alt=_arqCaminho(f.id+'-r'+Date.now().toString(36), f.name);
+        await nuvemUpload(alt, f.blob);
+        registrar(f, a, alt); env++;
+      }catch(e2){ falha++; }
+    }
   }
   if(env) saveDB();
   if(!silencioso && (env||falha)){

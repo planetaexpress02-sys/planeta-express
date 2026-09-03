@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.8)
+## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v8.9)
 
-**v8.8 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=211`, cache SW `planeta-express-v8-8`, rodapé `v8.8`.
+**v8.9 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=212`, cache SW `planeta-express-v8-9`, rodapé `v8.9`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -120,7 +120,7 @@ Arquivos em `Sistema Planeta Express\`:
 - Cliente NÃO tem GitHub Desktop (só git CLI 2.55). O celular (`Planeta Express - CELULAR.html`) e a pasta offline seguem atualizados localmente a cada versão.
 
 ## 10. PENDÊNCIAS / PRÓXIMOS PASSOS
-- Cliente concluir: criar bucket `arquivos` (Storage), criar os 2 usuários, desligar signups públicos.
+- ✅ Bucket `arquivos` criado pelo cliente em 31/08/2026. **Falta rodar a 4ª política (`arq_logados_atualizar`, `for update`)** — ver PASSO A2 do SETUP-ONLINE.txt. Ainda pendente: criar os 2 usuários e desligar signups públicos.
 - Validar login/sync/storage reais com o cliente (nunca foi testado de verdade aqui).
 - **Direção Defensiva não tem NENHUMA validade cadastrada** — os certificados existem só como arquivo na pasta. Ofereci lançar as validades a partir dos PDFs; o cliente ainda não respondeu.
 - **Perguntas em aberto que ele ainda não respondeu:** (a) o KPI arredonda (R$ 2.726,00 no cartão × R$ 2.725,84 na lista) — mudar para centavos seria decisão do sistema inteiro; (b) o cadastro de veículo ainda oferece o tipo **"Reboque Frigorífico"** enquanto a tela diz "Carreta" — trocar exigiria migrar dado; (c) o dourado do splash/login é da **logo** e continua lá.
@@ -287,6 +287,30 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 31/08/2026 — v8.9 (a 4ª permissão do Storage, e o arquivo que não trava mais)
+
+O cliente criou o bucket `arquivos` e rodou o SQL do `SETUP-ONLINE.txt` — *"já fiz e deu success"*. Antes de dar por encerrado, conferi o código de envio contra o guia e **achei um buraco no próprio guia**.
+
+**`nuvemUpload()` envia com `upsert:true`** (regravar por cima). No Supabase Storage isso muda a permissão exigida conforme o caso:
+- objeto **não existe** → é INSERT (o guia cobre);
+- objeto **já existe** → é **UPDATE** (o guia **NÃO** cobria).
+
+**Quando isso morde:** um envio que cai no meio (internet oscilou depois de o objeto ser criado, mas antes da resposta chegar). A `sincronizarArquivosPendentes()` tenta de novo **no mesmo caminho** → vira upsert sobre objeto existente → **recusado** → e recusado **em toda tentativa futura**. O arquivo ficaria preso em "Só aqui" **para sempre**, sem o cliente ter como descobrir o motivo.
+
+**Duas correções:**
+1. **`SETUP-ONLINE.txt`** ganhou a quarta política (`arq_logados_atualizar`, `for update`) e a explicação de por que ela existe — quem instalar do zero já sai completo. Avisei o cliente para rodar só essa linha.
+2. **O código deixou de depender disso.** Se a primeira tentativa é recusada, a fila tenta **uma segunda vez com caminho NOVO** (`<id>-r<timestamp>-<nome>`). Assim a permissão faltando vira, no pior caso, um caminho diferente no Storage — nunca um arquivo travado.
+
+**Validado no Chrome headless com o Storage simulado** (o IndexedDB não abre em `file://`, então a lista local foi preenchida à mão para exercitar só a fila) — **4 casos, zero erro de JS**:
+- **A** envio normal → enviado, `pendente=false`;
+- **B** 1ª tentativa recusada → **2 tentativas**, caminho alternativo `fB-rmtlop36s-b.pdf`, selo virou **"Em todos"**;
+- **C** as duas recusadas → conta como falha e **continua pendente** (não mente);
+- **D** arquivo que veio de outro aparelho (sem blob local) → 0/0, não dá erro nem trava a fila.
+
+> ⚠️ **O que NÃO foi testado, e por quê:** o envio real contra o Supabase do cliente. Exige a senha da conta dele, que eu não peço nem manuseio. A prova final é dele: anexar um arquivo, ver o selo virar **"Em todos"** e abrir no celular.
+
+**Versão:** assets `?v=212`, cache `planeta-express-v8-9`, rodapé `v8.9`, celular reconstruído.
 
 ### ✅ ESTADO EM 31/08/2026 — v8.8 (CRLV lido na ficha da placa + arquivo que existe em TODOS os aparelhos)
 
