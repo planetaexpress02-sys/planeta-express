@@ -6813,6 +6813,33 @@ function valeInit(){
 }
 
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
+/* ------------------------------------------------------------------
+   VALES DO MÊS VIGENTE — fonte única (v10.0)
+   Pedido, apontando para o cartão: *"está dando 7.200 de vale dos
+   motoristas, eu só quero que apareça ali o mês vigente"*.
+
+   O cartão mostrava `valesAberto` — a soma do saldo devedor de TODOS os
+   motoristas em TODA a história. É um número legítimo, mas não é o que ele
+   quer ver no alto do Financeiro: ele acompanha o mês.
+
+   ⚠️ Só `tipo:'Vale'` entra no total do mês. 'Pagamento' é o motorista
+   devolvendo — somar os dois daria um número que não quer dizer nada. O
+   devolvido sai à parte, para a conta ficar auditável.
+
+   ⚠️ O SALDO ACUMULADO continua existindo, nos cartões por motorista logo
+   abaixo — aquilo é dívida de verdade e não podia sumir da tela. São dois
+   números diferentes de propósito, e cada um diz no rótulo o que é.
+   ------------------------------------------------------------------ */
+function valesDoMes(){
+  const h=hoje();
+  const ym=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  const lista=(DB.vales||[]).filter(function(v){ return String((v&&v.data)||'').slice(0,7)===ym; });
+  const soma=function(f){ return lista.filter(f).reduce(function(s,v){ return s+(Number(v.valor)||0); },0); };
+  const vale=soma(function(v){ return v.tipo!=='Pagamento'; });
+  const pago=soma(function(v){ return v.tipo==='Pagamento'; });
+  return { ym:ym, lista:lista, vale:vale, pago:pago, saldo:vale-pago,
+           mesNome:(typeof MESES_L!=='undefined'? MESES_L[h.getMonth()] : ym) };
+}
 
 /* ==================================================================
    IMPORTAR PLANILHA NO FINANCEIRO (v6.82)
@@ -7527,7 +7554,9 @@ function viewFinConteudo(){
       <tbody>${pagRows||`<tr><td colspan="7">${emptyState('Nenhum gasto lançado ainda. Clique em "Novo gasto" para começar.')}</td></tr>`}</tbody>
       ${pagLista.length?`<tfoot><tr><td colspan="5" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
     </table></div></div></div>`;
-  const valesAberto=DB.motoristas.reduce((s,m)=>s+Math.max(0,valeSaldo(m.id)),0);
+  /* v10.0 — o cartão passa a mostrar o MÊS VIGENTE. O acumulado continua
+     visível nos cartões de saldo por motorista, logo abaixo. */
+  const vMes=valesDoMes();
   const valeRows=valeMesesHTML();
   const valeNSel=Object.keys(VALE_SEL).filter(k=>VALE_SEL[k]).length;
   const valeTotSel=(DB.vales||[]).filter(v=>VALE_SEL[v.id]).reduce((s,v)=>s+(Number(v.valor)||0),0);
@@ -7545,7 +7574,7 @@ function viewFinConteudo(){
     </div></div>
 
   <div class="grid kpis fin-gold" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px">
-    ${kpi('wallet','i-amber', money(valesAberto), 'Vales em aberto', 'Saldo devedor dos motoristas')}
+    ${kpi('wallet','i-amber', money(vMes.vale), 'Vales no mês', vMes.mesNome+' · '+vMes.lista.filter(v=>v.tipo!=='Pagamento').length+' vale(s)'+(vMes.pago?' · devolvido '+money(vMes.pago):''))}
     ${kpi('doc','i-red', money(pagMesTot), 'Gastos no mês', pagAll.length+' lançamento(s)')}
   </div>
 

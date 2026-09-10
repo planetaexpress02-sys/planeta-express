@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.9)
+## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v10.0)
 
-**v9.9 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=222`, cache SW `planeta-express-v9-9`, rodapé `v9.9`.
+**v10.0 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=223`, cache SW `planeta-express-v10-0`, rodapé `v10.0`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,23 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 10/09/2026 — v10.0 (o cartão de Vales passa a mostrar o MÊS VIGENTE)
+
+*"está dando 7.200 de vale dos motoristas, eu só quero que apareça ali o mês vigente"*.
+
+> 🔴 **Eu vinha consertando a coisa errada.** Nas rodadas anteriores li "vales antigos" como sendo a LISTA, e fui atrás de apagar dado, de corrigir importação, de limpar duplicado. Ele estava apontando para **o CARTÃO** o tempo todo — "aparecer **ali**". A lista por mês já estava certa desde a v9.5. **Lição: quando ele repete a mesma reclamação depois de uma correção, o alvo é outro — reler a frase antes de escrever código.**
+
+`valesAberto` somava o saldo devedor de **todos** os motoristas em **toda** a história. Número legítimo, mas não é o que ele acompanha no alto do Financeiro.
+
+**`valesDoMes()`** — fonte única, mesma forma do `notasDoMes()` da v9.1. O cartão virou **"Vales no mês"**, com o nome do mês e a contagem no subtítulo.
+
+- **Só `tipo:'Vale'`** entra no total. `'Pagamento'` é o motorista devolvendo; somar os dois daria um número sem significado. O devolvido aparece à parte no subtítulo, para a conta ficar auditável.
+- **O saldo acumulado NÃO sumiu:** continua nos cartões por motorista logo abaixo — aquilo é dívida real. São dois números diferentes de propósito, e cada um diz no rótulo o que é ([[selo-fala-do-que-o-cliente-ve]]).
+
+**Validado com os números da planilha real dele** (setembro + um vale de agosto + um pagamento): cartão **R$ 3.200** = `400+300+1000+400+1100`; devolvido R$ 500; **agosto ignorado**; rótulo "Vales no mês"; o acumulado não aparece mais no cartão; saldo por motorista intacto; a sanfona com 2 meses e **só o vigente aberto**.
+
+**Versão:** assets `?v=223`, cache `planeta-express-v10-0`, rodapé `v10.0`, celular reconstruído.
 
 ### ✅ ESTADO EM 10/09/2026 — v9.9 (botão "Limpar" no Financeiro + leitura da planilha conferida linha a linha)
 
