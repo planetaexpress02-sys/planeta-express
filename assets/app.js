@@ -35,7 +35,9 @@ function ensureCollections(){
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
-  limparEspelhosDeVale();
+  /* v10.2: limparEspelhosDeVale() saiu daqui — ela apagava justamente os
+     gastos com `origemVale`, que voltaram a ser o que o cliente pediu. */
+  refazerEspelhosDeVale();
   completarPlacasNosTextos();
 }
 /* Lançamentos que já existiam antes da v8.6 continuariam com "Descarga QIO".
@@ -7191,6 +7193,17 @@ function finZerarTudo(){
   toast('Financeiro zerado: '+nv+' vale(s) e '+ng+' gasto(s) apagados.');
   router();
 }
+/* Espelho cujo dono foi apagado vira lançamento fantasma: aparece na lista e
+   a Contabilidade o ignora (a trava manda `null` para quem tem marca de
+   origem). Ou seja, dinheiro na tela que não entra em lugar nenhum. Toda
+   limpeza em lote passa por aqui. */
+function _finTirarOrfaos(){
+  const vIds={}; (DB.vales||[]).forEach(function(v){ vIds[v.id]=1; });
+  const pIds={}; (DB.pagamentos||[]).forEach(function(p){ pIds[p.id]=1; });
+  (DB.pagamentos||[]).forEach(function(p){ if(p.origemVale && !vIds[p.origemVale]){ try{ marcarRemovido('pagamentosRemovidos',p.id); }catch(e){} } });
+  DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return !(p.origemVale && !vIds[p.origemVale]); });
+  DB.vales=(DB.vales||[]).filter(function(v){ return !(v.origemPagamento && !pIds[v.origemPagamento]); });
+}
 function finLimparConfirmar(){
   const p=_finLimpezaPrevia(_finCorte, _finRep);
   if(!p.qtd){ closeModal(); return; }
@@ -7201,6 +7214,7 @@ function finLimparConfirmar(){
   Object.keys(foraG).forEach(function(id){ try{ marcarRemovido('pagamentosRemovidos', id); }catch(e){} });
   DB.vales=(DB.vales||[]).filter(function(x){ return !foraV[x.id]; });
   DB.pagamentos=(DB.pagamentos||[]).filter(function(x){ return !foraG[x.id]; });
+  _finTirarOrfaos();                      /* v10.2: espelho sem dono não pode ficar */
   valeAbertos=null;                       /* refaz a sanfona com os meses que restaram */
   saveDB(); closeModal();
   toast(p.qtd+' lançamento(s) apagado(s).');
@@ -7477,14 +7491,21 @@ function finImportConfirmar(){
       const alvo = x.destino==='vale'
         ? (DB.vales||[]).find(function(v){ return v.id===x._corrigirId; })
         : (DB.pagamentos||[]).find(function(p){ return p.id===x._corrigirId; });
-      if(alvo){ alvo.data = x.data; nc++; return; }
+      if(alvo){ alvo.data = x.data; nc++;
+        /* o espelho tem que andar junto, senão o gasto fica no mês errado */
+        if(x.destino==='vale') _valeSincronizarGasto(alvo); else _pagSincronizarVale(alvo);
+        return; }
     }
     if(x.destino==='vale'){
-      DB.vales.push({id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor});
+      const nvale={id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor};
+      DB.vales.push(nvale);
+      _valeSincronizarGasto(nvale);   /* v10.2: vale importado também entra nos custos */
       nv++;
     } else {
-      (DB.pagamentos=DB.pagamentos||[]).push({id:uid('pg'), data:x.data, descricao:x.desc,
-        categoria:x.categoria||'', forma:x.forma||'', valor:x.valor, obs:'importado de planilha'});
+      const npag={id:uid('pg'), data:x.data, descricao:x.desc,
+        categoria:x.categoria||'', forma:x.forma||'', valor:x.valor, obs:'importado de planilha'};
+      (DB.pagamentos=DB.pagamentos||[]).push(npag);
+      _pagSincronizarVale(npag);      /* gasto de "vale" identificado vira vale do motorista */
       ng++;
     }
   });
@@ -7861,6 +7882,7 @@ function _pagEhVale(p){
 }
 function _pagSincronizarVale(p){
   if(!p) return '';
+  if(p.origemVale) return '';             /* já é espelho de um vale: não devolve o eco */
   const atual=_valeDoGasto(p.id);
   const mot = _pagEhVale(p) ? (typeof _finImpMotorista==='function'
       ? _finImpMotorista((p.descricao||'')+' '+(p.obs||'')) : null) : null;
@@ -7890,25 +7912,55 @@ function _pagSincronizarVale(p){
 
    A função continua existindo e agora só faz a limpeza: se sobrou espelho de
    antes, ele sai. */
+/* v10.2 — O VALE VOLTA A APARECER NOS GASTOS (custos).
+   *"OS VALES TAMBÉM DEVEM APARECER NOS CUSTOS"*. Conferido antes de mexer: na
+   **Contabilidade** o vale já entrava como custo (conta `c.motorista`, grupo
+   custo). O que faltava era a lista de **Gastos** do Financeiro.
+
+   Isto reabre o espelho que saiu na v9.6 — mas o que ele reclamou lá
+   ("misturado tudo") era outra coisa: naquele momento as DATAS estavam
+   trocadas e o mesmo lançamento aparecia em meses fantasmas. Com a data
+   certa, ver o vale entre os custos é o comportamento que ele quer.
+
+   ⚠️ AGORA O ESPELHO É NOS DOIS SENTIDOS, e isso traz um risco novo: vale
+   cria gasto → gasto tem "vale" no texto → cria vale → LAÇO INFINITO. A
+   trava é simples e obrigatória: **quem já é espelho nunca gera outro**.
+   `origemPagamento` marca o vale que nasceu de um gasto; `origemVale` marca
+   o gasto que nasceu de um vale. Cada função sai na hora se a outra marca
+   estiver presente. */
 function _valeSincronizarGasto(v){
   if(!v) return '';
+  if(v.origemPagamento) return '';        /* já é espelho de um gasto: não devolve o eco */
   const atual=_gastoDoVale(v.id);
-  if(atual){ marcarRemovido('pagamentosRemovidos',atual.id);
-    DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==atual.id); return 'removido'; }
-  return '';
+  const ehGasto = v.tipo==='Vale' && (Number(v.valor)||0)>0;
+  if(!ehGasto){                            /* virou 'Pagamento' ou zerou: o espelho sai */
+    if(atual){ marcarRemovido('pagamentosRemovidos',atual.id);
+      DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==atual.id); return 'removido'; }
+    return '';
+  }
+  const m=(DB.motoristas||[]).find(x=>x.id===v.motoristaId);
+  const campos={ data:v.data, descricao:'Vale — '+((m&&m.nome)||'motorista'), categoria:'Vale',
+                 valor:Number(v.valor)||0, obs:v.obs||'', origemVale:v.id };
+  if(atual){ Object.assign(atual,campos); return 'atualizado'; }
+  (DB.pagamentos=DB.pagamentos||[]).push(Object.assign({id:uid('pg'), forma:'', placa:''},campos));
+  return 'criado';
 }
-/* Tira da lista de Gastos os espelhos criados entre a v8.4 e a v9.5.
-   UMA vez por base (`DB.seedAplicado`) — varrer sempre apagaria um gasto que
-   o cliente resolvesse criar à mão com esse campo. */
-function limparEspelhosDeVale(){
-  const tag='sem-espelho-vale-v96';
+/* Os vales que já estavam no banco antes da v10.2 não têm espelho em Gastos —
+   a v9.6 tinha apagado todos. Sem esta passagem, "os vales aparecem nos
+   custos" só valeria para o que ele lançar de hoje em diante, e o mês
+   corrente dele continuaria sem os vales na lista de Gastos.
+
+   ⚠️ UMA VEZ POR BASE (`DB.seedAplicado`). Varrer a cada carregamento
+   ressuscitaria o espelho que ele apagasse à mão — foi exatamente esse erro
+   que já custou caro antes. */
+function refazerEspelhosDeVale(){
+  const tag='espelho-vale-gasto-v102';
   if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
   if(DB.seedAplicado.indexOf(tag)>=0) return;
-  const alvo=(DB.pagamentos||[]).filter(function(p){ return p && p.origemVale; });
-  alvo.forEach(function(p){ marcarRemovido('pagamentosRemovidos',p.id); });
-  if(alvo.length) DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return !(p && p.origemVale); });
+  let n=0;
+  (DB.vales||[]).forEach(function(v){ if(_valeSincronizarGasto(v)==='criado') n++; });
   DB.seedAplicado.push(tag);
-  if(alvo.length) try{ saveLocal(); }catch(e){}
+  try{ saveLocal(); }catch(e){}
 }
 function _valeApagarGasto(vid){
   const g=_gastoDoVale(vid);

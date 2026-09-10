@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v10.1)
+## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v10.2)
 
-**v10.1 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=224`, cache SW `planeta-express-v10-1`, rodapé `v10.1`.
+**v10.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,99 MB — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=225`, cache SW `planeta-express-v10-2`, rodapé `v10.2`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,57 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 10/09/2026 — v10.2 (o vale volta a aparecer nos CUSTOS — e o espelho passa a ser nos dois sentidos)
+
+**Pedido, com estas palavras:** *"OS VALES TAMBÉM DEVEM APARECER NOS CUSTOS"*.
+
+## O que eu conferi ANTES de mexer
+
+Rodei o sistema real no Chrome headless e olhei a Contabilidade: o vale **já entrava como custo** lá (`conta: c.motorista`, `grupo: custo`, valor certo, uma vez só). Então o que faltava não era a Contabilidade — era a **lista de Gastos do Financeiro**, o espelho que eu tinha desfeito na v9.6.
+
+## O espelho agora é NOS DOIS SENTIDOS
+
+| Sentido | Quem é o dono | Marca no espelho | Quem conta na Contabilidade |
+|---|---|---|---|
+| Vale lançado em **Vales** → vira gasto | o vale | `origemVale` no gasto | a fonte `vale` (`c.motorista`) |
+| Gasto com "vale" + nome → vira vale | o gasto | `origemPagamento` no vale | a fonte `pagamento` |
+
+**🔴 O RISCO NOVO, e a trava:** vale cria gasto → o gasto tem "vale" no texto → cria vale → **laço infinito**. A regra é uma linha em cada função, e não pode sair de lá:
+
+> **quem já é espelho nunca gera outro.**
+
+```js
+function _pagSincronizarVale(p){ if(p.origemVale) return '';      /* … */ }
+function _valeSincronizarGasto(v){ if(v.origemPagamento) return ''; /* … */ }
+```
+
+## O defeito que apareceu no teste (e que ninguém tinha visto)
+
+Um gasto que o cliente lança com categoria **"Vale"** caía em `a.outros` / grupo **despesa**, enquanto o **mesmo vale** lançado pela aba Vales caía em `c.motorista` / grupo **custo**. Mesmo dinheiro, dois lugares diferentes no relatório — e, no caminho gasto→vale, o valor **não aparecia em custos**, que é exatamente o que ele pediu. Corrigido em `_contabContaPorCategoria` (`contabilidade.js`): `vale|adiantament` agora vão para `c.motorista`.
+
+## Os vales que já estavam no banco
+
+A v9.6 tinha apagado todos os espelhos. Sem uma passagem de recuperação, "vale aparece nos custos" só valeria para o que ele lançasse de hoje em diante. `refazerEspelhosDeVale()` recria o gasto de cada vale existente — **uma vez por base** (`DB.seedAplicado`, tag `espelho-vale-gasto-v102`), pela regra de sempre: varrer a cada carregamento ressuscitaria o que ele apagasse à mão. A `limparEspelhosDeVale()` da v9.6 **saiu** — ela apagava justamente esses gastos.
+
+## Espelho órfão
+
+Nova `_finTirarOrfaos()`, chamada pelo "Limpar" do Financeiro. Espelho cujo dono foi apagado vira lançamento fantasma: aparece na lista e a Contabilidade o ignora (a trava manda `null` para quem tem marca de origem) — dinheiro na tela que não entra em lugar nenhum.
+
+## Validado no Chrome headless, com o sistema real
+
+1. Vale de R$ 400 pelo modal → 1 vale + 1 gasto "Vale — <nome>", custo **+400 (não 800)**
+2. 4 sincronizações seguidas → continua 1 e 1: **sem laço**
+3. Editar o vale para R$ 550 → o gasto vira 550 e muda de data junto; **não duplica**
+4. Trocar para tipo "Pagamento" → o gasto **sai**; o valor continua contado pela fonte `vale`
+5. Gasto "Vale <nome>" R$ 300 → cria o vale, custo **+300 em `c.motorista`** (antes ia para despesa)
+6. Órfãos → limpos
+7. Backfill → cria só o que falta, e rodar de novo **não duplica**
+8. A tela de Gastos mostra o vale com o nome do motorista
+
+**E a planilha de verdade dele** (`Planilha Vales Bradesco.xlsx`, pela regra de nunca publicar leitor sem passar o arquivo real): 42 linhas lidas com `_cru`, **14 marcadas, R$ 6.620,00, todas em 2026-09**; grava 5 vales + 9 gastos + **5 espelhos**; o custo sobe **R$ 3.200,00 — o valor dos vales, não o dobro**; o cartão do mês mostra **R$ 3.200 de Setembro** (não os 7.200 de antes). As 25 telas do sistema abrem sem erro de JS.
+
+**Versão:** assets `?v=225`, cache `planeta-express-v10-2`, rodapé `v10.2`, celular reconstruído.
 
 ### ✅ ESTADO EM 10/09/2026 — v10.1 ("Zerar tudo" no Financeiro + gasto com "vale" vira vale)
 

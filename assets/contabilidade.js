@@ -243,7 +243,11 @@ function _contabContaPorCategoria(cat){
   if(/descarga/.test(c)) return 'c.descarga';   /* v6.98: gasto de descarga vai para a conta de descargas, não para "outras despesas" */
   if(/pneu/.test(c)) return 'c.pneus';
   if(/seguro/.test(c)) return 'c.seguros';
-  if(/salario|motorista|folha/.test(c)) return 'c.motorista';
+  /* v10.2 — "vale" e "adiantamento" entraram aqui. Sem eles um gasto que o
+     cliente lança como categoria "Vale" caía em a.outros/DESPESA, enquanto o
+     MESMO vale lançado pela aba Vales caía em c.motorista/CUSTO. O dinheiro
+     era o mesmo e o relatório mostrava lugares diferentes. */
+  if(/salario|motorista|folha|vale|adiantament/.test(c)) return 'c.motorista';
   if(/imposto|tribut|icms|pis|cofins/.test(c)) return 'i.outros';
   if(/banc|tarifa|juros/.test(c)) return 'f.tarifas';
   if(/aluguel/.test(c)) return 'a.aluguel';
