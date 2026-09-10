@@ -218,6 +218,10 @@ const CONTAB_FONTES = [
   { id:'vale', modulo:'Vales', rota:'financeiro', colecao:'vales', tipo:'custo',
     mapear:function(x){
       const v=_contabNum(x.valor); if(!v) return null;
+      /* vale espelhado de um GASTO do Financeiro (v10.1): o dinheiro já entra
+         pela fonte 'pagamento'. Contar aqui também dobraria a despesa —
+         mesma armadilha da descarga espelhada. */
+      if(x.origemPagamento) return null;
       const m=(DB.motoristas||[]).find(function(y){ return y.id===x.motoristaId; });
       return { data:x.data, valor:v, conta:'c.motorista', descricao:'Vale — '+(m?m.nome:''),
         motorista:m?m.nome:'' };

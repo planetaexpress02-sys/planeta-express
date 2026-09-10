@@ -6771,7 +6771,10 @@ function valeMesesHTML(){
     const rows=arr.map(function(v){ const m=motorista(v.motoristaId);
       return '<tr class="clickable'+(VALE_SEL[v.id]?' sel-on':'')+'" onclick="modalVale(\''+v.id+'\')">'
       + '<td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" '+(VALE_SEL[v.id]?'checked':'')+' onchange="valeSel(\''+v.id+'\',this.checked)"></td>'
-      + '<td class="mono">'+fmtD(v.data)+'</td><td>'+(m?esc(m.nome):'—')+'</td>'
+      + '<td class="mono">'+fmtD(v.data)+'</td>'
+      + '<td>'+(m?esc(m.nome):'—')
+        + (v.origemPagamento?' <span class="st neutro" title="Veio de um gasto do Financeiro; os dois andam juntos">do Financeiro</span>':'')
+        + '</td>'
       + '<td><span class="st '+(v.tipo==='Pagamento'?'ok':'warn')+'">'+esc(v.tipo)+'</span></td>'
       + '<td class="mono"><b>'+money(v.valor)+'</b></td>'
       + '<td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalVale(\''+v.id+'\')">'+svg('edit')+'</button></td></tr>';
@@ -7161,8 +7164,32 @@ function modalFinLimpar(){
     + lista(p.gAnt,'Gastos antigos') + lista(p.gRep,'Gastos repetidos')
     +'<div class="hint" style="margin-top:12px">Lançamento <b>sem data</b> nunca é apagado pelo corte de mês — não dá para saber se é antigo.</div>'
     +'</div>'
-    +'<div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    +'<div class="m-f">'
+    +'<button class="btn danger" style="margin-right:auto" onclick="finZerarTudo()" title="Apagar TODOS os vales e gastos">'+svg('trash')+' Zerar tudo</button>'
+    +'<button class="btn" onclick="closeModal()">Cancelar</button>'
     +'<button class="btn danger" '+(p.qtd?'':'disabled')+' onclick="finLimparConfirmar()">'+svg('trash')+' Apagar '+p.qtd+' lançamento(s)</button></div>');
+}
+/* Zera o Financeiro inteiro — vales E gastos. Pedido do cliente para
+   recomeçar do zero e reimportar a planilha limpa.
+
+   ⚠️ Apaga TUDO e não tem volta, então: mostra a contagem e o total em R$ na
+   primeira pergunta, e exige uma SEGUNDA confirmação digitada. Botão perigoso
+   com uma pergunta só é acidente esperando acontecer. */
+function finZerarTudo(){
+  const nv=(DB.vales||[]).length, ng=(DB.pagamentos||[]).length;
+  const tot=(DB.vales||[]).reduce(function(s,x){ return s+(Number(x.valor)||0); },0)
+          + (DB.pagamentos||[]).reduce(function(s,x){ return s+(Number(x.valor)||0); },0);
+  if(!nv && !ng){ toast('O Financeiro já está vazio.'); return; }
+  if(!confirm('APAGAR TUDO do Financeiro?\n\n'+nv+' vale(s) e '+ng+' gasto(s), somando '+money(tot)
+    +'.\n\nIsso NÃO pode ser desfeito.')) return;
+  const r=prompt('Para confirmar, digite ZERAR (em maiúsculas):');
+  if(String(r||'').trim().toUpperCase()!=='ZERAR'){ toast('Cancelado — nada foi apagado.'); return; }
+  (DB.pagamentos||[]).forEach(function(p){ try{ marcarRemovido('pagamentosRemovidos',p.id); }catch(e){} });
+  DB.vales=[]; DB.pagamentos=[];
+  valeAbertos=null; VALE_SEL={}; PAG_SEL={};
+  saveDB(); closeModal();
+  toast('Financeiro zerado: '+nv+' vale(s) e '+ng+' gasto(s) apagados.');
+  router();
 }
 function finLimparConfirmar(){
   const p=_finLimpezaPrevia(_finCorte, _finRep);
@@ -7509,6 +7536,8 @@ function pagExcluirSel(){
   ids.forEach(function(i){ marcarRemovido('pagamentosRemovidos', i); });
   /* as descargas espelhadas saem junto (mesma regra do excluirPagamento) */
   DB.descargas=(DB.descargas||[]).filter(function(d){ return ids.indexOf(d.origemPagamento)<0; });
+  /* v10.1: e os vales ESPELHADOS destes gastos */
+  DB.vales=(DB.vales||[]).filter(function(v){ return ids.indexOf(v.origemPagamento)<0; });
   /* v8.4: e os vales que originaram estes gastos também */
   const vIds=deVale.map(function(p){ return p.origemVale; });
   if(vIds.length) DB.vales=(DB.vales||[]).filter(function(v){ return vIds.indexOf(v.id)<0; });
@@ -7807,6 +7836,45 @@ function modalVale(id){
    na conta c.motorista.
    ------------------------------------------------------------------ */
 function _gastoDoVale(vid){ return (DB.pagamentos||[]).find(p=>p.origemVale===vid); }
+/* ------------------------------------------------------------------
+   GASTO com "vale" → aparece em VALES (v10.1)
+   Pedido: *"em gastos, quando tiver 'vale' deve atualizar nos vales
+   automaticamente"*.
+
+   ⚠️ É o CONTRÁRIO do espelho que saiu na v9.6 — e é de propósito. Aquele
+   copiava o vale PARA os gastos e embolava a lista de despesas, que foi o que
+   ele reclamou. Este vai de gasto PARA vales: o dono é o GASTO (é onde ele
+   lança), e o vale é o espelho, marcado com `origemPagamento`. Assim a lista
+   de gastos continua limpa e o motorista não fica sem o vale registrado.
+
+   Só espelha quando dá para saber DE QUEM é o vale: sem motorista
+   identificado no texto, um "vale" solto viraria dívida de ninguém.
+
+   ⚠️ TRAVA CONTÁBIL: a fonte 'vale' devolve null quando há `origemPagamento`
+   — quem conta é a fonte 'pagamento'. Sem isso o mesmo dinheiro entraria
+   duas vezes na Contabilidade. Mesma regra do par gasto↔descarga.
+   ------------------------------------------------------------------ */
+function _valeDoGasto(pid){ return (DB.vales||[]).find(v=>v.origemPagamento===pid); }
+function _pagEhVale(p){
+  const t=((p&&p.descricao)||'')+' '+((p&&p.categoria)||'');
+  return /\bvale\b|adiantament/i.test(t);
+}
+function _pagSincronizarVale(p){
+  if(!p) return '';
+  const atual=_valeDoGasto(p.id);
+  const mot = _pagEhVale(p) ? (typeof _finImpMotorista==='function'
+      ? _finImpMotorista((p.descricao||'')+' '+(p.obs||'')) : null) : null;
+  const ehVale = !!mot && (Number(p.valor)||0)>0;
+  if(!ehVale){                       /* deixou de ser vale, ou não dá para saber de quem */
+    if(atual){ DB.vales=(DB.vales||[]).filter(v=>v.id!==atual.id); return 'removido'; }
+    return '';
+  }
+  const campos={ data:p.data, motoristaId:mot.id, tipo:'Vale',
+                 valor:Number(p.valor)||0, obs:p.obs||'', origemPagamento:p.id };
+  if(atual){ Object.assign(atual,campos); return 'atualizado'; }
+  (DB.vales=DB.vales||[]).push(Object.assign({id:uid('vl')},campos));
+  return 'criado';
+}
 /* ⚠️ v9.6 — O ESPELHO VALE→GASTO FOI DESFEITO.
    Ele nasceu na v8.4 a pedido do cliente ("os vales também devem ser lançados
    na planilha de gastos"). Na prática ficou ruim e ele cobrou olhando a tela:
@@ -7940,11 +8008,16 @@ function _salvarPagamentoFim(id,d){
   if(id){ alvo=(DB.pagamentos||[]).find(x=>x.id===id); Object.assign(alvo, d); }
   else { d.id=uid('pg'); (DB.pagamentos=DB.pagamentos||[]).push(d); alvo=d; }
   const eco=_pagSincronizarDescarga(alvo);
+  const ecoV=_pagSincronizarVale(alvo);          /* v10.1: gasto com "vale" vai para Vales */
   saveDB(); closeModal();
-  if(eco==='criada') toast('Gasto salvo e lançado também em Descargas.');
+  if(ecoV==='criado') toast('Gasto salvo e lançado também em Vales Motoristas.');
+  else if(ecoV==='atualizado') toast('Gasto salvo — o vale do motorista foi atualizado junto.');
+  else if(ecoV==='removido') toast('Gasto salvo — saiu de Vales Motoristas.');
+  else if(eco==='criada') toast('Gasto salvo e lançado também em Descargas.');
   else if(eco==='atualizada') toast('Gasto salvo — a descarga foi atualizada junto.');
   else if(eco==='removida') toast('Gasto salvo — saiu da aba Descargas.');
   else if(_pagEhDescarga(alvo) && !alvo.placa) toast('Gasto salvo. Escolha o veículo para ele entrar em Descargas.','warn');
+  else if(_pagEhVale(alvo)) toast('Gasto salvo. Não identifiquei o motorista no texto, então ele NÃO entrou em Vales — escreva o nome na descrição.','warn');
   else toast('Gasto salvo.');
   router();
 }
@@ -7960,6 +8033,8 @@ function excluirPagamento(id){
   /* leva junto a descarga espelhada — senão ficaria um lançamento órfão em
      Descargas, sem gasto por trás, e o cliente não teria como apagar */
   DB.descargas=(DB.descargas||[]).filter(d=>d.origemPagamento!==id);
+  /* v10.1: e o vale espelhado, pelo mesmo motivo */
+  DB.vales=(DB.vales||[]).filter(v=>v.origemPagamento!==id);
   DB.pagamentos=(DB.pagamentos||[]).filter(x=>x.id!==id); saveDB(); closeModal();
   toast(vale?'Gasto e vale excluídos.':'Gasto excluído.'); router(); }
 
