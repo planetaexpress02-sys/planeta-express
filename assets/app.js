@@ -7059,6 +7059,100 @@ function _finImpMotoristaSozinho(desc){
   if(achados.length === 1) return achados[0];
   return achados.length > 1 ? _finDesempatar(t, achados) : null;
 }
+/* ------------------------------------------------------------------
+   LIMPAR O FINANCEIRO (v9.9)
+   Pedido do cliente: *"apague todos os dados de financeiro, menos mês 8 pra
+   frente, só lance o que tem do mês 09"*.
+
+   ⚠️ Eu NÃO consigo apagar os dados dele daqui: eles moram no navegador e na
+   nuvem dele, não em arquivo meu. Então a entrega é a FERRAMENTA — com
+   prévia do que sai, confirmação, e nada acontecendo até ele confirmar.
+
+   ⚠️ Isto apaga DINHEIRO lançado. Por isso:
+   • mostra a contagem E o total em R$ do que vai sair, antes;
+   • lançamento SEM data nunca é apagado pelo corte de mês (não dá para
+     afirmar que é antigo — some da conta, não da base);
+   • usa `marcarRemovido`, a mesma trava do resto do sistema, para o que foi
+     apagado não voltar na próxima sincronização;
+   • o repetido só sai quando é IDÊNTICO (mesma data, mesmo valor e mesmo
+     motorista/descrição) — guardando sempre o primeiro.
+
+   O botão fica no Financeiro. Foi preciso porque a importação antiga gravou
+   datas trocadas (v9.6) e, se ele reimportou numa versão sem o conserto da
+   v9.8, ficou com os dois: o errado e o certo.
+   ------------------------------------------------------------------ */
+function _finMesDe(x){ const d=String((x&&x.data)||''); return /^\d{4}-\d{2}/.test(d)? d.slice(0,7) : ''; }
+function _finLimpezaPrevia(corte, tirarRepetidos){
+  const conta=function(lista, chaveFn){
+    const antigos=[], repetidos=[], vistos={};
+    (lista||[]).forEach(function(x){
+      const mes=_finMesDe(x);
+      if(corte && mes && mes < corte){ antigos.push(x); return; }   /* sem data: nunca entra aqui */
+      const k=chaveFn(x);
+      if(tirarRepetidos){ if(vistos[k]){ repetidos.push(x); return; } vistos[k]=1; }
+    });
+    return {antigos:antigos, repetidos:repetidos};
+  };
+  const cent=function(v){ return Math.round((Number(v)||0)*100); };
+  const norm=function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  const v=conta(DB.vales, function(x){ return x.data+'|'+cent(x.valor)+'|'+(x.motoristaId||'')+'|'+(x.tipo||''); });
+  const g=conta(DB.pagamentos, function(x){ return x.data+'|'+cent(x.valor)+'|'+norm(x.descricao); });
+  const soma=function(a){ return a.reduce(function(s,x){ return s+(Number(x.valor)||0); },0); };
+  return { vAnt:v.antigos, vRep:v.repetidos, gAnt:g.antigos, gRep:g.repetidos,
+    total: soma(v.antigos)+soma(v.repetidos)+soma(g.antigos)+soma(g.repetidos),
+    qtd: v.antigos.length+v.repetidos.length+g.antigos.length+g.repetidos.length };
+}
+let _finCorte='', _finRep=true;
+function modalFinLimpar(){
+  if(!_finCorte){
+    const h=hoje();
+    _finCorte=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  }
+  const p=_finLimpezaPrevia(_finCorte, _finRep);
+  const fica=(DB.vales||[]).length - p.vAnt.length - p.vRep.length;
+  const ficaG=(DB.pagamentos||[]).length - p.gAnt.length - p.gRep.length;
+  const lista=function(arr, rot){
+    if(!arr.length) return '';
+    const meses={}; arr.forEach(function(x){ const m=_finMesDe(x)||'sem data'; meses[m]=(meses[m]||0)+1; });
+    return '<div class="muted" style="font-size:12px;margin-top:4px">'+rot+': '
+      + Object.keys(meses).sort().map(function(m){ return esc(m)+' ('+meses[m]+')'; }).join(' · ') + '</div>';
+  };
+  openModal('<div class="m-h">'+svg('trash')+'<h3>Limpar o Financeiro</h3>'
+      +'<button class="x" onclick="closeModal()">×</button></div>'
+    +'<div class="m-b">'
+    +'<div class="hint" style="margin-bottom:12px">Serve para tirar o que a importação antiga gravou com a data errada. <b>Nada é apagado até você confirmar.</b></div>'
+    +'<div class="field"><label>Apagar lançamentos ANTERIORES a este mês</label>'
+      +'<input type="month" id="f_corte" value="'+esc(_finCorte)+'" onchange="_finCorte=this.value;modalFinLimpar()"></div>'
+    +'<label style="display:flex;align-items:center;gap:9px;margin:10px 0 14px;cursor:pointer">'
+      +'<input type="checkbox" '+(_finRep?'checked':'')+' onchange="_finRep=this.checked;modalFinLimpar()">'
+      +'<span>Apagar também os lançamentos <b>repetidos</b> (mesma data, mesmo valor e mesmo motorista/descrição)</span></label>'
+    +'<div class="grid kpis" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">'
+      + kpi('trash','i-red', String(p.qtd), 'Vão ser apagados', money(p.total))
+      + kpi('check','i-green', String(fica+ficaG), 'Vão ficar', fica+' vale(s) · '+ficaG+' gasto(s)')
+    +'</div>'
+    + lista(p.vAnt,'Vales antigos') + lista(p.vRep,'Vales repetidos')
+    + lista(p.gAnt,'Gastos antigos') + lista(p.gRep,'Gastos repetidos')
+    +'<div class="hint" style="margin-top:12px">Lançamento <b>sem data</b> nunca é apagado pelo corte de mês — não dá para saber se é antigo.</div>'
+    +'</div>'
+    +'<div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn danger" '+(p.qtd?'':'disabled')+' onclick="finLimparConfirmar()">'+svg('trash')+' Apagar '+p.qtd+' lançamento(s)</button></div>');
+}
+function finLimparConfirmar(){
+  const p=_finLimpezaPrevia(_finCorte, _finRep);
+  if(!p.qtd){ closeModal(); return; }
+  if(!confirm('Apagar '+p.qtd+' lançamento(s), somando '+money(p.total)+'?\n\nEssa ação não pode ser desfeita.')) return;
+  const foraV={}, foraG={};
+  p.vAnt.concat(p.vRep).forEach(function(x){ foraV[x.id]=1; });
+  p.gAnt.concat(p.gRep).forEach(function(x){ foraG[x.id]=1; });
+  Object.keys(foraG).forEach(function(id){ try{ marcarRemovido('pagamentosRemovidos', id); }catch(e){} });
+  DB.vales=(DB.vales||[]).filter(function(x){ return !foraV[x.id]; });
+  DB.pagamentos=(DB.pagamentos||[]).filter(function(x){ return !foraG[x.id]; });
+  valeAbertos=null;                       /* refaz a sanfona com os meses que restaram */
+  saveDB(); closeModal();
+  toast(p.qtd+' lançamento(s) apagado(s).');
+  router();
+}
+
 function finImportar(){
   const inp = document.createElement('input');
   inp.type='file'; inp.accept='.xlsx,.xls,.csv';
@@ -7446,6 +7540,7 @@ function viewFinConteudo(){
   return `
   <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Vales dos motoristas e gastos da empresa. Tudo somado automaticamente. O faturamento agora fica na Contabilidade.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" onclick="modalFinLimpar()" title="Apagar lançamentos antigos ou repetidos — mostra o que sai antes">${svg('trash')} Limpar</button>
       <button class="btn primary" onclick="finImportar()" title="Suba a planilha: o sistema separa vales de motorista e gastos sozinho, e você confere antes de gravar">${svg('upload')} Importar planilha</button>
     </div></div>
 
