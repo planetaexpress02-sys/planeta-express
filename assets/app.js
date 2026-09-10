@@ -1103,8 +1103,10 @@ function viewDashboard(){
   const alertIco=(cls)=>{ const map={vencido:['i-red','!'],crit:['i-orange','!'],warn:['i-amber','•'],ok:['i-green','✓'],neutro:['i-blue','•']}; const [c,e]=map[cls]||map.neutro; return `<div class="a-ico ${c}">${e}</div>`; };
 
   // Indicadores complementares
-  const notasOrd = DB.notas.slice().sort((a,b)=>(b.fim||'').localeCompare(a.fim||''));
-  const ultNota = notasOrd[0]; const ultNotaTotal = ultNota? totalNota(ultNota):0;
+  /* v9.1 — antes daqui saíam `notasOrd`/`ultNotaTotal`, o total do ÚLTIMO
+     período lançado. Viraram `notasDoMes()`: o cartão passa a mostrar o mês
+     vigente, que é o que a tela de Notas já mostrava. */
+  const notasMes = notasDoMes();
   const _pneus = pneusResumo();                 // fonte única — ver pneusResumo()
   const pneusAlerta = _pneus.noLimite;          // pneus no limite (somando qtd, não linhas)
   const chkMes = chkMesLista.length;   /* mesma lista que o selo usa — uma conta só */
@@ -1143,7 +1145,7 @@ function viewDashboard(){
     ${iniKpiTile('bell', fD10.length?'crit':(fGeral?'ok':''), fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18', okSe(!fD10.length, fGeral>0))}
     ${iniKpiTile('umbrella', segCrit?'crit':((segList.length&&!segAv)?'ok':''), segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9', okSe(!segAv, segList.length>0))}
     ${iniKpiTile('stamp', licVencidas?'crit':((licList.length&&!licVenc)?'ok':''), licVenc, '', '', 'Licenças a vencer', 'licencas/vencendo', '#5cc8ff', '0,15 16,13 32,17 48,12 64,15 80,10', okSe(!licVenc && !licVencidas, licList.length>0))}
-    ${iniKpiTile('money','', Math.round(ultNotaTotal), 'R$ ', '', 'Notas Fiscais', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
+    ${iniKpiTile('money','', Math.round(notasMes.total), 'R$ ', '', 'Notas Fiscais no mês', 'notas', '#4bd6a0', '0,18 16,14 32,17 48,12 64,15 80,10')}
     ${iniKpiTile('gauge', manutAlerta.length?'crit':(manutTotal?'ok':''), manutAlerta.length, '', '', 'Trocas a vencer', 'km/avencer', '#e0b354', '0,16 16,14 32,18 48,12 64,15 80,10', okSe(!manutAlerta.length, manutTotal>0))}
     ${iniKpiTile('tire', pneusAlerta?'crit':(_pneus.total?'ok':''), pneusAlerta, '', '', 'Pneus no limite', 'pneus/limite', '#5c99ff', '0,14 16,16 32,12 48,15 64,13 80,9', okSe(!pneusAlerta, _pneus.total>0))}
     ${iniKpiTile('check', chkReprov?'crit':(chkMes?'ok':''), chkMes, '', '', 'Check-lists no mês', 'checklist', '#4bd6a0', '0,18 16,14 32,16 48,10 64,13 80,8', okSe(!chkReprov, chkMes>0))}
@@ -3415,6 +3417,32 @@ function alarmeSyncChips(){ const box=document.getElementById('almChips'); if(!b
 
 /* ---------- NOTAS FISCAIS ---------- */
 function totalNota(n){ return (Number(n.alexandria)||0)+(Number(n.notasGerais)||0)+(Number(n.combustivel)||0); }
+/* ------------------------------------------------------------------
+   NOTAS DO MÊS VIGENTE — fonte única (v9.1)
+   Pedido do cliente: o cartão do Painel tem que mostrar SEMPRE o mês
+   corrente, "mesmo que seja zero a soma".
+
+   ⚠️ O defeito era mais fundo que o texto: a TELA de Notas já somava o mês
+   vigente (desde que ele pediu), mas o CARTÃO do Painel mostrava o total do
+   ÚLTIMO PERÍODO LANÇADO. Dois números para a mesma coisa — e o cartão não
+   batia com a tela que ele abre, que é a regra nº 3 do projeto. Agora os
+   dois chamam esta função; corrigir a conta num lugar corrige nos dois.
+
+   ⚠️ Devolver zero é RESULTADO, não ausência: mês sem lançamento soma R$ 0,00
+   e o cartão mostra isso. Antes, "nada lançado no mês" fazia o Painel exibir
+   o valor de um mês antigo, que é pior — parece movimento que não houve.
+   ------------------------------------------------------------------ */
+function notasDoMes(){
+  const hj=hoje();
+  const lista=(DB.notas||[]).filter(function(n){
+    const d=parseD(n && n.fim);
+    return d && d.getMonth()===hj.getMonth() && d.getFullYear()===hj.getFullYear();
+  });
+  const soma=function(campo){ return lista.reduce(function(s,n){ return s+(Number(n[campo])||0); },0); };
+  const r={ lista:lista, alexandria:soma('alexandria'), notasGerais:soma('notasGerais'), combustivel:soma('combustivel') };
+  r.total = r.alexandria + r.notasGerais + r.combustivel;
+  return r;
+}
 function viewNotas(){
   const notas=DB.notas.slice().sort((a,b)=>(a.fim||'').localeCompare(b.fim||''));
   const acumulado=notas.reduce((s,n)=>s+totalNota(n),0);
@@ -3423,15 +3451,12 @@ function viewNotas(){
   /* Os cartões de cima mostram o MÊS VIGENTE (pedido do cliente): soma de
      todos os períodos que terminam dentro do mês corrente — do dia 1º até a
      última data já lançada. Antes mostravam "o último período", e como a
-     lista passou a ser crescente isso acabava pegando o mais ANTIGO. */
+     lista passou a ser crescente isso acabava pegando o mais ANTIGO.
+     v9.1: a conta saiu daqui e virou `notasDoMes()`, compartilhada com o
+     cartão do Painel — eram dois cálculos para o mesmo número. */
   const hj=hoje();
-  const doMes=notas.filter(n=>{ const d=parseD(n.fim); return d && d.getMonth()===hj.getMonth() && d.getFullYear()===hj.getFullYear(); });
-  const mes={
-    alexandria: doMes.reduce((s,n)=>s+(Number(n.alexandria)||0),0),
-    notasGerais:doMes.reduce((s,n)=>s+(Number(n.notasGerais)||0),0),
-    combustivel:doMes.reduce((s,n)=>s+(Number(n.combustivel)||0),0)
-  };
-  mes.total = mes.alexandria + mes.notasGerais + mes.combustivel;
+  const mes=notasDoMes();
+  const doMes=mes.lista;
   const iniMes = hj.getFullYear()+'-'+String(hj.getMonth()+1).padStart(2,'0')+'-01';
   const fimLanc = doMes.length ? doMes.map(n=>n.fim).sort().pop() : '';
   const rotMes = doMes.length ? fmtD(iniMes)+' a '+fmtD(fimLanc) : 'nada lançado neste mês';

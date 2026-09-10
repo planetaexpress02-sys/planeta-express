@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (31/08/2026 — v9.0)
+## ⚡ ONDE O PROJETO ESTÁ (09/09/2026 — v9.1)
 
-**v9.0 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=213`, cache SW `planeta-express-v9-0`, rodapé `v9.0`.
+**v9.1 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=214`, cache SW `planeta-express-v9-1`, rodapé `v9.1`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,24 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 09/09/2026 — v9.1 (Notas Fiscais do Painel passa a ser o MÊS VIGENTE)
+
+Pedido: *"em painel de controle, notas fiscais exibir sempre o do mês vigente, mesmo que seja zero a soma"*.
+
+**O defeito era mais fundo que o texto — e é a regra nº 3 do projeto sendo violada.** A TELA de Notas já somava o mês corrente (ele tinha pedido isso antes); o CARTÃO do Painel mostrava o total do **ÚLTIMO PERÍODO LANÇADO**. Dois cálculos para o mesmo número, e o cartão **não batia com a tela que ele abre** — o caso clássico que já custou caro aqui.
+
+Na prática: mês sem lançamento fazia o Painel exibir o valor de um mês antigo. **Pior do que mostrar zero** — parece movimento que não houve.
+
+**Fonte única nova: `notasDoMes()`.** Devolve `{lista, alexandria, notasGerais, combustivel, total}` dos períodos cujo `fim` cai no mês corrente. Chamada **pelos dois**: `viewDashboard` e `viewNotas`. Corrigir a conta num lugar corrige nos dois.
+
+- Rótulo virou **"Notas Fiscais no mês"** — mesma forma de "Check-lists no mês", que já existia.
+- **Zero é RESULTADO, não ausência:** mês sem lançamento soma R$ 0,00 e o cartão mostra isso, como ele pediu.
+- Saíram `notasOrd` e `ultNotaTotal` do `viewDashboard` (conferido por grep: não eram usados em mais lugar nenhum).
+
+**Validado pelo caminho real, zero erro de JS:** com o mês vigente **vazio** e uma nota de março de R$ 9.999 na base, o cartão mostrou **0** (não 9.999) e a tela disse *"nada lançado neste mês"*; com dois períodos no mês corrente somando R$ 1.900,00, **cartão = 1900 = tela**, e a função ignorou o período de março (2 períodos, não 3).
+
+**Versão:** assets `?v=214`, cache `planeta-express-v9-1`, rodapé `v9.1`, celular reconstruído.
 
 ### ✅ ESTADO EM 31/08/2026 — v9.0 (o selo do CRLV fala do DOCUMENTO, não de onde o arquivo está)
 
