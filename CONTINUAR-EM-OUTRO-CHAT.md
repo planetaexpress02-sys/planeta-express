@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (09/09/2026 — v9.2)
+## ⚡ ONDE O PROJETO ESTÁ (09/09/2026 — v9.3)
 
-**v9.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=215`, cache SW `planeta-express-v9-2`, rodapé `v9.2`.
+**v9.3 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=216`, cache SW `planeta-express-v9-3`, rodapé `v9.3`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,30 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 09/09/2026 — v9.3 (anexar documento passa a funcionar em TODOS os lugares)
+
+Pedido: *"quero que faça pra funcionar em todos os lugares"*. Levantei antes de sair colocando card por card, e o buraco era em **duas frentes** — uma delas invisível.
+
+## (1) O selo mentia em ~10 telas de uma vez
+
+`badgeAnexo()` pintava **verde "Anexado"** sempre que existisse arquivo, **sem olhar se ele chegou à nuvem**. Um anexo preso num aparelho aparecia verde — e no celular o cliente clicava e não abria nada. **É o mesmo defeito que a v9.0 corrigiu nos cards de CRLV e CNH; aqui ele estava em todas as OUTRAS telas**, porque todas passam por esta função: exames, tacógrafo, licenças, seguros, ANTT, pedágios, notas de despesa e abastecimentos.
+
+Agora: **verde só quando o arquivo está mesmo na nuvem** (abre em qualquer aparelho); preso = **âmbar "Só neste aparelho"**, com o título explicando. Uma função corrigida, dez telas honestas.
+
+## (2) Seis tipos de registro não tinham anexo NENHUM
+
+Conferido varrendo cada modal: **CT-e, Descargas, Viagens, Serviços de manutenção, Baterias e Check-list** não ofereciam anexar nada.
+
+Nasceu **`campoAnexos(ent, ref, categoria, rotulo)`** — uma peça só, em vez de seis parecidas. Lista os arquivos daquele registro (abrir / baixar / excluir), mostra o estado quando há problema e usa o **mesmo caminho de tudo** (`uploadPara` → `subirUm`), então o arquivo sobe e abre em qualquer aparelho.
+
+> ⚠️ **Registro NOVO não recebe botão de anexar.** Sem id salvo, o arquivo não teria a que se ligar e viraria órfão na lista de Documentos. O bloco explica que é preciso salvar antes — melhor do que oferecer um botão que geraria lixo.
+
+**Onde ficou cada um:** CT-e → "Arquivo do CT-e (XML ou PDF)" · Descargas → "Comprovante da descarga" · Viagens → "Documentos da viagem" · Manutenção → "Nota fiscal / orçamento" · Baterias → "Nota fiscal / garantia" · Check-list → "Fotos e anexos do check-list".
+
+**Validado no Chrome headless, zero erro de JS:** os **6 modais** abertos de verdade com registro real, todos com "Anexar arquivo" (o de Check-list precisou de um lançamento criado na hora — a base não tinha nenhum); registro novo avisando para salvar antes; o selo global devolvendo **âmbar** para arquivo preso e **verde** só depois de `storagePath`; arquivo anexado aparecendo dentro do modal e na lista geral; **25 rotas** varridas.
+
+**Versão:** assets `?v=216`, cache `planeta-express-v9-3`, rodapé `v9.3`, celular reconstruído.
 
 ### ✅ ESTADO EM 09/09/2026 — v9.2 (CNH anexada e lida na ficha de TODO motorista)
 

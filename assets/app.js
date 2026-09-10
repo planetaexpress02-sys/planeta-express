@@ -342,13 +342,70 @@ function filesDe(entidade, refId){ return todosArquivos().filter(f=>f.entidade==
 function totalArquivos(){ return todosArquivos().length; }
 /* Procura um arquivo anexado (enviado na plataforma) de um tipo para um registro */
 function anexoTipo(ent, ref, re){ return todosArquivos().find(f=>f.entidade===ent && f.refId===ref && re.test(((f.categoria||'')+' '+(f.name||'')))); }
-/* Selo verde "Anexado" (clicável p/ ver) OU botão "Anexar" */
+/* Selo "Anexado" (clicável p/ ver) OU botão "Anexar".
+
+   ⚠️ v9.3 — o selo era VERDE sempre que existisse arquivo, e isso mentia
+   exatamente onde mais dói: um anexo preso num aparelho aparecia verde, o
+   cliente abria no celular e não abria nada. É o mesmo defeito que a v9.0
+   corrigiu nos cards de CRLV e CNH — aqui ele estava em TODAS as outras
+   telas de uma vez (exames, tacógrafo, licenças, seguros, ANTT, pedágios,
+   notas, abastecimentos), porque todas usam esta função.
+   Regra que fica: VERDE só quando o arquivo está mesmo na nuvem, ou seja,
+   quando abre em qualquer aparelho. Preso = âmbar, dizendo por quê. */
+/* ------------------------------------------------------------------
+   BLOCO DE ANEXOS PARA DENTRO DE UM FORMULÁRIO (v9.3)
+   Pedido do cliente: "faça pra funcionar em todos os lugares".
+
+   O sistema já tinha ponto de anexo em veículo, motorista, exames,
+   contrato, ficha criminal, tacógrafo, nota, pneu, seguro, pedágio, ANTT,
+   licença e abastecimento — mas SEIS tipos de registro não tinham nenhum:
+   CT-e, Descargas, Viagens, Serviços de manutenção, Baterias e Check-list.
+   Este bloco fecha esses seis com uma peça só, em vez de seis parecidas.
+
+   Usa o MESMO caminho de tudo (`uploadPara` → `subirUm`), então o arquivo
+   sobe para a nuvem e abre em qualquer aparelho — que é o "sempre" que ele
+   pediu. E mostra o estado de verdade: verde só quando está mesmo na nuvem.
+
+   ⚠️ Registro NOVO não tem id ainda, e sem id o arquivo não teria a que se
+   ligar (ficaria órfão na lista de Documentos). Nesse caso o bloco explica
+   que é preciso salvar antes, em vez de oferecer um botão que geraria lixo.
+   ------------------------------------------------------------------ */
+function campoAnexos(ent, ref, categoria, rotulo){
+  const titulo = rotulo || 'Arquivos anexados';
+  if(!ref){
+    return '<div class="field"><label>'+esc(titulo)+'</label>'
+      + '<div class="hint">Salve este registro primeiro. Depois reabra para anexar o arquivo — assim ele fica ligado ao lançamento certo.</div></div>';
+  }
+  const lista=filesDe(ent, ref);
+  const linhas = lista.map(function(f){
+    const naNuvem=!!f.storagePath;
+    return '<tr>'
+      + '<td><b>'+esc(f.name)+'</b>'
+      + '<div class="muted" style="font-size:11px">'+esc(f.categoria||'Arquivo')+' · '+fileSize(f.size)+'</div>'
+      + (naNuvem? '' : '<div style="margin-top:4px">'+fileSelo(f)+'</div>')
+      + '</td>'
+      + '<td style="text-align:right;white-space:nowrap" class="no-print">'
+      + '<button type="button" class="btn ghost sm" title="Abrir" onclick="verArquivo(\''+f.id+'\')">'+svg('eye')+'</button>'
+      + '<button type="button" class="btn ghost sm" title="Baixar" onclick="baixarArquivo(\''+f.id+'\')">'+svg('download')+'</button>'
+      + '<button type="button" class="btn ghost sm" title="Excluir" onclick="excluirArquivo(\''+f.id+'\')">'+svg('trash')+'</button>'
+      + '</td></tr>';
+  }).join('');
+  return '<div class="field"><label>'+esc(titulo)+'</label>'
+    + (linhas? '<div class="tbl-wrap" style="margin-bottom:8px"><table class="tbl"><tbody>'+linhas+'</tbody></table></div>' : '')
+    + '<button type="button" class="btn ghost sm no-print" onclick="uploadPara(\''+ent+'\',\''+ref+'\',\''+esc(categoria||'')+'\')">'
+    + svg('upload')+' Anexar arquivo</button>'
+    + '<div class="hint" style="margin-top:6px">PDF, foto ou planilha. O arquivo fica guardado e abre em qualquer aparelho.</div>'
+    + '</div>';
+}
+
 function badgeAnexo(ent, ref, re, categoria){
   const f=anexoTipo(ent,ref,re);
-  if(f) return `<span style="display:inline-flex;align-items:center;gap:5px">
-    <span class="st ok" style="cursor:pointer" title="Ver ${esc(f.name)}" onclick="event.stopPropagation();verArquivo('${f.id}')">${svg('clip')} Anexado</span>
+  if(f){ const naNuvem=!!f.storagePath;
+    return `<span style="display:inline-flex;align-items:center;gap:5px">
+    <span class="st ${naNuvem?'ok':'warn'}" style="cursor:pointer" title="${naNuvem?('Ver '+esc(f.name)):'Anexado, mas ainda só neste aparelho — não abre nos outros'}" onclick="event.stopPropagation();verArquivo('${f.id}')">${svg('clip')} ${naNuvem?'Anexado':'Só neste aparelho'}</span>
     <button class="btn ghost sm no-print" title="Baixar" onclick="event.stopPropagation();baixarArquivo('${f.id}')">${svg('download')}</button>
     <button class="btn ghost sm no-print" title="Excluir" onclick="event.stopPropagation();excluirArquivo('${f.id}')">${svg('trash')}</button></span>`;
+  }
   return `<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('${ent}','${ref}','${esc(categoria)}')">${svg('upload')} Anexar</button>`;
 }
 
@@ -2403,6 +2460,7 @@ function modalServico(id, vId){
       <div class="field-row">${sel('Tipo de manutenção','f_tipo',x.tipo||'Corretiva',['Corretiva','Preventiva'])}${fld('Oficina','f_ofi',x.oficina)}</div>
       <div class="field-row">${fldR$('Valor (R$)','f_val',x.valor)}${fld('KM / Horas (opcional)','f_km',x.km,'number')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(x.obs)}"></div>
+      ${campoAnexos('servico', id, 'Manutenção', 'Nota fiscal / orçamento')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirServico('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarServico('${id||''}')">Salvar</button></div>`);
@@ -3409,6 +3467,7 @@ function modalBateria(id, placa){
       <div class="field-row">${fld('Garantia (meses)','f_gm',b.garantiaMeses,'number')}${fld('Garantia até','f_ga',b.garantiaAte,'date')}</div>
       <div class="field-row">${fld('Trocado na garantia (data)','f_tg',b.trocaGarantia,'date','Preencha só se a bateria foi trocada dentro da garantia')}${fldMask('Telefone do fornecedor','f_tel',b.telefone,'fone','(  ) automático')}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(b.obs||'')}"></div>
+      ${campoAnexos('bateria', id, 'Bateria', 'Nota fiscal / garantia')}
 </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirBateria('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -4133,6 +4192,7 @@ function modalChecklist(id){
       <div class="sectitulo" style="margin-top:18px">${svg('truck')} Mapa do veículo — marque os pontos</div>
       <div id="chkMapArea"></div>
       <div class="field" style="margin-top:16px"><label>Observações / Fotos</label><textarea id="f_obs">${esc(c.obs||'')}</textarea></div>
+      ${campoAnexos('checklist', id, 'Check-list', 'Fotos e anexos do check-list')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirChecklist('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarChecklist('${id||''}')">Salvar</button></div>`, true);
@@ -5997,6 +6057,7 @@ function modalViagem(id){
       <div class="field-row">${sel('Transporte baixado','f_baix',v.baixado||'',['','SIM','TSP','NÃO'])}${sel('Status','f_status',v.status,['Pendente','Concluída','Cancelada'])}</div>
       <div class="field-row">${fld('Termo Pallet (nº)','f_termo',v.termoPallet)}${sel('Termo baixado','f_termob',v.termoBaixado||'',['','SIM','NÃO'])}</div>
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(v.obs)}"></div>
+      ${campoAnexos('viagem', id, 'Viagem', 'Documentos da viagem')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirViagem('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarViagem('${id||''}')">Salvar</button></div>`);
@@ -6298,6 +6359,7 @@ function modalDescarga(id){
       <div class="field-row">${fld('Nº Transporte','f_transp',d.transporte)}${fld('Senha','f_senha',d.senha)}</div>
       <div class="field-row">${fldR$('Valor (R$)','f_valor',d.valor)}${fld('Pago por','f_pago',d.pago)}</div>
       ${fld('Local','f_local',d.local)}
+      ${campoAnexos('descarga', id, 'Descarga', 'Comprovante da descarga')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirDescarga('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarDescarga('${id||''}')">Salvar</button></div>`);
@@ -7615,6 +7677,7 @@ function modalCte(id){
       ${fld('Destinatário (recebedor)','f_dtn',c.destinatario||'')}
       <div class="field"><label>Observação</label><input id="f_obs" value="${esc(c.obs)}"></div>
       ${c.chave?`<div class="hint" style="word-break:break-all">Chave: <span class="mono">${esc(c.chave)}</span>${c.produto?`<br>Produto: ${esc(c.produto)}`:''}${c.cfop?` · CFOP ${esc(c.cfop)}`:''}${c.vCarga?` · Carga R$ ${esc(c.vCarga)}`:''}</div>`:''}
+      ${campoAnexos('cte', id, 'CT-e', 'Arquivo do CT-e (XML ou PDF)')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirCte('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarCte('${id||''}')">Salvar</button></div>`);
