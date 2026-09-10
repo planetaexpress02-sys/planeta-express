@@ -1416,7 +1416,7 @@ async function veicAnexarCRLV(vid){
     try{
       /* 1) guarda o arquivo (e sobe à nuvem, se der) — o anexo é o que o
             cliente pediu primeiro; a leitura vem depois e é um bônus */
-      await subirUm(file,'veiculo',vid,'CRLV');
+      if(!await anexarOuAvisar(file,'veiculo',vid,'CRLV')) return;
       await reloadFiles(); saveDB();
       /* 2) lê pelo pipeline da Central */
       let campos=null, resumo='';
@@ -1777,7 +1777,7 @@ async function motAnexarCNH(mid){
     if(typeof pexBar==='function') pexBar(true);
     try{
       /* 1) guardar o arquivo é o principal do pedido — vem antes da leitura */
-      await subirUm(file,'motorista',mid,'CNH');
+      if(!await anexarOuAvisar(file,'motorista',mid,'CNH')) return;
       await reloadFiles(); saveDB();
       /* 2) ler pelo pipeline da Central */
       let campos=null, resumo='';
@@ -2582,7 +2582,11 @@ function fileThumb(f){
    selo, ao lado (ver `_crlvSituacao`). */
 function fileSelo(f){
   if(f && f.storagePath) return '';
-  return '<span class="st warn" style="font-size:10px" title="Ainda não subiu para a nuvem: por enquanto só abre neste aparelho">Só neste aparelho</span>';
+  /* v9.4 — este estado deixou de ser possível para anexo NOVO (o sistema
+     recusa em vez de guardar pela metade). Continua existindo só para o que
+     foi anexado antes desta versão e ficou preso; a fila sobe sozinha quando
+     houver conta e internet. */
+  return '<span class="st warn" style="font-size:10px" title="Anexado antes da regra nova e ainda não subiu. Entre na conta com internet que ele sobe sozinho">Só neste aparelho</span>';
 }
 function filesGrid(list){
   return `<div class="files">${list.map(f=>`<div class="filecard">
@@ -2703,18 +2707,52 @@ function _online(){ return typeof nuvemAtiva==='function' && nuvemAtiva() && nuv
    de fato na nuvem. Quem termina o serviço é `sincronizarArquivosPendentes()`.
    ------------------------------------------------------------------ */
 function _arqCaminho(id, nome){ return id+'-'+String(nome||'arquivo').replace(/[^\w.\-]/g,'_'); }
+/* Motivo pelo qual não dá para anexar agora — ou '' quando dá. Usado ANTES de
+   abrir o seletor de arquivos, para o cliente não escolher um PDF e só então
+   descobrir que não vai dar. */
+function motivoSemAnexar(){
+  if(typeof nuvemAtiva!=='function' || !nuvemAtiva())
+    return 'Este sistema está aberto no modo offline (sem nuvem configurada). Abra pelo endereço do sistema na internet para anexar documentos.';
+  if(!(typeof nuvemUser==='function' && nuvemUser()))
+    return 'Entre na sua conta para anexar documentos. É a conta que faz o arquivo abrir no seu computador e no celular.';
+  if(typeof navigator!=='undefined' && navigator.onLine===false)
+    return 'Sem internet agora. O documento precisa subir para a nuvem para abrir em qualquer aparelho — conecte e tente de novo.';
+  return '';
+}
+/* ⚠️ v9.4 — REGRA DURA DO CLIENTE: "não quero que nada fique salvo só nesse
+   aparelho; todos os documentos devem abrir em qualquer local".
+
+   Até a v9.3 o arquivo era guardado no IndexedDB mesmo quando não conseguia
+   subir, e ficava marcado "Só neste aparelho". Ele não quer esse estado
+   existir. Então agora o anexo é TUDO OU NADA:
+     • sem nuvem/conta/internet → nem aceita o arquivo, e diz o que fazer;
+     • upload falhou → DESFAZ (apaga a cópia local, não registra em DB.anexos)
+       e mostra o erro real. Meia-gravação é o que gerava o estado proibido.
+   Só entra em `DB.anexos` o que está comprovadamente na nuvem.
+
+   ⚠️ Consequência assumida: anexar passou a exigir internet + conta. O resto
+   do sistema continua funcionando offline — só o ANEXO exige, porque é a
+   única forma de o arquivo abrir em outro aparelho. */
 async function subirUm(file, entidade, refId, categoria){
+  const impedimento=motivoSemAnexar();
+  if(impedimento){ const e=new Error(impedimento); e._semNuvem=true; throw e; }
   const id=uid('f');
   const meta={ id, name:file.name, type:file.type||'', size:file.size, categoria:categoria||guessCat(file.name),
-    entidade, refId, validade:'', obs:'', uploadedAt:Date.now(), storagePath:'', pendente:true };
-  try{ if(IDB) await idbPut(Object.assign({}, meta, {blob:file})); }catch(e){}
-  if(_online()){
-    try{ const path=_arqCaminho(id, file.name); await nuvemUpload(path, file);
-         meta.storagePath=path; meta.pendente=false; }
-    catch(e){ toast('Arquivo guardado neste aparelho. O envio para a nuvem falhou — vou tentar de novo sozinho. ('+(e.message||'')+')','err'); }
+    entidade, refId, validade:'', obs:'', uploadedAt:Date.now(), storagePath:'', pendente:false };
+  const path=_arqCaminho(id, file.name);
+  try{
+    await nuvemUpload(path, file);
+    meta.storagePath=path;
+  }catch(e){
+    /* desfaz para não deixar rastro que vire "só neste aparelho" */
+    try{ if(IDB) await idbDel(id); }catch(_){}
+    const err=new Error('Não consegui enviar "'+file.name+'" para a nuvem: '+(e.message||'erro desconhecido'));
+    err._falhouUpload=true; throw err;
   }
+  /* a cópia local é só para abrir rápido neste aparelho; a verdade está na nuvem */
+  try{ if(IDB) await idbPut(Object.assign({}, meta, {blob:file})); }catch(e){}
   if(!Array.isArray(DB.anexos)) DB.anexos=[];
-  DB.anexos.push(meta);          /* SEMPRE: é isto que faz o arquivo existir para os outros aparelhos */
+  DB.anexos.push(meta);
   return meta;
 }
 /* Sobe o que ficou para trás — anexado offline, ou com o upload falhado.
@@ -2768,12 +2806,41 @@ async function sincronizarArquivosPendentes(silencioso){
 function arquivosPendentes(){ return (DB.anexos||[]).filter(function(a){ return a && !a.storagePath; }); }
 async function processUpload(files, entidade, refId, categoria){
   if(!files||!files.length) return;
-  if(!IDB && !_online()){ toast('Upload indisponível neste navegador. Abra em Chrome ou Edge.','err'); return; }
+  /* v9.4 — barra ANTES de tentar: um aviso claro, não um por arquivo */
+  const impedimento=motivoSemAnexar();
+  if(impedimento){ modalAnexoImpossivel(impedimento); return; }
   if(typeof pexBar==='function') pexBar(true);
+  let ok=0; const falhas=[];
   try{
-    for(const file of files){ await subirUm(file, entidade, refId, categoria); }
-    await reloadFiles(); saveDB(); toast(files.length+' arquivo(s) enviado(s)'+(_online()?' e sincronizado(s).':'.')); router();
+    for(const file of files){
+      try{ await subirUm(file, entidade, refId, categoria); ok++; }
+      catch(e){ falhas.push(e.message||String(e)); }
+    }
+    await reloadFiles(); if(ok) saveDB();
+    if(ok) toast(ok+' arquivo(s) enviado(s) — já abrem em qualquer aparelho.');
+    if(falhas.length) modalAnexoImpossivel(falhas.join('\n\n'), true);
+    router();
   } finally { if(typeof pexBar==='function') pexBar(false); }
+}
+/* Explica por que o documento não foi anexado. Modal, e não toast: o cliente
+   precisa LER isto — se passar batido, ele vai achar que anexou. */
+function modalAnexoImpossivel(motivo, falhou){
+  openModal('<div class="m-h">'+svg('upload')+'<h3>'+(falhou?'Não consegui anexar':'Ainda não dá para anexar')+'</h3>'
+    + '<button class="x" onclick="closeModal()">×</button></div>'
+    + '<div class="m-b">'
+    + '<p style="white-space:pre-wrap;margin-bottom:12px">'+esc(motivo)+'</p>'
+    + '<div class="hint">O sistema só aceita o documento quando ele consegue subir para a nuvem. É isso que garante que o arquivo abra no computador <b>e</b> no celular, para qualquer pessoa da empresa — em vez de ficar preso num aparelho só.</div>'
+    + '</div>'
+    + '<div class="m-f"><button class="btn primary" onclick="closeModal()">Entendi</button></div>');
+}
+/* Anexa e, se não der, AVISA — nunca em silêncio.
+   Vários pontos do sistema anexavam dentro de `catch(e){}` (nota fiscal,
+   abastecimento, apólice, licença, Central). Antes isso só perdia o anexo;
+   com a regra da v9.4 — anexo só existe se subir — engolir o erro faria o
+   cliente achar que o documento ficou guardado quando não ficou. */
+async function anexarOuAvisar(file, ent, ref, cat){
+  try{ return await subirUm(file, ent, ref, cat); }
+  catch(e){ modalAnexoImpossivel(e.message||String(e), true); return null; }
 }
 /* ================================================================== */
 /*  LEITOR DE PDF — extrai texto de NF/DANFE (inclui fontes CID)        */
@@ -3712,7 +3779,7 @@ async function salvarNota(id){ if(!val('f_fim')){toast('Informe o fim do períod
   const d={inicio:val('f_ini'),fim:val('f_fim'),alexandria:r2(val('f_alex'))||0,notasGerais:r2(val('f_ger'))||0,combustivel:r2(val('f_comb'))||0,obs:val('f_obs')};
   let novoId=id;
   if(id)Object.assign(DB.notas.find(x=>x.id===id),d); else{ d.id=uid('nf'); novoId=d.id; DB.notas.push(d); }
-  if(_notaNfPendente){ try{ await subirUm(_notaNfPendente,'nota',novoId,'Nota Fiscal'); await reloadFiles(); }catch(e){} _notaNfPendente=null; }
+  if(_notaNfPendente){ await anexarOuAvisar(_notaNfPendente,'nota',novoId,'Nota Fiscal'); await reloadFiles(); _notaNfPendente=null; }
   saveDB(); closeModal(); toast('Período salvo.'); router(); }
 function excluirNota(id){ if(!confirm('Excluir este período?'))return; DB.notas=DB.notas.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 /* Enviar PDF de nota fiscal: anexa ao período e sugere o valor total encontrado */
@@ -4614,8 +4681,10 @@ async function _apoliceAnexar(){
   const sel=APOLICE_FILA.filter(f=>f.matchId);
   if(!sel.length){ toast('Escolha a qual seguro pertence cada arquivo.','err'); return; }
   if(typeof pexBar==='function') pexBar(true);
-  try{ for(const f of sel){ await subirUm(f.file,'seguro',f.matchId,'Apólice'); } await reloadFiles(); saveDB(); }
-  finally { if(typeof pexBar==='function') pexBar(false); }
+  try{
+    for(const f of sel){ await anexarOuAvisar(f.file,'seguro',f.matchId,'Apólice'); }
+    await reloadFiles(); saveDB();
+  } finally { if(typeof pexBar==='function') pexBar(false); }
   APOLICE_FILA=[]; closeModal(); toast(sel.length+' apólice(s) anexada(s)'+(_online()?' e sincronizada(s).':'.')); location.hash='#seguros'; router();
 }
 /* Selo do arquivo da apólice, direto na lista: verde "Anexado" (ver) + baixar +
@@ -4637,7 +4706,11 @@ function _segTrocarAnexo(ref, oldId){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf,image/*';
   inp.onchange=async function(e){ const files=e.target.files; if(!files||!files.length) return;
     if(typeof pexBar==='function') pexBar(true);
-    try{ await subirUm(files[0],'seguro',ref,'Apólice'); await _removerAnexoSilencioso(oldId); await reloadFiles(); saveDB(); toast('Apólice substituída.'); }
+    try{
+      if(await anexarOuAvisar(files[0],'seguro',ref,'Apólice')){
+        await _removerAnexoSilencioso(oldId); await reloadFiles(); saveDB(); toast('Apólice substituída.');
+      }
+    }
     catch(err){ toast('Não foi possível trocar: '+((err&&err.message)||''),'err'); }
     finally{ if(typeof pexBar==='function') pexBar(false); router(); }
   };
@@ -5815,7 +5888,7 @@ async function licConfirmar(){
         licLog(l,'Criada pela leitura do documento', i.nome);
         licencas().push(l); novas++;
       }
-      try{ await subirUm(i.file,'licenca',l.id,'Licença'); licLog(l,'Documento anexado', i.nome); }catch(e){}
+      if(await anexarOuAvisar(i.file,'licenca',l.id,'Licença')) licLog(l,'Documento anexado', i.nome);
     }
     await reloadFiles(); licAutoRenovacao(); saveDB();
     toast(novas+' licença(s) cadastrada(s)'+(atualizadas?' e '+atualizadas+' atualizada(s)':'')+'.');
@@ -6617,7 +6690,7 @@ async function salvarAbastec(id){ if(!val('f_lit')){toast('Informe os litros.','
   const d={data:val('f_data'),veiculoId:val('f_veic'),litros:parseFloat(val('f_lit'))||0,valor:parseBRL(val('f_val')),km:numOrNull('f_km'),horas:numOrNull('f_h'),posto:val('f_posto')};
   let novoId=id;
   if(id)Object.assign(DB.abastecimentos.find(x=>x.id===id),d); else{ d.id=uid('ab'); novoId=d.id; DB.abastecimentos.push(d); }
-  if(_nfPendente){ try{ await subirUm(_nfPendente,'abastecimento',novoId,'Nota Fiscal'); await reloadFiles(); }catch(e){} _nfPendente=null; }
+  if(_nfPendente){ await anexarOuAvisar(_nfPendente,'abastecimento',novoId,'Nota Fiscal'); await reloadFiles(); _nfPendente=null; }
   saveDB(); closeModal(); toast('Abastecimento salvo.'); router(); }
 function excluirAbastec(id){ if(!confirm('Excluir este abastecimento?'))return; DB.abastecimentos=DB.abastecimentos.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 /* Enviar NF (PDF) de abastecimento: lê o PDF, preenche o que achar e abre o formulário */

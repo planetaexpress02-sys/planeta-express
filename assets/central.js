@@ -1095,7 +1095,17 @@ async function cpidAplicarTodos(){
     for(const it of alvos){ const r=await cpidAplicar(it); total+=r.salvos||0; cpidRender(); }
     if(typeof reloadFiles==='function') await reloadFiles();
     saveDB();
-    toast(total+' lançamento(s) gravado(s) e '+alvos.length+' documento(s) arquivado(s).');
+    /* ⚠️ v9.4 — o `arquivoErro` era gravado no item e NUNCA mostrado: o
+       documento não era guardado e a Central dizia "arquivado" assim mesmo.
+       Com a regra de que anexo só existe se subir para a nuvem, isso ficaria
+       comum — e silencioso é o pior jeito de falhar. */
+    const guardados=alvos.filter(function(i){ return i.arquivado; }).length;
+    const erros=alvos.filter(function(i){ return i.arquivoErro; });
+    toast(total+' lançamento(s) gravado(s) e '+guardados+' documento(s) arquivado(s).');
+    if(erros.length && typeof modalAnexoImpossivel==='function'){
+      modalAnexoImpossivel(erros.length+' documento(s) NÃO foram guardados:\n\n'
+        + erros.map(function(i){ return '• '+(i.file&&i.file.name||'arquivo')+' — '+i.arquivoErro; }).join('\n'), true);
+    }
   } finally { if(typeof pexBar==='function') pexBar(false); }
   cpidRender();
 }
