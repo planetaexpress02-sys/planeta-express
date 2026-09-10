@@ -255,6 +255,7 @@ const CPID_TIPOS = [
      mesmo CRLV é lido do mesmo jeito, venha ele pela Central ou pelo botão
      "Anexar CRLV" da placa. */
   {k:'crlv',       n:'CRLV do veículo',           ico:'doc',    destino:'Frota (ficha do veículo)'},
+  {k:'cnh',        n:'CNH do motorista',          ico:'idcard', destino:'Motoristas (ficha do colaborador)'},
   {k:'planilha',   n:'Planilha',                  ico:'doc',    destino:'conforme as colunas'},
   {k:'documento',  n:'Documento',                 ico:'doc',    destino:'Arquivo'},
 ];
@@ -288,6 +289,11 @@ function cpidClassificar(ct, fmt, nome){
     /* CRLV vem ANTES dos fiscais: o documento traz "placa", "renavam" e
        "chassi" juntos, e nenhum outro tipo tem esses três. Pôr depois faria
        um CRLV com a palavra "licenciamento" cair na regra de licença. */
+    /* CNH antes do CRLV: os dois são documentos de trânsito e dividem
+       palavras ("registro", "validade", "categoria"). O que separa é o termo
+       próprio de cada um — habilitação x licenciamento — e a CNH não tem
+       renavam nem chassi. */
+    ['cnh',       97, /carteira nacional de habilita[cç][aã]o|permiss[aã]o para dirigir|\bcnh\b|1[aª]\s*habilita[cç][aã]o|\brenach\b/, 'termos de CNH'],
     ['crlv',      97, /certificado de registro e licenciamento|licenciamento anual do ve[ií]culo|\bcrlv\b|crv\/crlv/, 'termos de CRLV'],
     ['crlv',      92, /renavam[\s\S]{0,80}chassi|chassi[\s\S]{0,80}renavam/, 'renavam e chassi no mesmo documento'],
     ['pedagio',   96, /sem\s*parar|conectcar|veloe|vale.?ped[aá]gio|pra[cç]a de ped[aá]gio|concession[aá]ria/, 'menções a pedágio/praças'],
@@ -361,6 +367,7 @@ async function cpidExtrair(tipo, ct, file, cls){
     case 'apolice':  return cpidExtrApolice(txt, file);
     case 'licenca':  return cpidExtrLicenca(txt, file);
     case 'crlv':     return cpidExtrCRLV(txt, file);
+    case 'cnh':      return cpidExtrCNH(txt, file);
     case 'planilha': return cpidExtrPlanilha(ct.grid);
     case 'cte': case 'nfe': case 'nfse': case 'fatura': case 'boleto':
                      return cpidExtrNotaTexto(txt, tipo);
@@ -596,6 +603,52 @@ function cpidExtrCRLV(txt, file){
   return {campos:d, registros:[d], _alvo:'veiculos',
     resumo:'CRLV'+(d.placa?' — '+d.placa:'')+(d.crlvAno?' · exercício '+d.crlvAno:'')
       +(veic?' · veículo encontrado na frota':(d.placa?' · placa NÃO cadastrada na frota':''))
+      +' · '+achou+' campo(s) lido(s)'};
+}
+
+/* ---- CNH: lê os campos da habilitação do motorista (v9.2) ----
+   Mesma disciplina do CRLV: por RÓTULO, com plano B por formato, e sem
+   decidir nada sozinho — quem chamou confirma com o cliente antes de gravar.
+
+   ⚠️ A CNH tem DUAS datas de 8 dígitos coladas ("1ª HABILITAÇÃO", "EMISSÃO")
+   além da VALIDADE, e uma pegar a outra é o erro mais fácil aqui: gravar a
+   emissão como validade faria o motorista aparecer vencido há anos. Por isso
+   cada data só sai pelo rótulo dela — nunca "a primeira data que aparecer". */
+function cpidExtrCNH(txt, file){
+  const T=String(txt||'');
+  const d={};
+  const pega=function(re,i){ const m=T.match(re); return m? String(m[i||1]).trim() : ''; };
+  const data=function(s){ return s? (_cpISO(s)||'') : ''; };
+
+  /* nº de registro: 11 dígitos, com rótulo (sem rótulo não dá — CPF também
+     tem 11 e a troca seria silenciosa) */
+  d.cnh = pega(/(?:N[ºO°]?\s*)?REGISTRO[\s:]*([0-9]{9,11})/i,1)
+       || pega(/HABILITA[ÇC][ÃA]O[\s\S]{0,40}?\b([0-9]{11})\b/i,1);
+  d.cnhValidade = data(pega(/VALIDADE[\s:]*([0-3]?\d[\/.\-][01]?\d[\/.\-]\d{2,4})/i,1));
+  d.primeiraHab = data(pega(/1[ªAº°]?\s*HABILITA[ÇC][ÃA]O[\s:]*([0-3]?\d[\/.\-][01]?\d[\/.\-]\d{2,4})/i,1));
+  d.emissaoCnh  = data(pega(/(?:DATA\s*(?:DA\s*)?)?EMISS[ÃA]O[\s:]*([0-3]?\d[\/.\-][01]?\d[\/.\-]\d{2,4})/i,1));
+  d.categoria   = pega(/CAT(?:EGORIA)?\.?\s*HAB\.?[\s:]*([A-E]{1,2})\b/i,1)
+               || pega(/CATEGORIA[\s:]*([A-E]{1,2})\b/i,1);
+  d.renach      = pega(/RENACH[\s:]*([A-Z0-9]{6,15})/i,1);
+  d.espelho     = pega(/ESPELHO[\s:]*([0-9]{6,15})/i,1);
+  d.cpf         = pega(/CPF[\s:]*(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/i,1);
+  d.nome        = pega(/\bNOME[\s:]*\n?\s*([A-ZÀ-Ý][A-ZÀ-Ý'\s]{5,60})/,1);
+  d.ear         = /\bEAR\b|EXERCE ATIVIDADE REMUNERADA/i.test(T)? 'Sim' : '';
+  Object.keys(d).forEach(function(k){ if(!d[k]) delete d[k]; });
+
+  /* liga ao motorista já cadastrado: CPF primeiro (é único), depois o nome */
+  let mot=null;
+  const soDig=function(s){ return String(s||'').replace(/\D/g,''); };
+  if(d.cpf){ try{ mot=(DB.motoristas||[]).find(function(x){ return soDig(x.cpf)===soDig(d.cpf); })||null; }catch(e){} }
+  if(!mot && d.cnh){ try{ mot=(DB.motoristas||[]).find(function(x){ return soDig(x.cnh)===soDig(d.cnh); })||null; }catch(e){} }
+  if(!mot && d.nome && typeof motoristaPorNome==='function'){ try{ mot=motoristaPorNome(d.nome)||null; }catch(e){} }
+  if(mot) d.motoristaId=mot.id;
+
+  const achou=Object.keys(d).filter(function(k){ return k!=='motoristaId'; }).length;
+  return {campos:d, registros:[d], _alvo:'motoristas',
+    resumo:'CNH'+(mot?' — '+mot.nome:(d.nome?' — '+d.nome:''))
+      +(d.cnhValidade&&typeof fmtD==='function'?' · vence '+fmtD(d.cnhValidade):'')
+      +(mot?' · colaborador encontrado':' · NÃO identifiquei o colaborador')
       +' · '+achou+' campo(s) lido(s)'};
 }
 

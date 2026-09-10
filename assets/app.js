@@ -1665,6 +1665,134 @@ function viewMotorista(id){
   ${corpo}`;
 }
 
+/* ---------- CNH na ficha do motorista (v9.2) ----------
+   Pedido: todo cadastro de motorista, de agora e os futuros, com um lugar
+   para anexar o PDF da CNH — que abra "independente do usuário e do mobile,
+   sempre".
+
+   É o mesmo desenho do card de CRLV da placa (v8.8), de propósito:
+   • o arquivo sobe por `subirUm()`, que registra em `DB.anexos` e sincroniza
+     — é isso que faz o PDF abrir em qualquer aparelho e para qualquer
+     usuário da conta;
+   • a leitura vai pelo pipeline da Central (tipo `cnh`), nunca um leitor
+     solto nesta tela;
+   • o selo fala do DOCUMENTO (vencida ou em dia), e o aviso de arquivo só
+     aparece quando ele ainda não subiu — a lição da v9.0.
+
+   "Todos, de agora e os futuros" sai de graça: o card é montado por
+   `viewMotResumo`, então vale para todo motorista que existir. */
+let _cnhLida=null;
+function _motCNHSituacao(m){
+  const v=(m&&m.cnhValidade)||'';
+  if(!v) return {cls:'neutro', txt:'Sem validade informada'};
+  const d=(typeof diasAte==='function')? diasAte(v) : null;
+  if(d==null) return {cls:'neutro', txt:'Sem validade informada'};
+  if(d<0)   return {cls:'vencido', txt:'Vencida em '+fmtD(v)};
+  if(d<=30) return {cls:'crit', txt:'Vence em '+d+' dia(s)'};
+  return {cls:'ok', txt:'Em dia — até '+fmtD(v)};
+}
+function _motCNH(m){
+  const arq=anexoTipo('motorista', m.id, /cnh|habilita/i);
+  const sit=_motCNHSituacao(m);
+  const corpo = arq
+    ? '<div class="tbl-wrap"><table class="tbl"><tbody><tr>'
+      + '<td><b>'+esc(arq.name)+'</b><div class="muted" style="font-size:11.5px">'+esc(arq.categoria||'CNH')+' · '+fileSize(arq.size)+'</div>'
+      + '<div style="margin-top:5px"><span class="st '+sit.cls+'">'+esc(sit.txt)+'</span> '+fileSelo(arq)+'</div></td>'
+      + '<td style="text-align:right;white-space:nowrap" class="no-print">'
+      + '<button class="btn ghost sm" title="Abrir" onclick="verArquivo(\''+arq.id+'\')">'+svg('eye')+'</button>'
+      + '<button class="btn ghost sm" title="Baixar" onclick="baixarArquivo(\''+arq.id+'\')">'+svg('download')+'</button>'
+      + '</td></tr></tbody></table></div>'
+    : emptyState('Nenhuma CNH anexada para este colaborador.');
+  return '<div class="card" style="margin-bottom:18px">'
+    + '<div class="card-h">'+svg('idcard')+'<h3>CNH — habilitação</h3>'
+    + (m.cnh? '<span class="st neutro">nº '+esc(m.cnh)+'</span>' : '')
+    + '<div class="r no-print"><button class="btn sm primary" onclick="motAnexarCNH(\''+m.id+'\')">'+svg('upload')+' Anexar CNH</button></div></div>'
+    + '<div class="card-b p0">'+corpo+'</div>'
+    + '<div class="card-b" style="padding-top:0"><div class="muted" style="font-size:11.5px">Envie o PDF: o arquivo fica guardado e abre em qualquer aparelho. Eu ainda leio o documento e mostro o que encontrei (nº, validade, categoria, 1ª habilitação) para você conferir antes de gravar na ficha.</div></div>'
+    + '</div>';
+}
+async function motAnexarCNH(mid){
+  const m=motorista(mid); if(!m) return;
+  const inp=document.createElement('input'); inp.type='file';
+  inp.accept='.pdf,.jpg,.jpeg,.png,application/pdf,image/*';
+  inp.onchange=async function(e){
+    const file=(e.target.files||[])[0]; if(!file) return;
+    if(typeof pexBar==='function') pexBar(true);
+    try{
+      /* 1) guardar o arquivo é o principal do pedido — vem antes da leitura */
+      await subirUm(file,'motorista',mid,'CNH');
+      await reloadFiles(); saveDB();
+      /* 2) ler pelo pipeline da Central */
+      let campos=null, resumo='';
+      try{
+        if(typeof cpidProcessar==='function'){
+          const item={file:file};
+          await cpidProcessar(item, null);
+          campos=(item.ex&&item.ex.campos)||null; resumo=item.resumo||'';
+        }
+      }catch(err){ resumo='Não consegui ler o conteúdo: '+(err.message||''); }
+      if(!campos || !Object.keys(campos).length){
+        toast('CNH anexada. Não consegui extrair os dados — se for um PDF digitalizado, o texto pode não estar legível.','warn');
+        router(); return;
+      }
+      _cnhLida={mid:mid, campos:campos};
+      modalCNHConferir(mid, campos, resumo);
+    } finally { if(typeof pexBar==='function') pexBar(false); }
+  };
+  inp.click();
+}
+const _CNH_CAMPOS=[
+  ['cnh',         'CNH nº',         'cnh'],
+  ['cnhValidade', 'Validade',       'cnhValidade'],
+  ['categoria',   'Categoria',      'categoria'],
+  ['primeiraHab', '1ª habilitação', 'primeiraHab'],
+  ['emissaoCnh',  'Emissão',        'emissaoCnh'],
+  ['renach',      'RENACH',         'renach'],
+  ['espelho',     'Espelho',        'espelho']
+];
+function modalCNHConferir(mid, campos, resumo){
+  const m=motorista(mid); if(!m) return;
+  const ehData=function(k){ return /Validade|primeiraHab|emissaoCnh/.test(k); };
+  const linhas=_CNH_CAMPOS.map(function(c){
+    const lido=campos[c[0]]||''; if(!lido) return '';
+    const atual=m[c[2]]||'';
+    const mostra=function(v){ return v? (ehData(c[0])? fmtD(v) : v) : '—'; };
+    const igual=String(atual).trim().toUpperCase()===String(lido).trim().toUpperCase();
+    return '<tr><td><b>'+esc(c[1])+'</b></td>'
+      + '<td class="mono">'+esc(mostra(atual))+'</td>'
+      + '<td class="mono"><b>'+esc(mostra(lido))+'</b></td>'
+      + '<td>'+(igual?'<span class="st ok">igual</span>':(atual?'<span class="st warn">muda</span>':'<span class="st neutro">preenche</span>'))+'</td></tr>';
+  }).filter(Boolean).join('');
+  /* CPF é o documento que identifica a pessoa: divergir aqui quase sempre
+     quer dizer CNH anexada no colaborador errado */
+  const soDig=function(s){ return String(s||'').replace(/\D/g,''); };
+  const alerta = (campos.cpf && soDig(m.cpf) && soDig(campos.cpf)!==soDig(m.cpf))
+    ? '<div class="hint" style="border-color:#f2686b;color:#f2686b">⚠️ O CPF do documento (<b>'+esc(campos.cpf)+'</b>) é diferente do CPF desta ficha (<b>'+esc(m.cpf)+'</b>). Confira se a CNH é deste colaborador antes de aplicar.</div>'
+    : '';
+  openModal('<div class="m-h">'+svg('idcard')+'<h3>CNH lida — '+esc(m.nome)+'</h3><button class="x" onclick="closeModal()">×</button></div>'
+    + '<div class="m-b">'
+    + '<p class="muted" style="margin-bottom:12px">'+esc(resumo||'')+'</p>'
+    + alerta
+    + (linhas
+        ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campo</th><th>Na ficha hoje</th><th>Na CNH</th><th>—</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
+        : emptyState('Não achei nenhum campo aproveitável neste documento.'))
+    + '<div class="hint" style="margin-top:12px">O arquivo <b>já foi anexado</b> ao colaborador. Aplicar só troca os campos da ficha.</div>'
+    + '</div>'
+    + '<div class="m-f"><button class="btn" onclick="closeModal();router()">Só anexar</button>'
+    + (linhas? '<button class="btn primary" onclick="motAplicarCNH(\''+mid+'\')">'+svg('check')+' Aplicar na ficha</button>' : '')
+    + '</div>');
+}
+function motAplicarCNH(mid){
+  const m=motorista(mid); const c=_cnhLida&&_cnhLida.mid===mid? _cnhLida.campos : null;
+  if(!m||!c){ closeModal(); return; }
+  let n=0;
+  _CNH_CAMPOS.forEach(function(f){ const lido=c[f[0]]; if(!lido) return;
+    if(String(m[f[2]]||'').trim()!==String(lido).trim()){ m[f[2]]=lido; n++; } });
+  _cnhLida=null; saveDB(); closeModal();
+  toast(n? n+' campo(s) atualizado(s) na ficha pela CNH.' : 'A ficha já estava igual à CNH.');
+  router();
+}
+
 function viewMotResumo(m,vencs,info){
   const anexos=filesDe('motorista',m.id);
   return `
@@ -1689,6 +1817,7 @@ function viewMotResumo(m,vencs,info){
     ${info('CTPS', esc(m.ctps?(m.ctps+(m.ctpsSerie?' · série '+m.ctpsSerie:'')):''))}
     ${info('Endereço', esc(m.endereco))}
   </div>
+  ${_motCNH(m)}
   ${m.problemasSaude?`<div class="card" style="margin-bottom:18px;border-left:3px solid #ff6b6b"><div class="card-b" style="display:flex;gap:12px;align-items:flex-start">
     <span style="color:#ff6b6b;flex:0 0 auto;display:flex">${svg('stetho')}</span>
     <div><b style="display:block;color:#ff6b6b;margin-bottom:3px">Problemas de saúde</b><span style="white-space:pre-wrap">${esc(m.problemasSaude)}</span></div></div></div>`:''}

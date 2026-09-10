@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (09/09/2026 — v9.1)
+## ⚡ ONDE O PROJETO ESTÁ (09/09/2026 — v9.2)
 
-**v9.1 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=214`, cache SW `planeta-express-v9-1`, rodapé `v9.1`.
+**v9.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=215`, cache SW `planeta-express-v9-2`, rodapé `v9.2`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,30 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 09/09/2026 — v9.2 (CNH anexada e lida na ficha de TODO motorista)
+
+Pedido: *"todos os cadastros de motoristas, de agora e os futuros, tenham uma opção de inserir pdf com CNH, que possa abrir independente do usuário e do mobile, sempre"*.
+
+**Card "CNH — habilitação"** no Resumo da ficha: mostra o PDF anexado (abrir/baixar), o **botão "Anexar CNH"** e a situação do documento. **"De agora e os futuros" sai de graça** — o card é montado por `viewMotResumo`, então nasce junto com qualquer motorista novo (conferido com um cadastro criado na hora).
+
+**"Abrir independente do usuário e do mobile"** é a máquina da v8.8/8.9: o arquivo sobe por `subirUm()`, que registra em `DB.anexos` e sincroniza. Nada novo foi inventado para isto — de propósito.
+
+**Leitura no pipeline da Central** (tipo `cnh` + `cpidExtrCNH`), nunca um leitor solto na tela. Lê nº de registro, validade, categoria, 1ª habilitação, emissão, RENACH, espelho, CPF, nome e EAR; liga ao colaborador por **CPF** (é único), depois por nº de CNH, depois por nome.
+
+> 🔴 **A armadilha desta leitura são as TRÊS DATAS.** A CNH traz *validade*, *1ª habilitação* e *emissão*, todas no mesmo formato e próximas no papel. Pegar uma pela outra faria o motorista aparecer **vencido há anos** — erro silencioso e grave. Por isso **cada data só sai pelo rótulo dela**, nunca "a primeira data que aparecer". Testado: 22/08/2035, 18/12/2018 e 19/09/2025 caíram cada uma no seu campo.
+
+⚠️ **O nº de registro exige rótulo.** Tem 11 dígitos — igual ao CPF. Sem o rótulo, um pegaria o outro sem ninguém perceber.
+
+⚠️ **Classificador:** a regra de CNH vem **antes** da de CRLV. Os dois são documentos de trânsito e dividem "registro", "validade", "categoria"; o que separa é *habilitação* × *licenciamento*, e a CNH não tem renavam nem chassi. Conferido: CNH dá `cnh`, CRLV continua `crlv`.
+
+**Selo fala do DOCUMENTO** (lição da v9.0): "Em dia — até 22/08/2035", "Vence em N dia(s)" quando faltam ≤30, "Vencida em 01/01/2020", "Sem validade informada". O aviso de arquivo só aparece quando ele ainda não subiu.
+
+**Nada é gravado sozinho:** modal *na ficha hoje × na CNH*, campo a campo. **CPF divergente gera aviso vermelho** — é o sinal de CNH anexada no colaborador errado.
+
+**Validado no Chrome headless, zero erro de JS:** card nos **6** motoristas e no cadastro novo; as três datas separadas corretamente; nº/categoria/RENACH lidos e colaborador ligado pelo CPF; classificador separando CNH de CRLV; os três estados do selo; arquivo anexado aparecendo no card.
+
+**Versão:** assets `?v=215`, cache `planeta-express-v9-2`, rodapé `v9.2`, celular reconstruído.
 
 ### ✅ ESTADO EM 09/09/2026 — v9.1 (Notas Fiscais do Painel passa a ser o MÊS VIGENTE)
 
