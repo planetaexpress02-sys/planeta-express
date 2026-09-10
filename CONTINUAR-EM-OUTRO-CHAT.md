@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.7)
+## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.8)
 
-**v9.7 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=220`, cache SW `planeta-express-v9-7`, rodapé `v9.7`.
+**v9.8 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=221`, cache SW `planeta-express-v9-8`, rodapé `v9.8`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,27 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 10/09/2026 — v9.8 (a reimportação CONSERTA as datas trocadas que já estavam gravadas)
+
+*"está no 9.7 e continua DANDO ERRO, olha o valor, olha os meses"* — com print mostrando Fevereiro, Março, Abril, Agosto e Setembro ainda errados.
+
+**Ele estava certo, e a falha foi minha em DUAS camadas:**
+1. a v9.6 consertou o **leitor** — mas leitor arrumado **não desfaz o que já está salvo**. Os lançamentos gravados com a data trocada continuaram lá;
+2. eu pedi que ele **apagasse tudo à mão e reimportasse**. Empurrei a limpeza do meu defeito para o cliente. Errado.
+
+**Agora o sistema se conserta sozinho.** Ao reimportar a MESMA planilha, antes de decidir "novo" ou "repetido", o importador procura um lançamento **igual** (mesmo valor + mesmo motorista / mesma descrição) parado na **data TROCADA** (`_dataTrocada`: `2026-09-02` ↔ `2026-02-09`). Se acha, não é novo nem repetido: **é o mesmo, com a data errada** — e o certo é **corrigir a data**, não criar outro.
+
+- Essas linhas vêm **MARCADAS** (corrigir é o que ele quer) e com o selo verde **"corrige a data"**, mostrando `estava em 09/02/2026`.
+- Um aviso verde no topo explica por que linhas que "já existem" serão gravadas mesmo assim.
+- `_dataTrocada` devolve `''` quando o dia > 12 — aí a troca não daria mês válido e **não pode** ter sido esse defeito. Isso impede o conserto de encostar em datas legítimas.
+
+**Validado reproduzindo a base do print e reimportando o arquivo REAL do cliente:**
+`ANTES {02:1, 03:1, 04:1, 09:1, 10:1}` → detectou **8** lançamentos (5 vales + 3 gastos) → `DEPOIS {2026-09: 5}`, **total continua 5 vales, sem duplicar**; gastos todos em `2026-09`.
+
+> 🔴 **A lição, e ela é sobre método:** eu mexi na importação sem passar o **arquivo real do cliente** por ela. A regra [[testar-com-dado-real]] já dizia isso e eu não cumpri — bastava ter aberto a planilha dele uma vez para o defeito aparecer na hora. E depois: **quando um defeito meu corrompe dado do cliente, a correção inclui reparar o dado**, não só o código.
+
+**Versão:** assets `?v=221`, cache `planeta-express-v9-8`, rodapé `v9.8`, celular reconstruído.
 
 ### 🚨 ESTADO EM 10/09/2026 — v9.7 (o cliente não recebia as versões: o cache do GitHub Pages)
 

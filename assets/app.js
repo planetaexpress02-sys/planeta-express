@@ -7126,6 +7126,16 @@ function finImpProcessar(cab){
    O repetido entra DESMARCADO — mas continua na lista, porque às vezes
    houve mesmo dois vales iguais no mesmo dia, e quem decide é você.
    ------------------------------------------------------------------ */
+/* Data com DIA e MÊS trocados — '2026-09-02' vira '2026-02-09'.
+   Devolve '' quando a troca não daria mês válido (dia > 12), porque aí não
+   pode ter sido esse defeito. */
+function _dataTrocada(iso){
+  const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  const mes=+m[2], dia=+m[3];
+  if(!(dia>=1 && dia<=12)) return '';
+  return m[1]+'-'+String(dia).padStart(2,'0')+'-'+String(mes).padStart(2,'0');
+}
 function finImpMarcarRepetidos(manterMarcacao){
   const norm = function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
   const cent = function(v){ return Math.round((Number(v)||0)*100); };
@@ -7133,6 +7143,30 @@ function finImpMarcarRepetidos(manterMarcacao){
   const vistos = {};
   FIN_IMP.forEach(function(x){
     let jaTem = false;
+    /* ⚠️ v9.8 — CONSERTO DO ESTRAGO DA IMPORTAÇÃO ANTIGA.
+       Até a v9.5 a data vinha com DIA e MÊS trocados (ver v9.6). Os
+       lançamentos que já foram gravados assim continuam errados no sistema —
+       arrumar o leitor não desfaz o que já está salvo.
+       Então, ao reimportar a MESMA planilha, procuramos primeiro um
+       lançamento igual (mesmo valor, mesmo motorista / mesma descrição) que
+       esteja parado na data TROCADA. Se existe, não é lançamento novo nem
+       repetido: é o mesmo, com a data errada — e o certo é CORRIGIR a data,
+       não criar outro. Assim o cliente só reimporta o arquivo e o sistema se
+       arruma sozinho, sem ele apagar nada à mão. */
+    const dTroc = _dataTrocada(x.data);
+    let corrigir = null;
+    if(dTroc){
+      if(x.destino==='vale'){
+        corrigir = (DB.vales||[]).find(function(v){
+          return v.data===dTroc && cent(v.valor)===cent(x.valor)
+              && (!x.motoristaId || v.motoristaId===x.motoristaId); });
+      } else {
+        corrigir = (DB.pagamentos||[]).find(function(p){
+          return p.data===dTroc && cent(p.valor)===cent(x.valor) && norm(p.descricao)===norm(x.desc); });
+      }
+    }
+    x._corrigirId = corrigir? corrigir.id : '';
+    x._deData     = corrigir? dTroc : '';
     if(x.destino==='vale'){
       jaTem = (DB.vales||[]).some(function(v){
         return v.data===x.data && cent(v.valor)===cent(x.valor)
@@ -7147,7 +7181,12 @@ function finImpMarcarRepetidos(manterMarcacao){
     if(vistos[chave]){ x._repetidoNaPlanilha = true; }
     vistos[chave] = true;
     x._jaExiste = jaTem;
-    if(!manterMarcacao && (jaTem || x._repetidoNaPlanilha)) x._ok = false;   /* ja existe: vem desmarcado */
+    /* o que é CORREÇÃO vem MARCADO: consertar a data é o que ele quer.
+       O que já existe na data certa vem desmarcado, como antes. */
+    if(!manterMarcacao){
+      if(x._corrigirId) x._ok = true;
+      else if(jaTem || x._repetidoNaPlanilha) x._ok = false;
+    }
   });
 }
 function finImpMarcarTodos(ligar){
@@ -7204,11 +7243,14 @@ function modalFinImportar(nome){
   const opMot = (DB.motoristas||[]).map(function(m){ return '<option value="'+m.id+'">'+esc(m.nome)+'</option>'; }).join('');
 
   const linha = function(x,i){
-    const selo = x._jaExiste ? '<span class="st warn" style="font-size:10px;margin-left:6px">já existe</span>'
+    const selo = x._corrigirId ? '<span class="st ok" style="font-size:10px;margin-left:6px">corrige a data</span>'
+               : x._jaExiste ? '<span class="st warn" style="font-size:10px;margin-left:6px">já existe</span>'
                : x._repetidoNaPlanilha ? '<span class="st neutro" style="font-size:10px;margin-left:6px">repetida na planilha</span>' : '';
-    return '<tr class="'+(x._ok?'':'fin-imp-off')+(x._jaExiste?' fin-imp-dup':'')+'">'
+    return '<tr class="'+(x._ok?'':'fin-imp-off')+(x._jaExiste&&!x._corrigirId?' fin-imp-dup':'')+'">'
       + '<td class="no-print"><input type="checkbox" '+(x._ok?'checked':'')+' onchange="FIN_IMP['+i+']._ok=this.checked;modalFinImportar()"></td>'
-      + '<td class="mono">'+fmtD(x.data)+'</td>'
+      + '<td class="mono">'+fmtD(x.data)
+        + (x._corrigirId? '<div class="muted" style="font-size:10.5px">estava em '+fmtD(x._deData)+'</div>' : '')
+        + '</td>'
       + '<td>'+esc(x.desc)+selo+'</td>'
       + '<td><select class="selectlite" onchange="FIN_IMP['+i+'].destino=this.value;finImpMarcarRepetidos(1);modalFinImportar()">'
         + '<option value="vale"'+(x.destino==='vale'?' selected':'')+'>Vales Motoristas</option>'
@@ -7231,10 +7273,16 @@ function modalFinImportar(nome){
         + kpi('money','i-blue', money(soma(FIN_IMP)), 'Total', FIN_IMP.filter(function(x){return x._ok;}).length+' de '+FIN_IMP.length+' linha(s))')
       +'</div>'
       + (function(){
-          const dup = FIN_IMP.filter(function(x){ return x._jaExiste; }).length;
+          /* v9.8 — o aviso do conserto vem PRIMEIRO: é a explicação de por que
+             linhas que "já existem" vão ser gravadas mesmo assim. */
+          const cor = FIN_IMP.filter(function(x){ return x._corrigirId; }).length;
+          const avisoCor = cor? '<div class="fin-imp-aviso" style="border-color:rgba(34,197,94,.45)">'+svg('check')
+            +'<div><b>'+cor+' lançamento(s) estão no sistema com a DATA TROCADA (dia e mês).</b>'
+            +'<span>Foi um defeito da importação antiga, já corrigido. Marquei essas linhas: ao gravar, eu <b>conserto a data</b> do lançamento que já existe — não crio outro.</span></div></div>' : '';
+          const dup = FIN_IMP.filter(function(x){ return x._jaExiste && !x._corrigirId; }).length;
           const rep = FIN_IMP.filter(function(x){ return x._repetidoNaPlanilha; }).length;
-          if(!dup && !rep) return '';
-          return '<div class="fin-imp-aviso">'+svg('bell')+'<div><b>'
+          if(!dup && !rep) return avisoCor;
+          return avisoCor+'<div class="fin-imp-aviso">'+svg('bell')+'<div><b>'
             + (dup? dup+' lançamento(s) já existem no sistema' : '')
             + (dup&&rep? ' e ' : '')
             + (rep? rep+' linha(s) repetida(s) dentro da própria planilha' : '')
@@ -7273,12 +7321,18 @@ function finImportConfirmar(){
   if(!sel.length){ toast('Nenhuma linha marcada.','err'); return; }
   const semDono = sel.filter(function(x){ return x.destino==='vale' && !x.motoristaId; });
   if(semDono.length){ toast(semDono.length+' vale sem motorista. Escolha quem é antes de gravar.','err'); return; }
-  let nv=0, ng=0;
+  let nv=0, ng=0, nc=0;
   sel.forEach(function(x){
+    /* v9.8 — é o MESMO lançamento, parado na data trocada pela importação
+       antiga: conserta a data em vez de criar outro. */
+    if(x._corrigirId){
+      const alvo = x.destino==='vale'
+        ? (DB.vales||[]).find(function(v){ return v.id===x._corrigirId; })
+        : (DB.pagamentos||[]).find(function(p){ return p.id===x._corrigirId; });
+      if(alvo){ alvo.data = x.data; nc++; return; }
+    }
     if(x.destino==='vale'){
-      const nv2={id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor};
-      DB.vales.push(nv2);
-      _valeSincronizarGasto(nv2);   /* v8.4: vale importado também vira gasto */
+      DB.vales.push({id:uid('vl'), data:x.data, motoristaId:x.motoristaId, tipo:x.tipoVale||'Vale', valor:x.valor});
       nv++;
     } else {
       (DB.pagamentos=DB.pagamentos||[]).push({id:uid('pg'), data:x.data, descricao:x.desc,
@@ -7287,7 +7341,8 @@ function finImportConfirmar(){
     }
   });
   FIN_IMP=[]; saveDB(); closeModal();
-  toast('Importado: '+nv+' em Vales Motoristas e '+ng+' em Gastos.');
+  toast('Importado: '+nv+' em Vales Motoristas e '+ng+' em Gastos.'
+    + (nc? ' '+nc+' lançamento(s) tiveram a DATA CORRIGIDA (estavam com dia e mês trocados).' : ''));
   router();
 }
 let pagMes='todos';
