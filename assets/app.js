@@ -873,6 +873,9 @@ function pexAfterRender(rota){
     pexTipInit(); pexEnhanceTables(); pexEnhanceCharts(); pexDashMapReveal(); if(rota==='dashboard' && typeof iniCountUp==='function') iniCountUp();
     /* Monitoramento: liga a simulação só na Início e desliga ao sair (performance) */
     if(rota==='descargas' && typeof descInit==='function') descInit();
+    /* v9.5 — a sanfona dos vales precisa da altura medida DEPOIS do render;
+       sem isto o mês corrente nasce "aberto" com altura 0 e parece vazio. */
+    if(rota==='financeiro' && typeof valeInit==='function') valeInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
     if(typeof pexMobileInit==='function') pexMobileInit(rota); }catch(e){}
@@ -6738,6 +6741,97 @@ function viewFinanceiro(){ return viewFinConteudo(); }  /* senha removida a pedi
 
 
 
+/* ------------------------------------------------------------------
+   VALES AGRUPADOS POR MÊS, MINIMIZADOS (v9.5)
+   Pedido: "deve haver a opção de minimizar vales por mês, e só abrir a
+   lista quando eu clicar".
+
+   ⚠️ Reusa a MESMA sanfona das Descargas (`.dsc-month*`, v6.x) em vez de
+   inventar outra. Duas razões: o cliente já sabe usar aquela (clica no mês,
+   abre), e um segundo componente parecido dobraria o CSS a manter.
+
+   ⚠️ Fechado é o padrão — é o que ele pediu ("só abrir quando eu clicar").
+   A exceção é o MÊS CORRENTE, que abre sozinho: é onde ele lança no dia a
+   dia, e obrigá-lo a clicar todo dia no mesmo lugar seria pior.
+   O que ele abrir fica lembrado em `valeAbertos` enquanto a tela viver.
+
+   ⚠️ A ordem CRONOLÓGICA continua valendo dentro de cada mês e entre os
+   meses — do mais antigo para o mais novo, regra dura do projeto. */
+let valeAbertos = null;                       /* null = ainda não inicializado */
+function _valeComp(v){
+  const d=String((v&&v.data)||'');
+  return /^\d{4}-\d{2}/.test(d) ? d.slice(0,7) : '0000-00';
+}
+function _valeGrupos(){
+  const lista=(DB.vales||[]).slice().sort(function(a,b){
+    return String(a.data||'').localeCompare(String(b.data||'')); });   /* antigo → novo */
+  const mapa={};
+  lista.forEach(function(v){ const c=_valeComp(v); (mapa[c]=mapa[c]||[]).push(v); });
+  const comps=Object.keys(mapa).sort();                                 /* meses antigos primeiro */
+  if(valeAbertos===null){
+    /* primeira montagem: só o mês corrente nasce aberto */
+    const h=hoje(); const atual=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+    valeAbertos={}; if(mapa[atual]) valeAbertos[atual]=1;
+  }
+  return {lista:lista, mapa:mapa, comps:comps};
+}
+function valeMesesHTML(){
+  const g=_valeGrupos();
+  if(!g.lista.length) return '';
+  return '<div class="dsc-months">' + g.comps.map(function(c){
+    const arr=g.mapa[c];
+    /* "Vale" é dinheiro que SAI; "Pagamento" é o motorista devolvendo. Somar
+       os dois num total só daria um número que não quer dizer nada. */
+    const vale=arr.filter(function(v){ return v.tipo!=='Pagamento'; })
+                  .reduce(function(s,v){ return s+(Number(v.valor)||0); },0);
+    const pago=arr.filter(function(v){ return v.tipo==='Pagamento'; })
+                  .reduce(function(s,v){ return s+(Number(v.valor)||0); },0);
+    const aberto=!!valeAbertos[c];
+    const label=(c==='0000-00')?'Sem data':(typeof mesLabel==='function'? mesLabel(c) : c);
+    const rows=arr.map(function(v){ const m=motorista(v.motoristaId);
+      return '<tr class="clickable'+(VALE_SEL[v.id]?' sel-on':'')+'" onclick="modalVale(\''+v.id+'\')">'
+      + '<td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" '+(VALE_SEL[v.id]?'checked':'')+' onchange="valeSel(\''+v.id+'\',this.checked)"></td>'
+      + '<td class="mono">'+fmtD(v.data)+'</td><td>'+(m?esc(m.nome):'—')+'</td>'
+      + '<td><span class="st '+(v.tipo==='Pagamento'?'ok':'warn')+'">'+esc(v.tipo)+'</span></td>'
+      + '<td class="mono"><b>'+money(v.valor)+'</b></td>'
+      + '<td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalVale(\''+v.id+'\')">'+svg('edit')+'</button></td></tr>';
+    }).join('');
+    return '<div class="dsc-month '+(aberto?'open':'')+'" data-vm="'+c+'">'
+      + '<button class="dsc-month-h" type="button" onclick="valeToggle(\''+c+'\')">'
+      + '<span class="dsc-chev">'+svg('chevron')+'</span>'
+      + '<span class="dsc-cal">'+svg('cal')+'</span>'
+      + '<span class="dsc-mtitle">'+esc(label)+'</span>'
+      + '<span class="dsc-mcount">'+arr.length+'</span>'
+      + '<span class="dsc-mspacer"></span>'
+      + '<span class="dsc-mtot">'+money(vale)+(pago?' <span class="muted" style="font-weight:600">· pago '+money(pago)+'</span>':'')+'</span>'
+      + '</button>'
+      + '<div class="dsc-monthbody"><div class="tbl-wrap"><table class="tbl">'
+      + '<thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>'
+      + '<tbody>'+rows+'</tbody></table></div></div></div>';
+  }).join('') + '</div>';
+}
+function valeToggle(c){
+  const sec=document.querySelector('#view .dsc-month[data-vm="'+c+'"]'); if(!sec) return;
+  const open=sec.classList.toggle('open');
+  if(valeAbertos===null) valeAbertos={};
+  if(open) valeAbertos[c]=1; else delete valeAbertos[c];
+  const body=sec.querySelector('.dsc-monthbody');
+  if(body) body.style.maxHeight = open ? body.scrollHeight+'px' : '0px';
+}
+function valeExpandir(on){
+  const g=_valeGrupos();
+  g.comps.forEach(function(c){ if(on) valeAbertos[c]=1; else delete valeAbertos[c]; });
+  router();
+}
+/* pós-render: dá a altura de cada mês aberto (é o que anima a expansão).
+   Sem isto o mês nasce "aberto" com altura 0 e parece vazio. */
+function valeInit(){
+  document.querySelectorAll('#view .dsc-month[data-vm]').forEach(function(sec){
+    const body=sec.querySelector('.dsc-monthbody'); if(!body) return;
+    body.style.maxHeight = sec.classList.contains('open') ? body.scrollHeight+'px' : '0px';
+  });
+}
+
 function valeSaldo(mId){ let s=0; DB.vales.filter(v=>v.motoristaId===mId).forEach(v=>{ s+= v.tipo==='Pagamento'? -(Number(v.valor)||0) : (Number(v.valor)||0); }); return s; }
 
 /* ==================================================================
@@ -7298,14 +7392,7 @@ function viewFinConteudo(){
       ${pagLista.length?`<tfoot><tr><td colspan="5" style="text-align:right;padding-top:10px"><b>Total${pagMes!=='todos'?' · '+mesLabel(pagMes):''}</b></td><td class="ta-r mono" style="padding-top:10px"><b>${money(pagTotFiltro)}</b></td><td class="no-print"></td></tr></tfoot>`:''}
     </table></div></div></div>`;
   const valesAberto=DB.motoristas.reduce((s,m)=>s+Math.max(0,valeSaldo(m.id)),0);
-  /* Vales Motoristas: SEMPRE do mais antigo para o mais novo (pedido do cliente) */
-  const valeRows=DB.vales.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v=>{ const m=motorista(v.motoristaId);
-    return `<tr class="clickable${VALE_SEL[v.id]?' sel-on':''}" onclick="modalVale('${v.id}')">
-    <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" ${VALE_SEL[v.id]?'checked':''} onchange="valeSel('${v.id}',this.checked)"></td>
-    <td class="mono">${fmtD(v.data)}</td><td>${m?esc(m.nome):'—'}</td>
-    <td><span class="st ${v.tipo==='Pagamento'?'ok':'warn'}">${esc(v.tipo)}</span></td>
-    <td class="mono"><b>${money(v.valor)}</b></td>
-    <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalVale('${v.id}')">${svg('edit')}</button></td></tr>`; }).join('');
+  const valeRows=valeMesesHTML();
   const valeNSel=Object.keys(VALE_SEL).filter(k=>VALE_SEL[k]).length;
   const valeTotSel=(DB.vales||[]).filter(v=>VALE_SEL[v.id]).reduce((s,v)=>s+(Number(v.valor)||0),0);
   const saldoCards=DB.motoristas.filter(m=>valeSaldo(m.id)!==0).map(m=>{ const s=valeSaldo(m.id);
@@ -7327,15 +7414,14 @@ function viewFinConteudo(){
 
   <div class="card"><div class="card-h">${svg('wallet')}<h3>Vales Motoristas</h3>
     <div class="r no-print" style="gap:8px">
+      ${(DB.vales||[]).length?`<button class="btn ghost sm" onclick="valeExpandir(${Object.keys(valeAbertos||{}).length? 'false':'true'})" title="Abrir ou fechar todos os meses">${svg('chevron')} ${Object.keys(valeAbertos||{}).length?'Fechar todos':'Abrir todos'}</button>`:''}
       <button class="btn sm" onclick="PEXRelAbrirId('fin-vales')" title="Emitir o relatório de Vales Motoristas em A4/PDF">${svg('print')} Relatório</button>
       <button class="btn primary sm" onclick="modalVale()">${svg('plus')} Novo</button></div></div>
     ${valeNSel?`<div class="sel-bar no-print">${svg('check')}<b>${valeNSel} selecionado(s)</b>
       <span>${money(valeTotSel)}</span><div class="spacer"></div>
       <button class="btn ghost sm" onclick="valeSelLimpar()">Limpar seleção</button>
       <button class="btn sm sel-del" onclick="valeExcluirSel()">${svg('trash')} Excluir selecionados</button></div>`:''}
-    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th class="no-print" style="width:34px"><input type="checkbox" ${(DB.vales||[]).length&&(DB.vales||[]).every(v=>VALE_SEL[v.id])?'checked':''} onchange="valeSelTodos(this.checked)" title="Selecionar todos"></th><th>Data</th><th>Motorista</th><th>Tipo</th><th>Valor</th><th class="no-print"></th></tr></thead>
-      <tbody>${valeRows||`<tr><td colspan="6">${emptyState('Nenhum vale ou pagamento lançado.')}</td></tr>`}</tbody></table></div></div>
+    <div class="card-b">${valeRows||emptyState('Nenhum vale ou pagamento lançado.')}</div>
     ${saldoCards?`<div class="fin-saldos"><div class="fin-saldos-t">${svg('wallet')} Saldo de vales por motorista</div>
       <div class="fin-saldos-g">${saldoCards}</div></div>`:''}
   </div>
