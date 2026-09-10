@@ -35,7 +35,7 @@ function ensureCollections(){
   importarManutencaoPlanilhas();
   importarCtesSeed();
   corrigirValoresAntigos();
-  espelharValesEmGastos();
+  limparEspelhosDeVale();
   completarPlacasNosTextos();
 }
 /* Lançamentos que já existiam antes da v8.6 continuariam com "Descarga QIO".
@@ -59,26 +59,6 @@ function completarPlacasNosTextos(){
   };
   passar(DB.pagamentos,'descricao');
   passar(DB.descargas,'local');
-  DB.seedAplicado.push(tag);
-  if(n) try{ saveLocal(); }catch(e){}
-}
-/* Os vales que JÁ existiam antes da v8.4 não têm gasto espelhado — sem isto,
-   o pedido do cliente ("vale também nos gastos") só valeria para vale novo.
-
-   ⚠️ UMA VEZ POR BASE, carimbado em `DB.seedAplicado`. É a regra dura do
-   projeto: varrer a coleção a cada carregamento faria o gasto VOLTAR toda vez
-   que ele apagasse um — foi assim que um motorista demitido ressuscitou na
-   v6.91. Depois deste carimbo, quem cria espelho é só o `salvarVale`. */
-function espelharValesEmGastos(){
-  const tag='espelho-vales-v84';
-  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
-  if(DB.seedAplicado.indexOf(tag)>=0) return;
-  let n=0;
-  (DB.vales||[]).forEach(function(v){
-    if(v && v.tipo==='Vale' && (Number(v.valor)||0)>0 && !_gastoDoVale(v.id)){
-      if(_valeSincronizarGasto(v)==='criado') n++;
-    }
-  });
   DB.seedAplicado.push(tag);
   if(n) try{ saveLocal(); }catch(e){}
 }
@@ -7108,7 +7088,14 @@ function finImpProcessar(cab){
   for(let i=cab.linha+1; i<grid.length; i++){
     const l = grid[i]||[];
     const pega = function(k){ return cab.col[k]==null? '' : String(l[cab.col[k]]==null?'':l[cab.col[k]]).trim(); };
-    const bruto = cab.col.data==null ? '' : (l[cab.col.data]);
+    /* ⚠️ v9.6 — a data vem PRIMEIRO da leitura CRUA (o número de série do
+       Excel), que não tem ambiguidade de formato. A leitura formatada só
+       entra como reserva: nela a planilha do cliente vinha em americano
+       ("9/2/26") e o sistema lia 9 de fevereiro em vez de 2 de setembro,
+       espalhando um único período de setembro por seis meses diferentes. */
+    const lCru = (FIN_GRID && FIN_GRID._cru && FIN_GRID._cru[i]) || null;
+    const bruto = cab.col.data==null ? ''
+      : ((lCru && lCru[cab.col.data]!=null && lCru[cab.col.data]!=='') ? lCru[cab.col.data] : l[cab.col.data]);
     const dataISO = _finData(bruto, fmtData) || _impISO(pega("data"));
     const valor   = _finValor(pega("valor"));
     if(!dataISO || !valor) continue;
@@ -7641,21 +7628,40 @@ function modalVale(id){
    na conta c.motorista.
    ------------------------------------------------------------------ */
 function _gastoDoVale(vid){ return (DB.pagamentos||[]).find(p=>p.origemVale===vid); }
+/* ⚠️ v9.6 — O ESPELHO VALE→GASTO FOI DESFEITO.
+   Ele nasceu na v8.4 a pedido do cliente ("os vales também devem ser lançados
+   na planilha de gastos"). Na prática ficou ruim e ele cobrou olhando a tela:
+   *"a aba financeiro está toda errada, está misturado tudo"*. E ele tem razão
+   — cada vale aparecia DUAS vezes no Financeiro: na lista de Vales e, de novo,
+   no meio dos gastos ("Vale — Marcelo Setsuo Goto"), embolado com Elétrica,
+   Correios e Uber. Uma tela de conferência com o mesmo lançamento repetido
+   não ajuda ninguém.
+
+   ⚠️ Nada se perde em dinheiro: a Contabilidade NUNCA contou pelo espelho —
+   a fonte 'pagamento' já devolvia null para `origemVale`, e quem conta o vale
+   é a fonte 'vale', na conta c.motorista. Ou seja, o espelho era só visual.
+
+   A função continua existindo e agora só faz a limpeza: se sobrou espelho de
+   antes, ele sai. */
 function _valeSincronizarGasto(v){
   if(!v) return '';
   const atual=_gastoDoVale(v.id);
-  const ehGasto = v.tipo==='Vale' && (Number(v.valor)||0)>0;
-  if(!ehGasto){                       /* virou 'Pagamento' ou zerou: espelho sai */
-    if(atual){ marcarRemovido('pagamentosRemovidos',atual.id);
-      DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==atual.id); return 'removido'; }
-    return '';
-  }
-  const m=(DB.motoristas||[]).find(x=>x.id===v.motoristaId);
-  const campos={ data:v.data, descricao:'Vale — '+((m&&m.nome)||'motorista'), categoria:'Vale',
-                 valor:Number(v.valor)||0, obs:v.obs||'', origemVale:v.id };
-  if(atual){ Object.assign(atual,campos); return 'atualizado'; }
-  (DB.pagamentos=DB.pagamentos||[]).push(Object.assign({id:uid('pg'), forma:'', placa:''},campos));
-  return 'criado';
+  if(atual){ marcarRemovido('pagamentosRemovidos',atual.id);
+    DB.pagamentos=(DB.pagamentos||[]).filter(p=>p.id!==atual.id); return 'removido'; }
+  return '';
+}
+/* Tira da lista de Gastos os espelhos criados entre a v8.4 e a v9.5.
+   UMA vez por base (`DB.seedAplicado`) — varrer sempre apagaria um gasto que
+   o cliente resolvesse criar à mão com esse campo. */
+function limparEspelhosDeVale(){
+  const tag='sem-espelho-vale-v96';
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  if(DB.seedAplicado.indexOf(tag)>=0) return;
+  const alvo=(DB.pagamentos||[]).filter(function(p){ return p && p.origemVale; });
+  alvo.forEach(function(p){ marcarRemovido('pagamentosRemovidos',p.id); });
+  if(alvo.length) DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return !(p && p.origemVale); });
+  DB.seedAplicado.push(tag);
+  if(alvo.length) try{ saveLocal(); }catch(e){}
 }
 function _valeApagarGasto(vid){
   const g=_gastoDoVale(vid);

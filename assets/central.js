@@ -148,12 +148,32 @@ async function cpidLerPlanilha(file, p){
       if(p) p('lendo com SheetJS');
       const buf = await file.arrayBuffer();
       const wb  = XLSX.read(buf, {type:'array', cellDates:true});
-      let grid=[];
+      /* ⚠️ v9.6 — SEGUNDA leitura, CRUA, e o motivo é um defeito real que
+         embaralhou a planilha de vales do cliente:
+
+         a leitura formatada (`raw:false`) devolve a data JÁ ESCRITA usando o
+         formato da célula. A planilha dele usa o formato padrão de data do
+         Excel (numFmtId 14), que o SheetJS escreve em AMERICANO — 02/09/2026
+         virava a string "9/2/26". O sistema lia como brasileiro (dia 9, mês
+         2) e jogava o lançamento em FEVEREIRO. Todas as datas viraram outro
+         mês: set/02→fev, set/03→mar, set/04→abr, set/08→ago, set/10→out.
+
+         A leitura CRUA devolve o número de série do Excel (46267), que não
+         tem formato nem ambiguidade — 46267 é sempre 02/09/2026. É esta que
+         a importação do Financeiro usa para a coluna de data.
+
+         Lemos sem `cellDates` de propósito: com ele o SheetJS devolveria
+         objetos Date, e aí voltaria a depender de fuso horário. */
+      let grid=[], cruas=[];
+      let wbRaw=null; try{ wbRaw = XLSX.read(buf, {type:'array', cellDates:false}); }catch(e){}
       (wb.SheetNames||[]).forEach(function(nome){
         const linhas = XLSX.utils.sheet_to_json(wb.Sheets[nome], {header:1, raw:false, defval:''});
         grid = grid.concat(linhas);
+        if(wbRaw && wbRaw.Sheets[nome]){
+          cruas = cruas.concat(XLSX.utils.sheet_to_json(wbRaw.Sheets[nome], {header:1, raw:true, defval:''}));
+        } else { cruas = cruas.concat(linhas); }
       });
-      if(grid.length) return grid;
+      if(grid.length){ try{ grid._cru = cruas; }catch(e){} return grid; }
     }catch(e){}
   }
   try{

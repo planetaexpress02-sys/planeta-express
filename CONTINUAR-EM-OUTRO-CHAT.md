@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.5)
+## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.6)
 
-**v9.5 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=218`, cache SW `planeta-express-v9-5`, rodapé `v9.5`.
+**v9.6 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=219`, cache SW `planeta-express-v9-6`, rodapé `v9.6`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,45 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### 🚨 ESTADO EM 10/09/2026 — v9.6 (a importação lia a data ao contrário — e era isso que bagunçou o Financeiro)
+
+O cliente mandou dois prints e a planilha: *"a aba financeiro está toda errada, está misturado tudo, olha a planilha que eu subi e olha os números que apareceram"*. **Ele estava certo nos dois pontos, e a causa do primeiro era um defeito meu.**
+
+## 🔴 O DEFEITO: dia trocado por mês na importação
+
+A **`Planilha Vales Bradesco.xlsx`** tem **um único período: 2 a 10 de setembro de 2026**. O sistema espalhou em **seis meses**.
+
+**Como descobri (e a lição de método):** abri o `.xlsx` como ZIP e li o XML. As datas estão como **número de série** (46267…46275) e o estilo aponta para **`numFmtId=14`** — o formato padrão de data do Excel, que **o SheetJS escreve em AMERICANO**. Com `raw:false`, a célula 02/09/2026 chegava como a string **`"9/2/26"`**, e o `_finData` lia no padrão brasileiro: **9 de fevereiro**.
+
+| Planilha | Vinha como | Sistema entendeu |
+|---|---|---|
+| 02/09 — Vale Marcelo R$ 400 | `9/2/26` | **Fevereiro** |
+| 03/09 — Vale Renato R$ 300 | `9/3/26` | **Março** |
+| 04/09 — Vale Marcelo R$ 1.000 | `9/4/26` | **Abril** |
+| 08/09 — Descarga JSX | `9/8/26` | **Agosto** |
+| 10/09 — Vale Renato R$ 1.100 | `9/10/26` | **Outubro** |
+
+Bate **exatamente** com os meses fantasmas dos prints. `_finFormatoData` não tinha como salvar: ele procura um número > 12 para decidir o formato, e nesses dados **nenhum** passa de 12.
+
+**A correção:** `cpidLerPlanilha` passou a fazer uma **segunda leitura CRUA** (`raw:true`, **sem** `cellDates`) e devolvê-la em `grid._cru`. A importação do Financeiro usa a data crua — o **número de série não tem formato nem ambiguidade**: 46267 é sempre 02/09/2026. A leitura formatada ficou só de reserva.
+Sem `cellDates` de propósito: com ele viriam objetos `Date` e a data voltaria a depender de **fuso horário** (medido: um `Date` de meia-noite UTC devolvia o dia anterior).
+
+> ✅ **Validado com o arquivo REAL do cliente, pelo caminho REAL** (`cpidLerPlanilha` → `_finImpCabecalho` → `finImpProcessar`): **14 lançamentos, todos em `2026-09`**, somando **R$ 6.620,00** — o mesmo total que a própria planilha fecha na última linha.
+
+## O "misturado": o espelho vale→gasto foi DESFEITO
+
+Ele criou-se na **v8.4 a pedido dele mesmo** ("os vales também devem ser lançados na planilha de gastos"). Na prática ficou ruim: cada vale aparecia **duas vezes** no Financeiro — na lista de Vales e de novo no meio dos gastos ("Vale — Marcelo Setsuo Goto"), embolado com Elétrica, Correios e Uber.
+
+⚠️ **Nada se perdeu em dinheiro:** a Contabilidade **nunca** contou pelo espelho — a fonte `'pagamento'` já devolvia `null` para `origemVale`, e quem conta o vale é a fonte `'vale'` (conta `c.motorista`). O espelho era **só visual**. Conferido: o vale continua aparecendo 1× na Contabilidade.
+
+`_valeSincronizarGasto()` virou só limpeza, e **`limparEspelhosDeVale()`** remove os espelhos criados entre a v8.4 e a v9.5 — uma vez por base. O backfill `espelharValesEmGastos()` foi **removido** (grep confirmou: nenhum outro chamador).
+
+## O que NÃO fiz, e por quê
+
+Ele pediu que **vales antigos não sejam salvos, só o mês vigente**. **Não implementei apagamento automático** — e o motivo é concreto: **`valeSaldo()` soma o histórico inteiro**, então apagar meses anteriores **zeraria dívidas que ainda existem** (os R$ 8.300 em aberto vêm dessa soma). Além disso, **os "meses antigos" que ele viu eram o defeito acima**, não histórico de verdade: com a data corrigida, a planilha dele cai toda em setembro. Ficou dito a ele, com o caminho para limpar o lixo da importação errada (seleção múltipla + "Excluir selecionados").
+
+**Versão:** assets `?v=219`, cache `planeta-express-v9-6`, rodapé `v9.6`, celular reconstruído.
 
 ### ✅ ESTADO EM 10/09/2026 — v9.5 (Vales agrupados por mês, minimizados)
 
