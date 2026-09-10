@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.6)
+## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v9.7)
 
-**v9.6 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=219`, cache SW `planeta-express-v9-6`, rodapé `v9.6`.
+**v9.7 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,90 MB) na mesma versão. Assets em `?v=220`, cache SW `planeta-express-v9-7`, rodapé `v9.7`.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +287,26 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### 🚨 ESTADO EM 10/09/2026 — v9.7 (o cliente não recebia as versões: o cache do GitHub Pages)
+
+*"não atualizou"*. Publiquei a v9.6, conferi que o site servia a v9.6 — e no navegador dele continuava a versão velha. **O defeito era meu, na estratégia de atualização.**
+
+**A causa, medida com `curl -I`:** o GitHub Pages manda **`Cache-Control: max-age=600`** em **tudo** — `index.html`, os assets **e o próprio `service-worker.js`**.
+
+Consequências que ninguém via:
+1. O service worker é "rede primeiro", mas um **`fetch()` comum PASSA pelo cache HTTP** do navegador. A "rede" devolvia a cópia guardada de até **10 minutos** atrás. O `Ctrl+Shift+R` limpa o documento, mas os arquivos que passam pelo SW continuavam velhos.
+2. Pior: o **`service-worker.js` também vinha do cache**, então o `reg.update()` podia rodar por 10 minutos **sem nem perceber** que existia versão nova.
+
+**Duas correções:**
+- **`service-worker.js`** — a busca de rede virou `fetch(new Request(url, {cache:'no-cache'}))`. Isso **obriga a perguntar ao servidor sempre**, revalidando por ETag. Não é baixar tudo de novo: se nada mudou, o servidor responde **304** e o navegador reusa. Fica atualizado **e** leve.
+- **`index.html`** — o registro virou `register('service-worker.js', {updateViaCache:'none'})`, para o navegador buscar o arquivo do SW **direto do servidor** a cada verificação, em vez de acreditar no cache.
+
+> **A lição:** "rede primeiro" **não** quer dizer "sempre a versão nova". Entre o `fetch()` e a rede existe o cache HTTP, e num host que manda `max-age` isso vira uma versão velha servida com toda a boa-fé. Ver [[deploy-github-pages]].
+
+**Validado:** sistema carregando e 6 rotas ok depois da mudança (zero erro de JS); sintaxe do service worker conferida à parte (`new Function(src)`), porque um erro ali não aparece no carregamento da página — o SW falharia **em silêncio** e o cliente ficaria presa na versão antiga de novo, sem sintoma nenhum.
+
+**Versão:** assets `?v=220`, cache `planeta-express-v9-7`, rodapé `v9.7`, celular reconstruído.
 
 ### 🚨 ESTADO EM 10/09/2026 — v9.6 (a importação lia a data ao contrário — e era isso que bagunçou o Financeiro)
 
