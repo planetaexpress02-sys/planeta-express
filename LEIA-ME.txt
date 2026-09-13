@@ -1,5 +1,5 @@
 ====================================================================
-   PLANETA EXPRESS — SISTEMA DE GESTÃO OPERACIONAL  (v2.0)
+   PLANETA EXPRESS — SISTEMA DE GESTÃO OPERACIONAL  (v2.3)
    Guia rápido de uso
 ====================================================================
 
@@ -90,6 +90,23 @@ NOVIDADES v2.2
 • NOTAS FISCAIS — valores por período (Alexandria, Notas em geral,
   Combustível) com total automático e gráfico de evolução.
 
+IMPORTAR A PLANILHA DE VIAGENS
+------------------------------------------------------------------
+Em VIAGENS > "Importar Planilha Excel", escolha a planilha do mês.
+
+• As DUAS colunas "Baixado" são lidas: a do transporte e a do
+  Termo Pallet. Antes só a primeira entrava, e por isso todo termo
+  aparecia como PENDENTE na tela.
+• Vale como baixado: OK, SIM, S, X, 1, "Baixado". TSP entra como
+  TSP. NÃO e "Pendente" entram como NÃO.
+• Pode importar o MESMO mês de novo. Viagem que já existe não
+  duplica: ela é ATUALIZADA com as baixas novas (a prévia mostra
+  "Atualiza" e o que vai mudar). É assim que se conserta o que
+  entrou errado antes.
+• A prévia agora mostra as colunas Baixado e Termo, para conferir
+  antes de confirmar.
+• Planilha que não for de viagens não é mais aceita como se fosse.
+
 ====================================================================
-Versão 2.2
+Versão 2.3
 ====================================================================

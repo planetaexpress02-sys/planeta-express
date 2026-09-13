@@ -171,6 +171,8 @@ table.tbl tr.clickable{cursor:pointer}
 .st.vencido{background:var(--danger-bg);color:var(--danger)}
 .st.neutro{background:#eef1f6;color:#64748b}
 .st.neutro::before{background:#94a3b8}
+/* "Atualiza": linha que já existe e vai receber a baixa vinda da planilha */
+.st.info{background:#e6f4fb;color:#0e6f96}
 
 .tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:600;background:#eef2f8;color:#475569}
 .tag.cavalo{background:#e6efff;color:#1d4ed8}

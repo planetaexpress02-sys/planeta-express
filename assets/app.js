@@ -6125,7 +6125,11 @@ function salvarViagem(id){ const d={data:val('f_data'),placa:val('f_placa'),moto
 function excluirViagem(id){ if(!confirm('Excluir esta viagem?'))return; DB.viagens=DB.viagens.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluída.'); router(); }
 
 /* ================================================================== */
-/*  IMPORTAÇÃO INTELIGENTE DE PLANILHA (Viagens) — v6.33               */
+/*  IMPORTAÇÃO INTELIGENTE DE PLANILHA (Viagens) — v6.34               */
+/*  v6.34: a planilha tem DUAS colunas "Baixado" (transporte e termo).   */
+/*  Só a primeira era lida, então todo termo entrava pendente. Agora as  */
+/*  duas entram, "OK"/"SIM" valem como baixado em um lugar só, e         */
+/*  reimportar o mesmo mês ATUALIZA a viagem em vez de ignorá-la.        */
 /*  Identifica as colunas sozinho e extrai as viagens da planilha.     */
 /* ================================================================== */
 function _viagemDetectar(sheets){
@@ -6153,6 +6157,21 @@ function _viagemDetectar(sheets){
     const map={}, used={}, hrow=grid[hr]||[];
     for(let c=0;c<hrow.length;c++){ const raw=hrow[c], t=_dnorm(raw); if(!t) continue;
       for(const [f,re] of FIELDS){ if(used[f]) continue; if(re.test(t)){ map[f]=c; used[f]=1; if(!campos[f]) campos[f]=String(raw).trim(); break; } } }
+    /*  A planilha das viagens tem DUAS colunas chamadas "Baixado": a do
+        transporte e a do termo pallet. A varredura acima só aproveitava a
+        primeira — a segunda ficava de fora e TODO termo entrava pendente.
+        Aqui a coluna que sobrou é recuperada: se vier depois do Termo Pallet,
+        é o termo; antes dele, é o transporte.  */
+    if(!used.termoBaixado || !used.baixado){
+      for(let c=0;c<hrow.length;c++){
+        if(Object.keys(map).some(f=>map[f]===c)) continue;          // coluna já usada
+        const raw=hrow[c], t=_dnorm(raw); if(!t || !/baix/.test(t)) continue;
+        const doTermo = /termo/.test(t) || (map.termoPallet!=null && c>map.termoPallet);
+        const f = doTermo ? 'termoBaixado' : 'baixado';
+        if(used[f]) continue;
+        map[f]=c; used[f]=1; if(!campos[f]) campos[f]=String(raw).trim();
+      }
+    }
     if(!('data' in map) && !(('placa' in map)&&('transporte' in map))) return;
     const get=(row,f)=>{ const c=map[f]; return c==null?'':String((row&&row[c])!=null?row[c]:'').trim(); };
     for(let r=hr+1;r<grid.length;r++){ const row=grid[r]||[];
@@ -6161,14 +6180,11 @@ function _viagemDetectar(sheets){
       if(!rData && !rPlaca && !rMot && !rTr && !rDest && !rTp) continue;
       const dataISO=_impISO(rData);
       if(!dataISO && !rPlaca && !rTr && !rMot) continue;
-      // normaliza "baixado" (SIM/TSP/NÃO)
-      const bxU=_dnorm(rBx); let baixado='';
-      if(/tsp/.test(bxU)) baixado='TSP'; else if(/sim|\bok\b|baix|^s$/.test(bxU)) baixado='SIM';
-      else if(/nao|^n$|pend/.test(bxU)) baixado='NÃO'; else baixado=rBx?String(rBx).toUpperCase():'';
-      const tbU=_dnorm(rTb); let termoB='';
-      if(/sim|\bok\b|baix|^s$/.test(tbU)) termoB='SIM'; else if(/nao|^n$/.test(tbU)) termoB='NÃO'; else termoB=rTb?String(rTb).toUpperCase():'';
+      const baixado=_bxNorm(rBx,true);      // transporte: aceita TSP
+      const termoB=_bxNorm(rTb,false);      // termo pallet
       const stU=_dnorm(rSt); let status='';
       if(/conclu|finaliz|entreg/.test(stU)) status='Concluída'; else if(/cancel/.test(stU)) status='Cancelada'; else if(/pend|aberto|andamento/.test(stU)) status='Pendente';
+      else if(_bxNorm(rSt,false)==='SIM') status='Concluída';   // coluna Status escrita como "OK"
       if(!status) status=(baixado==='SIM'||baixado==='TSP')?'Concluída':'Pendente';
       const o={ data:dataISO, placa:rPlaca, motorista:rMot, transporte:rTr, destino:rDest, baixado:baixado, termoPallet:rTp, termoBaixado:termoB, status:status };
       const issues=[];
@@ -6177,14 +6193,33 @@ function _viagemDetectar(sheets){
       if(!rMot) issues.push('sem motorista');
       const chave=(dataISO||'')+'|'+_plk(rPlaca)+'|'+_dnorm(rTr)+'|'+_dnorm(rMot);
       const dupeArq=!!vistos[chave]; vistos[chave]=1;
-      const dupe=dupeArq
-        || (rTr && DB.viagens.some(x=>x.data===dataISO && _dnorm(x.transporte)===_dnorm(rTr)))
-        || (dataISO && rMot && DB.viagens.some(x=>x.data===dataISO && _plk(x.placa)===_plk(rPlaca) && _dnorm(x.motorista)===_dnorm(rMot)));
-      o.imp = dupe?'dupe':(issues.length?'aviso':'ok');
-      o.issues=issues; o.incluir=(o.imp!=='dupe');
+      /*  Viagem que já existe não é mais simplesmente ignorada: a planilha é
+          a fonte da verdade da baixa. Reimportar o mês atualiza o que mudou
+          (transporte baixado, termo pallet e termo baixado) sem duplicar.  */
+      const ja = dupeArq ? null : (
+        (rTr && DB.viagens.find(x=>x.data===dataISO && _dnorm(x.transporte)===_dnorm(rTr))) ||
+        (dataISO && rMot && DB.viagens.find(x=>x.data===dataISO && _plk(x.placa)===_plk(rPlaca) && _dnorm(x.motorista)===_dnorm(rMot))) || null);
+      o.stFirme = !!(_dnorm(rSt) || baixado);   // a planilha realmente disse algo sobre a situação
+      o.issues=issues;
+      if(dupeArq){ o.imp='dupe'; o.incluir=false; }
+      else if(ja){
+        const mud=[];
+        if(baixado && baixado!==(ja.baixado||'')) mud.push('Baixado: '+(ja.baixado||'vazio')+' → '+baixado);
+        if(termoB && termoB!==(ja.termoBaixado||'')) mud.push('Termo: '+(ja.termoBaixado||'vazio')+' → '+termoB);
+        if(rTp && String(rTp).trim()!==(ja.termoPallet||'')) mud.push('Termo Pallet: '+(ja.termoPallet||'vazio')+' → '+String(rTp).trim());
+        if(o.stFirme && status && status!==(ja.status||'')) mud.push('Situação: '+(ja.status||'vazio')+' → '+status);
+        o.alvo=ja.id; o.mud=mud;
+        o.imp = mud.length ? 'atualiza' : 'dupe';
+        o.incluir = mud.length>0;
+      }
+      else { o.imp = issues.length?'aviso':'ok'; o.incluir=true; }
       rows.push(o);
     }
   });
+  /*  Rede de segurança: uma planilha de outro assunto (guardada na mesma pasta)
+      chegava a virar dezenas de "viagens" com colunas inventadas. Sem nenhuma
+      data válida e sem nenhuma placa da frota, não é planilha de viagem.  */
+  if(!rows.some(o=>o.data) && !rows.some(o=>o.placa && veiculoByPlaca(o.placa))) return { rows:[], detectadas:[] };
   const detectadas=Object.keys(campos).map(f=>LABEL[f]+' («'+campos[f]+'»)');
   return { rows, detectadas };
 }
@@ -6192,7 +6227,7 @@ function modalImportarViagem(){
   const suporta=!window.PEXImport || PEXImport.suportaXLSX();
   openModal(`<div class="m-h">${svg('upload')}<h3>Importar Planilha Excel — Viagens</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
-      <div class="banner" style="margin:0 0 14px">${svg('route')}<div><b>Importe as viagens de uma planilha</b><span>Escolha um arquivo <b>.xlsx</b> ou <b>.csv</b>. O sistema identifica sozinho as colunas (Data, Placa, Motorista, Transporte, Destino, Baixado, Termo Pallet, Status), lê tudo e monta uma prévia. Você confere as inconsistências e confirma.</span></div></div>
+      <div class="banner" style="margin:0 0 14px">${svg('route')}<div><b>Importe as viagens de uma planilha</b><span>Escolha um arquivo <b>.xlsx</b> ou <b>.csv</b>. O sistema identifica sozinho as colunas (Data, Placa, Motorista, Transporte, Destino, Baixado, Termo Pallet, Termo baixado, Status), lê tudo e monta uma prévia. <b>OK</b> e <b>SIM</b> valem como baixado. Pode reimportar o mesmo mês: viagem que já existe é <b>atualizada</b> com as baixas novas, sem duplicar.</span></div></div>
       ${suporta?'':`<div class="hint" style="color:var(--danger)">Este navegador não abre .xlsx direto — use o Chrome ou o Edge, ou salve a planilha como CSV.</div>`}
       <div class="field">
         <label>Arquivo (Excel ou CSV)</label>
@@ -6229,9 +6264,11 @@ function viagemImpRender(){
     prev.innerHTML=`<div class="hint">Não encontrei uma tabela de viagens nesta planilha. O ideal é ter uma linha de cabeçalho com colunas como <b>Data</b>, <b>Placa</b>, <b>Motorista</b>, <b>Transporte</b> e <b>Destino</b>. Você também pode lançar manualmente pelo botão <b>Nova viagem</b>.</div>`;
     if(btn) btn.style.display='none'; return;
   }
-  const badge={ok:'<span class="st ok">Nova</span>',aviso:'<span class="st warn">Conferir</span>',dupe:'<span class="st neutro">Já existe</span>'};
+  const badge={ok:'<span class="st ok">Nova</span>',aviso:'<span class="st warn">Conferir</span>',dupe:'<span class="st neutro">Já existe</span>',atualiza:'<span class="st info">Atualiza</span>'};
+  const selo=(v,sim)=>v?`<span class="st ${sim?'ok':'warn'}">${esc(v)}</span>`:'<span class="st neutro">—</span>';
   const linhas=rows.map((r,i)=>{
     const av=r.issues&&r.issues.length?`<div class="muted" style="font-size:10.5px">⚠ ${esc(r.issues.join(' · '))}</div>`:'';
+    const mu=r.mud&&r.mud.length?`<div class="muted" style="font-size:10.5px">${esc(r.mud.join(' · '))}</div>`:'';
     return `<tr class="${r.incluir?'':'imp-off'}">
       <td class="no-print" style="text-align:center"><input type="checkbox" ${r.incluir?'checked':''} onchange="viagemImpToggle(${i},this.checked)"></td>
       <td class="mono">${r.data?fmtD(r.data):'<span class="st crit">—</span>'}</td>
@@ -6239,18 +6276,20 @@ function viagemImpRender(){
       <td>${esc(r.motorista||'—')}</td>
       <td class="mono">${esc(r.transporte||'—')}</td>
       <td>${esc(r.destino||'—')}</td>
-      <td>${badge[r.imp]||''}${av}</td>
+      <td>${selo(r.baixado,r.baixado==='SIM'||r.baixado==='TSP')}</td>
+      <td>${selo(r.termoBaixado,r.termoBaixado==='SIM')}</td>
+      <td>${badge[r.imp]||''}${av}${mu}</td>
     </tr>`;
   }).join('');
   const cont={}; rows.forEach(r=>cont[r.imp]=(cont[r.imp]||0)+1);
-  const resumo=[cont.ok?cont.ok+' nova(s)':'',cont.aviso?cont.aviso+' p/ conferir':'',cont.dupe?cont.dupe+' já existe(m)':''].filter(Boolean).join(' · ');
+  const resumo=[cont.ok?cont.ok+' nova(s)':'',cont.atualiza?cont.atualiza+' p/ atualizar':'',cont.aviso?cont.aviso+' p/ conferir':'',cont.dupe?cont.dupe+' sem mudança':''].filter(Boolean).join(' · ');
   const cols=(window._vgImpCols||[]);
   const colInfo=cols.length?`<div class="dsc-imp-cols">${svg('filter')} <b>Colunas identificadas:</b> ${esc(cols.join(' · '))}</div>`:'';
   const nSel=rows.filter(r=>r.incluir).length;
   prev.innerHTML=`${colInfo}
     <div class="muted" style="margin:8px 0;font-size:12.5px">Encontrei <b>${rows.length}</b> viagem(ns). ${resumo?'('+resumo+')':''} Confira e desmarque o que não quiser.</div>
     <div class="tbl-wrap" style="max-height:44vh;overflow:auto"><table class="tbl">
-      <thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Situação</th></tr></thead>
+      <thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo</th><th>Situação</th></tr></thead>
       <tbody>${linhas}</tbody></table></div>`;
   if(btn){ btn.style.display=''; btn.textContent=nSel?('Importar '+nSel+' selecionada(s)'):'Nada selecionado'; btn.disabled=!nSel; }
 }
@@ -6261,16 +6300,26 @@ function viagemImpToggle(i,on){
   const tr=document.querySelectorAll('#vgImpPreview tbody tr')[i]; if(tr) tr.classList.toggle('imp-off',!on);
 }
 function viagemImpConfirmar(){
-  let novas=0, pulados=0;
+  let novas=0, atualizadas=0, pulados=0;
   (window._vgImp||[]).forEach(r=>{
     if(!r.incluir){ pulados++; return; }
+    /*  Já existe: completa o que a planilha traz, sem apagar o que ela não diz  */
+    if(r.alvo){
+      const v=DB.viagens.find(x=>x.id===r.alvo);
+      if(!v){ pulados++; return; }
+      if(r.baixado) v.baixado=r.baixado;
+      if(r.termoBaixado) v.termoBaixado=r.termoBaixado;
+      if((r.termoPallet||'').trim()) v.termoPallet=(r.termoPallet||'').trim();
+      if(r.stFirme && r.status) v.status=r.status;
+      atualizadas++; return;
+    }
     DB.viagens.push({ id:uid('vg'), data:r.data||'', placa:(r.placa||'').trim(), motorista:(r.motorista||'').trim(),
       transporte:(r.transporte||'').trim(), destino:(r.destino||'').trim(), baixado:r.baixado||'',
       termoPallet:(r.termoPallet||'').trim(), termoBaixado:r.termoBaixado||'', status:r.status||'Pendente', obs:'' });
     novas++;
   });
   saveDB(); closeModal();
-  toast('Importado: '+novas+' viagem(ns)'+(pulados?', '+pulados+' ignorada(s)':'')+'.');
+  toast('Importado: '+novas+' nova(s)'+(atualizadas?', '+atualizadas+' atualizada(s)':'')+(pulados?', '+pulados+' ignorada(s)':'')+'.');
   viagemFiltro='todas'; viagemMes='todos'; viagemPlaca='todas';
   if((location.hash.slice(1).split('/')[0])!=='viagens') location.hash='viagens';
   router();
@@ -6451,6 +6500,21 @@ function excluirDescarga(id){
 /*  aponta inconsistências/duplicados e importa após conferência.      */
 /* ================================================================== */
 function _dnorm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').trim(); }
+/*  BAIXADO — um lugar só decide o que conta como baixado, na importação e em
+    qualquer outra leitura de planilha. Regra do dono: "sempre aceitar OK ou
+    SIM como baixado". Vale também para x, v, ✓, 1, "baixado", "feito".
+    Valor que não for reconhecido volta como está, para aparecer na prévia e
+    não virar um "não" silencioso.  */
+function _bxNorm(valor, aceitaTSP){
+  const t=_dnorm(valor);
+  if(!t) return '';
+  if(aceitaTSP && /\btsp\b/.test(t)) return 'TSP';
+  if(/^(ok|okay|sim|s|x|v|1|true|feito|baixa|baixado|baixada|conclu\w*|entregue|finalizad\w*)$/.test(t)) return 'SIM';
+  if(/^(nao|n|0|false|pend\w*|aberto|falta|faltando|em aberto)$/.test(t)) return 'NÃO';
+  if(/\bok\b|\bsim\b|baixad|conclu|entregue|finalizad/.test(t)) return 'SIM';
+  if(/\bnao\b|pendente|em aberto/.test(t)) return 'NÃO';
+  return String(valor).trim().toUpperCase();
+}
 /* número da célula: aceita cru do xlsx (560 / 560.5) e padrão BR (1.234,56 / R$ 90,00) */
 function _descNum(s){
   s=String(s==null?'':s).trim(); if(!s) return null;
