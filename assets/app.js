@@ -300,17 +300,65 @@ function saveDB(){
     _nuvemSaveTimer=setTimeout(()=>{ _enviarNuvem(); }, 700);
   }
 }
+/* 🔴 v11.1 — ELE LIMPAVA `_localSujo` MESMO QUANDO NÃO SUBIU NADA.
+
+   O `.catch(()=>{})` engolia a falha, e o `nuvemSalvar` nem lançava: o
+   lançamento ficava marcado como enviado e **o sistema nunca mais
+   tentava**. Era esta a razão de *"não está atualizando em outros
+   usuários"* — o dado existia no aparelho dele e em lugar nenhum além.
+
+   Agora: só limpa a marca quando o servidor confirmou. Se não subiu,
+   continua sujo e uma nova tentativa é agendada (3s, 6s, 12s… até 1min).
+   Enquanto houver coisa para subir, o sistema não sossega. */
+let _pexEnvT=null, _pexEnvEspera=3000, _pexEnvFalhas=0, _pexAvisouEnvio=false;
 function _enviarNuvem(){
   if(!_localSujo) return Promise.resolve();
+  if(!_nuvemRecebida) return Promise.resolve();   /* a cópia da nuvem ainda não chegou: nada sobe */
   const enviada=DB;
-  return Promise.resolve(nuvemSalvar(enviada)).then(()=>{ if(DB===enviada) _localSujo=false; }).catch(()=>{});
+  return Promise.resolve(nuvemSalvar(enviada))
+    .then(function(){
+      if(DB===enviada) _localSujo=false;
+      _pexEnvFalhas=0; _pexEnvEspera=3000;
+      if(_pexAvisouEnvio){ toast('Pronto — suas alterações foram para a nuvem.'); _pexAvisouEnvio=false; }
+      try{ nuvemCarimbo().then(function(c){ if(c) _pexCarimbo=c; }).catch(function(){}); }catch(e){}
+    })
+    .catch(function(e){
+      _pexEnvFalhas++;
+      (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'salvar na nuvem', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+      try{ console.warn('[sync] não consegui salvar (tentativa '+_pexEnvFalhas+'):', e); }catch(_){}
+      _pexReenviar();
+    });
+}
+/* Reenvio teimoso: o que ele lançou TEM de chegar na nuvem. */
+function _pexReenviar(){
+  clearTimeout(_pexEnvT);
+  if(!_localSujo) return;
+  _pexEnvEspera=Math.min(_pexEnvEspera*2, 60000);
+  /* Depois de ~1 min sem conseguir, ele precisa saber — senão continua
+     lançando confiando que os outros estão vendo, e não estão. */
+  if(_pexEnvFalhas>=5 && !_pexAvisouEnvio){
+    _pexAvisouEnvio=true;
+    toast('Ainda não consegui enviar suas últimas alterações para a nuvem. Elas estão salvas aqui e eu continuo tentando — evite lançar o mesmo em outro aparelho até sincronizar.','warn');
+  }
+  _pexEnvT=setTimeout(function(){ _enviarNuvem(); }, _pexEnvEspera);
 }
 /* Garante que a última edição vá para a nuvem AGORA (ao fechar/trocar de aba) */
 function flushNuvem(){
   if(_nuvemSaveTimer){ clearTimeout(_nuvemSaveTimer); _nuvemSaveTimer=null; }
   if(!_localSujo || !_nuvemRecebida) return;          /* nada mudou aqui: não regrava nada */
   if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser()){
-    try{ nuvemSalvar(DB); _localSujo=false; }catch(e){}
+    /* 🔴 v11.1 — aqui também se marcava `_localSujo=false` ANTES de saber
+       se deu certo (e sem esperar a promessa). Ao fechar a aba, o que não
+       subisse ficava dado como enviado e sumia para os outros. Agora a
+       marca só cai na confirmação; se falhar, continua suja e sobe na
+       próxima abertura. */
+    try{
+      Promise.resolve(nuvemSalvar(DB))
+        .then(function(){ _localSujo=false; })
+        .catch(function(e){
+          (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'salvar ao fechar', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+        });
+    }catch(e){}
   }
 }
 /* Recebe uma atualização de outro aparelho (tempo real, ou a vigia da v11.0) */
@@ -8742,6 +8790,48 @@ function updateUserBadge(){
   else { el.innerHTML=''; el.style.display='none'; }
 }
 
+/* ==================================================================
+   v11.1 — O ARQUIVO DO CELULAR NÃO PODE ENVELHECER CALADO
+
+   Regra que ele deu: *"TODAS as atualizações devem ser feitas em todos
+   os locais acessados"*. O site se atualiza sozinho (service worker),
+   mas o `Planeta Express - CELULAR.html` é um ARQUIVO no aparelho: o
+   código dele fica parado na versão em que foi copiado, para sempre.
+   Foi metade do *"não está atualizando, nem no mobile"*.
+
+   Então o arquivo consulta o `versao.json` do site e, se o site estiver
+   à frente, leva ele para lá. Só quando há internet — offline ele
+   continua abrindo normalmente, que é a razão de esse arquivo existir.
+
+   `PEX_VERSAO` é gravada aqui pelo `build_celular.sh` no momento em que
+   o arquivo é gerado; no site ela fica vazia e a checagem não roda
+   (lá quem atualiza é o service worker). */
+var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular */
+async function pexConferirVersao(){
+  try{
+    if(!PEX_VERSAO) return;                       /* rodando no site: o SW cuida */
+    if(!navigator.onLine) return;                 /* sem internet: segue offline */
+    const r = await fetch('https://planetaexpress02-sys.github.io/planeta-express/versao.json?t='+Date.now(), {cache:'no-store'});
+    if(!r.ok) return;
+    const j = await r.json();
+    if(!j || !j.versao || j.versao===PEX_VERSAO) return;
+    _pexAvisarVersao(j.versao, j.site||'https://planetaexpress02-sys.github.io/planeta-express/');
+  }catch(e){ /* sem internet ou site fora: não atrapalha o uso offline */ }
+}
+function _pexAvisarVersao(nova, site){
+  if(document.getElementById('pexVerNova')) return;
+  const d=document.createElement('div');
+  d.id='pexVerNova';
+  d.innerHTML='<div class="pexvn-box">'
+    + '<b>Existe uma versão mais nova</b>'
+    + '<span>Este arquivo está na v'+esc(PEX_VERSAO)+' e já saiu a <b>v'+esc(nova)+'</b>. '
+    + 'Abra a versão do site para ter as novidades e continuar sincronizado com os outros.</span>'
+    + '<div class="pexvn-bts">'
+    +   '<a class="btn primary" href="'+esc(site)+'">Abrir a versão nova</a>'
+    +   '<button class="btn" onclick="document.getElementById(\'pexVerNova\').remove()">Agora não</button>'
+    + '</div></div>';
+  document.body.appendChild(d);
+}
 /* ---------- Tela de login (modo online) ---------- */
 function mostrarLogin(msg){
   const el=document.getElementById('loginScreen'); if(!el) return;
@@ -9004,6 +9094,8 @@ async function init(){
      quando a cópia da nuvem chega, porque ela pode vir errada também. */
   if(corrigirBaixasBRF()) saveLocal();
   applyRail();
+  /* v11.1: só faz algo no arquivo do celular, e só com internet */
+  try{ pexConferirVersao(); }catch(e){}
   try{ await idbOpen(); await reloadFiles(); }catch(e){ FILES=[]; }
   tick(); setInterval(tick,30000);
   window.addEventListener('hashchange',router);

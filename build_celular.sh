@@ -18,6 +18,14 @@ cd "$SYS"
 export T="$TMP"
 if [ ! -d "$T" ]; then echo "ERRO: pasta de trabalho nao existe: $T" >&2; exit 1; fi
 
+# v11.1 — a versao sai do RODAPE do index.html (fonte unica) e e carimbada
+# dentro do arquivo do celular. Se nao der para ler, o build para: um
+# celular sem carimbo nunca descobre que envelheceu, que e justamente o
+# defeito que estamos corrigindo.
+VERSAO=$(grep -o '<b>v[0-9.]*</b>' index.html | head -1 | sed 's/<b>v//; s|</b>||')
+if [ -z "$VERSAO" ]; then echo "ERRO: nao achei a versao no rodape do index.html" >&2; exit 1; fi
+echo "versao deste build: v$VERSAO"
+
 OUT_CEL="$COMP/Planeta Express - CELULAR.html"
 ART="$TMP/planeta_artifact.html"      # corpo p/ publicar como Artifact (sem <head>/<body>)
 
@@ -73,8 +81,32 @@ HEAD
 cat "$TMP/all.css"
 echo "</style></head><body>"
 cat "$TMP/body.html"
+# 🔴 v11.1 — A NUVEM FALTAVA AQUI, E O CELULAR NUNCA SINCRONIZOU.
+#
+# O arquivo do celular era montado só com os 10 .js de tela. `nuvem.js` e
+# `config-online.js` NUNCA entraram, e o <script> do Supabase no CDN ficava
+# de fora porque o awk corta o corpo exatamente na linha "Biblioteca da
+# nuvem". Resultado: `window.supabase` e `window.PEX_CONFIG` não existiam,
+# `nuvemAtiva()` devolvia false e o celular abria SEM login, 100% local.
+# Tudo lançado nele ficava nele; nada do computador chegava lá. O cliente
+# cobrou assim: "não está atualizando, nem no mobile nem em outros usuários".
+#
+# O CDN precisa de internet — e é isso mesmo: COM internet ele loga e
+# sincroniza como o site; SEM internet o `nuvemAtiva()` volta a ser false e
+# o sistema segue offline, como sempre funcionou. Não se perde nada.
+echo '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>'
+echo "<script>"
+cat assets/config-online.js
+cat assets/nuvem.js
+echo "</script>"
 echo "<script>"
 cat "$TMP/all.js"
+# v11.1 — carimba a versao DENTRO do arquivo. E com ela que o celular
+# descobre que envelheceu: compara com o versao.json do site e oferece
+# abrir a versao nova. Sai do rodape do index.html, entao nunca diverge.
+echo ""
+echo "/* carimbo do build: e por aqui que o arquivo do celular sabe a propria versao */"
+echo "try{ PEX_VERSAO='$VERSAO'; }catch(e){}"
 echo "</script></body></html>"
 } > "$TMP/celular_raw.html"
 
@@ -132,4 +164,10 @@ echo "--- checagens celular ---"
 echo -n "assets/ restantes (deve ser 0): "; grep -o "assets/" "$OUT_CEL" | wc -l
 echo -n "data:image no celular (deve ser >6): "; grep -o "data:image" "$OUT_CEL" | wc -l
 echo -n "chkResultadoBadge presente: "; grep -c "chkResultadoBadge" "$OUT_CEL"
-echo -n "supabase (deve ser 0): "; grep -c "supabase" "$OUT_CEL" || true
+# v11.1 — estas tres viraram OBRIGATORIAS. Antes a checagem exigia
+# "supabase: 0", o que carimbava como correto justamente o defeito: um
+# celular sem nuvem, que nunca sincronizava. Se qualquer uma destas vier 0,
+# o arquivo do celular esta offline de novo e NAO pode ser entregue.
+echo -n "createClient (nuvem; TEM de ser >0): "; grep -c "createClient" "$OUT_CEL" || true
+echo -n "PEX_CONFIG url (TEM de ser >0): ";      grep -c "supabase.co" "$OUT_CEL" || true
+echo -n "nuvemLogin (TEM de ser >0): ";          grep -c "function nuvemLogin" "$OUT_CEL" || true

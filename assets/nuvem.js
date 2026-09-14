@@ -85,10 +85,27 @@ async function nuvemCarimbo(){
   if(error) throw error;
   return data ? data.atualizado_em : null;
 }
+/* 🔴 v11.1 — ESTA FUNÇÃO ENGOLIA O ERRO, E ERA ISSO QUE FAZIA O TRABALHO
+   DELE NÃO CHEGAR NOS OUTROS APARELHOS.
+
+   Ela fazia `if(error) console.warn(...)` e devolvia normalmente. Quem
+   chamava (`_enviarNuvem`) entendia "salvou" e marcava `_localSujo=false`
+   — ou seja, **o sistema dava o lançamento por enviado e nunca mais
+   tentava**. No aparelho dele estava lá; na nuvem, não; para os outros
+   usuários, aquele lançamento simplesmente não existia. Nenhum aviso,
+   nenhuma segunda chance: exatamente o "salvo em silêncio".
+
+   Agora LANÇA. Insistir e avisar é problema de quem chama — mas mentir
+   dizendo que salvou, nunca. */
 async function nuvemSalvar(obj){
-  if(!nuvemInit() || !_sbUser) return;
+  if(!nuvemInit()) throw new Error('Nuvem não configurada neste aparelho.');
+  if(!_sbUser)     throw new Error('Sem usuário logado para salvar na nuvem.');
   const {error}=await _sb.from('dados').upsert({ id:'empresa', conteudo:obj, atualizado_em:new Date().toISOString() });
-  if(error) console.warn('Falha ao salvar na nuvem:', error.message);
+  if(error){
+    try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){}
+    throw error;
+  }
+  return true;
 }
 /* -------- Arquivos na nuvem (Supabase Storage, bucket 'arquivos') -------- */
 async function nuvemUpload(path, file){

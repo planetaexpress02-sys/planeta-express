@@ -3178,3 +3178,19 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
   .vg-pzcard{max-width:100%}
   .vg-pzcard .donut-wrap{gap:12px}
 }
+
+/* ============================================================
+   AVISO DE VERSÃO NOVA (v11.1) — só aparece no arquivo único do
+   celular, que não tem service worker para se atualizar sozinho.
+   Regra do dono: "TODAS as atualizações devem ser feitas em
+   todos os locais acessados".
+   ============================================================ */
+#pexVerNova{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,4,8,.72);backdrop-filter:blur(3px);padding:20px}
+#pexVerNova .pexvn-box{background:var(--surf2,#11161f);border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;padding:22px;max-width:420px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 20px 60px rgba(0,0,0,.55)}
+#pexVerNova b{font-size:16px;color:var(--text,#e8eef7)}
+#pexVerNova span{font-size:13.5px;line-height:1.5;color:var(--text-mute,#9fb0c6)}
+#pexVerNova .pexvn-bts{display:flex;gap:9px;margin-top:6px;flex-wrap:wrap}
+#pexVerNova .pexvn-bts .btn{flex:1;justify-content:center;text-decoration:none;min-width:130px}
