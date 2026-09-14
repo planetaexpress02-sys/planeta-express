@@ -3194,3 +3194,41 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
 #pexVerNova span{font-size:13.5px;line-height:1.5;color:var(--text-mute,#9fb0c6)}
 #pexVerNova .pexvn-bts{display:flex;gap:9px;margin-top:6px;flex-wrap:wrap}
 #pexVerNova .pexvn-bts .btn{flex:1;justify-content:center;text-decoration:none;min-width:130px}
+
+/* ============================================================
+   SELO DE VERSÃO (v11.2) — sempre visível, inclusive no celular
+   Pedido: "quero que apareça a versão que está sendo usada no
+   mobile também para sempre conferir". Mostra a versão E de onde
+   o sistema está rodando; em "arquivo" fica ÂMBAR, porque arquivo
+   salvo no aparelho não se atualiza sozinho.
+   ============================================================ */
+#pexVerTag{display:inline-flex;align-items:center;gap:5px;margin-left:8px;flex:0 0 auto;
+  padding:4px 9px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+  color:var(--text-mute,#9fb0c6);font-size:11px;line-height:1;white-space:nowrap}
+#pexVerTag b{color:var(--text,#e8eef7);font-size:11.5px;font-weight:800;letter-spacing:.2px}
+#pexVerTag span{text-transform:uppercase;letter-spacing:.6px;font-size:9.5px;opacity:.85}
+#pexVerTag:hover{background:rgba(255,255,255,.09)}
+/* rodando de um arquivo salvo: avisa pela cor, sem precisar ler */
+#pexVerTag.arq{background:var(--warn-bg,rgba(255,176,32,.15));border-color:rgba(255,176,32,.35)}
+#pexVerTag.arq b,#pexVerTag.arq span{color:var(--warn,#ffc061)}
+/* ⚠️ No celular NÃO dá para deixar o selo na barra de cima: ali só cabem
+   o menu, a marca e a busca (os botões têm 50-56px), e o selo era empurrado
+   para fora da tela — conferido por screenshot, depois de um teste meu ter
+   dito que estava visível. Mudar a largura do elemento NÃO dispara as regras
+   de tela; só a janela de verdade prova.
+
+   Então no celular ele vira um selo FIXO no canto de baixo, à esquerda,
+   logo acima da barra de navegação: fora do caminho do polegar e sempre
+   à vista, sem abrir menu nenhum — que é exatamente o pedido. */
+@media(max-width:860px){
+  #pexVerTag{
+    position:fixed; z-index:56; margin:0;
+    left:calc(10px + var(--safe-l,0px));
+    bottom:calc(70px + var(--safe-b,0px));
+    padding:4px 9px; gap:4px;
+    background:rgba(6,15,27,.92); backdrop-filter:blur(10px);
+    border-color:rgba(255,255,255,.14); box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  #pexVerTag.arq{background:rgba(60,40,6,.94)}
+}

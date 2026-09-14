@@ -1034,6 +1034,7 @@ function pexAfterRender(rota){
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
     pexContadores();                       /* v10.9: vale para TODA tela, sem lista de rotas */
+    pexSeloVersao();                       /* v11.2: refaz o selo (e o lugar dele muda no celular) */
     if(typeof pexMobileInit==='function') pexMobileInit(rota); }catch(e){}
 }
 /* ------------------------------------------------------------------
@@ -8806,7 +8807,73 @@ function updateUserBadge(){
    `PEX_VERSAO` é gravada aqui pelo `build_celular.sh` no momento em que
    o arquivo é gerado; no site ela fica vazia e a checagem não roda
    (lá quem atualiza é o service worker). */
-var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular */
+/* ==================================================================
+   v11.2 — A VERSÃO TEM DE APARECER, INCLUSIVE NO CELULAR
+
+   Pedido dele: *"quero que apareça a versão que está sendo usada no
+   mobile também para sempre conferir"*. Até agora ela só existia no
+   rodapé da barra lateral — que no celular fica escondida atrás do
+   menu. Ou seja: no telefone, justamente onde a versão velha é o
+   problema, não dava para conferir nada.
+
+   ⚠️ O selo mostra DUAS coisas, e a segunda é a que resolve o caso
+   dele: a versão **e de onde o sistema está rodando**.
+     · "v11.2 · site"    → veio do endereço na internet; atualiza sozinho
+     · "v11.2 · arquivo" → é o arquivo salvo no aparelho; NÃO se atualiza
+   Batendo o olho no telefone ele sabe na hora se está na cópia velha.
+
+   ⚠️ FONTE ÚNICA: `PEX_VER` é a única versão do sistema. O rodapé da
+   barra lateral passou a ser escrito por ela também — antes era texto
+   fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
+   que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
+   v10.2 e ninguém sabia qual versão estava rodando). */
+var PEX_VER = '11.2';
+var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
+function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
+function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
+function pexSeloVersao(){
+  try{
+    var onde=pexOndeRoda(), v=pexVersaoAtual();
+    /* selo sempre visível, no alto */
+    var el=document.getElementById('pexVerTag');
+    if(!el){
+      el=document.createElement('button');
+      el.id='pexVerTag'; el.type='button';
+      el.title='Versão do sistema — toque para ver os detalhes';
+      el.onclick=pexModalVersao;
+    }
+    /* ⚠️ ONDE O SELO MORA MUDA CONFORME A TELA, e não é capricho.
+       No celular ele é `position:fixed` no canto de baixo — mas a
+       `.topbar` tem `backdrop-filter`, e isso faz um elemento `fixed`
+       lá dentro se prender À TOPBAR em vez de à tela. O selo ia parar
+       em y = -21px, fora da tela: existia, "visível" em todas as
+       medições, e o cliente não via nada. Só o screenshot mostrou.
+       No celular ele vai para o `body`; no computador fica na barra
+       de cima, ao lado do título. */
+    var paiCerto = (typeof _pexMob==='function' && _pexMob())
+                 ? document.body
+                 : (document.querySelector('.topbar') || document.body);
+    if(el.parentElement!==paiCerto) paiCerto.appendChild(el);
+    el.className='no-print'+(onde==='arquivo'?' arq':'');
+    el.innerHTML='<b>v'+esc(v)+'</b><span>'+onde+'</span>';
+    /* rodapé da barra lateral: mesma fonte, para nunca divergir */
+    var f=document.querySelector('.sidebar .foot');
+    if(f) f.innerHTML='Sistema de Gestão Operacional<br><b>v'+esc(v)+'</b> · '+onde;
+  }catch(e){}
+}
+function pexModalVersao(){
+  var onde=pexOndeRoda(), v=pexVersaoAtual();
+  var site='https://planetaexpress02-sys.github.io/planeta-express/';
+  openModal('<div class="m-h">'+svg('info')+'<h3>Versão do sistema</h3><button class="x" onclick="closeModal()">×</button></div>'
+    + '<div class="m-b">'
+    + '<div class="field"><label>Versão em uso</label><div style="font-size:22px;font-weight:800">v'+esc(v)+'</div></div>'
+    + '<div class="field"><label>Rodando a partir de</label><div><b>'+(onde==='site'?'Endereço na internet':'Arquivo salvo neste aparelho')+'</b></div></div>'
+    + (onde==='arquivo'
+        ? '<div class="hint" style="color:var(--warn)">⚠️ Arquivo salvo no aparelho <b>não se atualiza sozinho</b>. Para receber as versões novas automaticamente, abra o sistema pelo endereço da internet e adicione à tela inicial.</div>'
+          + '<div style="margin-top:10px"><a class="btn primary" href="'+site+'">Abrir pelo endereço da internet</a></div>'
+        : '<div class="hint">Este é o jeito certo de usar: o endereço se atualiza sozinho e sincroniza com os outros aparelhos.</div>')
+    + '</div><div class="m-f"><button class="btn" onclick="closeModal()">Fechar</button></div>');
+}
 async function pexConferirVersao(){
   try{
     if(!PEX_VERSAO) return;                       /* rodando no site: o SW cuida */
@@ -9094,6 +9161,7 @@ async function init(){
      quando a cópia da nuvem chega, porque ela pode vir errada também. */
   if(corrigirBaixasBRF()) saveLocal();
   applyRail();
+  pexSeloVersao();                       /* v11.2: versão visível em toda tela, inclusive no celular */
   /* v11.1: só faz algo no arquivo do celular, e só com internet */
   try{ pexConferirVersao(); }catch(e){}
   try{ await idbOpen(); await reloadFiles(); }catch(e){ FILES=[]; }
