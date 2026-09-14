@@ -884,17 +884,26 @@ const PEX_RELATORIOS = [
     desc:'Viagens com placa, motorista, destino e situação da baixa.',
     filtros:['periodo','statusViagem'], orientacao:'paisagem',
     gerar:function(f){
+      const bxOk=function(x){ return x.baixado==='SIM'||x.baixado==='TSP'; };
+      const tmOk=function(x){ return x.termoBaixado==='SIM'; };
       let v = (DB.viagens||[]).filter(function(x){ return _relNoPeriodo(x.data, f); });
-      if(f.statusViagem && f.statusViagem!=='todos') v = v.filter(function(x){ return (x.status||'')===f.statusViagem; });
+      const st=f.statusViagem;
+      if(st==='baixadas')      v = v.filter(function(x){ return bxOk(x)&&tmOk(x); });
+      else if(st==='bxPend')   v = v.filter(function(x){ return !bxOk(x); });
+      else if(st==='tmPend')   v = v.filter(function(x){ return !tmOk(x); });
+      else if(st==='Pendente') v = v.filter(function(x){ return !bxOk(x); });          /* nome antigo */
+      else if(st==='Concluída')v = v.filter(function(x){ return bxOk(x)&&tmOk(x); });  /* nome antigo */
       _relCrono(v,'data');
       return {
         tituloTabela:'Viagens',
-        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Placa'},{rotulo:'Motorista',larg:'18%'},{rotulo:'Transporte'},
-                 {rotulo:'Destino',larg:'20%'},{rotulo:'Baixado'},{rotulo:'Termo pallet'},{rotulo:'Situação'}],
+        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Placa'},{rotulo:'Motorista',larg:'16%'},{rotulo:'Transporte'},
+                 {rotulo:'Destino',larg:'18%'},{rotulo:'Baixado'},{rotulo:'Termo pallet'},{rotulo:'Termo'}],
         linhas: v.map(function(x){ return [relData(x.data), x.placa, x.motorista, x.transporte, x.destino,
-          x.baixado||'—', x.termoPallet||'—', x.status||'—']; }),
+          bxOk(x)?(x.baixado||'SIM'):'Pendente', x.termoPallet||'—', tmOk(x)?'Baixado':'Pendente']; }),
         kpis:[{rotulo:'Viagens',valor:relNum(v.length)},
-              {rotulo:'Pendentes',valor:relNum(v.filter(function(x){ return x.status==='Pendente'; }).length)}],
+              {rotulo:'Baixadas',valor:relNum(v.filter(function(x){ return bxOk(x)&&tmOk(x); }).length)},
+              {rotulo:'Transportes pendentes',valor:relNum(v.filter(function(x){ return !bxOk(x); }).length)},
+              {rotulo:'Termos pendentes',valor:relNum(v.filter(function(x){ return !tmOk(x); }).length)}],
         graficos: v.length? [{titulo:'Viagens por placa', dados:_relPorChave(v,'placa').slice(0,12)}] : []
       };
     }},
@@ -1184,8 +1193,15 @@ function _relRenderConfig(lista, mod){
       + '<option value="Cancelado">Cancelados</option></select></div>');
   }
   if(fl.indexOf('statusViagem')>=0){
+    /* As opções falam a mesma língua dos cartões da tela de Viagens: a
+       baixa do transporte e a do termo pallet, separadas. "Concluída"
+       saiu porque era outro critério com nome parecido — dois jeitos de
+       perguntar a mesma coisa dão dois números diferentes. */
     campos.push('<div class="field"><label>Situação da viagem</label><select id="f_relStVg">'
-      + '<option value="todos">Todas</option><option value="Pendente">Pendentes</option><option value="Concluída">Concluídas</option></select></div>');
+      + '<option value="todos">Todas</option>'
+      + '<option value="baixadas">Baixadas (transporte e termo)</option>'
+      + '<option value="bxPend">Transportes pendentes</option>'
+      + '<option value="tmPend">Termos pallet pendentes</option></select></div>');
   }
   if(fl.indexOf('motorista')>=0){
     const ms = (DB.motoristas||[]).filter(function(m){ return (m.status||'Ativo')==='Ativo'; });
@@ -1264,7 +1280,9 @@ function PEXRelExecutar(){
   if((r.filtros||[]).indexOf('statusCte')>=0){ f.statusCte=v('f_relStCte')||'todos';
     rot['Situação'] = f.statusCte==='todos'?'Todas':f.statusCte; }
   if((r.filtros||[]).indexOf('statusViagem')>=0){ f.statusViagem=v('f_relStVg')||'todos';
-    rot['Situação'] = f.statusViagem==='todos'?'Todas':f.statusViagem; }
+    /* o cabeçalho do documento tem que dizer o filtro em português, não o código */
+    rot['Situação'] = ({todos:'Todas', baixadas:'Baixadas (transporte e termo)',
+      bxPend:'Transportes pendentes', tmPend:'Termos pallet pendentes'})[f.statusViagem] || f.statusViagem; }
   if((r.filtros||[]).indexOf('motorista')>=0){ f.motorista=v('f_relMot')||'todos';
     const m=(typeof motorista==='function' && f.motorista!=='todos')? motorista(f.motorista):null;
     rot['Motorista'] = m? m.nome : 'Todos'; }
