@@ -313,12 +313,15 @@ function flushNuvem(){
     try{ nuvemSalvar(DB); _localSujo=false; }catch(e){}
   }
 }
-/* Recebe uma atualização de outro aparelho (tempo real) */
+/* Recebe uma atualização de outro aparelho (tempo real, ou a vigia da v11.0) */
 function aplicarRemoto(obj){
   if(!obj) return;
   _applyingRemote=true;
   DB=obj; ensureCollections();
   _nuvemRecebida=true; _localSujo=false;
+  /* v11.0: a vigia compara por esta marca; sem atualizar aqui ela baixaria
+     a mesma versão de novo a cada 45 s. */
+  try{ nuvemCarimbo().then(function(c){ if(c) _pexCarimbo=c; }).catch(function(){}); }catch(e){}
   const nCorr=corrigirBaixasBRF();        /* cópia velha chegando: corrige de novo */
   saveLocal();
   _applyingRemote=false;
@@ -6269,24 +6272,33 @@ const _vgTmOk=v=>v.termoBaixado==='SIM';
    mês nem por placa — os cartões contam a base inteira, e um gráfico
    discordando do cartão ao lado é pior que gráfico nenhum.
 
-   ⚠️ v10.9 — ELE NASCEU GRANDE DEMAIS. Na v10.8 era um card de largura
-   inteira, com o anel à esquerda e uns 700px de vazio à direita. O
-   cliente cobrou na hora: *"olha o tamanho do cartão... encaixe melhor
-   juntamente com os outros"*. Agora é o QUINTO cartão da mesma fileira,
-   na mesma altura dos outros quatro.
+   ⚠️ O TAMANHO — duas correções seguidas, as duas dele.
+   Na v10.8 nasceu como card de largura INTEIRA, com o anel à esquerda e
+   uns 700px de vazio à direita: *"olha o tamanho do cartão... encaixe
+   melhor juntamente com os outros"*. Na v10.9 virou o quinto cartão da
+   fileira — encaixou, mas perdeu a legenda e ficou apertado demais para
+   o gosto dele: *"volte o gráfico das viagens como estava porém não tão
+   grande"*.
 
-   A legenda saiu junto e não faz falta: "Transportes pendentes" e
-   "Termos pallet pendentes" são exatamente os dois cartões ao lado — a
-   legenda só repetia o que já estava na tela. */
-function _vgPizza(registradas, baixadas){
+   v11.0 é o meio-termo: card com legenda, como na v10.8, mas **com
+   largura limitada** (`max-width`) em vez de esticar pela linha toda.
+   Ele ocupa o que precisa e para — sem o vazio que incomodou. */
+function _vgPizza(registradas, baixadas, pendBaixa, pendTermo){
   if(!registradas) return '';
+  const faltam=registradas-baixadas;
   const pct=Math.round(baixadas/registradas*100);
   const VERDE='#25e88f', CINZA='#31405c';
-  return `<div class="kpi vg-pz" title="${baixadas} de ${registradas} viagens com transporte e termo pallet baixados">
-    ${donut([{label:'Baixadas',value:baixadas,color:VERDE},
-             {label:'Faltando baixar',value:registradas-baixadas,color:CINZA}],
-            {center:pct+'%', sub:'', size:104, th:13})}
-    <div class="k-label">Baixadas · ${baixadas} de ${registradas}</div></div>`;
+  return `<div class="card vg-pzcard"><div class="card-h">${svg('check')}<h3>Viagens baixadas</h3></div>
+    <div class="card-b"><div class="donut-wrap">
+      ${donut([{label:'Baixadas',value:baixadas,color:VERDE},
+               {label:'Faltando baixar',value:faltam,color:CINZA}],
+              {center:pct+'%', sub:'baixadas', size:126, th:16})}
+      <div class="legend">
+        <div class="li"><span class="dot" style="background:${VERDE}"></span>Baixadas<b>${baixadas} de ${registradas}</b></div>
+        <div class="li"><span class="dot" style="background:${CINZA}"></span>Faltando baixar<b>${faltam}</b></div>
+        <div class="li"><span class="dot" style="background:var(--danger)"></span>Transportes pendentes<b>${pendBaixa}</b></div>
+        <div class="li"><span class="dot" style="background:var(--warn)"></span>Termos pallet pendentes<b>${pendTermo}</b></div>
+      </div></div></div></div>`;
 }
 function mesLabel(ym){ const p=ym.split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
 function viewViagens(){
@@ -6328,13 +6340,13 @@ function viewViagens(){
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
       <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Viagens')}</div></div>
-  <div class="grid kpis viag-kpis" style="margin-bottom:18px">
+  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpiV('route','i-blue', registradas, 'Viagens registradas', "viagemFiltro='todas';viagemMes='todos';router()", viagemFiltro==='todas')}
     ${kpiV('check','i-green', baixadas, 'Viagens baixadas', "viagemFiltro='baixadas';viagemMes='todos';router()", viagemFiltro==='baixadas')}
     ${kpiV('doc', pendBaixa?'i-red':'i-green', pendBaixa, 'Transportes pendentes', "viagemFiltro='pendentes';viagemMes='todos';router()", viagemFiltro==='pendentes')}
     ${kpiV('box', pendTermo?'i-amber':'i-green', pendTermo, 'Termos pallet pendentes', "viagemFiltro='termo';viagemMes='todos';router()", viagemFiltro==='termo')}
-    ${_vgPizza(registradas, baixadas)}
   </div>
+  ${_vgPizza(registradas, baixadas, pendBaixa, pendTermo)}
   <div class="toolbar"><div class="seg">${fb('todas','Todas')}${fb('baixadas','Baixadas')}${fb('pendentes','Transporte pendente')}${fb('termo','Termo pendente')}</div>
     <select class="selectlite" onchange="viagemMes=this.value;router()"><option value="todos">Todos os meses</option>
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
@@ -8777,6 +8789,103 @@ async function fazerLogin(){
 
    O motivo real de cada falha fica em `console` e em `window._pexSyncErros`
    — para eu diagnosticar sem depender de foto de tela. */
+/* ==================================================================
+   v11.0 — O SISTEMA SE RECONECTA SOZINHO, E TODOS VEEM AS ATUALIZAÇÕES
+
+   Dois pedidos do dono, no mesmo minuto:
+     • *"nunca deve haver erro"* (sobre o aviso de falha ao baixar);
+     • *"todos os usuários devem ver as atualizações sempre"*.
+
+   São o mesmo problema por dois lados. Antes: se a primeira leitura da
+   nuvem falhasse, o aparelho ficava a sessão inteira com a cópia local,
+   sem tempo real e sem sincronizar — e o cliente só descobria quando os
+   números não batiam com os do outro aparelho.
+
+   Três redes, uma atrás da outra:
+
+   1. RECONEXÃO — enquanto a cópia da nuvem não chegou, tenta de novo em
+      5s, 10s, 20s, 40s… até 2 min, e IMEDIATAMENTE quando a internet
+      volta (`online`) ou ele reabre a aba. Silencioso: ele não precisa
+      saber que houve tropeço, só que funciona.
+
+   2. PLANO B DO TEMPO REAL — se o WebSocket não subir (tabela não
+      publicada, rede corporativa bloqueando), a cada 45s confere só a
+      MARCA DE TEMPO da nuvem (`nuvemCarimbo`, um campo, não a base
+      inteira) e baixa apenas quando mudou. É isto que faz "todos veem as
+      atualizações" valer mesmo sem tempo real.
+
+   3. AO VOLTAR PARA A ABA — confere na hora, porque é o momento em que
+      ele vai olhar os números.
+
+   ⚠️ O aviso vermelho só sobra para o caso em que ele está lançando
+   dados sobre uma cópia velha há muito tempo — aí calar seria pior.
+   ================================================================== */
+let _pexRecT=null, _pexRecEspera=5000, _pexCarimbo=null, _pexVigiaT=null, _pexAvisouFrio=false;
+
+async function _pexReconectar(){
+  clearTimeout(_pexRecT);
+  if(_nuvemRecebida) return;                       /* já chegou: nada a fazer */
+  if(!(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser())) return;
+  try{
+    const remoto=await nuvemCarregar(2);           /* poucas tentativas: quem insiste é o laço */
+    _pexPasso('trocar base', function(){ if(remoto){ DB=remoto; ensureCollections(); } });
+    _nuvemRecebida=true; _localSujo=false;
+    const n=_pexPasso('corrigir baixas BRF', corrigirBaixasBRF).valor||0;
+    _pexPasso('gravar local', saveLocal);
+    if(n){ _localSujo=true; try{ await _enviarNuvem(); }catch(e){} }
+    _pexPasso('tempo real', function(){ nuvemRealtime(aplicarRemoto); });
+    _pexRecEspera=5000;
+    try{ renderSidebar((location.hash||'#dashboard').slice(1).split('/')[0]); router(); }catch(e){}
+    if(_pexAvisouFrio){ toast('Pronto — dados da nuvem atualizados.'); _pexAvisouFrio=false; }
+    _pexVigiar();
+    return;
+  }catch(e){
+    (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'reconectar', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+  }
+  /* ainda não: espera o dobro, até 2 minutos */
+  _pexRecEspera=Math.min(_pexRecEspera*2, 120000);
+  /* Só depois de ~2 min tentando é que ele precisa saber — aí o risco de
+     lançar coisa em cima de uma cópia velha é real. Uma vez só. */
+  if(_pexRecEspera>=120000 && !_pexAvisouFrio){
+    _pexAvisouFrio=true;
+    toast('Sem conexão com a nuvem no momento. Você pode continuar trabalhando — eu sincronizo sozinho assim que voltar.','warn');
+  }
+  _pexRecT=setTimeout(_pexReconectar, _pexRecEspera);
+}
+
+/* Plano B: sem tempo real, confere a marca de tempo de vez em quando. */
+function _pexVigiar(){
+  clearInterval(_pexVigiaT);
+  _pexVigiaT=setInterval(async function(){
+    if(!_nuvemRecebida) return;
+    if(typeof nuvemRealtimeOk==='function' && nuvemRealtimeOk()) return;   /* tempo real vivo: não precisa */
+    if(document.hidden) return;
+    try{
+      if(typeof nuvemRealtime==='function') nuvemRealtime(aplicarRemoto);  /* tenta reerguer o canal */
+      const c=await nuvemCarimbo();
+      if(c && _pexCarimbo && c!==_pexCarimbo){
+        const remoto=await nuvemCarregar(2);
+        if(remoto) aplicarRemoto(remoto);
+      }
+      if(c) _pexCarimbo=c;
+    }catch(e){}
+  }, 45000);
+}
+try{
+  window.addEventListener('online', function(){ _pexRecEspera=5000; _pexReconectar(); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) return;
+    if(!_nuvemRecebida){ _pexRecEspera=5000; _pexReconectar(); return; }
+    /* voltou para a aba: é agora que ele olha os números */
+    if(typeof nuvemRealtimeOk==='function' && !nuvemRealtimeOk()){
+      (async function(){ try{
+        const c=await nuvemCarimbo();
+        if(c && _pexCarimbo && c!==_pexCarimbo){ const r=await nuvemCarregar(2); if(r) aplicarRemoto(r); }
+        if(c) _pexCarimbo=c;
+      }catch(e){} })();
+    }
+  });
+}catch(e){}
 function _pexPasso(nome, fn){
   try{ const r=fn(); return {ok:true, valor:r}; }
   catch(e){
@@ -8808,13 +8917,28 @@ async function aposLogin(){
     try{ await _enviarNuvem(); }catch(e){}
   }
   else {
-    /* Aqui o cliente PRECISA saber: ele está vendo a cópia deste aparelho,
-       e o que editar agora pode não ser o que está na nuvem. */
-    toast('Entrei, mas não consegui baixar os dados da nuvem agora. Você está vendo a cópia deste aparelho — confira a internet antes de lançar coisas novas.','err');
+    /* ⚠️ v11.0 — AQUI NÃO SE AVISA MAIS, SE RESOLVE.
+
+       Ele fotografou este aviso e disse **"nunca deve haver erro"**. E
+       está certo: avisar é passar para ele um problema que é do sistema.
+       Conferido na hora: o servidor da nuvem estava no ar, respondendo em
+       0,7 s — era falha passageira. O `nuvemCarregar` já insiste 4 vezes
+       e renova a sessão; se nem assim veio, quem tem de insistir é o
+       sistema, sozinho, até conseguir.
+
+       ⚠️ `_nuvemRecebida` FICA FALSA aqui de propósito: enquanto a cópia
+       da nuvem não chegou, nada sobe. É o que impede a base deste
+       aparelho de apagar o trabalho dos outros (o acidente da v10.4). */
+    _pexReconectar();
   }
 
-  /* Tempo real: conforto, não dado. Falhar aqui não é assunto do cliente. */
+  /* Tempo real: conforto, não dado. Falhar aqui não é assunto do cliente —
+     e agora nem faz falta, porque o `_pexVigiar()` cobre a ausência dele. */
   _pexPasso('tempo real', function(){ nuvemRealtime(aplicarRemoto); });
+  /* v11.0: guarda a marca de tempo e liga a vigia, para que ele veja o que
+     os outros lançarem mesmo se o tempo real não subir. */
+  try{ _pexCarimbo = await nuvemCarimbo(); }catch(e){}
+  _pexVigiar();
 
   /* v8.8 — agora que há conta e internet, sobe o que foi anexado offline.
      Tem que ser DEPOIS do `DB=remoto`: a troca descarta o `DB.anexos`

@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v10.9)
+## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v11.0)
 
-**v10.9 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=232`, cache SW `planeta-express-v10-9`, rodapé `v10.9`.
+**v11.0 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=233`, cache SW `planeta-express-v11-0`, rodapé `v11.0`.
 
 **O rodapé agora acompanha cada release.** Ele ficou congelado em `v10.2` durante as v10.3–v10.7 e foi por isso que se descobriu que o cliente rodava versão velha — a foto que ele mandou tinha o número antigo. **Todo release muda o número visível na tela, não só o `?v=`.**
 
@@ -303,6 +303,46 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 14/09/2026 — v11.0 (a nuvem se reconecta sozinha · todos veem as atualizações · o card do gráfico no tamanho certo)
+
+## 🔴 "NUNCA DEVE HAVER ERRO"
+
+Ele fotografou o aviso *"não consegui baixar os dados da nuvem agora"* e respondeu: **"isso nao pode acontecer, corrija imediatamente, nunca deve haver erro"**. E logo depois: **"todos os usuários devem ver as atualizações sempre"**. São o mesmo problema por dois lados.
+
+**Primeiro medi, antes de mexer:** o servidor da nuvem estava **no ar, respondendo em 0,7 s** (`curl` no `/rest/v1/`, `/auth/v1/health`, `/realtime/v1/` — todos 401, que é o esperado sem chave). Ou seja: **não era a nuvem caída**. Era falha passageira — um pedido que não voltou, ou o token da sessão vencido — e o código **desistia na primeira negativa**.
+
+Três redes, uma atrás da outra:
+
+**1. `nuvemCarregar` insiste.** 4 tentativas com espera crescente (0,4 s · 0,8 s · 1,6 s) e, se o erro cheirar a sessão vencida (`jwt|token|401|expired|unauthor`), **renova a sessão** antes de repetir — senão as 4 tentativas falhariam pelo mesmo motivo e a espera não serviria de nada. Provado com um cliente Supabase de mentira: falha 2× → responde na 3ª; sessão vencida → renova 2× e responde; falha total → tenta 4× e **lança**.
+
+> ⚠️ **Lançar no fim é obrigatório.** Se `nuvemCarregar` devolvesse `null` numa falha, o sistema acharia que a nuvem está vazia e mandaria a cópia local por cima do trabalho dos outros. É o acidente da v10.4 de novo.
+
+**2. Reconexão sozinha (`_pexReconectar`).** Enquanto a cópia da nuvem não chegou, tenta de novo em 5 s, 10 s, 20 s, 40 s… até 2 min, e **na hora** quando a internet volta (`online`) ou ele reabre a aba. Silencioso — ele não precisa saber que houve tropeço. Quando consegue, redesenha a tela e segue.
+
+**⚠️ `_nuvemRecebida` fica FALSA** enquanto não chegou: é isso que impede este aparelho de apagar o trabalho dos outros. Conferido no teste.
+
+**3. Plano B do tempo real (`_pexVigiar`).** O tempo real depende de WebSocket e de a tabela estar publicada; quando não sobe, **ninguém fica sabendo** — o cliente simplesmente deixa de ver o que os outros lançaram. Agora o `subscribe` guarda o **status** (`nuvemRealtimeOk()`), e se ele não estiver vivo, a cada 45 s o sistema lê **só a marca de tempo** (`nuvemCarimbo`, um campo — não a base inteira) e baixa **apenas quando mudou**. Também confere ao voltar para a aba, que é quando ele olha os números. É isto que faz *"todos veem as atualizações sempre"* valer mesmo sem tempo real.
+
+O canal morto (`CLOSED`/`CHANNEL_ERROR`/`TIMED_OUT`) agora **solta a referência** — sem isso o `if(_sbChan) return` trancava a reconexão para sempre.
+
+**O aviso vermelho só sobra** para quem está há mais de 2 minutos sem nuvem, uma vez só, e com texto que não assusta: *"Você pode continuar trabalhando — eu sincronizo sozinho assim que voltar."* Calar nesse ponto seria pior: ele lançaria coisas sobre uma cópia velha.
+
+**Diagnóstico:** todo motivo real fica em `console` e em **`window._pexSyncErros`**.
+
+## O card do gráfico — terceira tentativa, e a que ele aprovou
+
+*"volte o gráfico das viagens como estava porém não tão grande."* O histórico do tamanho, porque ele cobrou duas vezes:
+
+| Versão | Formato | Resultado |
+|---|---|---|
+| v10.8 | Card de largura **inteira**, com legenda | ~700px de vazio ao lado do anel — reprovado |
+| v10.9 | **Quinto cartão** da fileira, sem legenda | Encaixou, mas apertado demais |
+| **v11.0** | Card **com legenda** e `max-width:520px` | Ocupa **45%** da largura e para ali |
+
+`max-width` é o que segura — o card pede o que precisa em vez de esticar. Abaixo de 620px ele volta a 100%.
+
+**Versão:** assets `?v=233`, cache `planeta-express-v11-0`, rodapé `v11.0`, celular reconstruído. Regressão: 25 telas, nenhuma com problema, 73/75 KPIs animando, `ERR[0]`.
 
 ### ✅ ESTADO EM 14/09/2026 — v10.9 (o cartão do gráfico encolheu · contador em TODA tela · o aviso vago de sincronismo · `veiculos` protegida)
 
