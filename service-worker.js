@@ -1,7 +1,7 @@
 /* Planeta Express — Service Worker (rede primeiro)
    Sempre busca a versão mais nova quando há internet; usa o cache só offline.
    Isso evita ficar "preso" numa versão antiga. */
-const CACHE = 'planeta-express-v11-2';
+const CACHE = 'planeta-express-v11-3';
 
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 
@@ -30,15 +30,53 @@ function buscarFresco(req){
     return fetch(req);          /* navegador antigo: pelo menos tenta a rede */
   }
 }
+/* 🔴 v11.3 — ERA ISTO QUE DEIXAVA O CELULAR COM DADOS ANTIGOS.
+
+   O cliente mandou dois prints lado a lado: computador com 135 viagens,
+   celular com 119 — **mesma versão, v11.2, os dois marcados como "site"**.
+   Não era versão velha: era este service worker.
+
+   A busca ao banco de dados (`/rest/v1/dados?select=...` do Supabase) é um
+   **GET**. Este `fetch` pegava TODO GET, guardava a resposta no cache e,
+   quando a rede falhava — que no celular, em rede móvel, falha o tempo
+   todo —, devolvia a **resposta guardada**. O sistema recebia aquilo como
+   se fosse a nuvem respondendo: `_nuvemRecebida=true`, nenhum erro,
+   nenhum aviso, e a tela montada com os dados de dias atrás.
+
+   Pior ainda: o `|| caches.match('./index.html')` devolvia a PÁGINA HTML
+   como resposta de uma chamada de API, e guardava dados da empresa no
+   cache do navegador.
+
+   ⚠️ REGRA: o service worker só cuida dos ARQUIVOS DO PRÓPRIO SITE.
+   Banco de dados, login, arquivos na nuvem e CDN passam DIRETO, sem
+   cache e sem intermediário. Dado vivo nunca pode vir de cache. */
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return;
+
+  var url;
+  try{ url = new URL(e.request.url); }catch(_){ return; }
+
+  /* Outra origem (Supabase, CDN…): não encosta. Deixa o navegador fazer. */
+  if(url.origin !== self.location.origin) return;
+
+  /* Mesma origem, mas não é arquivo do app (ex.: uma API futura): idem. */
+  if(url.pathname.indexOf('/rest/') === 0 || url.pathname.indexOf('/auth/') === 0) return;
+
   e.respondWith(
     buscarFresco(e.request).then(function(resp){
-      var copy = resp.clone();
-      caches.open(CACHE).then(function(c){ try{ c.put(e.request, copy); }catch(_){} });
+      /* só guarda resposta boa; erro/redirect no cache vira armadilha */
+      if(resp && resp.ok && resp.type === 'basic'){
+        var copy = resp.clone();
+        caches.open(CACHE).then(function(c){ try{ c.put(e.request, copy); }catch(_){} });
+      }
       return resp;
     }).catch(function(){
-      return caches.match(e.request).then(function(hit){ return hit || caches.match('./index.html'); });
+      return caches.match(e.request).then(function(hit){
+        if(hit) return hit;
+        /* só faz sentido devolver a página para uma NAVEGAÇÃO */
+        if(e.request.mode === 'navigate') return caches.match('./index.html');
+        return Response.error();
+      });
     })
   );
 });

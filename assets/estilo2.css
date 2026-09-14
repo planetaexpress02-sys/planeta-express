@@ -3232,3 +3232,14 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
   }
   #pexVerTag.arq{background:rgba(60,40,6,.94)}
 }
+
+/* Bolinha de sincronismo dentro do selo de versão (v11.3).
+   No celular o "Online" e o "Olá, fulano" não cabem na barra de cima —
+   sem isto não havia como perceber que a tela estava montada com uma
+   cópia velha (computador 135 viagens, celular 119, nada indicando). */
+#pexVerTag .pvt-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:var(--text-mute,#9fb0c6)}
+#pexVerTag.est-nuvem .pvt-dot{background:var(--ok,#25e88f);box-shadow:0 0 6px rgba(37,232,143,.8)}
+#pexVerTag.est-esperando .pvt-dot{background:var(--warn,#ffc061);box-shadow:0 0 6px rgba(255,192,97,.8);
+  animation:pvtPisca 1.4s ease-in-out infinite}
+#pexVerTag.est-local .pvt-dot{background:var(--text-mute,#9fb0c6)}
+@keyframes pvtPisca{0%,100%{opacity:1}50%{opacity:.35}}

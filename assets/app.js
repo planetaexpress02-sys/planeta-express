@@ -8827,7 +8827,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.2';
+var PEX_VER = '11.3';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -8854,8 +8854,21 @@ function pexSeloVersao(){
                  ? document.body
                  : (document.querySelector('.topbar') || document.body);
     if(el.parentElement!==paiCerto) paiCerto.appendChild(el);
-    el.className='no-print'+(onde==='arquivo'?' arq':'');
-    el.innerHTML='<b>v'+esc(v)+'</b><span>'+onde+'</span>';
+    /* ⚠️ v11.3 — o selo passa a dizer também SE OS DADOS SÃO OS DA NUVEM.
+       No celular a barra de cima esconde o "Online" e o "Olá, fulano"
+       (não cabe), então lá não havia nenhum jeito de perceber que a tela
+       estava montada com uma cópia velha — foi exatamente o caso dos dois
+       prints: computador 135 viagens, celular 119, e nada indicando isso.
+       Agora a bolinha fala: verde = veio da nuvem; âmbar = é a cópia
+       deste aparelho. */
+    var temNuvem = (typeof nuvemAtiva==='function' && nuvemAtiva() && typeof nuvemUser==='function' && nuvemUser());
+    var sincro = temNuvem && _nuvemRecebida;
+    var estado = !temNuvem ? 'local' : (sincro ? 'nuvem' : 'esperando');
+    el.className='no-print'+(onde==='arquivo'?' arq':'')+' est-'+estado;
+    el.innerHTML='<i class="pvt-dot"></i><b>v'+esc(v)+'</b><span>'+onde+'</span>';
+    el.title = estado==='nuvem'     ? 'v'+v+' · dados da nuvem, sincronizado'
+             : estado==='esperando' ? 'v'+v+' · AINDA NÃO recebi os dados da nuvem — você está vendo a cópia deste aparelho'
+             : 'v'+v+' · sem conta conectada: dados só deste aparelho';
     /* rodapé da barra lateral: mesma fonte, para nunca divergir */
     var f=document.querySelector('.sidebar .foot');
     if(f) f.innerHTML='Sistema de Gestão Operacional<br><b>v'+esc(v)+'</b> · '+onde;
@@ -8864,15 +8877,43 @@ function pexSeloVersao(){
 function pexModalVersao(){
   var onde=pexOndeRoda(), v=pexVersaoAtual();
   var site='https://planetaexpress02-sys.github.io/planeta-express/';
-  openModal('<div class="m-h">'+svg('info')+'<h3>Versão do sistema</h3><button class="x" onclick="closeModal()">×</button></div>'
+  var temNuvem = (typeof nuvemAtiva==='function' && nuvemAtiva() && typeof nuvemUser==='function' && nuvemUser());
+  var quem = temNuvem && typeof nomeUsuario==='function' ? nomeUsuario() : '';
+  var nViag=(DB.viagens||[]).length;
+  var linhaSinc = !temNuvem
+      ? '<b style="color:var(--warn)">Sem conta conectada</b><div class="hint">Os dados são só deste aparelho e não vão para os outros.</div>'
+      : (_nuvemRecebida
+          ? '<b style="color:var(--ok)">Sincronizado com a nuvem</b><div class="hint">Conectado como <b>'+esc(quem)+'</b>. O que você lançar aqui aparece nos outros aparelhos.</div>'
+          : '<b style="color:var(--warn)">Ainda não recebi os dados da nuvem</b><div class="hint">Você está vendo a cópia deste aparelho, que pode estar desatualizada. Estou tentando sozinho — ou toque em “Buscar agora”.</div>');
+  openModal('<div class="m-h">'+svg('info')+'<h3>Versão e sincronismo</h3><button class="x" onclick="closeModal()">×</button></div>'
     + '<div class="m-b">'
     + '<div class="field"><label>Versão em uso</label><div style="font-size:22px;font-weight:800">v'+esc(v)+'</div></div>'
-    + '<div class="field"><label>Rodando a partir de</label><div><b>'+(onde==='site'?'Endereço na internet':'Arquivo salvo neste aparelho')+'</b></div></div>'
+    + '<div class="field"><label>Rodando a partir de</label><div><b>'+(onde==='site'?'Endereço na internet (atualiza sozinho)':'Arquivo salvo neste aparelho (NÃO se atualiza)')+'</b></div></div>'
+    + '<div class="field"><label>Dados</label>'+linhaSinc+'</div>'
+    + '<div class="field"><label>Viagens nesta tela</label><div><b>'+nViag+'</b> <span class="muted">— compare com o outro aparelho: se diferir, os dados aqui não são os da nuvem</span></div></div>'
     + (onde==='arquivo'
-        ? '<div class="hint" style="color:var(--warn)">⚠️ Arquivo salvo no aparelho <b>não se atualiza sozinho</b>. Para receber as versões novas automaticamente, abra o sistema pelo endereço da internet e adicione à tela inicial.</div>'
+        ? '<div class="hint" style="color:var(--warn)">⚠️ Arquivo salvo no aparelho <b>não se atualiza sozinho</b>. Abra pelo endereço da internet e adicione à tela inicial.</div>'
           + '<div style="margin-top:10px"><a class="btn primary" href="'+site+'">Abrir pelo endereço da internet</a></div>'
-        : '<div class="hint">Este é o jeito certo de usar: o endereço se atualiza sozinho e sincroniza com os outros aparelhos.</div>')
-    + '</div><div class="m-f"><button class="btn" onclick="closeModal()">Fechar</button></div>');
+        : '')
+    + '</div><div class="m-f">'
+    + '<button class="btn" onclick="closeModal()">Fechar</button>'
+    + (temNuvem? '<button class="btn primary" onclick="pexBuscarAgora()">Buscar dados agora</button>':'')
+    + '</div>');
+}
+/* Botão de emergência: força buscar a base da nuvem na hora. Existe para
+   ele não depender de mim quando os números não baterem entre aparelhos. */
+async function pexBuscarAgora(){
+  toast('Buscando os dados da nuvem…');
+  try{
+    const remoto=await nuvemCarregar(3);
+    if(!remoto){ toast('A nuvem respondeu, mas não há base salva ainda.','warn'); return; }
+    aplicarRemoto(remoto);
+    _nuvemRecebida=true;
+    closeModal(); router(); pexSeloVersao();
+    toast('Pronto — dados da nuvem carregados: '+((DB.viagens||[]).length)+' viagem(ns).');
+  }catch(e){
+    toast('Não consegui buscar agora: '+((e&&e.message)||'sem conexão')+'. Continuo tentando sozinho.','err');
+  }
 }
 async function pexConferirVersao(){
   try{

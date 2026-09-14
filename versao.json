@@ -1,6 +1,6 @@
 {
-  "versao": "11.2",
-  "assets": "235",
+  "versao": "11.3",
+  "assets": "236",
   "site": "https://planetaexpress02-sys.github.io/planeta-express/",
   "nota": "Lido pelo arquivo unico do celular para saber se ele envelheceu. O build_celular.sh grava a MESMA versao dentro do arquivo; se as duas nao baterem, o celular oferece abrir a versao nova. Atualize junto com o rodape e o ?v= do index.html."
 }
