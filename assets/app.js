@@ -30,6 +30,19 @@ function ensureCollections(){
   try{ if(typeof licAutoRenovacao==='function') licAutoRenovacao(); }catch(e){}
   if(!DB.checklistModelo) DB.checklistModelo = clone(SEED.checklistModelo);
   if(!Array.isArray(DB.arquivos)) DB.arquivos = (typeof ARQUIVOS_EMPRESA!=='undefined'? clone(ARQUIVOS_EMPRESA):[]);
+  /* ⚠️ v10.9 — `veiculos` e `vencimentos` NÃO estavam protegidos, e são as
+     duas coleções mais usadas do sistema. Descoberto num teste: uma base
+     sem `DB.veiculos` derruba 14 das 25 telas de uma vez
+     (`veiculoByPlaca` → `DB.veiculos.find` de undefined) e nem o
+     `ensureCollections` consertava, porque ele não olhava para elas. Basta
+     a cópia da nuvem chegar truncada, ou uma migração parar no meio, para
+     o sistema ficar inutilizável sem dizer por quê.
+
+     Só age quando a chave NÃO é array (ou seja, sumiu). Lista vazia é
+     array e continua intocada — apagar tudo é decisão do cliente e a
+     semente não pode ressuscitar por cima. */
+  if(!Array.isArray(DB.veiculos))    DB.veiculos=clone(SEED.veiculos||[]);
+  if(!Array.isArray(DB.vencimentos)) DB.vencimentos=clone(SEED.vencimentos||[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
@@ -969,7 +982,92 @@ function pexAfterRender(rota){
     if(rota==='financeiro' && typeof valeInit==='function') valeInit();
     if(rota==='pedagios' && typeof pedCountUp==='function') pedCountUp();
     if(rota==='licencas' && typeof licCountUp==='function') licCountUp();
+    pexContadores();                       /* v10.9: vale para TODA tela, sem lista de rotas */
     if(typeof pexMobileInit==='function') pexMobileInit(rota); }catch(e){}
+}
+/* ------------------------------------------------------------------
+   CONTADOR QUE SOBE — EM TODA TELA (v10.9)
+
+   O cliente reparou: *"em vencimentos, e antt quando eu clico na aba os
+   números não ficam com aquele efeito de carregarem"*. E não ficavam
+   mesmo — o efeito existia em três lugares SEPARADOS, cada um preso à sua
+   rota: `iniCountUp()` (só `.ini-cmd` do Painel), `pedCountUp()` (só
+   `#view[data-route="pedagios"]`) e `licCountUp()` (só `"licencas"`).
+   Quem não estava na lista não animava, e toda tela nova nascia sem o
+   efeito sem ninguém perceber. É a mesma armadilha da lista de rotas que
+   já me pegou antes.
+
+   Agora é UMA passagem depois do render, para qualquer `.k-val`/`.num`
+   dentro do `#view`. E o número **não precisa vir com `data-count`**: se
+   não vier, ele é lido do próprio texto que a tela já escreveu. Assim as
+   11 telas com KPI entram juntas e as futuras entram sozinhas.
+
+   ⚠️ Só anima o que sabe reconstruir sem estragar: inteiro ("135"),
+   dinheiro ("R$ 2.726,00") e porcentagem ("82%"). Qualquer outro texto
+   ("—", "12/34", "3 de 9") fica exatamente como está — número errado na
+   tela é pior que número parado, foi o que a v6.97 aprendeu.
+
+   ⚠️ requestAnimationFrame NÃO escreve conteúdo sozinho: aba escondida ou
+   aparelho fraco não entrega quadro e o valor congelaria em zero. Por isso
+   `_pexSemAnimacao()` escreve direto, e `_pexRedeContadores()` continua
+   sendo a rede que fecha tudo 1,5 s depois.
+   ------------------------------------------------------------------ */
+function _pexLerNumero(txt){
+  const t=String(txt||'').trim();
+  if(!t) return null;
+  if(/^-?\d{1,3}(\.\d{3})*(,\d+)?$|^-?\d+$/.test(t) && t.indexOf(',')<0)      /* 135 · 1.204 */
+    return { valor:parseFloat(t.replace(/\./g,'')), tipo:'int' };
+  if(/^R\$\s?-?[\d.]+(,\d{2})?$/.test(t)) return { valor:parseBRL(t), tipo:'money' };
+  if(/^-?\d+%$/.test(t)) return { valor:parseFloat(t), tipo:'pct' };
+  return null;
+}
+function _pexEscrever(el, v, tipo, pre, suf){
+  el.textContent = tipo==='money' ? money(Math.round(v))
+                 : tipo==='pct'   ? Math.round(v)+'%'
+                 : pre+Math.round(v).toLocaleString('pt-BR')+suf;
+}
+/* ⚠️ GERAÇÃO — sem isto uma animação antiga escreve por cima da nova.
+   O `router()` roda duas vezes seguidas em situação normal (a chamada
+   direta e o `hashchange` logo atrás). Cada passagem começa uma contagem;
+   a de trás continua viva e, um quadro depois, reescreve o valor
+   INTERPOLADO por cima do que já estava certo — o cliente vê "0" num
+   cartão que o código já tinha preenchido. Quem não é da geração atual
+   escreve o valor final e para. `pexFinalizarContadores()` também troca a
+   geração, então fechar os contadores encerra o que estiver em curso. */
+let _pexGer=0;
+function pexContadores(){
+  _pexRedeContadores();
+  const ger=++_pexGer;
+  const els=document.querySelectorAll('#view .k-val, #view .num');
+  els.forEach(function(el){
+    if(el.getAttribute('data-pex-cont')==='1') return;      /* já animado neste render */
+    const pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
+    let alvo, tipo;
+    if(el.hasAttribute('data-count')){
+      alvo=parseFloat(el.getAttribute('data-count'));
+      if(isNaN(alvo)) return;
+      tipo = el.getAttribute('data-money')==='1' ? 'money' : 'int';
+    } else {
+      const lido=_pexLerNumero(el.textContent);
+      if(!lido) return;                                     /* texto que não sei reconstruir: não toco */
+      alvo=lido.valor; tipo=lido.tipo;
+      el.setAttribute('data-count', alvo);
+      if(tipo==='money') el.setAttribute('data-money','1');
+      if(tipo==='pct')   el.setAttribute('data-pct','1');
+    }
+    el.setAttribute('data-pex-cont','1');
+    if(_pexSemAnimacao() || !alvo){ _pexEscrever(el, alvo, tipo, pre, suf); return; }
+    let t0=null; const dur=850;
+    (function anima(){
+      function passo(ts){
+        if(ger!==_pexGer){ _pexEscrever(el, alvo, tipo, pre, suf); return; }  /* geração velha: fecha e sai */
+        if(!t0) t0=ts;
+        const k=Math.min(1,(ts-t0)/dur), e=1-Math.pow(1-k,3);
+        _pexEscrever(el, alvo*e, tipo, pre, suf);
+        if(k<1) requestAnimationFrame(passo); }
+      requestAnimationFrame(passo);
+    })();
+  });
 }
 /* ---- Gráficos: botão de ampliar (zoom) nos cards com gráfico ---- */
 function pexEnhanceCharts(){
@@ -4437,11 +4535,13 @@ function _pexEscreverContador(el){
   const alvo=parseFloat(el.getAttribute('data-count'))||0;
   const pre=el.getAttribute('data-pre')||'', suf=el.getAttribute('data-suf')||'';
   el.textContent = el.getAttribute('data-money')==='1' ? money(Math.round(alvo))
+                 : el.getAttribute('data-pct')==='1'   ? Math.round(alvo)+'%'   /* v10.9 */
                  : pre+Math.round(alvo).toLocaleString('pt-BR')+suf;
 }
 /* Fecha qualquer contador que tenha ficado para trás (chamado ao reexibir a aba) */
 function pexFinalizarContadores(){
-  try{ document.querySelectorAll('.num[data-count], .k-val[data-count]').forEach(_pexEscreverContador); }catch(e){}
+  try{ if(typeof _pexGer==='number') _pexGer++;   /* v10.9: encerra o que estiver animando */
+       document.querySelectorAll('.num[data-count], .k-val[data-count]').forEach(_pexEscreverContador); }catch(e){}
 }
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) pexFinalizarContadores(); });
 /* REDE DE SEGURANÇA DOS CONTADORES (v6.97).
@@ -6164,26 +6264,29 @@ const _vgTmOk=v=>v.termoBaixado==='SIM';
    Reusa o donut() dos outros gráficos (nada de desenho novo por tela).
 
    ⚠️ Os números vêm PRONTOS de viewViagens, os mesmos quatro dos cartões
-   de cima. Recontar aqui seria a armadilha de sempre: o gráfico diria uma
-   coisa e o cartão logo acima diria outra. Por isso também não filtra por
+   ao lado. Recontar aqui seria a armadilha de sempre: o gráfico diria uma
+   coisa e o cartão vizinho diria outra. Por isso também não filtra por
    mês nem por placa — os cartões contam a base inteira, e um gráfico
-   discordando do cartão ao lado é pior que gráfico nenhum. */
-function _vgPizza(registradas, baixadas, pendBaixa, pendTermo){
+   discordando do cartão ao lado é pior que gráfico nenhum.
+
+   ⚠️ v10.9 — ELE NASCEU GRANDE DEMAIS. Na v10.8 era um card de largura
+   inteira, com o anel à esquerda e uns 700px de vazio à direita. O
+   cliente cobrou na hora: *"olha o tamanho do cartão... encaixe melhor
+   juntamente com os outros"*. Agora é o QUINTO cartão da mesma fileira,
+   na mesma altura dos outros quatro.
+
+   A legenda saiu junto e não faz falta: "Transportes pendentes" e
+   "Termos pallet pendentes" são exatamente os dois cartões ao lado — a
+   legenda só repetia o que já estava na tela. */
+function _vgPizza(registradas, baixadas){
   if(!registradas) return '';
-  const faltam=registradas-baixadas;
   const pct=Math.round(baixadas/registradas*100);
   const VERDE='#25e88f', CINZA='#31405c';
-  return `<div class="card"><div class="card-h">${svg('check')}<h3>Viagens baixadas</h3>
-      <span class="muted" style="margin-left:auto;font-size:12.5px">transporte e termo pallet, os dois</span></div>
-    <div class="card-b"><div class="donut-wrap">
-      ${donut([{label:'Baixadas',value:baixadas,color:VERDE},{label:'Faltando baixar',value:faltam,color:CINZA}],
-              {center:pct+'%', sub:'baixadas'})}
-      <div class="legend">
-        <div class="li"><span class="dot" style="background:${VERDE}"></span>Baixadas<b>${baixadas} de ${registradas}</b></div>
-        <div class="li"><span class="dot" style="background:${CINZA}"></span>Faltando baixar<b>${faltam}</b></div>
-        <div class="li"><span class="dot" style="background:var(--danger)"></span>Transportes pendentes<b>${pendBaixa}</b></div>
-        <div class="li"><span class="dot" style="background:var(--warn)"></span>Termos pallet pendentes<b>${pendTermo}</b></div>
-      </div></div></div></div>`;
+  return `<div class="kpi vg-pz" title="${baixadas} de ${registradas} viagens com transporte e termo pallet baixados">
+    ${donut([{label:'Baixadas',value:baixadas,color:VERDE},
+             {label:'Faltando baixar',value:registradas-baixadas,color:CINZA}],
+            {center:pct+'%', sub:'', size:104, th:13})}
+    <div class="k-label">Baixadas · ${baixadas} de ${registradas}</div></div>`;
 }
 function mesLabel(ym){ const p=ym.split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
 function viewViagens(){
@@ -6225,13 +6328,13 @@ function viewViagens(){
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
       <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Viagens')}</div></div>
-  <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+  <div class="grid kpis viag-kpis" style="margin-bottom:18px">
     ${kpiV('route','i-blue', registradas, 'Viagens registradas', "viagemFiltro='todas';viagemMes='todos';router()", viagemFiltro==='todas')}
     ${kpiV('check','i-green', baixadas, 'Viagens baixadas', "viagemFiltro='baixadas';viagemMes='todos';router()", viagemFiltro==='baixadas')}
     ${kpiV('doc', pendBaixa?'i-red':'i-green', pendBaixa, 'Transportes pendentes', "viagemFiltro='pendentes';viagemMes='todos';router()", viagemFiltro==='pendentes')}
     ${kpiV('box', pendTermo?'i-amber':'i-green', pendTermo, 'Termos pallet pendentes', "viagemFiltro='termo';viagemMes='todos';router()", viagemFiltro==='termo')}
+    ${_vgPizza(registradas, baixadas)}
   </div>
-  ${_vgPizza(registradas, baixadas, pendBaixa, pendTermo)}
   <div class="toolbar"><div class="seg">${fb('todas','Todas')}${fb('baixadas','Baixadas')}${fb('pendentes','Transporte pendente')}${fb('termo','Termo pendente')}</div>
     <select class="selectlite" onchange="viagemMes=this.value;router()"><option value="todos">Todos os meses</option>
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
@@ -8651,24 +8754,75 @@ async function fazerLogin(){
   try{ await nuvemLogin(email.trim(), senha); await aposLogin(); }
   catch(e){ mostrarLogin('E-mail ou senha incorretos.'); }
 }
+/* ⚠️ v10.9 — O AVISO QUE NÃO DIZIA NADA.
+
+   O cliente fotografou *"Conectado, mas houve um aviso ao sincronizar."* e
+   pediu para "corrigir para nunca mais aparecer". Esse texto saía de UM
+   `catch` que embrulhava SETE operações diferentes — baixar da nuvem,
+   trocar o DB, `ensureCollections()` (que sozinha roda uma dúzia de
+   migrações e backfills), a correção das baixas, gravar local, ligar o
+   tempo real e subir anexos. Qualquer uma falhando dava a mesma frase
+   vermelha, sem dizer o quê, e — o pior — **o que vinha depois não
+   rodava**: um tropeço numa migração deixava o cliente sem tempo real e
+   sem upload dos anexos pendentes, sem nenhum sinal disso.
+
+   Agora cada etapa é isolada:
+   • falhar ao BAIXAR da nuvem é grave e ele precisa saber — é a única que
+     ainda avisa, e com texto que diz o que está acontecendo com os dados;
+   • as migrações não podem derrubar a entrada: erram, ficam registradas, a
+     sessão continua;
+   • o tempo real é conforto, não dado: se não subir, o sistema funciona
+     igual, só não recebe a mudança de outro aparelho na hora. Não é
+     assunto do cliente e não vira alarme vermelho.
+
+   O motivo real de cada falha fica em `console` e em `window._pexSyncErros`
+   — para eu diagnosticar sem depender de foto de tela. */
+function _pexPasso(nome, fn){
+  try{ const r=fn(); return {ok:true, valor:r}; }
+  catch(e){
+    (window._pexSyncErros=window._pexSyncErros||[]).push({passo:nome, erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+    try{ console.warn('[sync] falhou em "'+nome+'":', e); }catch(_){}
+    return {ok:false, erro:e};
+  }
+}
 async function aposLogin(){
-  try{
-    const remoto=await nuvemCarregar();
-    if(remoto){
-      DB=remoto; ensureCollections();
-      _nuvemRecebida=true; _localSujo=false;
-      /* a cópia da nuvem pode trazer as baixas erradas da v10.2 */
-      const nCorr=corrigirBaixasBRF();
-      saveLocal();
-      if(nCorr){ _localSujo=true; await _enviarNuvem(); toast(nCorr+' viagem(ns) tiveram a baixa corrigida pela planilha.'); }
-    }
-    else { _nuvemRecebida=true; _localSujo=true; await _enviarNuvem(); }   // primeira vez: envia a base atual
-    nuvemRealtime(aplicarRemoto);
-    /* v8.8 — agora que há conta e internet, sobe o que foi anexado offline.
-       Tem que ser DEPOIS do `DB=remoto`: a troca descarta o `DB.anexos`
-       local, e é o IndexedDB (intocado) que devolve esses arquivos. */
-    try{ await sincronizarArquivosPendentes(true); }catch(e){}
-  }catch(e){ toast('Conectado, mas houve um aviso ao sincronizar.','err'); }
+  let remoto=null, baixou=true;
+  try{ remoto=await nuvemCarregar(); }
+  catch(e){
+    baixou=false;
+    (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'nuvemCarregar', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+    try{ console.warn('[sync] falhou ao baixar da nuvem:', e); }catch(_){}
+  }
+
+  if(baixou && remoto){
+    _pexPasso('trocar base', function(){ DB=remoto; ensureCollections(); });
+    _nuvemRecebida=true; _localSujo=false;
+    const nCorr=_pexPasso('corrigir baixas BRF', corrigirBaixasBRF).valor||0;
+    _pexPasso('gravar local', saveLocal);
+    if(nCorr){ _localSujo=true;
+      try{ await _enviarNuvem(); }catch(e){}
+      toast(nCorr+' viagem(ns) tiveram a baixa corrigida pela planilha.'); }
+  }
+  else if(baixou){                       /* primeira vez nesta conta: manda a base atual */
+    _nuvemRecebida=true; _localSujo=true;
+    try{ await _enviarNuvem(); }catch(e){}
+  }
+  else {
+    /* Aqui o cliente PRECISA saber: ele está vendo a cópia deste aparelho,
+       e o que editar agora pode não ser o que está na nuvem. */
+    toast('Entrei, mas não consegui baixar os dados da nuvem agora. Você está vendo a cópia deste aparelho — confira a internet antes de lançar coisas novas.','err');
+  }
+
+  /* Tempo real: conforto, não dado. Falhar aqui não é assunto do cliente. */
+  _pexPasso('tempo real', function(){ nuvemRealtime(aplicarRemoto); });
+
+  /* v8.8 — agora que há conta e internet, sobe o que foi anexado offline.
+     Tem que ser DEPOIS do `DB=remoto`: a troca descarta o `DB.anexos`
+     local, e é o IndexedDB (intocado) que devolve esses arquivos. */
+  try{ await sincronizarArquivosPendentes(true); }catch(e){
+    (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'anexos pendentes', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+  }
+
   esconderLogin();
   renderSidebar('dashboard'); router(); hideSplash(); updateUserBadge();
   toast('Bem-vindo, '+(nomeUsuario()||'')+'!');

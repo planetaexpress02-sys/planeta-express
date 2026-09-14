@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v10.8)
+## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v10.9)
 
-**v10.8 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=231`, cache SW `planeta-express-v10-8`, rodapé `v10.8`.
+**v10.9 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=232`, cache SW `planeta-express-v10-9`, rodapé `v10.9`.
 
 **O rodapé agora acompanha cada release.** Ele ficou congelado em `v10.2` durante as v10.3–v10.7 e foi por isso que se descobriu que o cliente rodava versão velha — a foto que ele mandou tinha o número antigo. **Todo release muda o número visível na tela, não só o `?v=`.**
 
@@ -303,6 +303,44 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 14/09/2026 — v10.9 (o cartão do gráfico encolheu · contador em TODA tela · o aviso vago de sincronismo · `veiculos` protegida)
+
+Quatro coisas numa versão, três delas cobradas por ele em sequência.
+
+## 1. O cartão do gráfico ficou grande demais
+
+*"olha o tamanho do cartão que voce fez para esse grafico, redimensione e deixe mais padrão, encaixe melhor juntamente com os outros."* Tinha razão: na v10.8 era um card de largura inteira com ~700px de vazio ao lado do anel. Agora é o **quinto cartão da mesma fileira** (`.viag-kpis` = `repeat(4,1fr) minmax(168px,200px)`), mesma altura dos outros quatro (164px, conferido). A legenda saiu e não faz falta — "Transportes pendentes" e "Termos pallet pendentes" **são** os dois cartões ao lado. Abaixo de 1100px a fileira cai para 2 colunas e a pizza ocupa a linha inteira (`grid-column:1/-1`), senão o anel sairia cortado.
+
+## 2. O efeito de contagem não existia na maioria das telas
+
+*"em vencimentos, e antt quando eu clico na aba os números não ficam com aquele efeito de carregarem."* O efeito existia em **três funções separadas, cada uma presa à sua rota**: `iniCountUp()` (só `.ini-cmd`), `pedCountUp()` (só `pedagios`), `licCountUp()` (só `licencas`). Quem não estava na lista não animava, e toda tela nova nascia sem o efeito.
+
+Agora `pexContadores()` roda no `pexAfterRender` para **qualquer** `.k-val`/`.num` do `#view`, **sem lista de rotas**. E o número **não precisa vir com `data-count`**: se não vier, é lido do texto que a tela já escreveu. Resultado medido: **75 KPIs, 73 animando, 0 números errados**. Os 2 de fora são `"0 L"` e `"R$ 37k"` — formatos que não sei reconstruir, e **texto que não sei reconstruir eu não toco** (número errado é pior que número parado, lição da v6.97).
+
+**🔴 O defeito que quase foi junto:** no screenshot os quatro cartões apareciam **"0"** com os valores certos na medição. Causa: o `router()` roda **duas vezes** em situação normal (a chamada direta e o `hashchange` logo atrás), e a animação da primeira passagem continuava viva escrevendo o valor **interpolado** por cima do que a segunda já tinha acertado. A trava é um **número de geração** (`_pexGer`): quem não é da geração atual escreve o valor final e sai. `pexFinalizarContadores()` também troca a geração, então fechar encerra o que estiver em curso.
+
+> **Medir o DOM não provou nada aqui — só o screenshot mostrou.** Os valores estavam certos em toda medição e errados na tela pintada.
+
+## 3. "Conectado, mas houve um aviso ao sincronizar."
+
+Ele fotografou e pediu para **nunca mais aparecer**. Esse texto saía de **um `catch` embrulhando SETE operações**: baixar da nuvem, trocar o DB, `ensureCollections()` (uma dúzia de migrações), corrigir baixas, gravar local, ligar o tempo real e subir anexos. Qualquer uma falhando dava a mesma frase vermelha — e **o que vinha depois não rodava**: um tropeço numa migração deixava o cliente **sem tempo real e sem upload dos anexos pendentes**, sem nenhum sinal disso.
+
+Agora cada etapa é isolada (`_pexPasso`), e o motivo real fica em `console` e em **`window._pexSyncErros`** — para diagnosticar sem depender de foto de tela. A regra de quem avisa:
+
+| Falha | O cliente vê |
+|---|---|
+| **Baixar da nuvem** | Avisa, e diz o que importa: *"Você está vendo a cópia deste aparelho — confira a internet antes de lançar coisas novas."* |
+| Migração / `ensureCollections` | Nada. Fica registrado, a sessão continua, o resto roda |
+| **Tempo real** | Nada. É conforto, não dado — o sistema funciona igual, só não recebe a mudança de outro aparelho na hora |
+
+Testado nos 4 cenários com as funções de nuvem trocadas por versões que falham: o aviso vago apareceu em **0**, e no caso da migração quebrada o tempo real **passou a ligar** (antes não ligava).
+
+## 4. 🔴 `DB.veiculos` e `DB.vencimentos` não eram protegidas
+
+Apareceu sozinho num teste: uma base sem `DB.veiculos` **derruba 14 das 25 telas** (`veiculoByPlaca` → `.find` de undefined) e o `ensureCollections()` **não consertava**, porque ele nunca olhou para essas duas — a lista protegida tem `viagens`, `descargas`, `pneus`… e `motoristas` tem linha própria, mas `veiculos` e `vencimentos` ficaram de fora. Bastava a cópia da nuvem chegar truncada ou uma migração parar no meio. Agora entram na proteção: **telas que quebram com a base remendada = 0**. Só agem quando a chave **não é array**; lista vazia continua vazia, a semente não ressuscita por cima ([[backfill-nunca-varre-semente]]).
+
+**Versão:** assets `?v=232`, cache `planeta-express-v10-9`, rodapé `v10.9`, celular reconstruído. Regressão: 25 telas, nenhuma com problema, `ERR[0]`.
 
 ### ✅ ESTADO EM 14/09/2026 — v10.8 (pizza do % de viagens baixadas) + a conferência das planilhas de Junho e Julho
 

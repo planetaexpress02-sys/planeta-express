@@ -3155,3 +3155,24 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
 .sp-logo,.login-logo,.ini-logo,.etica-logo,.brand .logo-badge{
   box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(var(--au-rgb),.18), inset 0 1px 0 rgba(255,255,255,.06)!important;
 }
+
+/* ============================================================
+   VIAGENS — a fileira de cartões com a pizza no fim (v10.9)
+   O gráfico é o QUINTO cartão, não um card de largura inteira:
+   na v10.8 ele nasceu ocupando a linha toda com ~700px de vazio
+   ao lado e o cliente cobrou na hora. A coluna dele é mais
+   estreita que as outras quatro (o anel não precisa de largura).
+   ============================================================ */
+.viag-kpis{grid-template-columns:repeat(4,1fr) minmax(168px,200px)}
+.kpi.vg-pz{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px 10px}
+.kpi.vg-pz .donut{margin:0}
+.kpi.vg-pz .donut-c{font-size:25px}
+.kpi.vg-pz .k-label{text-align:center;margin:0}
+/* Telas médias: os 4 cartões já caem para 2 colunas (estilo.css, 1100px).
+   A pizza acompanha e ocupa a linha inteira, centralizada — senão ela
+   ficaria espremida numa meia-coluna com o anel cortado. */
+@media(max-width:1100px){
+  .viag-kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi.vg-pz{grid-column:1/-1}
+}
+@media(max-width:560px){ .kpi.vg-pz .donut-c{font-size:23px} }
