@@ -504,7 +504,7 @@ function aplicarRemoto(obj){
   /* v11.0: a vigia compara por esta marca; sem atualizar aqui ela baixaria
      a mesma versão de novo a cada 45 s. */
   try{ nuvemCarimbo().then(function(c){ if(c) _pexCarimbo=c; }).catch(function(){}); }catch(e){}
-  const nCorr=corrigirBaixasBRF();        /* cópia velha chegando: corrige de novo */
+  const nCorr=corrigirBaixasBRF()+corrigirBaixasBRF2();   /* cópia velha chegando: corrige de novo */
   saveLocal();
   _applyingRemote=false;
   if(nCorr){ _localSujo=true; _enviarNuvem(); }
@@ -591,6 +591,57 @@ function corrigirBaixasBRF(){
     }
   });
   DB.config.brfBaixasCorrigidas=1;
+  return n;
+}
+/* ============================================================
+   🔴 v11.5 — AS 4 VIAGENS QUE A TABELA DE CIMA NUNCA ALCANÇA
+
+   Depois do retrocesso, a tela dele ficou com **112 baixadas** onde
+   antes havia **116**. As 4 que faltam são exatamente estas — e elas
+   não voltam sozinhas, porque a `_BRF_BAIXAS` é chaveada pelo NÚMERO
+   DO TRANSPORTE e nestas quatro o número não serve de chave:
+
+     09/02  EJZ-4I65  "13112647"            → falta um dígito NA PLANILHA
+     18/02  JSX-4D55  "129814962/131191311" → dois números na mesma célula
+     31/03  BDP-1B55  termo = "SIM final 488"   → baixa escrita por extenso
+     27/04  BDP-1B55  termo = "Final 897 SIM"   → idem
+
+   Conferido célula a célula no xlsx: as quatro estão baixadas no papel,
+   transporte e termo. Eu já tinha achado isto de manhã e **descartei**,
+   porque naquele momento elas estavam certas na base dele. Depois do
+   retrocesso deixaram de estar. A correção volta, agora com chave que
+   funciona: **DATA + PLACA**, a mesma dupla que o importador usa quando
+   o número não bate. Conferido nas 6 planilhas: nenhuma outra viagem
+   divide data+placa com estas quatro.
+
+   ⚠️ SÓ PREENCHE, e nunca rebaixa uma baixa que já vale: se o transporte
+   já estiver como TSP (que conta como baixado), fica TSP. Um "reparo"
+   que troca marca válida por outra é outro jeito de retroagir.
+   ============================================================ */
+const _BRF_BAIXAS2 = {
+  '2026-02-09|EJZ4I65':['SIM','SIM'],
+  '2026-02-18|JSX4D55':['SIM','SIM'],
+  '2026-03-31|BDP1B55':['SIM','SIM'],
+  '2026-04-27|BDP1B55':['SIM','SIM']
+};
+function corrigirBaixasBRF2(){
+  if(!DB || !Array.isArray(DB.viagens)) return 0;
+  DB.config = DB.config || {};
+  if(DB.config.brfBaixas2) return 0;
+  let n=0;
+  DB.viagens.forEach(v=>{
+    const alvo=_BRF_BAIXAS2[(v.data||'')+'|'+String(v.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'')];
+    if(!alvo) return;
+    let mudou=false;
+    /* só mexe em quem NÃO conta como baixado hoje */
+    if(alvo[0] && !(v.baixado==='SIM'||v.baixado==='TSP')){ v.baixado=alvo[0]; mudou=true; }
+    if(alvo[1] && v.termoBaixado!=='SIM'){ v.termoBaixado=alvo[1]; mudou=true; }
+    if(mudou){
+      v.status=(v.baixado==='SIM'||v.baixado==='TSP')?'Concluída':'Pendente';
+      n++;
+    }
+  });
+  DB.config.brfBaixas2=1;
   return n;
 }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -6448,6 +6499,46 @@ let viagemFiltro='todas', viagemMes='todos', viagemPlaca='todas';
    tabela têm que responder a mesma pergunta do mesmo jeito. */
 const _vgBxOk=v=>v.baixado==='SIM'||v.baixado==='TSP';
 const _vgTmOk=v=>v.termoBaixado==='SIM';
+/* Seleção múltipla em Viagens (v11.5) — vive só na tela, não no banco. */
+let VIAG_SEL={};
+function viagSel(id,on){ if(on) VIAG_SEL[id]=true; else delete VIAG_SEL[id]; router(); }
+function viagSelLimpar(){ VIAG_SEL={}; router(); }
+function viagSelTodosVisiveis(){
+  /* marca o que está NA LISTA FILTRADA — se o filtro é "Termo pendente",
+     marca só os termos pendentes, que é como ele vai usar isto */
+  let lista=DB.viagens.slice();
+  if(viagemFiltro==='baixadas') lista=lista.filter(v=>_vgBxOk(v)&&_vgTmOk(v));
+  else if(viagemFiltro==='pendentes'||viagemFiltro==='emviagem') lista=lista.filter(v=>!_vgBxOk(v));
+  else if(viagemFiltro==='termo') lista=lista.filter(v=>!_vgTmOk(v));
+  if(viagemMes!=='todos') lista=lista.filter(v=>(v.data||'').slice(0,7)===viagemMes);
+  if(viagemPlaca!=='todas') lista=lista.filter(v=>v.placa===viagemPlaca);
+  const jaTodas = lista.length && lista.every(v=>VIAG_SEL[v.id]);
+  VIAG_SEL={};
+  if(!jaTodas) lista.forEach(v=>{ VIAG_SEL[v.id]=true; });
+  router();
+}
+/* Baixa em lote. `o que` = 'ambos' | 'transporte' | 'termo'. */
+function viagBaixarSel(oQue){
+  const ids=Object.keys(VIAG_SEL).filter(k=>VIAG_SEL[k]);
+  if(!ids.length) return;
+  const rot = oQue==='ambos'? 'o transporte E o termo pallet'
+            : oQue==='transporte'? 'o transporte' : 'o termo pallet';
+  if(!confirm('Marcar '+rot+' como BAIXADO em '+ids.length+' viagem(ns)?\n\n'
+    +'Isso vale como se você tivesse aberto uma a uma. Dá para desfazer em '
+    +'Configurações → Pontos de restauração.')) return;
+  pexGuardarPonto('antes de baixar '+ids.length+' viagem(ns) em lote');
+  let n=0;
+  DB.viagens.forEach(v=>{
+    if(ids.indexOf(v.id)<0) return;
+    let mudou=false;
+    if((oQue==='ambos'||oQue==='transporte') && !_vgBxOk(v)){ v.baixado='SIM'; mudou=true; }
+    if((oQue==='ambos'||oQue==='termo')      && !_vgTmOk(v)){ v.termoBaixado='SIM'; mudou=true; }
+    if(mudou){ v.status=_vgBxOk(v)?'Concluída':'Pendente'; n++; }
+  });
+  VIAG_SEL={}; saveDB();
+  toast(n? (n+' viagem(ns) baixada(s).') : 'Essas viagens já estavam assim.');
+  router();
+}
 /* Pizza do % de viagens baixadas — pedido do cliente, verde.
    Reusa o donut() dos outros gráficos (nada de desenho novo por tela).
 
@@ -6509,7 +6600,9 @@ function viewViagens(){
   // agrupa por mês
   const grupos={}; lista.forEach(v=>{ const k=(v.data||'').slice(0,7)||'—'; (grupos[k]=grupos[k]||[]).push(v); });
   const linhaViagem=(v)=>{ const ve=veiculoByPlaca(v.placa); const bxCls=(v.baixado==='SIM'||v.baixado==='TSP')?'ok':(v.baixado?'vencido':'neutro');
-    return `<tr class="clickable" onclick="modalViagem('${v.id}')">
+    return `<tr class="clickable ${VIAG_SEL[v.id]?'sel':''}" onclick="modalViagem('${v.id}')">
+      <td class="no-print" style="text-align:center" onclick="event.stopPropagation()">
+        <input type="checkbox" ${VIAG_SEL[v.id]?'checked':''} onchange="viagSel('${v.id}',this.checked)"></td>
       <td class="mono">${fmtD(v.data)}</td><td>${ve?plate(ve.placa,ve.tipo):esc(v.placa)}</td>
       <td>${esc(v.motorista||'—')}</td><td class="mono">${esc(v.transporte||'—')}</td><td>${esc(v.destino||'—')}</td>
       <td><span class="st ${bxCls}">${esc(v.baixado||'Pendente')}</span></td>
@@ -6517,9 +6610,25 @@ function viewViagens(){
       <td><span class="st ${v.termoBaixado==='SIM'?'ok':'warn'}">${v.termoBaixado==='SIM'?'Baixado':'Pendente'}</span></td>
       <td class="no-print" style="text-align:right"><button class="btn ghost sm" onclick="event.stopPropagation();modalViagem('${v.id}')">${svg('edit')}</button></td></tr>`; };
   const corpo=Object.keys(grupos).sort().reverse().map(k=>{ const gs=grupos[k];
-    return `<tr class="grouprow"><td colspan="9">${svg('cal')} ${k==='—'?'Sem data':mesLabel(k)} <span class="muted">· ${gs.length} viagem(ns)</span></td></tr>`+
+    return `<tr class="grouprow"><td colspan="10">${svg('cal')} ${k==='—'?'Sem data':mesLabel(k)} <span class="muted">· ${gs.length} viagem(ns)</span></td></tr>`+
       gs.map(linhaViagem).join('');
   }).join('');
+  /* ⚠️ v11.5 — BAIXA EM LOTE.
+     As baixas que ele faz À MÃO (o que já voltou, mas ainda não foi para a
+     planilha da BRF) não existem em nenhuma outra fonte: nem na planilha,
+     nem no backup. Quando a base retrocedeu, foram as únicas que ninguém
+     conseguiu recuperar — nem eu. Refazer uma a uma, abrindo e salvando
+     cada viagem, é trabalho demais para uma coisa que ele faz toda semana.
+     Aqui ele marca várias e baixa de uma vez. */
+  const nSel=Object.keys(VIAG_SEL).filter(k=>VIAG_SEL[k]).length;
+  const barraSel = nSel ? `<div class="toolbar no-print" style="background:var(--surf2);border-radius:12px;padding:10px 12px;margin-bottom:10px">
+      <b>${nSel} viagem(ns) marcada(s)</b>
+      <div class="spacer"></div>
+      <button class="btn sm" onclick="viagBaixarSel('ambos')">${svg('check')} Baixar transporte e termo</button>
+      <button class="btn sm" onclick="viagBaixarSel('transporte')">Só o transporte</button>
+      <button class="btn sm" onclick="viagBaixarSel('termo')">Só o termo pallet</button>
+      <button class="btn ghost sm" onclick="viagSelLimpar()">Limpar seleção</button>
+    </div>` : '';
   return `
   <div class="banner">${svg('route')}<div><b>Controle de Viagens BRF</b><span>Registre a saída do motorista com o número de transporte e o termo pallet. Filtre por mês e por placa.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
@@ -6537,9 +6646,12 @@ function viewViagens(){
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
     <select class="selectlite" onchange="viagemPlaca=this.value;router()"><option value="todas">Todas as placas</option>
       ${placas.map(p=>`<option value="${esc(p)}" ${viagemPlaca===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
-    <div class="spacer"></div><div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div>
+    <div class="spacer"></div>
+    <button class="btn ghost sm no-print" onclick="viagSelTodosVisiveis()" title="Marcar todas as viagens desta lista">Marcar todas da lista</button>
+    <div class="muted no-print" style="font-size:12.5px;margin-right:6px">${lista.length} viagem(ns)${viagemMes!=='todos'?' · '+mesLabel(viagemMes):''}</div><button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button></div>
+  ${barraSel}
   <div class="card"><div class="card-b p0"><div class="tbl-wrap"><table class="tbl viag-tbl pex-noenh">
-    <thead><tr><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th class="no-print"></th></tr></thead>
+    <thead><tr><th class="no-print" style="width:34px"></th><th>Data</th><th>Placa</th><th>Motorista</th><th>Transporte</th><th>Destino</th><th>Baixado</th><th>Termo Pallet</th><th>Termo</th><th class="no-print"></th></tr></thead>
     <tbody>${corpo||`<tr><td colspan="10">${emptyState('Nenhuma viagem neste filtro.')}</td></tr>`}</tbody></table></div></div></div>`;
 }
 function modalViagem(id){
@@ -8963,7 +9075,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.4';
+var PEX_VER = '11.5';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9164,7 +9276,8 @@ async function _pexReconectar(){
     const remoto=await nuvemCarregar(2);           /* poucas tentativas: quem insiste é o laço */
     _pexPasso('trocar base', function(){ if(remoto){ DB=remoto; ensureCollections(); } });
     _nuvemRecebida=true; _localSujo=false;
-    const n=_pexPasso('corrigir baixas BRF', corrigirBaixasBRF).valor||0;
+    const n=(_pexPasso("corrigir baixas BRF", corrigirBaixasBRF).valor||0)
+            + (_pexPasso("corrigir as 4 da v11.5", corrigirBaixasBRF2).valor||0);
     _pexPasso('gravar local', saveLocal);
     if(n){ _localSujo=true; try{ await _enviarNuvem(); }catch(e){} }
     _pexPasso('tempo real', function(){ nuvemRealtime(aplicarRemoto); });
@@ -9268,7 +9381,8 @@ async function aposLogin(){
     _pexAvisarSeEncolheu(DB, remoto);
     _pexPasso('trocar base', function(){ DB=remoto; ensureCollections(); });
     _nuvemRecebida=true; _localSujo=false;
-    const nCorr=_pexPasso('corrigir baixas BRF', corrigirBaixasBRF).valor||0;
+    const nCorr=(_pexPasso("corrigir baixas BRF", corrigirBaixasBRF).valor||0)
+                + (_pexPasso("corrigir as 4 da v11.5", corrigirBaixasBRF2).valor||0);
     _pexPasso('gravar local', saveLocal);
     if(nCorr){ _localSujo=true;
       try{ await _enviarNuvem(); }catch(e){}
@@ -9364,7 +9478,7 @@ async function init(){
      cópia local velha e o cliente via "Pendente" de novo. Agora roda
      aqui, sempre, sobre o que estiver na máquina — e roda outra vez
      quando a cópia da nuvem chega, porque ela pode vir errada também. */
-  if(corrigirBaixasBRF()) saveLocal();
+  if(corrigirBaixasBRF()+corrigirBaixasBRF2()) saveLocal();
   applyRail();
   pexSeloVersao();                       /* v11.2: versão visível em toda tela, inclusive no celular */
   /* v11.1: só faz algo no arquivo do celular, e só com internet */
