@@ -97,15 +97,43 @@ async function nuvemCarimbo(){
 
    Agora LANÇA. Insistir e avisar é problema de quem chama — mas mentir
    dizendo que salvou, nunca. */
-async function nuvemSalvar(obj){
+/* 🔴 v11.4 — ESCRITA CONDICIONAL: UM APARELHO NÃO APAGA O OUTRO.
+
+   Foi assim que o trabalho do computador sumiu: o celular estava com uma
+   base velha (resposta do cache do service worker, corrigido na v11.3) e,
+   ao salvar, mandou aquilo por cima da boa. O `upsert` obedece sempre —
+   não pergunta se o que está lá é mais novo.
+
+   Agora o envio diz **em cima de qual versão ele foi feito**
+   (`carimboEsperado`, o `atualizado_em` que este aparelho leu). Se a
+   nuvem já tiver outro carimbo, é porque alguém salvou no meio: a
+   gravação NÃO acontece e devolvemos um erro de conflito, para quem
+   chamou baixar o que há de novo antes de insistir.
+
+   Sem `carimboEsperado` (primeira gravação da base), segue o upsert. */
+async function nuvemSalvar(obj, carimboEsperado){
   if(!nuvemInit()) throw new Error('Nuvem não configurada neste aparelho.');
   if(!_sbUser)     throw new Error('Sem usuário logado para salvar na nuvem.');
-  const {error}=await _sb.from('dados').upsert({ id:'empresa', conteudo:obj, atualizado_em:new Date().toISOString() });
-  if(error){
-    try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){}
-    throw error;
+  const agora=new Date().toISOString();
+
+  if(carimboEsperado){
+    const {data,error}=await _sb.from('dados')
+      .update({ conteudo:obj, atualizado_em:agora })
+      .eq('id','empresa').eq('atualizado_em', carimboEsperado)
+      .select('atualizado_em');
+    if(error){ try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){} throw error; }
+    if(!data || !data.length){
+      const e=new Error('Outro aparelho salvou depois de você; preciso buscar o que mudou antes de gravar.');
+      e._conflito=true;
+      try{ console.warn('[nuvem] conflito: a nuvem mudou desde a leitura'); }catch(_){}
+      throw e;
+    }
+    return agora;
   }
-  return true;
+
+  const {error}=await _sb.from('dados').upsert({ id:'empresa', conteudo:obj, atualizado_em:agora });
+  if(error){ try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){} throw error; }
+  return agora;
 }
 /* -------- Arquivos na nuvem (Supabase Storage, bucket 'arquivos') -------- */
 async function nuvemUpload(path, file){

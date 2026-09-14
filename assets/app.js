@@ -43,6 +43,12 @@ function ensureCollections(){
      semente não pode ressuscitar por cima. */
   if(!Array.isArray(DB.veiculos))    DB.veiculos=clone(SEED.veiculos||[]);
   if(!Array.isArray(DB.vencimentos)) DB.vencimentos=clone(SEED.vencimentos||[]);
+  /* v11.4 — `manutencoes` e `baterias` escaparam da correção da v10.9.
+     Achadas por varredura: comparei TODA coleção usada direto no código
+     (`DB.x.filter/find/map/...`) com a lista protegida aqui. Uma a uma eu
+     erraria de novo; a varredura fecha a lista inteira. */
+  if(!Array.isArray(DB.manutencoes)) DB.manutencoes=clone(SEED.manutencoes||[]);
+  if(!Array.isArray(DB.baterias))    DB.baterias=clone(SEED.baterias||[]);
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
@@ -315,14 +321,32 @@ function _enviarNuvem(){
   if(!_localSujo) return Promise.resolve();
   if(!_nuvemRecebida) return Promise.resolve();   /* a cópia da nuvem ainda não chegou: nada sobe */
   const enviada=DB;
-  return Promise.resolve(nuvemSalvar(enviada))
-    .then(function(){
+  /* v11.4: diz em cima de QUAL versão da nuvem esta gravação foi feita */
+  return Promise.resolve(nuvemSalvar(enviada, _pexCarimbo))
+    .then(function(novoCarimbo){
       if(DB===enviada) _localSujo=false;
+      if(novoCarimbo) _pexCarimbo=novoCarimbo;
       _pexEnvFalhas=0; _pexEnvEspera=3000;
       if(_pexAvisouEnvio){ toast('Pronto — suas alterações foram para a nuvem.'); _pexAvisouEnvio=false; }
-      try{ nuvemCarimbo().then(function(c){ if(c) _pexCarimbo=c; }).catch(function(){}); }catch(e){}
     })
     .catch(function(e){
+      /* 🔴 CONFLITO: outro aparelho salvou depois de nós. NÃO insistir por
+         cima — isso é exatamente o que apagou o trabalho dele. Busca o que
+         há de novo, guarda um ponto de restauração e deixa o cliente ver
+         o que mudou; o que ele lançou aqui continua marcado como pendente
+         e sobe na próxima, já sobre a versão certa. */
+      if(e && e._conflito){
+        (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'conflito ao salvar', erro:e.message, quando:new Date().toISOString()});
+        return nuvemCarregar(2).then(function(remoto){
+          if(!remoto) return;
+          pexGuardarPonto('antes de resolver um conflito com outro aparelho');
+          _pexAvisarSeEncolheu(DB, remoto);
+          return nuvemCarimbo().then(function(c){
+            if(c) _pexCarimbo=c;
+            toast('Outro aparelho salvou ao mesmo tempo. Busquei a versão mais nova — confira a tela antes de continuar.','warn');
+          });
+        }).catch(function(){ _pexReenviar(); });
+      }
       _pexEnvFalhas++;
       (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'salvar na nuvem', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
       try{ console.warn('[sync] não consegui salvar (tentativa '+_pexEnvFalhas+'):', e); }catch(_){}
@@ -361,9 +385,119 @@ function flushNuvem(){
     }catch(e){}
   }
 }
+/* ==================================================================
+   🔴 v11.4 — PONTOS DE RESTAURAÇÃO: NADA PODE RETROAGIR
+
+   Cobrança dele, e é a mais séria de todas:
+   *"nada pode retroagir, senão somem informações e documentos; vi em
+   viagens que você desatualizou o que eu tinha feito, isso nunca pode
+   acontecer"*.
+
+   O que aconteceu: o celular recebeu uma resposta VELHA do cache do
+   service worker (corrigido na v11.3), tratou como se fosse a nuvem, e
+   a partir daí qualquer edição feita lá mandou aquela base velha por
+   cima da boa. O trabalho do computador foi apagado pelo celular.
+
+   A v11.3 fechou a porta. Isto aqui é a rede embaixo: **antes de trocar
+   a base por outra, o sistema guarda a que está saindo**. Se algo
+   retroceder de novo — por qualquer motivo, meu ou não — o dado está
+   ali e volta em dois cliques, sem depender de eu estar por perto.
+
+   Guarda até 12 pontos no próprio aparelho. Se o espaço acabar, joga
+   fora o mais antigo em vez de falhar calado ([[salvar-nunca-em-silencio]]).
+   ================================================================== */
+const PEX_HIST_KEY='pex_hist_v1', PEX_HIST_MAX=12;
+function _pexResumo(base){
+  base=base||{};
+  return { viagens:(base.viagens||[]).length, veiculos:(base.veiculos||[]).length,
+           motoristas:(base.motoristas||[]).length, anexos:(base.anexos||[]).length,
+           pagamentos:(base.pagamentos||[]).length, vales:(base.vales||[]).length,
+           vencimentos:(base.vencimentos||[]).length,
+           baixadas:(base.viagens||[]).filter(function(v){
+             return (v.baixado==='SIM'||v.baixado==='TSP') && v.termoBaixado==='SIM'; }).length };
+}
+function pexHistLer(){
+  try{ const t=localStorage.getItem(PEX_HIST_KEY); return t? (JSON.parse(t)||[]) : []; }catch(e){ return []; }
+}
+/* Guarda a base ATUAL como ponto de restauração. `motivo` conta o porquê,
+   para ele entender a lista depois ("antes de receber da nuvem"). */
+function pexGuardarPonto(motivo, base){
+  try{
+    base = base || DB;
+    if(!base || !Array.isArray(base.viagens)) return false;
+    const lista=pexHistLer();
+    const ultimo=lista[0];
+    const resumo=_pexResumo(base);
+    /* não enche a lista de cópias idênticas seguidas */
+    if(ultimo && JSON.stringify(ultimo.resumo)===JSON.stringify(resumo)
+       && (Date.now()-new Date(ultimo.quando).getTime()) < 10*60*1000) return false;
+    lista.unshift({ quando:new Date().toISOString(), motivo:motivo||'', resumo:resumo,
+                    dados:JSON.stringify(base) });
+    while(lista.length>PEX_HIST_MAX) lista.pop();
+    /* espaço acabou? joga fora os mais antigos até caber */
+    for(;;){
+      try{ localStorage.setItem(PEX_HIST_KEY, JSON.stringify(lista)); return true; }
+      catch(e){
+        if(lista.length<=1){ try{ console.warn('[hist] sem espaço para o ponto de restauração'); }catch(_){} return false; }
+        lista.pop();
+      }
+    }
+  }catch(e){ return false; }
+}
+function pexRestaurarPonto(i){
+  const lista=pexHistLer(), p=lista[i];
+  if(!p){ toast('Ponto não encontrado.','err'); return; }
+  const r=_pexResumo(DB);
+  if(!confirm('Voltar os dados para o ponto de '+fmtDH(p.quando)+'?\n\n'
+     +'AGORA:  '+r.viagens+' viagens ('+r.baixadas+' baixadas)\n'
+     +'VOLTAR: '+p.resumo.viagens+' viagens ('+p.resumo.baixadas+' baixadas)\n\n'
+     +'O estado de agora também será guardado, então dá para desfazer.')) return;
+  pexGuardarPonto('antes de restaurar um ponto anterior');
+  try{
+    DB=JSON.parse(p.dados); ensureCollections();
+    _localSujo=true; saveLocal();
+    if(_nuvemRecebida) _enviarNuvem();         /* leva a restauração para os outros aparelhos */
+    closeModal(); router(); pexSeloVersao();
+    toast('Restaurado: '+((DB.viagens||[]).length)+' viagem(ns).');
+  }catch(e){ toast('Não consegui restaurar: '+(e.message||''),'err'); }
+}
+function fmtDH(iso){
+  try{ const d=new Date(iso);
+    return d.toLocaleDateString('pt-BR')+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return iso||''; }
+}
+function modalRestaurar(){
+  const lista=pexHistLer();
+  const agora=_pexResumo(DB);
+  const linhas = lista.length ? lista.map(function(p,i){
+    const dif=p.resumo.viagens-agora.viagens;
+    const sinal = dif>0? '<span class="st ok">+'+dif+' viagens</span>'
+                : dif<0? '<span class="st warn">'+dif+' viagens</span>'
+                : '<span class="st neutro">igual</span>';
+    return '<tr><td class="mono">'+esc(fmtDH(p.quando))+'</td>'
+      + '<td>'+esc(p.motivo||'—')+'</td>'
+      + '<td class="mono">'+p.resumo.viagens+' <span class="muted">('+p.resumo.baixadas+' baixadas)</span></td>'
+      + '<td>'+sinal+'</td>'
+      + '<td style="text-align:right"><button class="btn sm" onclick="pexRestaurarPonto('+i+')">Voltar para este</button></td></tr>';
+  }).join('') : '<tr><td colspan="5">'+emptyState('Ainda não há pontos guardados. A partir de agora o sistema guarda um antes de cada troca de dados.')+'</td></tr>';
+  openModal('<div class="m-h">'+svg('shield')+'<h3>Pontos de restauração</h3><button class="x" onclick="closeModal()">×</button></div>'
+    + '<div class="m-b">'
+    + '<p class="muted" style="line-height:1.6">O sistema guarda uma cópia dos dados <b>antes</b> de cada troca — ao receber da nuvem, ao entrar e ao restaurar. Se algo voltar atrás, é aqui que você desfaz.</p>'
+    + '<div class="hint" style="margin:10px 0">Agora nesta tela: <b>'+agora.viagens+' viagens</b> ('+agora.baixadas+' baixadas) · '
+    + agora.anexos+' anexos · '+agora.pagamentos+' gastos · '+agora.vencimentos+' vencimentos</div>'
+    + '<div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table class="tbl">'
+    + '<thead><tr><th>Quando</th><th>Motivo</th><th>Continha</th><th>Diferença</th><th></th></tr></thead>'
+    + '<tbody>'+linhas+'</tbody></table></div>'
+    + '</div><div class="m-f"><button class="btn" onclick="closeModal()">Fechar</button>'
+    + '<button class="btn" onclick="pexGuardarPonto(\'guardado à mão\')||1;closeModal();modalRestaurar()">Guardar um ponto agora</button></div>', true);
+}
 /* Recebe uma atualização de outro aparelho (tempo real, ou a vigia da v11.0) */
 function aplicarRemoto(obj){
   if(!obj) return;
+  /* 🔴 v11.4 — guarda o que está saindo ANTES de trocar. Foi por aqui que
+     o trabalho dele se perdeu: chegou uma base velha e a boa foi embora
+     sem deixar rastro. Agora sempre dá para voltar. */
+  pexGuardarPonto('antes de receber dados da nuvem');
   _applyingRemote=true;
   DB=obj; ensureCollections();
   _nuvemRecebida=true; _localSujo=false;
@@ -3256,8 +3390,10 @@ function viewConfig(){ const c=DB.config;
       <div class="card-b">
         <p class="muted" style="margin-bottom:14px">Os dados ficam neste computador. Faça backups e guarde em pendrive/nuvem. O backup inclui cadastros; os arquivos enviados ficam no navegador (exporte-os individualmente se precisar).</p>
         <div class="chips" style="margin-bottom:16px">
+          <button class="btn primary" onclick="modalRestaurar()">${svg('shield')} Pontos de restauração</button>
           <button class="btn" onclick="exportar()">${svg('export')} Exportar backup (.json)</button>
           <label class="btn">${svg('import')} Importar backup<input type="file" accept="application/json" onchange="importar(event)" style="display:none"></label></div>
+        <div class="hint" style="margin-bottom:16px">⚠️ <b>Se algo voltou atrás</b> — viagens que você já tinha baixado aparecendo como pendentes, lançamentos sumidos — use <b>Pontos de restauração</b>. O sistema guarda uma cópia antes de cada troca de dados, e você volta em dois cliques.</div>
         <div class="divider"></div>
         <button class="btn danger" onclick="restaurarFabrica()">${svg('trash')} Restaurar dados de fábrica</button>
         <div class="hint" style="margin-top:8px">Substitui os cadastros pelos dados originais.</div>
@@ -8827,7 +8963,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.3';
+var PEX_VER = '11.4';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9084,6 +9220,31 @@ try{
     }
   });
 }catch(e){}
+/* 🔴 v11.4 — AVISA QUANDO A BASE QUE CHEGA É MENOR DO QUE A QUE ESTÁ AQUI.
+
+   Dado some em silêncio quando ninguém compara. Se a cópia que chega tem
+   MENOS registros do que a daqui, alguma coisa está errada — foi
+   exatamente o caso do celular com a resposta velha do cache. O sistema
+   continua aplicando (a nuvem é a fonte), mas o cliente é avisado e o
+   ponto de restauração já está guardado, então ele desfaz num clique. */
+function _pexAvisarSeEncolheu(local, remoto){
+  try{
+    if(!local || !remoto) return;
+    const a=_pexResumo(local), b=_pexResumo(remoto);
+    const perdas=[];
+    [['viagens','viagens'],['anexos','anexos/documentos'],['pagamentos','gastos'],
+     ['vales','vales'],['vencimentos','vencimentos'],['motoristas','motoristas'],
+     ['veiculos','veículos']].forEach(function(p){
+      if(b[p[0]] < a[p[0]]) perdas.push((a[p[0]]-b[p[0]])+' '+p[1]);
+    });
+    if(!perdas.length) return;
+    setTimeout(function(){
+      toast('Atenção: os dados que vieram da nuvem têm MENOS registros que os deste aparelho ('
+        + perdas.join(', ') + ' a menos). Se isso estiver errado, abra Configurações → Pontos de restauração e volte.','warn');
+    }, 1200);
+    try{ console.warn('[dados] a nuvem trouxe menos:', a, b); }catch(_){}
+  }catch(e){}
+}
 function _pexPasso(nome, fn){
   try{ const r=fn(); return {ok:true, valor:r}; }
   catch(e){
@@ -9102,6 +9263,9 @@ async function aposLogin(){
   }
 
   if(baixou && remoto){
+    /* v11.4: a base local pode ser a boa — guarda antes de trocar */
+    pexGuardarPonto('antes de entrar e receber da nuvem');
+    _pexAvisarSeEncolheu(DB, remoto);
     _pexPasso('trocar base', function(){ DB=remoto; ensureCollections(); });
     _nuvemRecebida=true; _localSujo=false;
     const nCorr=_pexPasso('corrigir baixas BRF', corrigirBaixasBRF).valor||0;
