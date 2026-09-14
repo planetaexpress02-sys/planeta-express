@@ -6156,25 +6156,29 @@ function viewEtica(){
 
 /* ---------- CONTROLE DE VIAGENS ---------- */
 let viagemFiltro='todas', viagemMes='todos', viagemPlaca='todas';
+/* As duas baixas da viagem, em um lugar só: os cartões, os filtros e a
+   tabela têm que responder a mesma pergunta do mesmo jeito. */
+const _vgBxOk=v=>v.baixado==='SIM'||v.baixado==='TSP';
+const _vgTmOk=v=>v.termoBaixado==='SIM';
 function mesLabel(ym){ const p=ym.split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
 function viewViagens(){
-  const h=hoje();
-  const mesAtual=DB.viagens.filter(v=>{ const d=parseD(v.data); return d&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).length;
-  const emV=DB.viagens.filter(v=>v.status==='Pendente').length;
-  const pendTermo=DB.viagens.filter(v=>v.termoBaixado!=='SIM').length;
-  const pendBaixa=DB.viagens.filter(v=>v.baixado!=='SIM'&&v.baixado!=='TSP').length;
+  /* Uma viagem só está BAIXADA quando as duas baixas saíram: a do
+     transporte e a do termo pallet. É assim que o cliente conta. */
+  const registradas=DB.viagens.length;
+  const baixadas=DB.viagens.filter(v=>_vgBxOk(v)&&_vgTmOk(v)).length;
+  const pendTermo=DB.viagens.filter(v=>!_vgTmOk(v)).length;
+  const pendBaixa=DB.viagens.filter(v=>!_vgBxOk(v)).length;
   const meses=[...new Set(DB.viagens.map(v=>(v.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   const placas=[...new Set(DB.viagens.map(v=>v.placa).filter(Boolean))].sort();
   const fb=(k,l)=>`<button class="${viagemFiltro===k?'active':''}" onclick="viagemFiltro='${k}';router()">${l}</button>`;
-  const ymAtual=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
   // KPI clicável: leva direto ao que está pendente (filtro correspondente)
   const kpiV=(ico,cls,val,label,onclk,ativo)=>`<a class="kpi link ${ativo?'ativo':''}" style="cursor:pointer" onclick="${onclk}">
     <div class="k-top"><div class="k-ico ${cls}">${svg(ico)}</div><span class="k-go">→</span></div>
     <div class="k-val">${val}</div><div class="k-label">${label}</div></a>`;
   let lista=DB.viagens.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
-  if(viagemFiltro==='emviagem') lista=lista.filter(v=>v.status==='Pendente');
-  else if(viagemFiltro==='pendentes') lista=lista.filter(v=>v.baixado!=='SIM'&&v.baixado!=='TSP');
-  else if(viagemFiltro==='termo') lista=lista.filter(v=>v.termoBaixado!=='SIM');
+  if(viagemFiltro==='baixadas') lista=lista.filter(v=>_vgBxOk(v)&&_vgTmOk(v));
+  else if(viagemFiltro==='pendentes'||viagemFiltro==='emviagem') lista=lista.filter(v=>!_vgBxOk(v));
+  else if(viagemFiltro==='termo') lista=lista.filter(v=>!_vgTmOk(v));
   if(viagemMes!=='todos') lista=lista.filter(v=>(v.data||'').slice(0,7)===viagemMes);
   if(viagemPlaca!=='todas') lista=lista.filter(v=>v.placa===viagemPlaca);
   // agrupa por mês
@@ -6197,12 +6201,12 @@ function viewViagens(){
       <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
       <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Viagens')}</div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
-    ${kpiV('route','i-blue', mesAtual, 'Viagens no mês', "viagemFiltro='todas';viagemMes='"+ymAtual+"';router()", viagemMes===ymAtual)}
-    ${kpiV('truck', emV?'i-orange':'i-green', emV, 'Pendentes', "viagemFiltro='emviagem';viagemMes='todos';router()", viagemFiltro==='emviagem')}
-    ${kpiV('doc', pendBaixa?'i-red':'i-green', pendBaixa, 'Transportes a baixar', "viagemFiltro='pendentes';viagemMes='todos';router()", viagemFiltro==='pendentes')}
+    ${kpiV('route','i-blue', registradas, 'Viagens registradas', "viagemFiltro='todas';viagemMes='todos';router()", viagemFiltro==='todas')}
+    ${kpiV('check','i-green', baixadas, 'Viagens baixadas', "viagemFiltro='baixadas';viagemMes='todos';router()", viagemFiltro==='baixadas')}
+    ${kpiV('doc', pendBaixa?'i-red':'i-green', pendBaixa, 'Transportes pendentes', "viagemFiltro='pendentes';viagemMes='todos';router()", viagemFiltro==='pendentes')}
     ${kpiV('box', pendTermo?'i-amber':'i-green', pendTermo, 'Termos pallet pendentes', "viagemFiltro='termo';viagemMes='todos';router()", viagemFiltro==='termo')}
   </div>
-  <div class="toolbar"><div class="seg">${fb('todas','Todas')}${fb('emviagem','Pendentes')}${fb('pendentes','A baixar')}${fb('termo','Termo pendente')}</div>
+  <div class="toolbar"><div class="seg">${fb('todas','Todas')}${fb('baixadas','Baixadas')}${fb('pendentes','Transporte pendente')}${fb('termo','Termo pendente')}</div>
     <select class="selectlite" onchange="viagemMes=this.value;router()"><option value="todos">Todos os meses</option>
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
     <select class="selectlite" onchange="viagemPlaca=this.value;router()"><option value="todas">Todas as placas</option>
