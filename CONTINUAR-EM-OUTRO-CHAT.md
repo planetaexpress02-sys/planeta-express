@@ -4,9 +4,27 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v11.0)
+## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v11.1)
 
-**v11.0 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=233`, cache SW `planeta-express-v11-0`, rodapé `v11.0`.
+**v11.1 publicada e sincronizada.** Assets em `?v=234`, cache SW `planeta-express-v11-1`, rodapé `v11.1`, `versao.json` no ar, celular reconstruído **com a camada de nuvem** e carimbado com `PEX_VERSAO='11.1'`.
+
+## 🔴 A REGRA MAIS IMPORTANTE DESTE PROJETO (dada por ele em 14/09)
+
+> **"crie como regra sempre, TODAS as atualizações devem ser feitas em todos os locais acessados"**
+
+O sistema é acessado de **três** lugares e cada um tem um caminho próprio. Para ele é um sistema só — a divisão é problema meu:
+
+| Local | Como o CÓDIGO chega | Como o DADO chega |
+|---|---|---|
+| Site (GitHub Pages) | `git push` + `?v=NNN` + cache do SW | Supabase (login) |
+| `Planeta Express - CELULAR.html` | arquivo local: **não chega sozinho** → `versao.json` + `PEX_VERSAO` | Supabase — **só a partir da v11.1** |
+| Outros usuários | o site deles | a mesma linha `dados/empresa` |
+
+**Antes de dizer que uma versão está entregue:** bump visível (rodapé + `?v=` + SW) · `versao.json` atualizado · celular reconstruído e as checagens do build passando (`createClient > 0`) · o dado subindo de verdade.
+
+---
+
+## (histórico) v11.0 publicada e sincronizada. Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=233`, cache SW `planeta-express-v11-0`, rodapé `v11.0`.
 
 **O rodapé agora acompanha cada release.** Ele ficou congelado em `v10.2` durante as v10.3–v10.7 e foi por isso que se descobriu que o cliente rodava versão velha — a foto que ele mandou tinha o número antigo. **Todo release muda o número visível na tela, não só o `?v=`.**
 
@@ -303,6 +321,43 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### 🔴 ESTADO EM 14/09/2026 — v11.1 (o dado não subia · o celular nunca teve nuvem)
+
+Cobrança dele: *"essa merda desse sistema não está ATUALIZANDO, nem no mobile nem em outros usuarios, CORRIJA AGORA ESSE lixo"*. Eram **dois defeitos independentes**, os dois graves, e os dois viviam há muito tempo.
+
+## 1. 🔴 O dado não subia — e o sistema dizia que tinha subido
+
+```js
+async function nuvemSalvar(obj){
+  const {error}=await _sb.from('dados').upsert({...});
+  if(error) console.warn('Falha ao salvar na nuvem:', error.message);   // ← e devolvia normal
+}
+```
+
+Quem chamava (`_enviarNuvem`) entendia **"salvou"** e marcava `_localSujo=false`. O lançamento era dado por enviado e **o sistema nunca mais tentava**. No aparelho dele estava lá; na nuvem, não; para os outros usuários, aquele lançamento **simplesmente não existia**. Sem aviso, sem segunda chance — o "salvo em silêncio" de [[salvar-nunca-em-silencio]], agora com o dado da empresa.
+
+O `flushNuvem()` (ao fechar a aba) tinha o mesmo vício: `nuvemSalvar(DB); _localSujo=false;` — marcava limpo **antes** de saber o resultado e sem esperar a promessa.
+
+**Corrigido:** `nuvemSalvar` **lança**; `_enviarNuvem` só limpa a marca na confirmação do servidor e, se falhar, mantém pendente e **reenvia** (3 s, 6 s, 12 s… até 1 min); depois de ~5 falhas avisa, e confirma quando consegue.
+
+## 2. 🔴 O arquivo do celular NUNCA teve nuvem
+
+O `build_celular.sh` montava o arquivo com **os 10 `.js` de tela e mais nada**. `nuvem.js` e `config-online.js` nunca entraram, e o `<script>` do Supabase ficava de fora porque o `awk` corta o corpo exatamente na linha `<!-- Biblioteca da nuvem`. Logo: `window.supabase` e `window.PEX_CONFIG` não existiam, `nuvemAtiva()` devolvia `false`, e **o celular abria sem login, 100% local**. Tudo lançado nele ficava nele; nada do computador chegava lá.
+
+E a checagem do próprio build **carimbava o defeito como correto**: `supabase (deve ser 0)`. Agora as checagens **exigem** `createClient > 0`, `supabase.co > 0` e `nuvemLogin > 0` — se qualquer uma vier zero, o arquivo está offline de novo e não pode ser entregue.
+
+## 3. O código do celular também não se atualizava
+
+Arquivo local não tem service worker: a versão fica parada na cópia. Agora o build carimba `PEX_VERSAO` dentro do arquivo, o site publica **`versao.json`**, e `pexConferirVersao()` compara e oferece abrir a versão nova. Só com internet — offline continua abrindo normalmente, que é a razão de esse arquivo existir. Testado contra o site publicado: v10.2 → mostra o aviso com link certo; versão igual → não incomoda; rodando no site → não faz nada; chamada 2× → um aviso só.
+
+## ⚠️ ARMADILHA: como (não) testar o arquivo do celular
+
+Injetar um `<script>` substituindo `</body>` ou `</html>` **quebra o arquivo** — essas marcas aparecem **dezenas de vezes dentro de strings JavaScript** (os modelos de relatório; `</html>` aparece 44×). A injeção cai no meio de uma string, o bloco vira erro de sintaxe e o teste acusa um defeito que não existe. **Perdi uma rodada inteira convencido de que o celular estava quebrado.**
+
+**Teste sem modificar:** `--dump-dom` no arquivo original e procure conteúdo que só o JS produz — a `<nav>` preenchida, o campo `lg_email`. Apareceram: o sistema carregou.
+
+**Versão:** assets `?v=234`, cache `planeta-express-v11-1`, rodapé `v11.1`. Regressão: 25 telas, nenhuma com problema, 73/75 KPIs animando.
 
 ### ✅ ESTADO EM 14/09/2026 — v11.0 (a nuvem se reconecta sozinha · todos veem as atualizações · o card do gráfico no tamanho certo)
 
