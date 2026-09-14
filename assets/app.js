@@ -12,6 +12,9 @@ const CFG_KEY = 'pex_config';   /* preferências persistem separadas -> sobreviv
 let DB = null;
 
 let _applyingRemote=false, _nuvemSaveTimer=null;
+/* v10.4 — controle de quem manda na nuvem: só envia o que mudou AQUI
+   (_localSujo) e só depois de a cópia da nuvem ter chegado (_nuvemRecebida) */
+let _localSujo=false, _nuvemRecebida=false;
 function ensureCollections(){
   if(!DB.config) DB.config = clone(SEED.config);
   ['alertaCritico','alertaAtencao','alertaKm','alertaHora','sulcoMinimo','finPin'].forEach(k=>{ if(DB.config[k]==null) DB.config[k]=SEED.config[k]; });
@@ -261,30 +264,136 @@ function saveLocal(){
   try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
   try{ localStorage.setItem(CFG_KEY, JSON.stringify(DB.config)); }catch(e){}
 }
+/* ⚠️ v10.4 — A ABA ABERTA APAGAVA O TRABALHO DE QUEM SALVOU DEPOIS.
+
+   `flushNuvem()` roda ao fechar, ao minimizar e ao trocar de aba. Ele
+   mandava a cópia da memória para a nuvem SEMPRE — mesmo sem nenhuma
+   edição. Então uma aba esquecida aberta desde de manhã, ao ser
+   minimizada à tarde, regravava a manhã inteira por cima do que outro
+   aparelho tinha salvo no meio do dia. Aconteceu de verdade: corrigi as
+   baixas da BRF na nuvem e a aba aberta do cliente as desfez.
+
+   Agora só sobe o que foi realmente alterado aqui (`_localSujo`), e
+   nada sobe antes de a cópia da nuvem ter chegado (`_nuvemRecebida`) —
+   senão os primeiros segundos do arranque mandam a cópia local velha
+   por cima da nuvem. */
 function saveDB(){
   saveLocal();
+  if(_applyingRemote) return;              /* mudança que veio de fora não volta */
+  _localSujo=true;
   // Modo online: envia para a nuvem (com pequeno atraso, para agrupar edições)
-  if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser() && !_applyingRemote){
+  if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser() && _nuvemRecebida){
     clearTimeout(_nuvemSaveTimer);
-    _nuvemSaveTimer=setTimeout(()=>{ nuvemSalvar(DB).catch(()=>{}); }, 700);
+    _nuvemSaveTimer=setTimeout(()=>{ _enviarNuvem(); }, 700);
   }
+}
+function _enviarNuvem(){
+  if(!_localSujo) return Promise.resolve();
+  const enviada=DB;
+  return Promise.resolve(nuvemSalvar(enviada)).then(()=>{ if(DB===enviada) _localSujo=false; }).catch(()=>{});
 }
 /* Garante que a última edição vá para a nuvem AGORA (ao fechar/trocar de aba) */
 function flushNuvem(){
   if(_nuvemSaveTimer){ clearTimeout(_nuvemSaveTimer); _nuvemSaveTimer=null; }
+  if(!_localSujo || !_nuvemRecebida) return;          /* nada mudou aqui: não regrava nada */
   if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser()){
-    try{ nuvemSalvar(DB); }catch(e){}
+    try{ nuvemSalvar(DB); _localSujo=false; }catch(e){}
   }
 }
 /* Recebe uma atualização de outro aparelho (tempo real) */
 function aplicarRemoto(obj){
   if(!obj) return;
   _applyingRemote=true;
-  DB=obj; ensureCollections(); saveLocal();
+  DB=obj; ensureCollections();
+  _nuvemRecebida=true; _localSujo=false;
+  const nCorr=corrigirBaixasBRF();        /* cópia velha chegando: corrige de novo */
+  saveLocal();
   _applyingRemote=false;
+  if(nCorr){ _localSujo=true; _enviarNuvem(); }
   const ov=document.getElementById('overlay');
   if(!ov || !ov.classList.contains('show')){ renderSidebar((location.hash||'#dashboard').slice(1).split('/')[0]); router(); }
   toast('Dados atualizados (outro aparelho).');
+}
+/* ============================================================
+   v10.4 — CORREÇÃO ÚNICA DAS BAIXAS DA BRF
+
+   Até a v10.2 a importação lia só a PRIMEIRA coluna "Baixado" da
+   planilha e jogava fora a segunda (a do termo pallet). Resultado: as
+   viagens entraram com o termo em branco e ficaram "Pendente" mesmo
+   com OK na planilha. A v10.3 consertou a leitura — mas o que já
+   estava gravado continuava errado, e o cliente não tem que reimportar
+   seis planilhas para consertar um erro meu.
+
+   Esta tabela é o que as 6 planilhas de 2026 dizem, lidas pelo próprio
+   leitor do sistema: transporte -> [transporte baixado, termo baixado].
+   Roda uma vez por base (marca em DB.config.brfBaixasCorrigidas) e só
+   PREENCHE o que está com OK na planilha — nunca desmarca uma baixa
+   que alguém fez à mão aqui dentro.
+   ============================================================ */
+const _BRF_BAIXAS = {
+  '130949638':['SIM','SIM'],'131003184':['SIM','SIM'],'131003186':['SIM','SIM'],
+  '131096098':['SIM','SIM'],'131100398':['SIM','SIM'],'131101198':['SIM','SIM'],
+  '131112649':['SIM','SIM'],'131125887':['SIM','SIM'],'131136294':['SIM','SIM'],
+  '131136295':['SIM','SIM'],'131145916':['SIM','SIM'],'131146464':['SIM',''],
+  '131179429':['SIM','SIM'],'131179450':['SIM','SIM'],'131181973':['SIM','SIM'],
+  '131191309':['SIM','SIM'],'131211366':['SIM','SIM'],'131220750':['SIM','SIM'],
+  '131220751':['SIM','SIM'],'131225358':['SIM','SIM'],'131225425':['SIM','SIM'],
+  '131227331':['SIM','SIM'],'131227332':['SIM','SIM'],'131238831':['SIM','SIM'],
+  '131249028':['SIM','SIM'],'131250851':['SIM','SIM'],'131250852':['SIM','SIM'],
+  '131251282':['SIM','SIM'],'131259196':['SIM','SIM'],'131275692':['SIM','SIM'],
+  '131280334':['SIM','SIM'],'131287008':['SIM','SIM'],'131287300':['SIM','SIM'],
+  '131374128':['SIM','SIM'],'131409594':['SIM','SIM'],'131409595':['SIM','SIM'],
+  '131431887':['SIM','SIM'],'131450367':['SIM','SIM'],'131453919':['SIM',''],
+  '131454420':['SIM','SIM'],'131463664':['SIM','SIM'],'131486340':['SIM','SIM'],
+  '131486662':['SIM','SIM'],'131486663':['SIM','SIM'],'131495998':['SIM','SIM'],
+  '131496000':['SIM','SIM'],'131512659':['','SIM'],'131512661':['SIM',''],
+  '131512662':['SIM','SIM'],'131512663':['SIM','SIM'],'131512684':['SIM','SIM'],
+  '131512687':['SIM',''],'131603219':['SIM','SIM'],'131671459':['SIM','SIM'],
+  '131671460':['SIM',''],'131671461':['SIM','SIM'],'131680889':['SIM','SIM'],
+  '131720744':['SIM','SIM'],'131720747':['SIM',''],'131725108':['SIM','SIM'],
+  '131736414':['SIM','SIM'],'131759261':['SIM','SIM'],'131759646':['SIM','SIM'],
+  '131760183':['SIM',''],'131767668':['SIM',''],'131890420':['SIM','SIM'],
+  '131924875':['SIM','SIM'],'131949340':['SIM','SIM'],'131950147':['SIM','SIM'],
+  '131950148':['SIM',''],'131951931':['SIM',''],'131952554':['SIM','SIM'],
+  '131962261':['SIM','SIM'],'131982850':['SIM','SIM'],'131991081':['SIM','SIM'],
+  '132003452':['SIM','SIM'],'132003453':['SIM','SIM'],'132004264':['SIM','SIM'],
+  '132007400':['SIM','SIM'],'132058709':['SIM','SIM'],'132080741':['SIM','SIM'],
+  '132137850':['SIM','SIM'],'132168929':['SIM',''],'132168931':['SIM',''],
+  '132170629':['TSP','SIM'],'132184093':['SIM','SIM'],'132184356':['SIM','SIM'],
+  '132194903':['SIM','SIM'],'132205758':['TSP','SIM'],'132234127':['SIM','SIM'],
+  '132244556':['SIM','SIM'],'132254049':['SIM','SIM'],'132256300':['SIM','SIM'],
+  '132256965':['SIM','SIM'],'132256966':['SIM','SIM'],'132320045':['SIM','SIM'],
+  '132330329':['SIM','SIM'],'132339189':['','SIM'],'132345840':['SIM','SIM'],
+  '132355798':['SIM','SIM'],'132375620':['SIM','SIM'],'132396020':['SIM','SIM'],
+  '132397411':['','SIM'],'132398194':['SIM','SIM'],'132399398':['SIM','SIM'],
+  '132431078':['','SIM'],'132438191':['','SIM'],'132452491':['SIM','SIM'],
+  '132452958':['SIM','SIM'],'132478800':['SIM','SIM'],'132479946':['SIM','SIM'],
+  '132490215':['SIM','SIM'],'132498620':['SIM','SIM'],'132498621':['SIM','SIM'],
+  '132499101':['SIM','SIM'],'132506357':['SIM','SIM'],'132598383':['SIM','SIM'],
+  '132608652':['SIM',''],'132621761':['SIM','SIM'],'132634785':['SIM','SIM'],
+  '132634788':['SIM','SIM'],'132644653':['SIM','SIM'],'132665898':['SIM',''],
+  '132677436':['SIM',''],'132677437':['SIM','SIM'],'132677439':['SIM','SIM'],
+  '132677443':['SIM',''],'132681418':['SIM','SIM'],'132691929':['SIM',''],
+  '132701724':['SIM','SIM'],'132767693':['SIM','']
+};
+function corrigirBaixasBRF(){
+  if(!DB || !Array.isArray(DB.viagens)) return 0;
+  DB.config = DB.config || {};
+  if(DB.config.brfBaixasCorrigidas) return 0;
+  let n=0;
+  DB.viagens.forEach(v=>{
+    const alvo=_BRF_BAIXAS[String(v.transporte||'').replace(/\D/g,'')];
+    if(!alvo) return;
+    let mudou=false;
+    if(alvo[0] && v.baixado!==alvo[0]){ v.baixado=alvo[0]; mudou=true; }
+    if(alvo[1] && v.termoBaixado!==alvo[1]){ v.termoBaixado=alvo[1]; mudou=true; }
+    if(mudou){
+      v.status=(v.baixado==='SIM'||v.baixado==='TSP')?'Concluída':'Pendente';
+      n++;
+    }
+  });
+  DB.config.brfBaixasCorrigidas=1;
+  return n;
 }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
 function uid(p){ return p + Math.random().toString(36).slice(2,8); }
@@ -8515,8 +8624,15 @@ async function fazerLogin(){
 async function aposLogin(){
   try{
     const remoto=await nuvemCarregar();
-    if(remoto){ DB=remoto; ensureCollections(); saveDB(); }
-    else { await nuvemSalvar(DB); }            // primeira vez: envia a base atual p/ a nuvem
+    if(remoto){
+      DB=remoto; ensureCollections();
+      _nuvemRecebida=true; _localSujo=false;
+      /* a cópia da nuvem pode trazer as baixas erradas da v10.2 */
+      const nCorr=corrigirBaixasBRF();
+      saveLocal();
+      if(nCorr){ _localSujo=true; await _enviarNuvem(); toast(nCorr+' viagem(ns) tiveram a baixa corrigida pela planilha.'); }
+    }
+    else { _nuvemRecebida=true; _localSujo=true; await _enviarNuvem(); }   // primeira vez: envia a base atual
     nuvemRealtime(aplicarRemoto);
     /* v8.8 — agora que há conta e internet, sobe o que foi anexado offline.
        Tem que ser DEPOIS do `DB=remoto`: a troca descarta o `DB.anexos`
@@ -8572,6 +8688,8 @@ async function bootOnline(){
 
 async function init(){
   loadDB();
+  /* sem nuvem, a correção das baixas vale para a base local mesmo */
+  if(!(typeof nuvemAtiva==='function' && nuvemAtiva())){ if(corrigirBaixasBRF()) saveLocal(); }
   applyRail();
   try{ await idbOpen(); await reloadFiles(); }catch(e){ FILES=[]; }
   tick(); setInterval(tick,30000);
