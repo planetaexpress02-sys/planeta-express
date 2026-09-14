@@ -8688,8 +8688,13 @@ async function bootOnline(){
 
 async function init(){
   loadDB();
-  /* sem nuvem, a correção das baixas vale para a base local mesmo */
-  if(!(typeof nuvemAtiva==='function' && nuvemAtiva())){ if(corrigirBaixasBRF()) saveLocal(); }
+  /* ⚠️ v10.5 — a correção das baixas rodava SÓ depois do login na nuvem.
+     Quando esse caminho falha (sessão vencida, Supabase fora do ar, CDN
+     bloqueada), ela simplesmente não acontecia: o sistema abria com a
+     cópia local velha e o cliente via "Pendente" de novo. Agora roda
+     aqui, sempre, sobre o que estiver na máquina — e roda outra vez
+     quando a cópia da nuvem chega, porque ela pode vir errada também. */
+  if(corrigirBaixasBRF()) saveLocal();
   applyRail();
   try{ await idbOpen(); await reloadFiles(); }catch(e){ FILES=[]; }
   tick(); setInterval(tick,30000);
