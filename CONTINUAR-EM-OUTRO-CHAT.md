@@ -4,9 +4,25 @@
 
 ---
 
-## ⚡ ONDE O PROJETO ESTÁ (10/09/2026 — v10.2)
+## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v10.8)
 
-**v10.2 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html`, ~3,99 MB — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=225`, cache SW `planeta-express-v10-2`, rodapé `v10.2`.
+**v10.8 publicada e sincronizada.** Árvore do git limpa, `main` = `origin/main`, GitHub Pages no ar, pasta offline e celular (`Planeta Express - CELULAR.html` — ele mora na **pasta da empresa, um nível acima**; havia uma cópia velha, v7.0, presa dentro de `Sistema Planeta Express\` e ela foi apagada na v10.2) na mesma versão. Assets em `?v=231`, cache SW `planeta-express-v10-8`, rodapé `v10.8`.
+
+**O rodapé agora acompanha cada release.** Ele ficou congelado em `v10.2` durante as v10.3–v10.7 e foi por isso que se descobriu que o cliente rodava versão velha — a foto que ele mandou tinha o número antigo. **Todo release muda o número visível na tela, não só o `?v=`.**
+
+**v10.3 → v10.7 (13–14/09) — o bloco das VIAGENS BRF:**
+
+| Versão | O que entrou |
+|---|---|
+| v10.3 | A planilha da BRF tem **DUAS colunas "Baixado"**: a G é a baixa do transporte, a I é a do **termo pallet** (a H é o número do termo). O importador lia só a primeira. Agora lê as duas (`_bxNorm`), e **reimportar ATUALIZA** viagem que já existe em vez de dizer "já existe" — a prévia mostra o que muda ("Termo: vazio → SIM") |
+| v10.4 | (a) `flushNuvem()` mandava a memória da aba para a nuvem ao fechar/minimizar **mesmo sem edição** — aba esquecida regravava por cima do que outro aparelho salvou depois; agora só sobe o que mudou ali (`_localSujo`) e nada sobe antes de a cópia da nuvem chegar (`_nuvemRecebida`). (b) `_BRF_BAIXAS` + `corrigirBaixasBRF()`: o que as 6 planilhas dizem, aplicado uma vez por base (`DB.config.brfBaixasCorrigidas`), só **preenchendo** |
+| v10.5 | `corrigirBaixasBRF()` rodava só dentro de `aposLogin()`, depois da nuvem — com sessão vencida ou internet ruim não acontecia e o cliente via "Pendente" de novo. Agora roda no `init()`, sempre, antes do primeiro desenho, e **outra vez** quando a cópia remota chega |
+| v10.6 | Os 4 cartões de Viagens na ordem que ele conta: Registradas / Baixadas (transporte **E** termo) / Transportes pendentes / Termos pallet pendentes. Antes o primeiro contava só o mês e os outros a base inteira. `_vgBxOk`/`_vgTmOk` concentram a regra |
+| v10.7 | Relatório "Viagens do período": seletor com Todas / Baixadas / Transportes pendentes / Termos pallet pendentes, e a **coluna TERMO** (Baixado/Pendente) — antes saía só o número do termo, sem dizer se a baixa aconteceu |
+
+**Dados:** a base fica na **nuvem** (Supabase, tabela `dados`, id `empresa`); o localStorage é só cópia. Depois da correção: 135 viagens, 124 com transporte baixado, 116 com termo. Cópia de segurança de como estavam antes: `Planeta Express Transportes\Backup viagens antes da correcao 14-09-2026.json` — **é com ela que se testa qualquer coisa de viagens.**
+
+**🚩 ACHADO ESPERANDO RESPOSTA DELE:** pedágio contado 2×, **VIA CAMPO, BDP-1B55, 14/07/2026** — as mesmas duas passagens (11:31:35 e 16:20:29) gravadas quatro vezes, **R$ 214,32 a mais nos custos**. Um par veio da fatura Sem Parar (tem tag `0757930328` e fatura `26176725165`, ids `pd32`/`pd33`); o outro entrou sem isso (ids `pdw2u919`/`pdzdjafi`). Ofereci apagar os dois sem tag/fatura; em 14/09 ele disse **"esquece o pedágio agora"**. Não apagar sem ordem dele.
 
 **🚧 PENDÊNCIA ABERTA DA v8.0 — A LOGO NOVA.** O cliente pediu para trocar a marca por uma arte **preta e dourada** que ele anexou no chat, reprovou a reconstrução que eu fiz em vetor, e **ficou de salvar o PNG dele em `assets\logo-original.png`**. Enquanto não chegar, a marca do sistema segue a da v7.8. Ver a seção da v8.0 no histórico.
 
@@ -287,6 +303,32 @@ v6.65: **Monitoramento virou CARTA TOPOGRÁFICA (a v6.64 tinha ficado apagada).*
 v6.66: **Mais cidades, rotas melhores, veículos maiores e mais lentos** (pedido do cliente). **(1) 23 cidades** (eram 15): entraram **Astorga, Jaguapitã, Mandaguaçu, Florestópolis, Primeiro de Maio, Assaí, Tamarana e Califórnia**, com coordenadas reais e `tipo:'referencia'` — **os destinos operacionais continuam sendo Cambé, Maringá e Paiçandu**. **(2) Malha viária de 5 → 11 rodovias** (PR-457, PR-090, PR-444, BR-376, PR-445, PR-218 leste…), com **15 placas** espalhadas. **(3) Rotas melhores:** rodovia não é reta entre duas cidades — **`_monSinuoso()`** acrescenta pontos intermediários (1 a cada ~70px) com desvio lateral suave e **determinístico** (semente vinda da própria posição, então não treme a cada quadro), e o traçado passou a serpentear como via de verdade. **(4) Veículos maiores:** **28×15** (eram 18×8), agora com carreta, cabine, vidro, farol, **3 rodas** e sombra; placa maior. **(5) Bem mais lentos:** `escala` da simulação 0,0009 → **0,00011** — a rota inteira leva **~2 min** (era ~15 s). **(6) Mais informação no painel:** velocidade média, **próxima chegada** (hora + destino) e o tamanho da malha (rotas · cidades). **Validado** em 1440px e 375px: nada cortado, nenhuma colisão de rótulo, 823 elementos SVG (estáticos), zero erro. Commit `2b153db`.
 
 v6.67: **48 cidades, 23 rodovias e veículos de volta ao ritmo ágil.** **(1) Cidades 23 → 48**, todas com coordenadas reais e `tipo:'referencia'` (os destinos operacionais seguem só Cambé, Maringá e Paiçandu): vale do Paranapanema (Porecatu, Alvorada do Sul, Centenário do Sul, Lupionópolis, Prado Ferreira, Miraselva, Guaraci), região de Maringá (Colorado, Iguaraçu, Ângulo, Flórida, Munhoz de Melo, Nova Esperança), leste (Uraí, Leópolis, Sertaneja, Rancho Alegre, Cornélio Procópio, Santa Mariana) e sul (Sabáudia, Pitangueiras, Cambira, Marumbi, Rio Bom, Bom Sucesso). **(2) Rodovias 11 → 23** (PR-160, PR-436, PR-538, PR-340, PR-317, PR-082, PR-466, BR-369 leste e sul…), com **33 placas** no mapa. **(3) Velocidade de volta ao original** (`escala` 0,00011 → **0,0009**): a rota inteira leva **~14 s** — o cliente pediu para voltar a ser mais rápido. **(4) Anti-encavalamento dos nomes:** com 44 pontos de referência os rótulos se sobreporiam; quem está perto de outro já colocado **joga o nome para baixo** (`_refPost`), e **no celular ficam só os pontos** (`.mon-r-nome{display:none}` + placas de rodovia ocultas). **Validado:** 1264 elementos SVG (estáticos), **5,4 ms por quadro** (limite 16,7 para 60 fps), nada cortado, nenhuma colisão nos rótulos principais, zero erro. Commit `896d6bc`.
+
+### ✅ ESTADO EM 14/09/2026 — v10.8 (pizza do % de viagens baixadas) + a conferência das planilhas de Junho e Julho
+
+## O gráfico
+
+Pedido: *"faça um gráfico pode ser pizza em verde com a % de viagens que estão baixadas"*. Entrou na tela de **Viagens**, entre os 4 cartões e a barra de filtros: `_vgPizza()`, que **reusa o `donut()`** dos outros seis gráficos do sistema — nada de desenho novo por tela. Verde `#25e88f`, centro com a porcentagem, legenda com Baixadas / Faltando baixar / Transportes pendentes / Termos pallet pendentes.
+
+**⚠️ Os quatro números chegam PRONTOS de `viewViagens`** — são os mesmos dos cartões logo acima. Recontar dentro da função seria a armadilha de sempre ([[numeros-derivados-fonte-unica]]): o gráfico dizendo uma coisa e o cartão ao lado dizendo outra. Pelo mesmo motivo ele **não filtra por mês nem por placa**, porque os cartões também não. Base vazia devolve `''` e a tela abre normal.
+
+Conferido com a base real (135 viagens): centro 82%, 2 fatias que **fecham o círculo** (soma = circunferência), legenda batendo com os cartões, e **screenshot** da tela — porque `offsetParent` num `<svg>` é sempre nulo e não serve de prova ([[elemento-visivel-offsetparent]]); quem tem `offsetParent` é o `.donut-wrap` (1198×160).
+
+## A conferência que ele pediu: "confira essas planilhas e altere status das viagens se tiver"
+
+Ele mandou **Junho** e **Julho**. Reli as SEIS planilhas com o próprio leitor do sistema e comparei com a base: **não há nada a alterar**. Das 38 viagens das duas, 35 batem exatamente; 2 estão em branco na planilha; 1 aparece duas vezes (baixada em Abril/Maio, repetida em branco em Junho).
+
+As **7 pendentes de Junho/Julho** estão pendentes porque **a célula está vazia na planilha dele** — o sistema mostra o que o papel diz. Conferido uma a uma; `viagens que a planilha permitiria baixar agora: 0`.
+
+## 🔴 O ERRO QUE EU QUASE PUBLIQUEI — leia antes de escrever qualquer reparo de dados
+
+Na varredura achei "4 viagens baixadas no papel que a tabela `_BRF_BAIXAS` não alcança": duas com o número do transporte torto **na planilha** (`13112647`, com 8 dígitos; `129814962/131191311`, dois números na mesma célula) e duas com o termo escrito por extenso (`"SIM final 488"`, `"Final 897 SIM"`). Escrevi a correção inteira — tabela nova, bandeira nova, comentário longo.
+
+Aí rodei contra a **base do cliente**: as quatro já estavam `baixado=SIM`, `termo=SIM`, **Concluída**, e já estavam assim **antes** de qualquer correção. Falso positivo: eu tinha comparado a planilha com uma **tabela do meu próprio código**, não com os dados dele. **Revertido, nada publicado.**
+
+> **A ordem é BASE PRIMEIRO.** Antes de escrever reparo: carregar o dado real (o backup JSON serve), rodar o diagnóstico e **contar quantos registros mudariam**. Zero = não existe correção a fazer, existe uma resposta a dar. E o reparo que só "preenche" ainda não pode trocar marca válida por marca válida — a minha sobrescrevia `TSP` por `SIM`, rebaixando uma baixa que já valia.
+
+**Versão:** assets `?v=231`, cache `planeta-express-v10-8`, rodapé `v10.8`, celular reconstruído.
 
 ### ✅ ESTADO EM 10/09/2026 — v10.2 (o vale volta a aparecer nos CUSTOS — e o espelho passa a ser nos dois sentidos)
 

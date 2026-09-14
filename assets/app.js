@@ -6160,6 +6160,31 @@ let viagemFiltro='todas', viagemMes='todos', viagemPlaca='todas';
    tabela têm que responder a mesma pergunta do mesmo jeito. */
 const _vgBxOk=v=>v.baixado==='SIM'||v.baixado==='TSP';
 const _vgTmOk=v=>v.termoBaixado==='SIM';
+/* Pizza do % de viagens baixadas — pedido do cliente, verde.
+   Reusa o donut() dos outros gráficos (nada de desenho novo por tela).
+
+   ⚠️ Os números vêm PRONTOS de viewViagens, os mesmos quatro dos cartões
+   de cima. Recontar aqui seria a armadilha de sempre: o gráfico diria uma
+   coisa e o cartão logo acima diria outra. Por isso também não filtra por
+   mês nem por placa — os cartões contam a base inteira, e um gráfico
+   discordando do cartão ao lado é pior que gráfico nenhum. */
+function _vgPizza(registradas, baixadas, pendBaixa, pendTermo){
+  if(!registradas) return '';
+  const faltam=registradas-baixadas;
+  const pct=Math.round(baixadas/registradas*100);
+  const VERDE='#25e88f', CINZA='#31405c';
+  return `<div class="card"><div class="card-h">${svg('check')}<h3>Viagens baixadas</h3>
+      <span class="muted" style="margin-left:auto;font-size:12.5px">transporte e termo pallet, os dois</span></div>
+    <div class="card-b"><div class="donut-wrap">
+      ${donut([{label:'Baixadas',value:baixadas,color:VERDE},{label:'Faltando baixar',value:faltam,color:CINZA}],
+              {center:pct+'%', sub:'baixadas'})}
+      <div class="legend">
+        <div class="li"><span class="dot" style="background:${VERDE}"></span>Baixadas<b>${baixadas} de ${registradas}</b></div>
+        <div class="li"><span class="dot" style="background:${CINZA}"></span>Faltando baixar<b>${faltam}</b></div>
+        <div class="li"><span class="dot" style="background:var(--danger)"></span>Transportes pendentes<b>${pendBaixa}</b></div>
+        <div class="li"><span class="dot" style="background:var(--warn)"></span>Termos pallet pendentes<b>${pendTermo}</b></div>
+      </div></div></div></div>`;
+}
 function mesLabel(ym){ const p=ym.split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
 function viewViagens(){
   /* Uma viagem só está BAIXADA quando as duas baixas saíram: a do
@@ -6206,6 +6231,7 @@ function viewViagens(){
     ${kpiV('doc', pendBaixa?'i-red':'i-green', pendBaixa, 'Transportes pendentes', "viagemFiltro='pendentes';viagemMes='todos';router()", viagemFiltro==='pendentes')}
     ${kpiV('box', pendTermo?'i-amber':'i-green', pendTermo, 'Termos pallet pendentes', "viagemFiltro='termo';viagemMes='todos';router()", viagemFiltro==='termo')}
   </div>
+  ${_vgPizza(registradas, baixadas, pendBaixa, pendTermo)}
   <div class="toolbar"><div class="seg">${fb('todas','Todas')}${fb('baixadas','Baixadas')}${fb('pendentes','Transporte pendente')}${fb('termo','Termo pendente')}</div>
     <select class="selectlite" onchange="viagemMes=this.value;router()"><option value="todos">Todos os meses</option>
       ${meses.map(m=>`<option value="${m}" ${viagemMes===m?'selected':''}>${mesLabel(m)}</option>`).join('')}</select>
