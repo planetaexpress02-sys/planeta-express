@@ -1013,13 +1013,16 @@ const PEX_RELATORIOS = [
         tituloTabela:'Lançamentos',
         colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Motorista',larg:'32%'},{rotulo:'Tipo'},{rotulo:'Valor',tipo:'moeda'}],
         linhas: v.map(function(x){ return [relData(x.data), nome(x.motoristaId), x.tipo||'Vale', relMoney(x.valor)]; }),
+        /* "Pagamentos" e "Diferença" saíram a pedido do cliente (16/09).
+           Ele não usa o lançamento do tipo "Pagamento": sai sempre R$ 0,00,
+           e aí a DIFERENÇA repetia o mesmo número dos VALES. Três linhas
+           para dizer uma coisa só. O saldo em aberto continua, que é o que
+           ele cobra do motorista. */
         kpis:[{rotulo:'Lançamentos',valor:relNum(v.length)},
               {rotulo:'Vales adiantados',valor:relMoney(sv),nota:vales.length+' lançamento(s)'},
-              {rotulo:'Pagamentos',valor:relMoney(sp),nota:pagos.length+' lançamento(s)'},
               {rotulo:'Saldo em aberto',valor:relMoney(emAberto),
                nota:'devedor dos motoristas'}],
-        totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)},{rotulo:'PAGAMENTOS', valor:relMoney(sp)},
-                           {rotulo:'DIFERENÇA', valor:relMoney(sv-sp)}] : [],
+        totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)}] : [],
         tituloCartoes:'Saldo de vales por motorista',
         cartoes: cartoes
       };
@@ -1042,8 +1045,10 @@ const PEX_RELATORIOS = [
         colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Descrição',larg:'46%'},
                  {rotulo:'Forma de pagamento'},{rotulo:'Valor',tipo:'moeda'}],
         linhas: p.map(function(x){ return [relData(x.data), x.descricao, x.forma, relMoney(x.valor)]; }),
-        kpis:[{rotulo:'Gastos',valor:relNum(p.length)},{rotulo:'Total',valor:relMoney(total)},
-              {rotulo:'Gasto médio',valor: p.length? relMoney(total/p.length):'—'}],
+        /* "Gasto médio" saiu a pedido do cliente (16/09): média de gastos
+           de naturezas diferentes — vale, pedágio, Uber, ASO — não diz
+           nada sobre a operação, e ocupava o lugar de um indicador útil. */
+        kpis:[{rotulo:'Gastos',valor:relNum(p.length)},{rotulo:'Total',valor:relMoney(total)}],
         totais: p.length? [{rotulo:'TOTAL DO PERÍODO', valor:relMoney(total)}] : []
       };
     }},
