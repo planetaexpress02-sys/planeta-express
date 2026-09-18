@@ -2061,7 +2061,9 @@ function viewMotoristas(){
       </div></div>`;
   }).join('');
   return `<div class="toolbar"><div class="spacer"></div>
-    ${docBtn('Motoristas')}<button class="btn primary" onclick="modalMotorista()">${svg('plus')} Novo motorista</button></div>
+    ${docBtn('Motoristas')}
+    <button class="btn" onclick="motImportarFicha()" title="Importa cadastro, vencimentos e documentos de um arquivo de ficha">${svg('upload')} Importar ficha</button>
+    <button class="btn primary" onclick="modalMotorista()">${svg('plus')} Novo motorista</button></div>
     <div class="grid mgrid">${cards}</div>`;
 }
 
@@ -3270,6 +3272,130 @@ function modalAnexoImpossivel(motivo, falhou){
 async function anexarOuAvisar(file, ent, ref, cat){
   try{ return await subirUm(file, ent, ref, cat); }
   catch(e){ modalAnexoImpossivel(e.message||String(e), true); return null; }
+}
+/* ==================================================================
+   v11.7 — FICHA DE MOTORISTA EM UM ARQUIVO (.pexmot.json)
+
+   Admitir um motorista era: digitar ~25 campos do cadastro, criar os
+   vencimentos de ASO, Toxicológico e CNH um por um, e depois anexar os
+   PDFs. Muita coisa para uma tarefa que se repete a cada contratação.
+
+   Agora tudo isso cabe num arquivo: cadastro + vencimentos + a foto +
+   os PDFs em base64. Ao importar, o sistema cria o motorista, lança os
+   vencimentos e **sobe os anexos para a nuvem** — então os documentos
+   abrem em qualquer aparelho, que é a regra da casa.
+
+   ⚠️ POR QUE UM ARQUIVO, E NÃO EMBUTIDO NO CÓDIGO: o repositório do
+   sistema é PÚBLICO (GitHub Pages em conta gratuita exige isso). CPF,
+   RG, número de CNH, filiação e endereço não podem morar lá. No
+   arquivo, os dados ficam na pasta da empresa, que é dele.
+   ================================================================== */
+function motImportarFicha(){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.json,.pexmot,application/json';
+  inp.onchange=async function(){
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    let ficha=null;
+    try{ ficha=JSON.parse(await f.text()); }
+    catch(e){ toast('Não consegui ler o arquivo: ele não parece uma ficha de motorista.','err'); return; }
+    if(!ficha || !ficha.motorista || !ficha.motorista.nome){
+      toast('O arquivo não tem os dados do motorista.','err'); return; }
+    _motFichaConfirmar(ficha);
+  };
+  inp.click();
+}
+function _motFichaConfirmar(ficha){
+  const m=ficha.motorista||{}, vs=ficha.vencimentos||[], ax=ficha.anexos||[];
+  const jaExiste=(DB.motoristas||[]).find(function(x){
+    return (x.cpf && m.cpf && x.cpf.replace(/\D/g,'')===String(m.cpf).replace(/\D/g,''))
+        || _dnorm(x.nome)===_dnorm(m.nome); });
+  const linha=(r,v)=>'<div class="antt-f"><small>'+esc(r)+'</small><b>'+esc(v||'—')+'</b></div>';
+  window._motFicha=ficha;
+  openModal('<div class="m-h">'+svg('user')+'<h3>Importar ficha de motorista</h3><button class="x" onclick="closeModal()">×</button></div>'
+    + '<div class="m-b">'
+    + (jaExiste? '<div class="hint" style="color:var(--warn);margin-bottom:12px">⚠️ Já existe <b>'+esc(jaExiste.nome)+'</b> com este CPF/nome. Importar vai <b>atualizar</b> o cadastro dele, não criar outro.</div>' : '')
+    + '<div class="antt-grid">'
+    +   linha('Nome', m.nome) + linha('CPF', m.cpf) + linha('Nascimento', m.nascimento? fmtD(m.nascimento):'')
+    +   linha('CNH', m.cnh) + linha('Categoria', m.categoria) + linha('Validade da CNH', m.cnhValidade? fmtD(m.cnhValidade):'')
+    +   linha('Celular', m.celular) + linha('Endereço', m.endereco) + linha('Função', m.funcao)
+    + '</div>'
+    + '<div class="hint" style="margin-top:12px"><b>'+vs.length+'</b> vencimento(s): '
+    +   esc(vs.map(function(v){ return v.tipo+(v.validade? ' até '+fmtD(v.validade):''); }).join(' · ')||'nenhum')+'</div>'
+    + '<div class="hint"><b>'+ax.length+'</b> documento(s) para anexar: '
+    +   esc(ax.map(function(a){ return a.nome; }).join(' · ')||'nenhum')+'</div>'
+    + (ax.length? '<div class="hint" style="margin-top:8px">Os documentos vão para a nuvem, então abrem em qualquer computador ou celular.</div>':'')
+    + '<div id="motFichaProg" class="hint" style="margin-top:10px"></div>'
+    + '</div><div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn primary" id="motFichaBt" onclick="motFichaGravar()">'+(jaExiste?'Atualizar cadastro':'Cadastrar motorista')+'</button></div>');
+}
+function _b64ParaArquivo(nome, tipo, b64){
+  const bin=atob(String(b64||'').replace(/^data:[^,]*,/,''));
+  const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new File([arr], nome, {type:tipo||'application/octet-stream'});
+}
+async function motFichaGravar(){
+  const ficha=window._motFicha; if(!ficha) return;
+  const bt=document.getElementById('motFichaBt'); if(bt){ bt.disabled=true; bt.textContent='Gravando…'; }
+  const prog=function(t){ const e=document.getElementById('motFichaProg'); if(e) e.innerHTML=esc(t); };
+  try{
+    pexGuardarPonto('antes de importar a ficha de '+(ficha.motorista.nome||'motorista'));
+    const m=Object.assign({}, ficha.motorista);
+    let alvo=(DB.motoristas||[]).find(function(x){
+      return (x.cpf && m.cpf && x.cpf.replace(/\D/g,'')===String(m.cpf).replace(/\D/g,''))
+          || _dnorm(x.nome)===_dnorm(m.nome); });
+    if(alvo){ const id=alvo.id; Object.assign(alvo, m, {id:id}); }
+    else { m.id=m.id||uid('mot'); (DB.motoristas=DB.motoristas||[]).push(m); alvo=m; }
+
+    /* Foto: vai no próprio cadastro como dataURL. Os outros motoristas
+       apontam para `assets/fotos/mN.png` — um arquivo do site —, mas isso
+       só funciona porque essas fotos estão no repositório PÚBLICO, que
+       não é lugar para foto de gente nova. Dentro do cadastro ela viaja
+       com a base e aparece em qualquer aparelho, sem publicar nada. */
+    if(ficha.foto && ficha.foto.base64){
+      const b64=String(ficha.foto.base64).replace(/^data:[^,]*,/,'');
+      alvo.foto='data:'+(ficha.foto.tipo||'image/png')+';base64,'+b64;
+    }
+
+    /* vencimentos: substitui os do mesmo tipo, não empilha duplicata */
+    (ficha.vencimentos||[]).forEach(function(v){
+      const novo=Object.assign({}, v, {entidade:'motorista', refId:alvo.id});
+      const igual=(DB.vencimentos||[]).find(function(x){
+        return x.entidade==='motorista' && x.refId===alvo.id && x.tipo===novo.tipo; });
+      if(igual) Object.assign(igual, novo, {id:igual.id});
+      else { novo.id=novo.id||uid('vc'); (DB.vencimentos=DB.vencimentos||[]).push(novo); }
+    });
+
+    /* anexos: sobem para a nuvem, um a um, com aviso do que falhar.
+       ⚠️ Importar a MESMA ficha duas vezes não pode deixar duas cópias de
+       cada PDF: o cadastro e os vencimentos são atualizados no lugar, mas
+       o envio de anexo sempre cria um registro novo. Então aqui se pula o
+       que já está anexado com o mesmo nome neste motorista. */
+    const ax=ficha.anexos||[]; const falhas=[]; let pulados=0;
+    for(let i=0;i<ax.length;i++){
+      const a=ax[i];
+      const repetido=(DB.anexos||[]).some(function(x){
+        return x && x.refId===alvo.id && String(x.name||x.nome||'')===String(a.nome); });
+      if(repetido){ pulados++; continue; }
+      prog('enviando '+(i+1)+' de '+ax.length+': '+a.nome);
+      try{
+        const file=_b64ParaArquivo(a.nome, a.tipo||'application/pdf', a.base64);
+        await subirUm(file, 'motorista', alvo.id, a.categoria||'Documento');
+      }catch(e){ falhas.push(a.nome+' ('+(e.message||'falhou')+')'); }
+    }
+    saveDB(); closeModal();
+    if(falhas.length){
+      toast('Motorista cadastrado, mas '+falhas.length+' documento(s) não subiram: '+falhas.join('; '),'warn');
+    } else {
+      toast((ficha.motorista.nome||'Motorista')+' cadastrado com '+(ficha.vencimentos||[]).length
+            +' vencimento(s) e '+(ax.length-pulados)+' documento(s).'
+            +(pulados? ' '+pulados+' já estava(m) anexado(s).' : ''));
+    }
+    location.hash='motoristas'; router();
+  }catch(e){
+    toast('Não consegui importar: '+(e.message||''),'err');
+    if(bt){ bt.disabled=false; bt.textContent='Tentar de novo'; }
+  }
 }
 /* ================================================================== */
 /*  LEITOR DE PDF — extrai texto de NF/DANFE (inclui fontes CID)        */
@@ -9075,7 +9201,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.6';
+var PEX_VER = '11.7';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
