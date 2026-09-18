@@ -2152,27 +2152,6 @@ function viewMotorista(id){
   else if(motAba==='docs')     corpo=viewMotDocs(m,docsTodos);
   else                         corpo=viewMotResumo(m,vencs,info);
 
-  /* ⚠️ v11.9 — FICHA PELA METADE NÃO PODE APARECER CALADA.
-     Na v11.8 o Edson entrou no sistema só com nome e categoria (o resto do
-     cadastro não pode ficar no arquivo público). O resultado na tela dele
-     foi uma ficha com TODOS os campos em "—", sem nada explicando por quê —
-     e ele cobrou, com razão: ficha vazia é pior que ficha nenhuma.
-     Agora, quando falta o essencial, a tela diz o que falta e oferece o
-     botão que resolve, em vez de mostrar traços. */
-  const faltaTudo = !m.cpf && !m.cnh && !m.nascimento;
-  const avisoIncompleto = faltaTudo ? `
-    <div class="card" style="border-color:rgba(255,176,32,.35);background:var(--warn-bg)">
-      <div class="card-b" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-        <div style="flex:1;min-width:240px">
-          <b style="color:var(--warn);font-size:15px">Cadastro incompleto</b>
-          <div class="muted" style="margin-top:4px;line-height:1.55">
-            Falta o cadastro completo de <b>${esc(m.nome)}</b> — CPF, RG, nº da CNH, endereço e os documentos
-            (CNH, ASO e toxicológico em PDF).${m.pasta?` Está tudo pronto no arquivo <b>${esc((m.nome||'').trim())}.pexmot.json</b>, dentro da pasta <b>${esc(m.pasta)}</b>.`:''}
-          </div>
-        </div>
-        <button class="btn primary no-print" onclick="motImportarFicha()">${svg('upload')} Completar ficha agora</button>
-      </div>
-    </div>` : '';
 
   return `
   <button class="btn ghost sm no-print" onclick="history.back()" style="margin-bottom:14px">← Voltar</button>
@@ -2186,7 +2165,6 @@ function viewMotorista(id){
       <button class="btn" onclick="modalMotorista('${m.id}')">${svg('edit')} Editar</button>
     </div>
   </div>
-  ${avisoIncompleto}
   ${abasHTML}
   ${corpo}`;
 }
@@ -9239,7 +9217,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.9';
+var PEX_VER = '12.0';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

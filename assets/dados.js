@@ -23,7 +23,7 @@ const SEED = {
        Só o esqueleto: ESTE ARQUIVO É PÚBLICO (o site serve ele sem login).
        CPF, RG, CNH, filiação, endereço e os documentos vêm da ficha
        .pexmot.json, que fica na pasta da empresa. */
-    { id:"m8", nome:"Edson Carlos Barufo", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", pasta:"Documentos Motoristas/Edson Carlos Barufo" },
+    { id:"m8", nome:"Edson Carlos Barufo", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m8.png", pasta:"Documentos Motoristas/Edson Carlos Barufo" },
 
   ],
 

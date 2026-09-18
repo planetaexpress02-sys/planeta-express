@@ -47,7 +47,7 @@ printf '%s' "$(duri assets/fotos/m3.png image/png)" > "$TMP/uri_m3"
 printf '%s' "$(duri assets/fotos/m4.png image/png)" > "$TMP/uri_m4"
 printf '%s' "$(duri assets/fotos/m5.jpg image/jpeg)"> "$TMP/uri_m5"
 
-printf '%s' "$(duri assets/fotos/m7.png image/png)" > "$TMP/uri_m7"
+printf '%s' "$(duri assets/fotos/m8.png image/png)" > "$TMP/uri_m8"
 
 # ---------- 2. corpo visivel (entre <body> e o bloco de scripts) ----------
 awk '
@@ -116,7 +116,7 @@ perl -pe '
     sub rd { local $/; open(my $f,"<",$_[0]) or die $_[0]; my $s=<$f>; close $f; return $s; }
     $logo=rd($ENV{T}."/uri_logo"); $logod=rd($ENV{T}."/uri_logo_dark"); $icon=rd($ENV{T}."/uri_icon"); $marca=rd($ENV{T}."/uri_marca");
     $m1=rd($ENV{T}."/uri_m1"); $m2=rd($ENV{T}."/uri_m2"); $m3=rd($ENV{T}."/uri_m3");
-    $m4=rd($ENV{T}."/uri_m4"); $m5=rd($ENV{T}."/uri_m5"); $m7=rd($ENV{T}."/uri_m7");
+    $m4=rd($ENV{T}."/uri_m4"); $m5=rd($ENV{T}."/uri_m5"); $m8=rd($ENV{T}."/uri_m8");
   }
   s{__LOGO__}{$icon}g;
   s{assets/logo-claro.png}{$logo}g;
@@ -129,7 +129,7 @@ perl -pe '
   s{assets/fotos/m3\.png}{$m3}g;
   s{assets/fotos/m4\.png}{$m4}g;
   s{assets/fotos/m5\.jpg}{$m5}g;
-  s{assets/fotos/m7\.png}{$m7}g;
+  s{assets/fotos/m8.png}{$m8}g;
 ' "$TMP/celular_raw.html" > "$OUT_CEL"
 
 # ---------- 6. monta o corpo do ARTIFACT (sem head/body; so logo embutida, fotos viram iniciais) ----------
@@ -154,7 +154,7 @@ perl -pe '
   s{assets/logo-sm.png}{$logo}g;
   s{assets/logo\.png}{$logo}g;
   s{assets/fotos/m1\.png}{}g; s{assets/fotos/m2\.png}{}g; s{assets/fotos/m3\.png}{}g;
-  s{assets/fotos/m4\.png}{}g; s{assets/fotos/m5\.jpg}{}g; s{assets/fotos/m7\.png}{}g;
+  s{assets/fotos/m4\.png}{}g; s{assets/fotos/m5\.jpg}{}g; s{assets/fotos/m8.png}{}g;
 ' "$TMP/artifact_raw.html" > "$ART"
 
 echo "=== GERADO ==="
