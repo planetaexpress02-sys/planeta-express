@@ -59,6 +59,12 @@ const SEED = {
     { id:"a1", tipo:"ASO", entidade:"motorista", refId:"m1", emissao:"2026-07-13", validade:"2027-07-13", numero:"", orgao:"", obs:"" },
     { id:"a2", tipo:"ASO", entidade:"motorista", refId:"m4", emissao:"2025-08-20", validade:"2026-08-20", numero:"", orgao:"", obs:"" },
     { id:"a3", tipo:"ASO", entidade:"motorista", refId:"m5", emissao:"2025-09-19", validade:"2026-09-19", numero:"", orgao:"", obs:"" },
+    /* Edson Carlos Barufo (m8) — as VALIDADES dos documentos. Datas nao
+       identificam ninguem, entao podem ficar aqui; o numero da CNH, o CPF e
+       os PDFs vem da ficha .pexmot.json (ver o comentario em motoristas). */
+    { id:"c8", tipo:"CNH", entidade:"motorista", refId:"m8", emissao:"2025-08-03", validade:"2030-07-31", numero:"", orgao:"DETRAN-PR", obs:"Categoria E · EAR A" },
+    { id:"t8", tipo:"Toxicológico", entidade:"motorista", refId:"m8", emissao:"2026-09-11", validade:"2029-03-11", numero:"", orgao:"Innovatox", obs:"Negativo em todas as substâncias" },
+    { id:"a8", tipo:"ASO", entidade:"motorista", refId:"m8", emissao:"2026-09-11", validade:"2027-09-11", numero:"", orgao:"Genusclin", obs:"Admissional · Apto" },
     { id:"a4", tipo:"ASO", entidade:"motorista", refId:"m2", emissao:"2026-03-18", validade:"2027-03-18", numero:"", orgao:"", obs:"" },
     { id:"a5", tipo:"ASO", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2027-03-13", numero:"", orgao:"", obs:"" },
     { id:"of1", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m1", emissao:"2026-07-10", validade:"2027-01-10", numero:"", orgao:"BRF", obs:"BRF" },
