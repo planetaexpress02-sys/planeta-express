@@ -3,6 +3,23 @@
 > Cole este arquivo inteiro no início de uma nova conversa do Claude Code (ou diga: "leia CONTINUAR-EM-OUTRO-CHAT.md na pasta Planeta Express Transportes"). Ele resume tudo o que já foi construído para você dar continuidade sem perder nada.
 
 ---
+## ⚡ ONDE O PROJETO ESTÁ (18/09/2026 — v11.8)
+
+**v11.8 publicada.** Assets `?v=241`, cache SW `planeta-express-v11-8`, rodapé `v11.8`, `versao.json` no ar, celular reconstruído e carimbado.
+
+## 🔴 REGRA NOVA E DURA: O REPOSITÓRIO É PÚBLICO
+
+`curl` anônimo em `assets/dados.js` respondia **200** com **CPF, RG, número de CNH, nascimento, filiação, endereço, CTPS e PIS dos 6 motoristas** — e os **processos criminais** de um deles (número, classe, assunto, resultado), mais os nomes dos anexos que citavam a sentença. O cliente achava que o login protegia (*"tem login e senha, então não é público"*); só aceitou vendo o `curl`.
+
+> **O login protege a NUVEM. Não protege os arquivos do site** — o navegador os baixa ANTES de desenhar a tela de login.
+
+**No `SEED`, motorista só pode ter:** `id, nome, categoria, funcao, socio, status, foto, pasta`. Dado pessoal entra pela **ficha `.pexmot.json`** (Motoristas → Importar ficha), que mora na pasta da empresa e traz cadastro + vencimentos + foto + PDFs; o importador cria ou atualiza por CPF/nome e sobe os anexos para a nuvem.
+
+**⚠️ PENDENTE:** o **histórico do git** ainda tem tudo. Resolver exige reescrever o histórico (force-push, destrutivo) ou tornar o repositório privado (Pages pede plano pago). **Aguardando decisão dele.**
+
+**Quadro de pessoal:** Wesley saiu da empresa (09/2026) e saiu também do arquivo público — registros, vencimentos, processos e os 9 anexos. **Edson Carlos Barufo** entrou no lugar (admissão 11/09/2026): o esqueleto está no seed + entrega `v11.8`, então ele aparece sozinho na lista; **CPF/CNH/documentos dependem de importar a ficha** em `Documentos Motoristas\Edson Carlos Barufo\Edson Carlos Barufo.pexmot.json`.
+
+---
 
 ## ⚡ ONDE O PROJETO ESTÁ (14/09/2026 — v11.1)
 
