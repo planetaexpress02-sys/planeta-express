@@ -14,14 +14,17 @@ const SEED = {
 
   /* -------------------- MOTORISTAS / COLABORADORES -------------------- */
   motoristas: [
-    { id:"m1", matricula:"", nome:"Reinaldo Adriano do Amaral", nascimento:"1979-10-27", genero:"Masculino", celular:"(42) 99968-4325", telefone:"(42) 99968-4325", email:"", ufNat:"PR", municipioNat:"Ponta Grossa", tipoCondutor:"", cpf:"035.184.109-11", rg:"79340413", emissorRg:"SESP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"E", cnh:"02510171079", primeiraHab:"2002-09-09", emissaoCnh:"2025-04-14", cnhValidade:"2035-04-11", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"", espelho:"2965320528", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m1.png", pasta:"Documentos Motoristas/Reinaldo Adriano do Amaral" },
-    { id:"m2", matricula:"", nome:"Marcelo Setsuo Goto", nascimento:"1982-05-05", genero:"Masculino", celular:"(43) 98485-0743", telefone:"(43) 98485-0743", email:"", ufNat:"PR", municipioNat:"Assaí", tipoCondutor:"", cpf:"010.427.179-58", rg:"78324520", emissorRg:"SESP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"E", cnh:"03101125785", primeiraHab:"2003-11-05", emissaoCnh:"2025-03-20", cnhValidade:"2035-02-13", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"", espelho:"3356724071", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m2.png", pasta:"Documentos Motoristas/Marcelo Setsuo Goto" },
-    { id:"m3", matricula:"", nome:"Renato Carlos da Silva", nascimento:"1974-03-09", genero:"Masculino", celular:"(67) 99673-7521", telefone:"(67) 99673-7521", email:"", ufNat:"SP", municipioNat:"Embu das Artes", tipoCondutor:"", cpf:"170.033.118-36", rg:"247197634", emissorRg:"SSP-SP", cargo:"", ctps:"", pis:"", admissao:"", categoria:"E", cnh:"02210974134", primeiraHab:"1992-09-17", emissaoCnh:"2023-02-10", cnhValidade:"2032-08-28", cnhUf:"MS", cnhMunicipio:"Campo Grande", renach:"", espelho:"2501147725", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m3.png", pasta:"Documentos Motoristas/Renato Carlos da Silva" },
-    { id:"m4", matricula:"", nome:"Marcelo Ronsoni Moreira", nascimento:"1973-10-11", genero:"Masculino", celular:"", telefone:"", email:"", ufNat:"RS", municipioNat:"Erechim", tipoCondutor:"", cpf:"782.481.089-53", rg:"54901925", emissorRg:"SSP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"AE", cnh:"02040947477", primeiraHab:"1991-11-25", emissaoCnh:"2025-12-15", cnhValidade:"2031-05-14", cnhUf:"RS", cnhMunicipio:"Porto Alegre", renach:"", espelho:"3427735020", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Sócio · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m4.png", pasta:"Documentos Motoristas/Marcelo Ronsoni Moreira" },
-    { id:"m5", matricula:"", nome:"Uilian Marcelo Moreira", nascimento:"1997-01-06", genero:"Masculino", celular:"", telefone:"", email:"", ufNat:"RS", municipioNat:"Getúlio Vargas", tipoCondutor:"", cpf:"022.997.900-98", rg:"02299790098", emissorRg:"SESP-PR", cargo:"", ctps:"", pis:"", admissao:"", categoria:"AE", cnh:"06304514325", primeiraHab:"2018-12-18", emissaoCnh:"2025-09-19", cnhValidade:"2035-08-22", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"", espelho:"3400239528", ear:"Sim", cep:"", logradouro:"", numero:"", complemento:"", bairro:"", ufEnd:"", municipioEnd:"", endereco:"", funcao:"Sócio · Responsável Técnico · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m5.jpg", pasta:"Documentos Motoristas/Uilian Marcelo Moreira" },
-    { id:"m7", matricula:"", nome:"Wesley Luiz da Silva Pereira", nascimento:"1988-03-10", genero:"Masculino", celular:"(66) 98127-2639", telefone:"(66) 98127-2639", email:"", ufNat:"PR", municipioNat:"Sertanópolis", tipoCondutor:"Motorista Carreteiro CLT - Primária", cpf:"068.256.969-04", rg:"97574090", emissorRg:"SESP-PR", mae:"Marlene Silva de Oliveira", pai:"Valdeir Luiz Pereira", cargo:"Motorista de Carreta", ctps:"068256", ctpsSerie:"96904", pis:"", admissao:"2026-08-18", categoria:"AE", cnh:"05396948335", primeiraHab:"2012-01-06", emissaoCnh:"2026-07-10", cnhValidade:"2036-07-08", cnhUf:"PR", cnhMunicipio:"Curitiba", renach:"PR929170076", espelho:"5160834370", ear:"Sim", cep:"86039-560", logradouro:"Avenida Anália Franco", numero:"151", complemento:"Casa", bairro:"Jardim Brasília", ufEnd:"PR", municipioEnd:"Londrina", endereco:"Avenida Anália Franco, 151 — Jardim Brasília, Londrina/PR", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m7.png", pasta:"Documentos Motoristas/Wesley Luiz da Silva Pereira",
-      contratoTipo:"Experiência", contratoInicio:"2026-08-18", contratoDias:45, contratoProrrog:"", contratoFuncao:"Motorista de Carreta", contratoSalario:2758.33, contratoLocal:"Carambeí/PR", contratoObs:"Contrato de experiência assinado digitalmente em 17/08/2026. Prorrogável uma única vez, respeitado o limite legal de 90 dias.",
-      criminalSituacao:"Possui processo(s)", criminalData:"2026-08-05", criminalFonte:"Declaração da advogada Sarah Cachioni Machado Camilo (OAB/PR 117.881), de 05/08/2026, apresentada pelo próprio colaborador ao empregador.", criminalObs:"Um processo encerrado com ABSOLVIÇÃO (o próprio Ministério Público pediu a absolvição) e um segundo em fase inicial, sem audiência de instrução e julgamento e sem condenação. Certidões de objeto e pé dos dois processos foram requeridas pela defesa e serão entregues quando expedidas pelo Juízo." },
+    { id:"m1", nome:"Reinaldo Adriano do Amaral", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m1.png", pasta:"Documentos Motoristas/Reinaldo Adriano do Amaral" },
+    { id:"m2", nome:"Marcelo Setsuo Goto", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m2.png", pasta:"Documentos Motoristas/Marcelo Setsuo Goto" },
+    { id:"m3", nome:"Renato Carlos da Silva", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m3.png", pasta:"Documentos Motoristas/Renato Carlos da Silva" },
+    { id:"m4", nome:"Marcelo Ronsoni Moreira", categoria:"AE", funcao:"Sócio · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m4.png", pasta:"Documentos Motoristas/Marcelo Ronsoni Moreira" },
+    { id:"m5", nome:"Uilian Marcelo Moreira", categoria:"AE", funcao:"Sócio · Responsável Técnico · Motorista", socio:true, status:"Ativo", foto:"assets/fotos/m5.jpg", pasta:"Documentos Motoristas/Uilian Marcelo Moreira" },
+    /* Edson Carlos Barufo — contratado em 11/09/2026 no lugar do Wesley.
+       Só o esqueleto: ESTE ARQUIVO É PÚBLICO (o site serve ele sem login).
+       CPF, RG, CNH, filiação, endereço e os documentos vêm da ficha
+       .pexmot.json, que fica na pasta da empresa. */
+    { id:"m8", nome:"Edson Carlos Barufo", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", pasta:"Documentos Motoristas/Edson Carlos Barufo" },
+
   ],
 
   /* -------------------- FROTA / VEÍCULOS --------------------
@@ -48,25 +51,16 @@ const SEED = {
     { id:"c3", tipo:"CNH", entidade:"motorista", refId:"m3", emissao:"", validade:"2032-08-28", numero:"", orgao:"DETRAN-MS", obs:"Categoria E" },
     { id:"c4", tipo:"CNH", entidade:"motorista", refId:"m4", emissao:"2025-12-15", validade:"2031-05-14", numero:"02040947477", orgao:"DETRAN-RS", obs:"Categoria AE" },
     { id:"c5", tipo:"CNH", entidade:"motorista", refId:"m5", emissao:"2025-09-19", validade:"2035-08-22", numero:"06304514325", orgao:"DETRAN-PR", obs:"Categoria AE" },
-    { id:"c7", tipo:"CNH", entidade:"motorista", refId:"m7", emissao:"2026-07-10", validade:"2036-07-08", numero:"05396948335", orgao:"DETRAN-PR", obs:"Categoria AE · RENACH PR929170076 · EAR" },
-
-    /* Toxicológico */
     { id:"t1", tipo:"Toxicológico", entidade:"motorista", refId:"m1", emissao:"2025-02-06", validade:"2027-10-11", numero:"", orgao:"", obs:"" },
     { id:"t2", tipo:"Toxicológico", entidade:"motorista", refId:"m4", emissao:"2026-04-24", validade:"2028-10-24", numero:"", orgao:"", obs:"" },
     { id:"t3", tipo:"Toxicológico", entidade:"motorista", refId:"m5", emissao:"2025-08-14", validade:"2028-03-17", numero:"", orgao:"", obs:"" },
     { id:"t4", tipo:"Toxicológico", entidade:"motorista", refId:"m2", emissao:"2025-02-03", validade:"2027-02-03", numero:"", orgao:"", obs:"" },
     { id:"t5", tipo:"Toxicológico", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2028-09-13", numero:"", orgao:"", obs:"" },
-    { id:"t7", tipo:"Toxicológico", entidade:"motorista", refId:"m7", emissao:"2026-08-11", validade:"2029-02-11", numero:"03J7DXAC012221046", orgao:"Laboratório Sodré", obs:"Coleta 11/08/2026 (pelo de perna), resultado NEGATIVO para todas as substâncias. Laudo do médico revisor emitido em 13/08/2026. Validade aqui = periodicidade legal de 2 anos e 6 meses; o laudo traz 10/10/2026 como prazo para uso na admissão." },
-
-    /* ASO (exame ocupacional) */
     { id:"a1", tipo:"ASO", entidade:"motorista", refId:"m1", emissao:"2026-07-13", validade:"2027-07-13", numero:"", orgao:"", obs:"" },
     { id:"a2", tipo:"ASO", entidade:"motorista", refId:"m4", emissao:"2025-08-20", validade:"2026-08-20", numero:"", orgao:"", obs:"" },
     { id:"a3", tipo:"ASO", entidade:"motorista", refId:"m5", emissao:"2025-09-19", validade:"2026-09-19", numero:"", orgao:"", obs:"" },
     { id:"a4", tipo:"ASO", entidade:"motorista", refId:"m2", emissao:"2026-03-18", validade:"2027-03-18", numero:"", orgao:"", obs:"" },
     { id:"a5", tipo:"ASO", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2027-03-13", numero:"", orgao:"", obs:"" },
-    { id:"a7", tipo:"ASO", entidade:"motorista", refId:"m7", emissao:"2026-08-12", validade:"2027-08-12", numero:"", orgao:"Dr. Vinícius Marcondes Silva — CRM 51786/PR", obs:"ASO admissional — APTO para a função. Exames de 12/08/2026, assinado em 14/08/2026. Validade de 1 ano (padrão da empresa; o ASO não traz data de validade impressa)." },
-
-    /* Opentech Funcionários (BRF) */
     { id:"of1", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m1", emissao:"2026-07-10", validade:"2027-01-10", numero:"", orgao:"BRF", obs:"BRF" },
     { id:"of2", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m4", emissao:"2026-07-09", validade:"2027-01-09", numero:"", orgao:"BRF", obs:"BRF" },
     { id:"of3", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m5", emissao:"2026-03-09", validade:"2026-09-09", numero:"", orgao:"BRF", obs:"BRF" },
@@ -558,16 +552,6 @@ const SEED = {
      defesa, sentença, certidão). Serve para a homologação nas gerenciadoras de
      risco. Nunca inferir culpa: só é condenação quando o documento diz que é. */
   processos: [
-    { id:"pj1", entidade:"motorista", refId:"m7", numero:"0057800-83.2024.8.16.0014",
-      classe:"Ação Penal - Procedimento Ordinário", assunto:"Furto",
-      comarca:"Londrina/PR", vara:"2ª Vara Criminal de Londrina", data:"2026-04-27",
-      situacao:"Encerrado", resultado:"Absolvido",
-      obs:"Sentença de 27/04/2026 (Juíza Chélida Roberta Soterroni Heitzmann): denúncia julgada IMPROCEDENTE e o réu ABSOLVIDO, com fulcro no art. 386, VII, do Código de Processo Penal. O próprio Ministério Público se manifestou pela absolvição. As medidas cautelares foram revogadas." },
-    { id:"pj2", entidade:"motorista", refId:"m7", numero:"0039943-58.2023.8.16.0014",
-      classe:"Ação Penal", assunto:"Violência doméstica",
-      comarca:"Londrina/PR", vara:"", data:"",
-      situacao:"Em andamento", resultado:"Sem julgamento",
-      obs:"Em fase inicial, sem audiência de instrução e julgamento. Conforme a declaração da defesa, a denúncia não traz imputação de violência física e há elementos probatórios a apresentar. Não há condenação — vale a presunção de inocência." },
   ],
 
   /* -------------------- ANEXOS na nuvem (metadados; bytes no Supabase Storage) -------------------- */

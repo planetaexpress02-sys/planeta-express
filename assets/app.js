@@ -131,6 +131,10 @@ function importarLicencasSeed(){
    volte a percorrer a coleção toda.
    ================================================================== */
 const SEED_ENTREGAS = [
+  /* v6.91 — entrega do Wesley, que saiu da empresa em 09/2026. Os registros
+     dele sairam do arquivo publico na v11.8 (nome, CNH, exames, processos
+     criminais e anexos). A entrega fica aqui so como historico: nao ha mais
+     o que injetar, e quem ja recebeu tem a marca em DB.seedAplicado. */
   { v:'6.91',
     motoristas:['m7'],
     vencimentos:['c7','t7','a7'],
@@ -149,6 +153,17 @@ const SEED_ENTREGAS = [
      e serviços, menos os créditos). O pedágio fica de fora de propósito: ele
      já é custo pelo módulo Pedágios. */
   { v:'6.95', pagamentos:['pg_semparar_26176725165'] },
+  /* v11.8 — Edson Carlos Barufo, contratado em 11/09/2026 no lugar do
+     Wesley (que saiu da empresa).
+
+     ⚠️ Aqui entra só o ESQUELETO — nome, categoria, função, status —,
+     igual ao que sobrou dos outros seis nesta mesma versão. CPF, RG,
+     número de CNH, filiação e endereço NÃO entram: este arquivo é
+     servido pelo site e qualquer um lê sem login. Esses campos e os
+     PDFs (CNH, ASO, toxicológico) vêm da ficha
+     `Documentos Motoristas\Edson Carlos Barufo\*.pexmot.json`, que fica
+     na pasta da empresa e se importa em Motoristas → Importar ficha. */
+  { v:'11.8', motoristas:['m8'] },
 ];
 function importarCadastroSeed(){
   if(!SEED) return;
@@ -2538,8 +2553,8 @@ function modalProcesso(id, motId){
   openModal(`<div class="m-h">${svg('shield')}<h3>${id?'Editar processo':'Novo processo'}</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="m-b">
       <div class="field"><label>Colaborador</label><select id="f_ref">${optsMot}</select></div>
-      ${fld('Número do processo','f_num',p.numero,'text','Ex.: 0057800-83.2024.8.16.0014')}
-      <div class="field-row">${fld('Classe','f_classe',p.classe,'text','Ex.: Ação Penal - Procedimento Ordinário')}${fld('Assunto','f_assunto',p.assunto,'text','Ex.: Furto')}</div>
+      ${fld('Número do processo','f_num',p.numero,'text','Ex.: 0000000-00.0000.0.00.0000')}
+      <div class="field-row">${fld('Classe','f_classe',p.classe,'text','a classe informada no documento')}${fld('Assunto','f_assunto',p.assunto,'text','o que consta no processo')}</div>
       <div class="field-row">${fld('Comarca','f_comarca',p.comarca)}${fld('Vara','f_vara',p.vara)}</div>
       <div class="field-row">${sel('Situação','f_sit',p.situacao,PROC_SITUACOES)}${sel('Resultado','f_res',p.resultado,PROC_RESULTADOS)}</div>
       ${fld('Data da decisão / última movimentação','f_data',p.data,'date')}
@@ -9201,7 +9216,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '11.7';
+var PEX_VER = '11.8';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
