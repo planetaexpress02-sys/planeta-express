@@ -70,17 +70,24 @@ function relAgora(){
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 /* Nome de arquivo profissional: PlanetaExpress_Relatorio_Abastecimentos_08-2026 */
+/* v12.3 — um só padrão de nome de arquivo para TODO PDF do sistema.
+   Antes a Central usava "PlanetaExpress_Relatorio_<titulo>_<mes>" e os
+   outros caminhos de impressão não nomeavam nada (o celular batizava com
+   o endereço do site). Agora todos passam por `pexNomePDF`, então o que
+   ele manda no WhatsApp sai sempre com a mesma cara. */
 function relNomeArquivo(spec){
-  const limpo = String(spec.titulo||'Relatorio')
-    .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  let per = '';
+  let per = null;
   if(spec.periodo && spec.periodo.ini){
     const d = String(spec.periodo.ini).split('-');
-    if(d.length===3) per = '_' + d[1] + '-' + d[0];
+    if(d.length===3) per = d[1] + '-' + d[0];          /* mês-ano do período do relatório */
   }
-  if(!per){ const d=new Date(); per = '_' + String(d.getMonth()+1).padStart(2,'0') + '-' + d.getFullYear(); }
-  return 'PlanetaExpress_Relatorio_' + limpo + per;
+  if(typeof pexNomePDF==='function') return pexNomePDF(spec.titulo, per);
+  /* reserva, se o app.js não tiver carregado */
+  const limpo = String(spec.titulo||'Relatorio')
+    .normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'')
+    .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const d=new Date();
+  return 'PlanetaExpress_' + limpo + '_' + (per || (String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear()));
 }
 
 /* ================================================================== */

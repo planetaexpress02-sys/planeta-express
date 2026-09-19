@@ -1307,8 +1307,9 @@ function contabExportar(tipo, fmt){
       + ds.linhas.map(function(r){ return '<tr>'+r.map(function(c){ return '<td>'+esc(c)+'</td>'; }).join('')+'</tr>'; }).join('')
       +'</tbody></table><div class="lic-print-f">Planeta Express — Contabilidade</div>';
     document.body.classList.add('lic-printing');
-    const limpar=function(){ document.body.classList.remove('lic-printing'); window.removeEventListener('afterprint',limpar); };
-    window.addEventListener('afterprint',limpar);
-    setTimeout(function(){ window.print(); setTimeout(limpar,1500); },60);
+    const limpar=function(){ document.body.classList.remove('lic-printing'); };
+    /* v12.3: o PDF sai com o nome do relatório, não com o endereço do site */
+    if(typeof pexImprimirComNome==='function'){ pexImprimirComNome(ds.titulo, null, {limpar:limpar}); }
+    else { window.addEventListener('afterprint',limpar); setTimeout(function(){ window.print(); setTimeout(limpar,1500); },60); }
   }
 }

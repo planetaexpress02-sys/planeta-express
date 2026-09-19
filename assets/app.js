@@ -6598,9 +6598,9 @@ function licExportar(tipo, fmt){
     <tbody>${ds.linhas.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
     <div class="lic-print-f">Planeta Express — Centro de Gestão de Conformidade</div>`;
   document.body.classList.add('lic-printing');
-  const limpar=()=>{ document.body.classList.remove('lic-printing'); window.removeEventListener('afterprint',limpar); };
-  window.addEventListener('afterprint', limpar);
-  setTimeout(()=>{ window.print(); setTimeout(limpar,1500); }, 60);
+  const limpar=()=>{ document.body.classList.remove('lic-printing'); };
+  /* v12.3: nomeia o PDF com o título do relatório e devolve o título da aba */
+  pexImprimirComNome(ds.titulo, null, {limpar:limpar});
 }
 function _licBaixar(nome, conteudo, mime){
   try{
@@ -9002,6 +9002,63 @@ function tick(){ const d=new Date(); const el=document.getElementById('clock'); 
    imprime — em A4, paginado e com o cabeçalho da empresa.
    Se a tela atual não tem relatório no catálogo, cai na impressão simples
    da própria tela (o comportamento antigo), para nada ficar sem saída. */
+/* ==================================================================
+   v12.3 — O NOME DO PDF
+
+   Reclamação dele: *"quando eu clico em algo no mobile para enviar via
+   PDF, sai uma escrita muito grande como se fosse link"*.
+
+   É o navegador batizando o arquivo. Quando a página não tem um título
+   curto e próprio na hora de imprimir, o Chrome do celular usa o
+   ENDEREÇO da página como nome — e sai aquele `planetaexpress02-sys.
+   github.io_planeta-express_index.html.pdf`, impossível de mandar no
+   WhatsApp sem vergonha.
+
+   A Central de Relatórios já resolvia isso (`PEXRelImprimir` troca o
+   `document.title` antes de imprimir). Os outros três caminhos que
+   imprimem — a tela atual, o relatório de Licenças e o da Contabilidade
+   — não faziam, e eram justamente os que ele usa no telefone.
+
+   Agora todos passam por aqui: nome do documento + `.pdf`.
+
+   ⚠️ O título TEM de voltar ao que era. Se ficar o nome do relatório, a
+   aba do navegador e o app instalado passam a se chamar "Frota_09-2026"
+   para sempre. Por isso o `afterprint` E o `setTimeout` de segurança:
+   em alguns celulares o `afterprint` não dispara quando a pessoa
+   cancela a impressão.
+   ================================================================== */
+function pexNomePDF(titulo, sufixo){
+  const limpo = String(titulo||'Relatorio')
+    .normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'')   /* tira acento */
+    .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const d = new Date();
+  const quando = sufixo || (String(d.getMonth()+1).padStart(2,'0') + '-' + d.getFullYear());
+  return 'PlanetaExpress_' + (limpo||'Relatorio') + '_' + quando;
+}
+/* Troca o título, imprime e devolve o título de antes.
+
+   ⚠️ `_pexTituloReal` guarda o título VERDADEIRO da aba, e só na
+   primeira vez. Sem isso, duas impressões seguidas (ele cancela uma e
+   manda outra na sequência — coisa de dois toques no celular) fazem a
+   segunda guardar como "título original" o nome do PDF que a primeira
+   acabou de pôr. Aí a aba fica chamada "PlanetaExpress_Frota_09-2026"
+   para sempre, e o app instalado também. Peguei isso no teste. */
+let _pexTituloReal = null;
+function pexImprimirComNome(titulo, sufixo, extra){
+  if(_pexTituloReal===null) _pexTituloReal = document.title;
+  document.title = pexNomePDF(titulo, sufixo);
+  let voltou=false;
+  const voltar = function(){
+    if(voltou) return; voltou=true;
+    if(_pexTituloReal!==null){ document.title = _pexTituloReal; _pexTituloReal = null; }
+    window.removeEventListener('afterprint', voltar);
+    if(extra && typeof extra.limpar==='function') extra.limpar();
+  };
+  window.addEventListener('afterprint', voltar);
+  /* o `afterprint` não dispara em todo celular quando a pessoa cancela;
+     o timer é a rede que devolve o nome da aba de qualquer jeito */
+  setTimeout(function(){ window.print(); setTimeout(voltar, 2000); }, 80);
+}
 function imprimirRelatorio(){
   const rota=(location.hash||'#dashboard').slice(1).split('/')[0];
   if(typeof PEXRelAbrir==='function' && typeof relPorModulo==='function'){
@@ -9022,7 +9079,10 @@ function imprimirTelaAtual(){
       </div>
       <div class="ph-title">${esc(tit)}</div>`;
   }
-  closeSidebar(); window.print();
+  closeSidebar();
+  /* v12.3: o PDF sai com o nome da tela (ex.: PlanetaExpress_Frota_09-2026),
+     em vez do endereço do site que o celular usava como nome. */
+  pexImprimirComNome(tit);
 }
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('scrim').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar')?.classList.remove('open'); document.getElementById('scrim')?.classList.remove('show'); }
@@ -9261,7 +9321,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.1';
+var PEX_VER = '12.3';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
