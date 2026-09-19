@@ -1496,6 +1496,49 @@ function iniKpiTile(ico,cls,val,pre,suf,label,href,color,pts,flag){
    mesma fonte da tela Vencimentos e da ficha do motorista — para os três
    lugares nunca discordarem.
    ================================================================== */
+/* ==================================================================
+   v12.1 — % DE DOCUMENTOS EM DIA (Painel → Situação dos vencimentos)
+
+   Pedido dele, com a definição junto: *"em dia se refere também aos que
+   ainda não venceram, e o que não está em dia são os que já venceram"*.
+
+   ⚠️ É UMA CONTA DIFERENTE DA QUE O CARD JÁ MOSTRAVA. A fatia verde
+   "Em dia" do gráfico é só o que vence em MAIS de 30 dias; o que vence
+   em 10, 20 ou 30 dias sai em fatias próprias. Para a conta dele, tudo
+   isso conta como em dia — o que pesa é ter vencido ou não:
+
+       em dia = total − vencidos
+
+   Por isso a barra e o gráfico mostram números diferentes de propósito,
+   e a legenda embaixo explica isso em uma linha. Sem esse aviso, alguém
+   ia somar a fatia verde e achar que a porcentagem está errada.
+
+   A faixa de cor segue a régua de risco da operação: 100% verde,
+   95%+ verde, 85%+ âmbar, abaixo disso vermelho.
+   ================================================================== */
+function _dashConformidade(total, vencidos){
+  total=Number(total)||0; vencidos=Number(vencidos)||0;
+  if(!total) return '';
+  const emDia = Math.max(0, total - vencidos);
+  const pct   = Math.round(emDia/total*100);
+  const cor   = pct>=95 ? 'var(--ok,#25e88f)' : pct>=85 ? 'var(--warn,#ffc061)' : 'var(--danger,#f2686b)';
+  const rotulo= pct===100 ? 'Tudo em dia'
+              : pct>=95   ? 'Situação boa'
+              : pct>=85   ? 'Atenção'
+              : 'Situação crítica';
+  return `<div class="conf-box">
+    <div class="conf-top">
+      <div class="conf-num" style="color:${cor}">${pct}<span>%</span></div>
+      <div class="conf-txt">
+        <b>documentos em dia</b>
+        <span class="muted">${emDia} de ${total} não venceram${vencidos?` · <a href="#vencimentos/venc">${vencidos} vencido${vencidos>1?'s':''}</a>`:''}</span>
+      </div>
+      <span class="conf-selo" style="color:${cor};border-color:${cor}">${rotulo}</span>
+    </div>
+    <div class="conf-barra"><i style="width:${pct}%;background:${cor}"></i></div>
+    <div class="conf-nota muted">Conta tudo que ainda não venceu, inclusive o que vence nos próximos dias — por isso é maior que a fatia verde do gráfico.</div>
+  </div>`;
+}
 function _dashExames(){
   const todos=todosVencimentos().filter(v=>v.entidade==='motorista');
   const ativos=(DB.motoristas||[]).filter(m=>m.status!=='Inativo').length;
@@ -1657,6 +1700,7 @@ function viewDashboard(){
     <div class="card">
       <div class="card-h">${svg('shield')}<h3>Situação dos vencimentos</h3><div class="r"><span class="muted" style="font-size:11.5px">situação geral · clique para abrir</span></div></div>
       <div class="card-b">
+        ${_dashConformidade(fGeral, fVenc.length)}
         <div class="donut-wrap">
           ${donut([
             {label:'Em dia',value:fEmDia.length,color:'#22c55e'},
@@ -9217,7 +9261,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.0';
+var PEX_VER = '12.1';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
