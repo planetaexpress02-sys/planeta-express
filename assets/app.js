@@ -1219,6 +1219,53 @@ function pexMobileGlobals(){
 /*  APRIMORAMENTOS DE UX (v6.6) — tabelas, tooltips, mapa, loading      */
 /*  Pós-render: não altera as telas nem a lógica; só realça a UX.       */
 /* ================================================================== */
+/* ==================================================================
+   v12.4 — CLICAR NUM CARD NÃO PODE ABRIR UM REGISTRO
+
+   Reclamação dele, em Viagens: *"quando clico nos cards, ele abre uma
+   guia para 'editar viagem' sozinho"*.
+
+   O card de filtro faz `viagemFiltro='...'; router()` — e o `router()`
+   troca a tela INTEIRA ali, dentro do próprio clique. No celular um
+   toque não é só um clique: vem `touchstart`, `touchend` e, uns 300 ms
+   depois, o "clique fantasma". Quando esse fantasma chega, a lista já
+   foi redesenhada e o que está embaixo do dedo é uma LINHA da tabela —
+   que tem `onclick="modalViagem(id)"`. Resultado: ele filtra e o
+   sistema abre a ficha de uma viagem que ele nunca escolheu.
+
+   A trava tem duas partes:
+   1. `pexFiltro()` marca a hora em que um card trocou a tela;
+   2. um guarda em fase de CAPTURA engole qualquer clique em linha ou
+      item clicável nos 500 ms seguintes — antes que o `onclick` da
+      linha chegue a rodar.
+
+   Vale para toda tela com card de filtro em cima de lista clicável
+   (Viagens, Vencimentos, e as próximas), e não atrapalha o uso normal:
+   meio segundo depois tudo volta a responder.
+   ================================================================== */
+let _pexBlindaAte = 0;
+function pexFiltro(fn){
+  _pexBlindaAte = Date.now() + 500;
+  try{
+    const e = window.event;
+    if(e){ if(e.preventDefault) e.preventDefault(); if(e.stopPropagation) e.stopPropagation(); }
+  }catch(_){}
+  try{ if(typeof fn==='function') fn(); }catch(e){ try{ console.warn('[filtro]', e); }catch(_){} }
+  return false;
+}
+try{
+  document.addEventListener('click', function(e){
+    if(Date.now() > _pexBlindaAte) return;
+    const t = e.target;
+    if(!t || !t.closest) return;
+    /* só o que ABRE registro: linha de tabela e cartão clicável.
+       Botões da barra e os próprios cards continuam funcionando. */
+    if(t.closest('tr.clickable, .mgrid .mcard, .clk')){
+      e.preventDefault(); e.stopPropagation();
+      try{ e.stopImmediatePropagation(); }catch(_){}
+    }
+  }, true);
+}catch(e){}
 function pexAfterRender(rota){
   try{ var _vw=document.getElementById('view'); if(_vw){ _vw.setAttribute('data-route',rota);
       /* tema CYBER global: liga em todas as telas, EXCETO Início/Painel/Manutenção
@@ -1767,7 +1814,7 @@ function viewDashboard(){
 /* ================================================================== */
 let frotaFiltro='todos';
 function viewFrota(){
-  const fb=(k,l)=>`<button class="${frotaFiltro===k?'active':''}" onclick="frotaFiltro='${k}';router()">${l}</button>`;
+  const fb=(k,l)=>`<button class="${frotaFiltro===k?'active':''}" onclick="return pexFiltro(function(){frotaFiltro='${k}';router()})">${l}</button>`;
   let lista=DB.veiculos.slice();
   if(frotaFiltro==='cavalo') lista=lista.filter(v=>v.tipo==='Cavalo');
   else if(frotaFiltro==='reboque') lista=lista.filter(v=>isReb(v));
@@ -2720,7 +2767,7 @@ function viewVencimentos(){
   const total=faixa.length;
   const vendoEmDia = vencFiltro==='emdia';
 
-  const kpiV=(k)=>{ const d=VENC_SEC[k]; return `<a class="kpi link ${vencFiltro===k?'ativo':''}" style="cursor:pointer" onclick="vencFiltro='${vencFiltro===k?'todos':k}';router()">
+  const kpiV=(k)=>{ const d=VENC_SEC[k]; return `<a class="kpi link ${vencFiltro===k?'ativo':''}" style="cursor:pointer" onclick="return pexFiltro(function(){vencFiltro='${vencFiltro===k?'todos':k}';router()})">
     <div class="k-top"><div class="k-ico ${d.kico}">${svg(d.ico)}</div><span class="k-go">→</span></div>
     <div class="k-val">${cont[k]}</div><div class="k-label">${d.t.replace('Vence em ','').replace('até ','≤')}</div></a>`; };
 
@@ -2757,7 +2804,7 @@ function viewVencimentos(){
     <select class="selectlite" onchange="vencTipo=this.value;router()">
       <option value="todos">Todos os tipos</option>
       ${tipos.map(t=>`<option value="${esc(t)}" ${vencTipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
-    ${vencFiltro!=='todos'?`<button class="btn sm no-print" onclick="vencFiltro='todos';router()">${svg('list')} Ver todas as faixas</button>`:''}
+    ${vencFiltro!=='todos'?`<button class="btn sm no-print" onclick="return pexFiltro(function(){vencFiltro='todos';router()})">${svg('list')} Ver todas as faixas</button>`:''}
     <div class="spacer"></div>
     <div class="muted no-print" style="font-size:12.5px">${vendoEmDia? cont.emdia+' documento(s) em dia' : total+' vencimento(s) na faixa'}</div>
     <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
@@ -2875,9 +2922,9 @@ function viewManutencao(){
   const veics=DB.veiculos.filter(v=>v.status!=='Arquivado');
   const comGasto=veics.map(v=>({v,g:_somaServ(filtr.filter(x=>x.veiculoId===v.id))})).filter(x=>x.g>0).sort((a,b)=>b.g-a.g);
   const barras=comGasto.map(x=>({label:esc(x.v.placa.split('-')[0]),value:Math.round(x.g),vtxt:moneyK(x.g),color:isReb(x.v)?'#1fd4c4':'#2f8fff',js:`location.hash='#manutencao/${x.v.id}'`}));
-  const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="manutFiltro='${k}';router()">${l}</button>`;
+  const fb=(k,l)=>`<button class="${manutFiltro===k?'active':''}" onclick="return pexFiltro(function(){manutFiltro='${k}';router()})">${l}</button>`;
   const pctCorr= total? Math.round(corr/total*100):0;
-  const kpiF=(ico,cor,val,label,sub,filtro)=>`<a class="kpi link ${manutFiltro===filtro?'ativo':''}" style="cursor:pointer" onclick="manutFiltro='${filtro}';router()" data-tip="Filtrar por ${label}">
+  const kpiF=(ico,cor,val,label,sub,filtro)=>`<a class="kpi link ${manutFiltro===filtro?'ativo':''}" style="cursor:pointer" onclick="return pexFiltro(function(){manutFiltro='${filtro}';router()})" data-tip="Filtrar por ${label}">
     <div class="k-top"><div class="k-ico ${cor}">${svg(ico)}</div><span class="k-go">→</span></div>
     <div class="k-val">${val}</div><div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`;
   const foot=(v)=>{ const s=filtr.filter(x=>x.veiculoId===v.id); const g=_somaServ(s);
@@ -5022,7 +5069,7 @@ function viewSeguros(){
   const vencidas = ativos.filter(s=>{ const d=dias(s); return d!=null && d<0; });
 
   const kseg=(ico,val,label,sub,cor,filtro,ativoCor)=>{ const on=filtro&&segFiltro===filtro;
-    return `<a class="kpi ${filtro?'link':''} ${on?'ativo':''}" ${filtro?`style="cursor:pointer" onclick="segFiltro='${on?'todos':filtro}';router()"`:''}>
+    return `<a class="kpi ${filtro?'link':''} ${on?'ativo':''}" ${filtro?`style="cursor:pointer" onclick="return pexFiltro(function(){segFiltro='${on?'todos':filtro}';router()})"`:''}>
       <div class="k-top"><div class="k-ico" style="color:${cor};background:${cor}1f">${svg(ico)}</div>${filtro?'<span class="k-go">→</span>':''}</div>
       <div class="k-val" style="${ativoCor&&val!=='0'?`color:${cor}`:''}">${val}</div><div class="k-label">${label}</div>${sub?`<div class="k-sub">${sub}</div>`:''}</a>`; };
 
@@ -5104,7 +5151,7 @@ function viewSeguros(){
       <option value="vencidos" ${segFiltro==='vencidos'?'selected':''}>Vencidas</option>
       <option value="cancelados" ${segFiltro==='cancelados'?'selected':''}>Canceladas</option>
     </select>
-    ${segFiltro!=='todos'?`<button class="btn sm no-print" onclick="segFiltro='todos';router()">${svg('list')} Ver todos</button><span class="muted" style="font-size:12.5px">filtro: ${esc(filtroLabel||'')}</span>`:''}
+    ${segFiltro!=='todos'?`<button class="btn sm no-print" onclick="return pexFiltro(function(){segFiltro='todos';router()})">${svg('list')} Ver todos</button><span class="muted" style="font-size:12.5px">filtro: ${esc(filtroLabel||'')}</span>`:''}
     <div class="spacer"></div>
     <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
   </div>
@@ -6772,9 +6819,11 @@ function viewViagens(){
   const pendBaixa=DB.viagens.filter(v=>!_vgBxOk(v)).length;
   const meses=[...new Set(DB.viagens.map(v=>(v.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   const placas=[...new Set(DB.viagens.map(v=>v.placa).filter(Boolean))].sort();
-  const fb=(k,l)=>`<button class="${viagemFiltro===k?'active':''}" onclick="viagemFiltro='${k}';router()">${l}</button>`;
+  const fb=(k,l)=>`<button class="${viagemFiltro===k?'active':''}" onclick="return pexFiltro(function(){viagemFiltro='${k}';router()})">${l}</button>`;
   // KPI clicável: leva direto ao que está pendente (filtro correspondente)
-  const kpiV=(ico,cls,val,label,onclk,ativo)=>`<a class="kpi link ${ativo?'ativo':''}" style="cursor:pointer" onclick="${onclk}">
+  /* v12.4: passa por pexFiltro() — sem isso o toque no card "vaza" para a
+     linha que aparece embaixo do dedo e abre a ficha de uma viagem. */
+  const kpiV=(ico,cls,val,label,onclk,ativo)=>`<a class="kpi link ${ativo?'ativo':''}" style="cursor:pointer" onclick="return pexFiltro(function(){${onclk}})">
     <div class="k-top"><div class="k-ico ${cls}">${svg(ico)}</div><span class="k-go">→</span></div>
     <div class="k-val">${val}</div><div class="k-label">${label}</div></a>`;
   let lista=DB.viagens.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
@@ -8904,7 +8953,7 @@ function viewCtes(){
   const aReceber=DB.ctes.filter(c=>c.status!=='Pago'&&c.status!=='Cancelado').reduce((s,c)=>s+(Number(c.valor)||0),0);
   const meses=[...new Set(DB.ctes.map(c=>(c.data||'').slice(0,7)).filter(Boolean))].sort().reverse();
   const cont={}; CTE_STATUS.forEach(s=>cont[s]=DB.ctes.filter(c=>c.status===s).length);
-  const fb=(k,l,n)=>`<button class="${cteFiltro===k?'active':''}" onclick="cteFiltro='${k}';router()">${l}${n!=null?` <b style="opacity:.55">${n}</b>`:''}</button>`;
+  const fb=(k,l,n)=>`<button class="${cteFiltro===k?'active':''}" onclick="return pexFiltro(function(){cteFiltro='${k}';router()})">${l}${n!=null?` <b style="opacity:.55">${n}</b>`:''}</button>`;
   let lista=DB.ctes.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   if(cteFiltro!=='todos') lista=lista.filter(c=>c.status===cteFiltro);
   if(cteMes!=='todos') lista=lista.filter(c=>(c.data||'').slice(0,7)===cteMes);
@@ -9321,7 +9370,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.3';
+var PEX_VER = '12.4';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
