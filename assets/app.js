@@ -1078,8 +1078,13 @@ const ROTAS = {
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
 const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, contabilidade:1};
+/* v12.5: abertura de ficha agendada por endereço (#viagens/<id>). Todo
+   redesenho cancela a que estiver pendente — senão ela abre depois, já
+   sobre outra tela. */
+let _pexAbrirTimer=null;
 function router(){
   const h = (location.hash||'#dashboard').slice(1);
+  try{ clearTimeout(_pexAbrirTimer); }catch(e){}
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
   const [rota, arg] = h.split('/');
   renderSidebar(rota);
@@ -1104,7 +1109,11 @@ function router(){
   else if(rota==='pneus'){ if(arg && arg!=='limite'){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Pneus'; } el.innerHTML=viewPneusVeiculo(arg); } else { if(arg==='limite') pneusFiltro='limite'; el.innerHTML=viewPneus(); } }
   else if(rota==='baterias'){ if(arg){ const v=veiculo(arg); if(v){ titulo=v.placa; sub='Baterias'; } el.innerHTML=viewBateriasVeiculo(arg); } else el.innerHTML=viewBaterias(); }
   else if(rota==='abastecimento') el.innerHTML=viewAbastecimento();
-  else if(rota==='viagens'){ el.innerHTML=viewViagens(); if(arg) setTimeout(function(){ if(typeof modalViagem==='function' && DB.viagens.some(x=>x.id===arg)) modalViagem(arg); },30); }
+  /* v12.5 — a abertura fica num timer NOMEADO e todo router() o cancela
+     (ver `_pexAbrirTimer` no topo). Sem isso, um redesenho que acontecesse
+     nos 30 ms seguintes deixava a ficha abrir depois, já fora de contexto. */
+  else if(rota==='viagens'){ el.innerHTML=viewViagens();
+    if(arg) _pexAbrirTimer=setTimeout(function(){ if(typeof modalViagem==='function' && DB.viagens.some(x=>x.id===arg)) modalViagem(arg); },30); }
   else if(rota==='descargas') el.innerHTML=viewDescargas();
   else if(rota==='ctes') el.innerHTML=viewCtes();
   else if(rota==='checklist') el.innerHTML=viewChecklist();
@@ -1225,23 +1234,18 @@ function pexMobileGlobals(){
    Reclamação dele, em Viagens: *"quando clico nos cards, ele abre uma
    guia para 'editar viagem' sozinho"*.
 
-   O card de filtro faz `viagemFiltro='...'; router()` — e o `router()`
-   troca a tela INTEIRA ali, dentro do próprio clique. No celular um
-   toque não é só um clique: vem `touchstart`, `touchend` e, uns 300 ms
-   depois, o "clique fantasma". Quando esse fantasma chega, a lista já
-   foi redesenhada e o que está embaixo do dedo é uma LINHA da tabela —
-   que tem `onclick="modalViagem(id)"`. Resultado: ele filtra e o
-   sistema abre a ficha de uma viagem que ele nunca escolheu.
+   ⚠️ NA v12.4 EU CULPEI A COISA ERRADA. Achei que fosse o "clique
+   fantasma" do celular (o `click` que chega ~300 ms depois do toque) e
+   publiquei a blindagem de 500 ms abaixo. Ele voltou dizendo que
+   continuava — e estava certo: reproduzindo o toque de verdade, o dedo
+   continua sobre o CARD depois do redesenho, nunca sobre a lista.
 
-   A trava tem duas partes:
-   1. `pexFiltro()` marca a hora em que um card trocou a tela;
-   2. um guarda em fase de CAPTURA engole qualquer clique em linha ou
-      item clicável nos 500 ms seguintes — antes que o `onclick` da
-      linha chegue a rodar.
+   A CAUSA REAL está no `pexFiltro`, logo abaixo: o id da viagem fica
+   pendurado no endereço (`#viagens/<id>`) e todo `router()` o relê.
 
-   Vale para toda tela com card de filtro em cima de lista clicável
-   (Viagens, Vencimentos, e as próximas), e não atrapalha o uso normal:
-   meio segundo depois tudo volta a responder.
+   A blindagem fica, porque cobre um caso diferente e real (lista que
+   sobe sob o dedo em telas curtas), mas NÃO era o defeito dele. Anotado
+   para não me perder de novo: só chamar de causa o que o teste reproduz.
    ================================================================== */
 let _pexBlindaAte = 0;
 function pexFiltro(fn){
@@ -1249,6 +1253,19 @@ function pexFiltro(fn){
   try{
     const e = window.event;
     if(e){ if(e.preventDefault) e.preventDefault(); if(e.stopPropagation) e.stopPropagation(); }
+  }catch(_){}
+  /* 🔴 v12.5 — ESTA É A CAUSA REAL DO "ABRE A VIAGEM SOZINHO".
+     `#viagens/<id>` manda o router ABRIR aquela viagem — é assim que a
+     busca do Ctrl+K leva ao registro, e está certo. Só que o id FICA
+     pendurado no endereço depois que ele fecha o modal. Aí qualquer
+     filtro, que faz `router()` sem mexer no endereço, lê o id de novo e
+     reabre a ficha que ele já tinha fechado.
+     Filtrar é mudar a LISTA, não voltar a um registro: por isso o
+     argumento sai do endereço antes de redesenhar. */
+  try{
+    const h = (location.hash||'').replace(/^#/,'');
+    const barra = h.indexOf('/');
+    if(barra > 0) history.replaceState(null, '', '#' + h.slice(0, barra));
   }catch(_){}
   try{ if(typeof fn==='function') fn(); }catch(e){ try{ console.warn('[filtro]', e); }catch(_){} }
   return false;
@@ -9370,7 +9387,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.4';
+var PEX_VER = '12.5';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
