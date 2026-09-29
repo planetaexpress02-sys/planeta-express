@@ -4821,11 +4821,32 @@ function salvarPneu(id){
     fogo:val('f_fogo'),nf:val('f_nf'),fornecedor:val('f_forn'),dataCompra:val('f_datac'),valor:parseBRL(val('f_valor')),
     sulco:numOrNull('f_sulco'),status:st,borracha:(/usado|recap/i.test(st)?numOrNull('f_borracha'):null),
     dataInstalacao:val('f_data'),kmInstalacao:numOrNull('f_km'),rodizios:numOrNull('f_rod')||0,reformas:numOrNull('f_ref')||0,obs:val('f_obs')};
-  let baixa='';
+  let baixa='', troca='';
+  /* 🔴 v12.6 — POSIÇÃO JÁ OCUPADA: o dado mudava e o desenho não.
+     Reclamação dele: *"em ficha completa de pneus eu faço alteração porém
+     não muda no diagrama"*. Reproduzido: ao mandar um pneu para uma
+     posição que já tem outro, o slot era gravado nos DOIS. O diagrama dá
+     a posição ao primeiro da lista e encaixa o outro onde sobrar — então
+     o pneu que ele acabou de mover continuava desenhado no lugar antigo.
+     O botão "Mover" do painel já resolvia isso trocando os dois
+     (`pneuMover`); faltava aqui. Agora é a mesma regra: quem estava na
+     posição vai para a que o outro deixou. */
+  if(d.slot){
+    const ocupante=DB.pneus.find(x=>x.id!==id && x.veiculoId===d.veiculoId && x.slot===d.slot);
+    if(ocupante){
+      const antigo = oldP ? (oldP.slot||'') : '';
+      ocupante.slot = antigo;                       /* troca; sem posição anterior, sai do desenho */
+      const _v2=veiculo(d.veiculoId); const _s2=_v2&&antigo? pneuSlots(_v2).find(x=>x.id===antigo) : null;
+      ocupante.posicao = _s2 ? _s2.nome : '';
+      troca = antigo
+        ? ' O pneu que estava lá foi para '+(_s2?_s2.nome:antigo)+'.'
+        : ' O pneu que estava lá saiu da posição.';
+    }
+  }
   if(id)Object.assign(DB.pneus.find(x=>x.id===id),d); else{ d.id=uid('pn'); DB.pneus.push(d);
     const eid=val('f_estq'); if(eid){ const e=DB.estoquePneus.find(x=>x.id===eid); if(e){ e.qtd=(parseInt(e.qtd)||0)-q;
       baixa=' Baixa de '+q+' no estoque'+(e.marca?' ('+e.marca+')':'')+'.'; if(e.qtd<=0) DB.estoquePneus=DB.estoquePneus.filter(x=>x.id!==eid); } } }
-  saveDB(); closeModal(); toast('Pneu salvo.'+baixa); router(); }
+  saveDB(); closeModal(); toast('Pneu salvo.'+troca+baixa); router(); }
 function excluirPneu(id){ if(!confirm('Excluir este pneu?'))return; DB.pneus=DB.pneus.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ---------- CHECK-LIST ---------- */
@@ -9387,7 +9408,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.5';
+var PEX_VER = '12.6';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
