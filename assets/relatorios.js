@@ -1093,32 +1093,6 @@ const PEX_RELATORIOS = [
       };
     }},
 
-  /* ---------------------------------------------------- CONTABILIDADE */
-  { id:'contab-lanc', modulo:'contabilidade', nome:'Lançamentos contábeis',
-    desc:'Lançamentos derivados dos módulos, com conta, centro de custo e origem.',
-    filtros:['periodo'], orientacao:'paisagem',
-    gerar:function(f){
-      let l = (typeof contabLancamentos==='function')? contabLancamentos() : [];
-      l = _relCrono(l.filter(function(x){ return _relNoPeriodo(x.data, f); }),'data');
-      const rec = l.filter(function(x){ return x.grupo==='receita'; });
-      const cus = l.filter(function(x){ return x.grupo!=='receita'; });
-      const sr=_relSoma(rec,'valor'), sc=_relSoma(cus,'valor');
-      const nomeConta = function(c){ return (typeof contabContaNome==='function')? contabContaNome(c) : c; };
-      return {
-        tituloTabela:'Lançamentos',
-        colunas:[{rotulo:'Data',tipo:'data'},{rotulo:'Origem'},{rotulo:'Descrição',larg:'28%'},{rotulo:'Conta',larg:'16%'},
-                 {rotulo:'Placa'},{rotulo:'Grupo'},{rotulo:'Valor',tipo:'moeda'}],
-        linhas: l.map(function(x){ return [relData(x.data), x.origem, x.descricao, nomeConta(x.conta),
-          x.placa||'—', x.grupo, relMoney(x.valor)]; }),
-        kpis:[{rotulo:'Lançamentos',valor:relNum(l.length)},{rotulo:'Receitas',valor:relMoney(sr)},
-              {rotulo:'Custos e despesas',valor:relMoney(sc)},
-              {rotulo:'Resultado',valor:relMoney(sr-sc), nota: sr? 'margem '+relPct((sr-sc)/sr*100) : ''}],
-        totais: l.length? [{rotulo:'RECEITAS', valor:relMoney(sr)},{rotulo:'CUSTOS E DESPESAS', valor:relMoney(sc)},
-                           {rotulo:'RESULTADO', valor:relMoney(sr-sc)}] : [],
-        graficos: l.length? [{titulo:'Custos por origem', dados:_relPorChave(cus,'origem','valor').slice(0,10).map(_relMoneyBar)}] : []
-      };
-    }},
-
   /* Aniversários: sem aba própria desde a v6.81 — a data vem do cadastro do
      motorista, então o relatório mora dentro de Motoristas. */
   { id:'mot-aniversarios', modulo:'motoristas', nome:'Aniversários',

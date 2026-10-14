@@ -21,7 +21,14 @@ function ensureCollections(){
   ['notas','checklists','pneus','viagens','descargas','abastecimentos','faturamento','vales','ctes','servicos','anexos','estoqueBaterias','estoquePneus','seguros','pedagios','pagamentos','licencas','docModelos','docLogs',
    /* 'aniversarios' ficou aqui de propósito: a aba foi removida na v6.81, mas
       quem tiver cadastrado alguém não pode perder o registro — trocar de
-      versão nunca apaga dado. */
+      versão nunca apaga dado.
+
+      ⚠️ v13.0 — as sete coleções 'contab*' (e o 'faturamento' lá em cima)
+      ficam pela MESMA razão. A área de Contabilidade foi removida a pedido
+      do dono, mas 'contabManuais', 'contabTributos' e 'contabAtivos' são
+      coisas que ELE digitou, não derivadas de outro módulo. Sumir com a
+      tela é o que ele pediu; sumir com o que ele digitou, não. Continuam
+      na base, no backup e na nuvem. Se a área voltar um dia, volta cheia. */
    'aniversarios','processos','pedFaturas','contabPlano','contabCentros','contabManuais','contabAtivos','contabFinanc','contabTributos','contabFech','contabAudit'].forEach(k=>{ if(!Array.isArray(DB[k])) DB[k]=clone(SEED[k]||[]); });
   if(!DB.contabClass || typeof DB.contabClass!=='object') DB.contabClass={};
   if(!DB.antt) DB.antt = clone(SEED.antt);
@@ -1122,13 +1129,22 @@ const ROTAS = {
   etica:{t:'Código de Ética', s:'Conduta e normas da empresa', ico:'shield'},
   antt:{t:'ANTT - RNTRC', s:'RNTRC e regularidade do transportador', ico:'shield'},
   licencas:{t:'Licenças e Alvarás', s:'Alvarás, vigilância sanitária, inscrições e certidões', ico:'stamp'},
-  financeiro:{t:'Financeiro', s:'Faturamento, vales e pagamentos', ico:'lock'},
-  contabilidade:{t:'Contabilidade', s:'DRE, custos por veículo, tributos e resultado', ico:'coins'},
+  /* v13.0 — a Contabilidade saiu a pedido do dono ("remova a área de
+     contabilidade"). Com ela saíram DRE, custos por veículo, lançamentos
+     derivados, plano de contas, centros de custo, ativos, financiamentos,
+     tributos, fechamento, auditoria, o relatório "Lançamentos contábeis" e
+     a tela de Faturamento.
+     ⚠️ NENHUM DADO FOI APAGADO: `DB.contabPlano`, `contabCentros`,
+     `contabManuais`, `contabAtivos`, `contabFinanc`, `contabTributos`,
+     `contabFech`, `contabAudit`, `contabClass` e `DB.faturamento` continuam
+     na base, nos backups e na nuvem. Some a tela, não o dado — se um dia
+     ele pedir de volta, está tudo lá. */
+  financeiro:{t:'Financeiro', s:'Vales e gastos da empresa', ico:'lock'},
   config:{t:'Configurações', s:'Preferências e backup', ico:'gear'},
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1, contabilidade:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1};
 /* v12.5: abertura de ficha agendada por endereço (#viagens/<id>). Todo
    redesenho cancela a que estiver pendente — senão ela abre depois, já
    sobre outra tela. */
@@ -1178,7 +1194,6 @@ function router(){
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='antt') el.innerHTML=viewAntt();
   else if(rota==='licencas'){ if(arg) licFiltro=arg; el.innerHTML=viewLicencas(); }
-  else if(rota==='contabilidade'){ if(arg) contabAba=arg; el.innerHTML=viewContabilidade(); }
   else if(rota==='socios') el.innerHTML=viewSocios();
   else if(rota==='financeiro') el.innerHTML=viewFinanceiro();
   else if(rota==='etica') el.innerHTML=viewEtica();
@@ -1559,7 +1574,7 @@ function renderSidebar(rota){
          e o relatório do período apontam para ela — só saiu do menu. */
     `<div class="group">Manutenção</div>`+ item('km')+ item('manutencao')+ item('pneus')+ item('baterias')+
     `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
-    `<div class="group">Financeiro</div>`+ item('financeiro')+ item('contabilidade')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
+    `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
 }
@@ -8598,9 +8613,18 @@ function pagExcluirSel(){
   DB.pagamentos=(DB.pagamentos||[]).filter(function(p){ return ids.indexOf(p.id)<0; });
   PAG_SEL={}; saveDB(); toast(ids.length+' gasto(s) excluído(s).'); router();
 }
-/* O FATURAMENTO saiu daqui na v6.88 e foi para a Contabilidade (é receita —
-   o lugar dela é lá). Este módulo ficou só com Vales Motoristas e Gastos.
-   Os lançamentos continuam em DB.faturamento: nada mudou de banco. */
+/* v13.0 — O FATURAMENTO SAIU DE VISTA, MAS NAO DA BASE.
+
+   Ele saiu daqui na v6.88 e foi para a Contabilidade; com a Contabilidade
+   removida a pedido do dono, e com a escolha dele de tirar o Faturamento
+   junto, nao sobrou tela que mostre receita. Os lancamentos continuam em
+   `DB.faturamento`, intactos, e saem no backup — so nao ha onde ve-los.
+
+   As funções modalFaturamento/salvarFaturamento/excluirFaturamento saíram
+   daqui: eram chamadas SÓ pela aba de Faturamento da Contabilidade, então
+   viraram código morto no mesmo instante.
+
+   Este módulo ficou só com Vales Motoristas e Gastos. */
 function viewFinConteudo(){
   const h=hoje();
   /* GASTOS (planilha livre — separada dos vales dos motoristas) */
@@ -8650,7 +8674,7 @@ function viewFinConteudo(){
       <div class="mono fin-saldo-v" style="color:${s>0?'var(--warn)':'var(--ok)'}">${money(s)}</div></div></div>`; }).join('');
 
   return `
-  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Vales dos motoristas e gastos da empresa. Tudo somado automaticamente. O faturamento agora fica na Contabilidade.</span></div>
+  <div class="banner">${svg('wallet')}<div><b>Financeiro</b><span>Vales dos motoristas e gastos da empresa. Tudo somado automaticamente.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" onclick="modalFinLimpar()" title="Apagar lançamentos antigos ou repetidos — mostra o que sai antes">${svg('trash')} Limpar</button>
       <button class="btn primary" onclick="finImportar()" title="Suba a planilha: o sistema separa vales de motorista e gastos sozinho, e você confere antes de gravar">${svg('upload')} Importar planilha</button>
@@ -8677,20 +8701,6 @@ function viewFinConteudo(){
 
   ${pagCard}`;
 }
-function modalFaturamento(id){
-  const f=id?DB.faturamento.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),cliente:'',valor:'',obs:''};
-  openModal(`<div class="m-h">${svg('money')}<h3>${id?'Editar faturamento':'Novo faturamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <div class="field-row">${fld('Data','f_data',f.data,'date')}${fldR$('Valor (R$)','f_val',f.valor)}</div>
-      ${fld('Cliente / origem','f_cli',f.cliente)}
-      <div class="field"><label>Observação</label><input id="f_obs" value="${esc(f.obs)}"></div>
-    </div>
-    <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirFaturamento('${id}')">${svg('trash')} Excluir</button>`:''}
-      <button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarFaturamento('${id||''}')">Salvar</button></div>`);
-}
-function salvarFaturamento(id){ const d={data:val('f_data'),cliente:val('f_cli'),valor:parseBRL(val('f_val')),obs:val('f_obs')};
-  if(id)Object.assign(DB.faturamento.find(x=>x.id===id),d); else{ d.id=uid('ft'); DB.faturamento.push(d); } saveDB(); closeModal(); toast('Faturamento salvo.'); router(); }
-function excluirFaturamento(id){ if(!confirm('Excluir este faturamento?'))return; DB.faturamento=DB.faturamento.filter(x=>x.id!==id); saveDB(); closeModal(); toast('Excluído.'); router(); }
 
 /* ---------- IMPORTAR FATURAMENTO DO CONTADOR (PDF / Excel / XML) ---------- */
 let FAT_FILA=[];
@@ -9554,7 +9564,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.9';
+var PEX_VER = '13.0';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

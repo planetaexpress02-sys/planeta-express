@@ -58,7 +58,29 @@ awk '
 
 # ---------- 3. CSS e JS concatenados ----------
 cat assets/estilo.css assets/estilo2.css > "$TMP/all.css"
-cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/contabilidade.js assets/aniversarios.js assets/relatorios.js > "$TMP/all.js"
+# v13.0 — a lista abaixo era repetida A MAO e divergiu do index.html assim que
+# a Contabilidade saiu: o `cat` apontava para um arquivo que nao existe mais.
+# Com `set -euo pipefail` isso derruba o build, o que ja e melhor que passar
+# calado -- mas o risco real e o inverso: entrar um arquivo NOVO no index.html
+# e nao entrar aqui, e o celular rodar um sistema diferente do site, sem aviso
+# (regra do dono: toda atualizacao vale em TODOS os locais).
+# Por isso agora existe a conferencia logo abaixo.
+cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/aniversarios.js assets/relatorios.js > "$TMP/all.js"
+
+# Confere: todo assets/*.js que o index.html carrega tem de estar no `cat` de
+# cima. (config-online.js e nuvem.js entram separados mais abaixo.)
+FALTOU=""
+for J in $(grep -oE 'assets/[a-z0-9_-]+\.js' index.html | sort -u); do
+  case "$J" in assets/config-online.js|assets/nuvem.js) continue;; esac
+  grep -q "$J" <<< "$(sed -n '/^cat assets\/viagens\.js/p' build_celular.sh)" || FALTOU="$FALTOU $J"
+done
+if [ -n "$FALTOU" ]; then
+  echo "ERRO: o index.html carrega$FALTOU, mas o arquivo do celular nao." >&2
+  echo "      Acrescente no 'cat' acima, senao o celular roda um sistema" >&2
+  echo "      diferente do site -- e sem nenhum aviso." >&2
+  exit 1
+fi
+echo "   site e celular carregam os mesmos arquivos"
 
 # ---------- 4. monta o arquivo do CELULAR (com <head>/<body>) ----------
 {

@@ -915,7 +915,9 @@ async function cpidAplicar(item){
     if(!Array.isArray(DB.ctes)) DB.ctes=[];
     regs.forEach(function(r){ const id='cte_'+(r.chave||uid(''));
       if(!DB.ctes.some(function(x){ return x.id===id; })){ DB.ctes.push(Object.assign({}, r, {id:id})); salvos++; } });
-    onde.push('CT-e','Clientes','Faturamento');
+    /* v13.0 — tirado 'Faturamento' daqui: o CT-e aparece na tela de CT-e;
+       a receita dele só era somada na DRE, que saiu com a Contabilidade. */
+    onde.push('CT-e','Clientes');
   }
   else if(item.alvo==='faturamento'){
     if(!Array.isArray(DB.faturamento)) DB.faturamento=[];
@@ -927,7 +929,10 @@ async function cpidAplicar(item){
         else { lim.id=uid('ft'); DB.faturamento.push(lim); salvos++; } }); }
     else if(c.valor){ DB.faturamento.push({ id:uid('ft'), data:c.data||'', cliente:c.emitente||c.cliente||'',
         valor:+c.valor||0, chave:c.chave||'', obs:'Documento nº '+(c.numero||'') }); salvos=1; }
-    if(salvos) onde.push('Financeiro','Painel');
+    /* v13.0 — dizia 'Financeiro','Painel'. Nenhuma das duas mostra
+       faturamento (o Painel soma DB.notas, outra coleção). Depois da saída
+       da Contabilidade isso virou promessa de tela inexistente. */
+    if(salvos) onde.push('Faturamento (guardado na base, sem tela)');
   }
   else if(item.alvo==='pagamentos'){
     if(!Array.isArray(DB.pagamentos)) DB.pagamentos=[];
@@ -1106,7 +1111,12 @@ function cpidItemHTML(it){
       '<span class="cp-selo" style="--c:'+selo[0]+'">'+selo[1]+'</span></div>'+
     miolo+'</div>';
 }
-function cpidNomeAlvo(a){ return {abastecimentos:'Abastecimentos', ctes:'CT-e', faturamento:'Financeiro (Faturamento)',
+/* v13.0 — 'faturamento' nao aponta mais para uma tela. A area de
+   Contabilidade foi removida e o dono escolheu tirar o Faturamento junto,
+   entao o lancamento e guardado na base (e sai no backup) mas nao tem onde
+   ser visto. O rotulo diz isso: prometer "Financeiro (Faturamento)" seria
+   mandar o cliente procurar uma tela que nao existe. */
+function cpidNomeAlvo(a){ return {abastecimentos:'Abastecimentos', ctes:'CT-e', faturamento:'Faturamento (guardado na base, sem tela)',
   pagamentos:'Financeiro (Pagamentos)', pedagios:'Pedágios', licencas:'Licenças e Alvarás', descargas:'Descargas',
   viagens:'Viagens', seguros:'Seguros', vencimentos:'Vencimentos'}[a]||a; }
 function cpidCamposVisiveis(it, c){
