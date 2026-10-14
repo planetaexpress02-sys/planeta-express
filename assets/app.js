@@ -6866,13 +6866,26 @@ function docsDoMotorista(m){
 function viewSocios(){
   const socios=DB.motoristas.filter(m=>m.socio);
   if(!socios.length) return `<div class="banner">${svg('briefcase')}<div><b>Quadro Societário</b><span>Marque um colaborador como sócio no cadastro (Motoristas → Editar → Sócio).</span></div></div>${emptyState('Nenhum sócio marcado ainda.')}`;
-  const cards=socios.map(m=>{ const docs=docsDoMotorista(m);
+  /* v13.1 — A LISTA DE DOCUMENTOS SAIU DAQUI.
+
+     Pedido do dono, olhando a tela: *"em quadro de sócios, não precisa
+     aparecer todos esses documentos, somente dados dos sócios e pronto"*.
+     Eram dez cartões de arquivo por sócio empurrando os dados para cima.
+
+     Os documentos NÃO sumiram do sistema: sócio é motorista marcado como
+     sócio, e `docsDoMotorista()` continua alimentando a ficha dele em
+     Motoristas → abrir → Documentos. É o mesmo arquivo, no mesmo lugar de
+     sempre; só deixou de ser repetido aqui.
+
+     O botão "Anexar" saiu junto, de propósito: anexar numa tela que não
+     mostra anexo nenhum é mandar o cliente clicar e não ver nada acontecer.
+     Quem anexa é a ficha, onde o resultado aparece. */
+  const cards=socios.map(m=>{
     return `<div class="card socio-card">
       <div class="socio-head">${avatarFoto(m,92)}
         <div class="socio-info"><h3>${esc(m.nome)}</h3><div class="socio-role">${esc(m.funcao||'Sócio')}</div>
           <div class="chips" style="margin-top:8px">${m.cpf?`<span class="tag">CPF ${esc(m.cpf)}</span>`:''}${m.categoria?`<span class="tag">CNH ${esc(m.categoria)}</span>`:''}</div></div>
         <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn sm" onclick="uploadPara('motorista','${m.id}')">${svg('upload')} Anexar</button>
           <button class="btn sm" onclick="modalMotorista('${m.id}')">${svg('edit')} Editar</button></div>
       </div>
       <div class="info-grid" style="margin:4px 0 14px">
@@ -6881,17 +6894,9 @@ function viewSocios(){
         <div class="it"><div class="l">Endereço</div><div class="v">${esc(m.endereco||'—')}</div></div>
         <div class="it"><div class="l">Validade CNH</div><div class="v">${fmtD(m.cnhValidade)}</div></div>
       </div>
-      <div class="sectitulo">${svg('doc')} Documentos do sócio</div>
-      ${docs.length?`<div class="files">${docs.map(d=>`<div class="filecard">
-        <div class="fc-ico">${fileThumb({name:d.nome})}</div>
-        <div class="fc-main"><b title="${esc(d.nome)}">${esc(d.nome)}</b><div class="muted" style="font-size:11px">${esc(d.cat||'Documento')}</div></div>
-        <div class="fc-act no-print">
-          ${d.tipo==='real'?`<button class="btn ghost sm" title="Abrir" onclick="abrirReal('${esc(d.path)}')">${svg('eye')}</button><button class="btn ghost sm" title="Baixar" onclick="baixarReal('${esc(d.path)}','${esc(d.nome)}')">${svg('download')}</button>`
-            :`<button class="btn ghost sm" title="Abrir" onclick="verArquivo('${d.id}')">${svg('eye')}</button><button class="btn ghost sm" title="Baixar" onclick="baixarArquivo('${d.id}')">${svg('download')}</button><button class="btn ghost sm" title="Excluir" onclick="excluirArquivo('${d.id}')">${svg('trash')}</button>`}
-        </div></div>`).join('')}</div>`:emptyState('Nenhum documento. Use "Anexar" para enviar.')}
     </div>`;
   }).join('');
-  return `<div class="banner">${svg('briefcase')}<div><b>Quadro Societário — Planeta Express Transportes</b><span>Sócios da empresa, com foto e documentos. Todos os dados são editáveis pelo cadastro.</span></div></div>
+  return `<div class="banner">${svg('briefcase')}<div><b>Quadro Societário — Planeta Express Transportes</b><span>Sócios da empresa. Todos os dados são editáveis pelo cadastro.</span></div></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:18px">${cards}</div>`;
 }
 
@@ -9564,7 +9569,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '13.0';
+var PEX_VER = '13.1';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
