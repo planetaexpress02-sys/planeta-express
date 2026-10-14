@@ -2861,6 +2861,11 @@ body.rail .rail-toggle svg{transform:rotate(180deg)}
 .rel-sec-t{ font-size:9.4pt; font-weight:800; color:#0b2a44; letter-spacing:.3px; text-transform:uppercase;
   padding-bottom:4px; margin:2px 0 7px; border-bottom:1px solid #dce6ee; break-after:avoid; page-break-after:avoid }
 .rel-cont{ font-size:7.4pt; font-style:italic; color:#8aa5b8; margin:0 0 5px; break-after:avoid; page-break-after:avoid }
+/* v12.9 — observação sob o título de uma seção, para dizer de ONDE vem o
+   número quando ele não sai do período do cabeçalho. Nasceu do relatório de
+   vales, em que a lista somava 1.900 e os cartões 7.100. */
+.rel-sec-n{ font-size:7.2pt; color:#6d8699; line-height:1.35; margin:-3px 0 7px;
+  break-after:avoid; page-break-after:avoid }
 
 /* ---------- tabela ---------- */
 .rel-tab{ width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:9px }
@@ -3185,7 +3190,7 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
    Regra do dono: "TODAS as atualizações devem ser feitas em
    todos os locais acessados".
    ============================================================ */
-#pexVerNova{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+#pexVerNova{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:center;justify-content:center;
   background:rgba(2,4,8,.72);backdrop-filter:blur(3px);padding:20px}
 #pexVerNova .pexvn-box{background:var(--surf2,#11161f);border:1px solid rgba(255,255,255,.10);
   border-radius:16px;padding:22px;max-width:420px;display:flex;flex-direction:column;gap:10px;

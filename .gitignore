@@ -11,3 +11,13 @@ Backup Planeta Express*/
 # Pages nao usa, e a copia envelhece sozinha (entrou como v6.95 na v6.96).
 Planeta Express - CELULAR.html
 _teste_*
+
+# v12.9 — DOCUMENTOS OPERACIONAIS FICAM FORA DO REPOSITORIO.
+# Este repositorio e PUBLICO (exigencia do GitHub Pages gratuito). O relatorio
+# de seguranca lista as limitacoes conhecidas do sistema e o guia de volta
+# ensina a destravar o banco: publicados, viram mapa para quem quiser atacar.
+# Ficam na pasta do cliente, nao no site.
+SECURITY_REPORT.md
+MIGRATION_GUIDE.md
+ROLLBACK_GUIDE.md
+RELATORIO_CQ.md

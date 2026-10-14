@@ -131,8 +131,55 @@ async function nuvemSalvar(obj, carimboEsperado){
     return agora;
   }
 
-  const {error}=await _sb.from('dados').upsert({ id:'empresa', conteudo:obj, atualizado_em:agora });
-  if(error){ try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){} throw error; }
+  /* 🔴 v12.7 — SEM CARIMBO, A PROTEÇÃO DA v11.4 SUMIA SOZINHA.
+
+     Era aqui: `if(carimboEsperado)` grava com condição; senão, `upsert`
+     cego, que obedece sempre e passa por cima de quem gravou antes.
+
+     O problema é QUANDO o carimbo falta. O `_pexCarimbo` é preenchido na
+     entrada por `nuvemCarimbo()` — dentro de um `try{}catch(e){}` que não
+     avisa ninguém. Uma falha de rede de meio segundo naquele instante
+     deixava o carimbo nulo **a sessão inteira**, e a partir daí TODA
+     gravação deste aparelho virava upsert cego: a trava de concorrência
+     desaparecia sem nenhum sinal, e voltava o acidente da v10.4 — o
+     aparelho com a base velha apagando o trabalho do outro.
+
+     Agora não existe mais gravação cega. Sem carimbo, o próprio
+     `nuvemSalvar` vai buscar o que está na nuvem AGORA e grava condicionado
+     a esse valor. Só é `insert` quando a linha ainda não existe — a
+     primeiríssima gravação da base. Se outro aparelho criar a linha no meio
+     do caminho, o banco recusa a chave duplicada e isso vira conflito, que
+     é o tratamento certo. */
+  let atual=null;
+  {
+    const {data,error}=await _sb.from('dados').select('atualizado_em').eq('id','empresa').maybeSingle();
+    if(error){ try{ console.warn('[nuvem] falha ao conferir antes de salvar:', error.message); }catch(_){} throw error; }
+    atual = data ? data.atualizado_em : null;
+  }
+
+  if(atual){
+    /* a linha existe: grava condicionada ao que acabamos de ler */
+    const {data,error}=await _sb.from('dados')
+      .update({ conteudo:obj, atualizado_em:agora })
+      .eq('id','empresa').eq('atualizado_em', atual)
+      .select('atualizado_em');
+    if(error){ try{ console.warn('[nuvem] falha ao salvar:', error.message); }catch(_){} throw error; }
+    if(!data || !data.length){
+      const e=new Error('Outro aparelho salvou neste instante; preciso buscar o que mudou antes de gravar.');
+      e._conflito=true; throw e;
+    }
+    return agora;
+  }
+
+  /* linha inexistente: primeira gravação da base */
+  const {error}=await _sb.from('dados').insert({ id:'empresa', conteudo:obj, atualizado_em:agora });
+  if(error){
+    try{ console.warn('[nuvem] falha ao criar a base na nuvem:', error.message); }catch(_){}
+    /* 23505 = chave duplicada: alguém criou a linha entre o SELECT e o
+       INSERT. Não é erro de configuração, é concorrência. */
+    if(error.code==='23505' || /duplicate|conflict/i.test(error.message||'')) error._conflito=true;
+    throw error;
+  }
   return agora;
 }
 /* -------- Arquivos na nuvem (Supabase Storage, bucket 'arquivos') -------- */

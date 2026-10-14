@@ -205,18 +205,60 @@ async function cpidLerDocx(file){
 }
 
 /* ZIP: devolve os arquivos de dentro como File, para reprocessar um a um */
+/* ==================================================================
+   LIMITES DE IMPORTAÇÃO (segurança) — não havia nenhum.
+
+   Qualquer arquivo entrava: um .xlsx de 300 MB congelava a aba, e um ZIP
+   preparado ("zip bomb") podia estourar a memória do navegador e derrubar
+   o sistema com o trabalho dele aberto. Não é um ataque provável na rotina
+   dele, mas o custo de evitar é baixo e a falha é total quando acontece.
+
+   Números escolhidos com folga sobre o uso real: a maior planilha da BRF
+   tem ~42 KB e o maior PDF (ASO digitalizado) ~1 MB.
+   ================================================================== */
+const PEX_LIM = {
+  arquivo:      40*1024*1024,   /* 40 MB por arquivo */
+  zipEntradas:  300,            /* itens dentro de um ZIP */
+  zipTotal:    120*1024*1024,   /* 120 MB somando o que sai do ZIP */
+  zipItem:      40*1024*1024    /* 40 MB por item de dentro do ZIP */
+};
+function pexFormatoTamanho(b){
+  if(b>=1048576) return (b/1048576).toFixed(1).replace('.',',')+' MB';
+  if(b>=1024) return Math.round(b/1024)+' KB';
+  return b+' bytes';
+}
+/* Devolve a mensagem do impedimento, ou '' quando o arquivo pode entrar. */
+function pexArquivoAceito(file){
+  if(!file) return 'Arquivo vazio.';
+  if(file.size > PEX_LIM.arquivo){
+    return 'O arquivo "'+(file.name||'')+'" tem '+pexFormatoTamanho(file.size)
+         + ' e o limite é '+pexFormatoTamanho(PEX_LIM.arquivo)
+         + '. Divida o arquivo ou envie uma versão menor.';
+  }
+  return '';
+}
 async function cpidLerZip(file){
   if(typeof PEXImport==='undefined' || !PEXImport.unzip) return [];
   const u8 = new Uint8Array(await file.arrayBuffer());
   const z  = await PEXImport.unzip(u8);
   const filhos=[];
+  let somados=0, lidos=0, cortou='';
   for(const n of (z.nomes||[])){
     if(/\/$/.test(n)) continue;                                  // pasta
     if(/^__MACOSX|\/\._|^\./.test(n)) continue;                  // lixo de sistema
     if(!/\.(pdf|xml|xlsx|xlsm|xls|csv|jpe?g|png|webp|bmp|tiff?|docx|eml|txt)$/i.test(n)) continue;
+    if(lidos >= PEX_LIM.zipEntradas){ cortou='mais de '+PEX_LIM.zipEntradas+' arquivos'; break; }
     try{ const b = await z.ler(n); if(!b) continue;
+      const tam = b.byteLength || b.length || 0;
+      if(tam > PEX_LIM.zipItem) continue;                        /* item gigante: pula */
+      somados += tam;
+      if(somados > PEX_LIM.zipTotal){ cortou='mais de '+pexFormatoTamanho(PEX_LIM.zipTotal)+' descompactados'; break; }
+      lidos++;
       filhos.push(new File([b], n.split('/').pop(), {type:''}));
     }catch(e){}
+  }
+  if(cortou && typeof toast==='function'){
+    toast('O pacote tem '+cortou+'. Li os '+filhos.length+' primeiros — envie o restante em outro pacote.','warn');
   }
   return filhos;
 }

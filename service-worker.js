@@ -1,14 +1,27 @@
 /* Planeta Express — Service Worker (rede primeiro)
    Sempre busca a versão mais nova quando há internet; usa o cache só offline.
    Isso evita ficar "preso" numa versão antiga. */
-const CACHE = 'planeta-express-v12-6';
+const CACHE = 'planeta-express-v12-9';
 
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 
+/* 🔴 P0 — A LIMPEZA APAGAVA CACHE QUE NÃO ERA NOSSO.
+
+   Estava `caches.keys()` → apaga TUDO. O armazenamento de cache é por
+   ORIGEM, e o sistema divide origem com qualquer outra coisa publicada
+   no mesmo endereço (hoje e no futuro). Apagar tudo é destruir dado
+   alheio sem saber — e um dia seria dado nosso, de outra funcionalidade.
+
+   Agora só apaga o que leva o nome do Planeta Express, e preserva a
+   versão corrente. */
+const PREFIXO_CACHE = 'planeta-express-';
 self.addEventListener('activate', function(e){
   e.waitUntil(
-    caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })
-      .then(function(){ return self.clients.claim(); })
+    caches.keys().then(function(ks){
+      return Promise.all(ks.filter(function(k){
+        return k.indexOf(PREFIXO_CACHE) === 0 && k !== CACHE;   /* só os nossos, menos o atual */
+      }).map(function(k){ return caches.delete(k); }));
+    }).then(function(){ return self.clients.claim(); })
   );
 });
 

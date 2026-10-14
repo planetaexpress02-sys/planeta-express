@@ -350,16 +350,44 @@ function _enviarNuvem(){
          há de novo, guarda um ponto de restauração e deixa o cliente ver
          o que mudou; o que ele lançou aqui continua marcado como pendente
          e sobe na próxima, já sobre a versão certa. */
+      /* 🔴 v12.7 — O CONFLITO SÓ ADIAVA A PERDA, NÃO EVITAVA.
+
+         Este trecho buscava a versão do outro aparelho, guardava ponto de
+         restauração, avisava… e **jogava a versão buscada fora**. `DB`
+         continuava sendo a cópia local, `_localSujo` continuava true, e o
+         `_pexCarimbo` passava a ser o carimbo NOVO da nuvem.
+
+         Com o carimbo novo em mãos, o reenvio seguinte não dava conflito
+         nenhum: a gravação condicional passava lisa e mandava a base
+         LOCAL por cima da do outro aparelho. Ou seja, a trava da v11.4
+         atrasava o acidente em alguns segundos em vez de impedi-lo — e o
+         comentário aqui dizia "sobe na próxima, já sobre a versão certa",
+         que era justamente o que NÃO acontecia.
+
+         Agora a versão da nuvem é de fato aplicada (`aplicarRemoto`), que
+         já guarda ponto de restauração, zera o `_localSujo` e repinta.
+
+         ⚠️ Por que não fundir as duas? Porque a base é um documento só,
+         sem marca de hora por registro. Juntar "tudo o que existe nos
+         dois lados" ressuscitaria o que ele APAGOU no outro aparelho —
+         ver [[backfill-nunca-varre-semente]]. Entre ressuscitar sozinho e
+         avisar, eu aviso: a versão local inteira fica no ponto de
+         restauração, e a mensagem diz onde buscá-la. */
       if(e && e._conflito){
         (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'conflito ao salvar', erro:e.message, quando:new Date().toISOString()});
         return nuvemCarregar(2).then(function(remoto){
-          if(!remoto) return;
+          if(!remoto){ _pexReenviar(); return; }
           pexGuardarPonto('antes de resolver um conflito com outro aparelho');
-          _pexAvisarSeEncolheu(DB, remoto);
-          return nuvemCarimbo().then(function(c){
-            if(c) _pexCarimbo=c;
-            toast('Outro aparelho salvou ao mesmo tempo. Busquei a versão mais nova — confira a tela antes de continuar.','warn');
-          });
+          const sumiu=_pexQueSumiu(DB, remoto);        /* por id, não por contagem */
+          aplicarRemoto(remoto);                       /* ← o que faltava */
+          setTimeout(function(){
+            toast(sumiu.length
+              ? 'Outro aparelho salvou ao mesmo tempo, e a versão dele é a que vale agora. '
+                + sumiu.join(', ') + (sumiu.length>1?' que estavam nesta tela não estão':' que estava nesta tela não está') + ' na versão nova — '
+                +'abra Configurações → Pontos de restauração para recuperar.'
+              : 'Outro aparelho salvou ao mesmo tempo. Já peguei a versão mais nova, e nada que estava aqui ficou de fora.',
+              'warn');
+          }, 1400);
         }).catch(function(){ _pexReenviar(); });
       }
       _pexEnvFalhas++;
@@ -381,21 +409,44 @@ function _pexReenviar(){
   }
   _pexEnvT=setTimeout(function(){ _enviarNuvem(); }, _pexEnvEspera);
 }
-/* Garante que a última edição vá para a nuvem AGORA (ao fechar/trocar de aba) */
+/* Garante que a última edição vá para a nuvem AGORA (ao fechar/trocar de aba)
+
+   🔴 P0 — ESTA FUNÇÃO BURLAVA A TRAVA DE CONCORRÊNCIA.
+
+   A v11.4 criou a escrita condicional: `nuvemSalvar(obj, carimboEsperado)`
+   só grava se a nuvem ainda estiver na versão que este aparelho leu.
+   Era a proteção contra o acidente que já apagou o trabalho dele — um
+   aparelho com base velha sobrescrevendo o outro.
+
+   Só que `flushNuvem` continuou chamando `nuvemSalvar(DB)` SEM o carimbo.
+   Sem carimbo a função cai no `upsert`, que grava por cima sem perguntar
+   nada. E `flushNuvem` roda no pior momento possível: ao fechar a aba, ao
+   minimizar e ao trocar de aba — justamente quando a aba pode estar com
+   uma base velha e outro aparelho já ter salvo depois.
+
+   Ou seja: a porta da frente estava trancada e a dos fundos aberta. Fui eu
+   que deixei assim na v11.4, ao blindar só o caminho principal.
+
+   ⚠️ REGRA: toda gravação na nuvem passa o carimbo. Nenhuma exceção, nem
+   "só esta, que é rapidinha ao fechar". */
 function flushNuvem(){
   if(_nuvemSaveTimer){ clearTimeout(_nuvemSaveTimer); _nuvemSaveTimer=null; }
   if(!_localSujo || !_nuvemRecebida) return;          /* nada mudou aqui: não regrava nada */
   if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser()){
-    /* 🔴 v11.1 — aqui também se marcava `_localSujo=false` ANTES de saber
-       se deu certo (e sem esperar a promessa). Ao fechar a aba, o que não
-       subisse ficava dado como enviado e sumia para os outros. Agora a
-       marca só cai na confirmação; se falhar, continua suja e sobe na
-       próxima abertura. */
     try{
-      Promise.resolve(nuvemSalvar(DB))
-        .then(function(){ _localSujo=false; })
+      Promise.resolve(nuvemSalvar(DB, _pexCarimbo))   /* ← com carimbo, como todas as outras */
+        .then(function(novoCarimbo){
+          _localSujo=false;
+          if(novoCarimbo) _pexCarimbo=novoCarimbo;
+        })
         .catch(function(e){
-          (window._pexSyncErros=window._pexSyncErros||[]).push({passo:'salvar ao fechar', erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
+          /* Conflito ao fechar: NÃO insiste por cima. O que ele lançou
+             continua marcado como pendente (`_localSujo` fica true) e sobe
+             na próxima abertura, já sobre a versão certa. Conflito visível
+             é melhor que perda silenciosa. */
+          (window._pexSyncErros=window._pexSyncErros||[]).push({
+            passo: (e&&e._conflito)? 'conflito ao fechar' : 'salvar ao fechar',
+            erro:(e&&e.message)||String(e), quando:new Date().toISOString()});
         });
     }catch(e){}
   }
@@ -1083,6 +1134,9 @@ const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, li
    sobre outra tela. */
 let _pexAbrirTimer=null;
 function router(){
+  /* v12.7: enquanto a tela de login está no ar, nada desenha. Sem isto um
+     `#frota` no endereço, ou o `hashchange`, repintava a base por trás. */
+  if(typeof pexTrancado==='function' && pexTrancado()) return;
   const h = (location.hash||'#dashboard').slice(1);
   try{ clearTimeout(_pexAbrirTimer); }catch(e){}
   try{ _pexTrackNav(); }catch(e){}                 // histórico p/ o botão Voltar (mobile)
@@ -1748,7 +1802,17 @@ function viewDashboard(){
   <div class="ini-kstrip4">
     ${iniKpiTile('truck', (cavalos&&!veicVencidos)?'ok':'', cavalos, '', '', 'Conjuntos ativos', 'frota', '#5cc8ff', '0,20 16,16 32,18 48,10 64,13 80,6', okSe(!veicVencidos, cavalos>0))}
     ${iniKpiTile('user', (motAtivos&&!motVencidos)?'ok':'', motAtivos, '', '', 'Motoristas ativos', 'motoristas', '#4bd6a0', '0,18 16,15 32,17 48,13 64,9 80,11', okSe(!motVencidos, motAtivos>0))}
-    ${iniKpiTile('check','ok', fEmDia.length, '', '', 'Documentos em dia', 'vencimentos/emdia', '#3fd68a', '0,20 16,17 32,18 48,12 64,10 80,6', okSe(true, fEmDia.length>0))}
+    <!-- v12.8 (CQ) — DUAS CONTAS COM O MESMO NOME NA MESMA TELA.
+         Este cartão dizia "46 Documentos em dia"; logo abaixo, o cartão
+         verde diz "86% documentos em dia (50 de 58)". Os dois números
+         estão certos, mas contam coisas diferentes: aqui são os que têm
+         MAIS DE 30 DIAS de validade; lá são todos os que ainda não
+         venceram — que é a definição que o próprio dono deu ("em dia se
+         refere também aos que ainda não venceram").
+         Não mudei nenhum número: o cartão abre a tela com exatamente
+         estes 46, e mexer no valor quebraria essa correspondência. Mudei
+         o RÓTULO, que era o que estava errado. -->
+    ${iniKpiTile('check','ok', fEmDia.length, '', '', 'Vencem em +30 dias', 'vencimentos/emdia', '#3fd68a', '0,20 16,17 32,18 48,12 64,10 80,6', okSe(true, fEmDia.length>0))}
     ${iniKpiTile('shield', fVenc.length?'crit':(fGeral?'ok':''), fVenc.length, '', '', 'Documentos vencidos', 'vencimentos/venc', '#f2686b', '0,8 16,12 32,10 48,16 64,14 80,20', okSe(!fVenc.length, fGeral>0))}
     ${iniKpiTile('bell', fD10.length?'crit':(fGeral?'ok':''), fD10.length, '', '', 'Vencem em ≤10 dias', 'vencimentos/d10', '#f2a44e', '0,10 16,14 32,9 48,16 64,12 80,18', okSe(!fD10.length, fGeral>0))}
     ${iniKpiTile('umbrella', segCrit?'crit':((segList.length&&!segAv)?'ok':''), segAv, '', '', 'Seguros a vencer', 'seguros/avencer', '#f2a44e', '0,14 16,12 32,16 48,11 64,14 80,9', okSe(!segAv, segList.length>0))}
@@ -3418,7 +3482,7 @@ function motImportarFicha(){
   const inp=document.createElement('input');
   inp.type='file'; inp.accept='.json,.pexmot,application/json';
   inp.onchange=async function(){
-    const f=inp.files&&inp.files[0]; if(!f) return;
+    const f=inp.files&&inp.files[0]; if(!f) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(f); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
     let ficha=null;
     try{ ficha=JSON.parse(await f.text()); }
     catch(e){ toast('Não consegui ler o arquivo: ele não parece uma ficha de motorista.','err'); return; }
@@ -4127,7 +4191,7 @@ function modalImportar(){
 }
 
 async function importarLerArquivo(input){
-  const file=input.files&&input.files[0]; if(!file) return;
+  const file=input.files&&input.files[0]; if(!file) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(file); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
   const nomeEl=document.getElementById('impNome'); if(nomeEl) nomeEl.textContent=file.name;
   const prev=document.getElementById('impPreview');
   prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
@@ -4265,12 +4329,88 @@ function salvarOnlineCfg(){
 }
 function desconectarOnline(){ if(!confirm('Desligar o modo online neste aparelho? Voltará a funcionar offline.'))return;
   try{ localStorage.removeItem('pex_online_cfg'); }catch(e){} setTimeout(()=>location.reload(),400); }
-function exportar(){ const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}); const a=document.createElement('a');
+/* O backup agora leva CARIMBO: versão do sistema, data e um resumo do que
+   tem dentro. É isso que permite conferir, antes de restaurar, se o
+   arquivo é desta empresa e o que ele vai mudar. Arquivos antigos (sem
+   carimbo) continuam sendo aceitos — compatibilidade primeiro. */
+const PEX_SCHEMA = 1;
+function exportar(){
+  const pacote = Object.assign({}, DB, {
+    _pex: { schemaVersion:PEX_SCHEMA, versaoSistema:(typeof PEX_VER!=='undefined'?PEX_VER:''),
+            criadoEm:new Date().toISOString(), resumo:_pexResumo(DB) }
+  });
+  const blob=new Blob([JSON.stringify(pacote,null,2)],{type:'application/json'}); const a=document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download='backup-planeta-express-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); toast('Backup exportado.'); }
-function importar(ev){ const f=ev.target.files[0]; if(!f)return; const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.veiculos||!d.motoristas)throw 0; DB=d; saveDB(); toast('Backup importado.'); location.hash='dashboard'; router(); }catch(e){ toast('Arquivo inválido.','err'); } };
+
+/* 🔴 P0 — RESTAURAR SUBSTITUÍA TUDO SEM REDE DE SEGURANÇA.
+
+   Era: `JSON.parse` → confere se tem `veiculos` e `motoristas` → `DB=d`.
+   Qualquer arquivo com essas duas chaves passava: um backup de meses
+   atrás, de outro aparelho, ou truncado pela metade. E não havia ponto
+   de restauração antes — a base boa ia embora sem volta.
+
+   Agora: valida a estrutura, MOSTRA o que entra e o que sai (registro a
+   registro, com o saldo), guarda ponto de restauração e só então troca. */
+function importar(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(f); if(_imp){ toast(_imp,'err'); return; } }
+  const r=new FileReader();
+  r.onload=()=>{
+    let d=null;
+    try{ d=JSON.parse(r.result); }
+    catch(e){ toast('Esse arquivo não é um backup do sistema (não consegui ler o conteúdo).','err'); return; }
+    const falta=['veiculos','motoristas','viagens'].filter(k=>!Array.isArray(d&&d[k]));
+    if(!d || typeof d!=='object' || falta.length){
+      toast('Arquivo inválido: falta '+(falta.join(', ')||'a estrutura básica')+'. Nada foi alterado.','err'); return; }
+    _pexConfirmarRestauro(d, f.name);
+  };
   r.readAsText(f); }
-function restaurarFabrica(){ if(!confirm('Substituir TODOS os cadastros pelos dados originais?'))return; DB=clone(SEED); saveDB(); toast('Dados restaurados.'); location.hash='dashboard'; router(); }
+function _pexConfirmarRestauro(novo, nomeArq){
+  const atual=_pexResumo(DB), vem=_pexResumo(novo);
+  const car=novo._pex||{};
+  const linha=(rot,k)=>{ const a=atual[k]||0, b=vem[k]||0, dif=b-a;
+    const cor = dif<0 ? 'var(--danger)' : dif>0 ? 'var(--ok)' : 'var(--text-mute)';
+    return '<tr><td>'+rot+'</td><td class="mono">'+a+'</td><td class="mono">'+b+'</td>'
+         + '<td class="mono" style="color:'+cor+'">'+(dif>0?'+':'')+dif+'</td></tr>'; };
+  const perde=['viagens','veiculos','motoristas','anexos','pagamentos','vales','vencimentos']
+    .filter(k=>(vem[k]||0)<(atual[k]||0));
+  window._pexRestauro=novo;
+  openModal('<div class="m-h">'+svg('shield')+'<h3>Restaurar backup</h3><button class="x" onclick="closeModal()">×</button></div>'
+    +'<div class="m-b">'
+    +'<div class="hint">Arquivo: <b>'+esc(nomeArq||'')+'</b>'
+    + (car.criadoEm? ' · gerado em '+esc(fmtDH(car.criadoEm)) : ' · sem data (backup antigo)')
+    + (car.versaoSistema? ' · sistema v'+esc(car.versaoSistema) : '')+'</div>'
+    +'<div class="tbl-wrap" style="margin-top:12px"><table class="tbl">'
+    +'<thead><tr><th>O que</th><th>Agora</th><th>No backup</th><th>Diferença</th></tr></thead><tbody>'
+    + linha('Viagens','viagens') + linha('Veículos','veiculos') + linha('Motoristas','motoristas')
+    + linha('Anexos','anexos') + linha('Gastos','pagamentos') + linha('Vales','vales')
+    + linha('Vencimentos','vencimentos')
+    +'</tbody></table></div>'
+    + (perde.length
+        ? '<div class="hint" style="color:var(--warn);margin-top:12px">⚠️ Este backup tem MENOS registros que a base de agora ('
+          + esc(perde.join(', '))+'). Restaurar vai substituir o que está aqui. Guardo um ponto de restauração antes, e dá para desfazer.</div>'
+        : '<div class="hint" style="margin-top:12px">Guardo um ponto de restauração antes de trocar — dá para desfazer em Configurações.</div>')
+    +'</div><div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn '+(perde.length?'danger':'primary')+'" onclick="_pexRestaurarAgora()">Restaurar</button></div>', true);
+}
+function _pexRestaurarAgora(){
+  const novo=window._pexRestauro; if(!novo) return;
+  pexGuardarPonto('antes de restaurar um backup de arquivo');
+  const limpo=Object.assign({}, novo); delete limpo._pex;
+  DB=limpo; ensureCollections(); _localSujo=true; saveDB();
+  window._pexRestauro=null; closeModal();
+  toast('Backup restaurado: '+((DB.viagens||[]).length)+' viagem(ns). Para desfazer, use Pontos de restauração.');
+  location.hash='dashboard'; router();
+}
+function restaurarFabrica(){
+  const r=_pexResumo(DB);
+  if(!confirm('Substituir TODOS os cadastros pelos dados originais?\n\n'
+    +'Você perde de vista: '+r.viagens+' viagens, '+r.pagamentos+' gastos, '+r.anexos+' anexos.\n\n'
+    +'Guardo um ponto de restauração antes — dá para desfazer em Configurações.')) return;
+  pexGuardarPonto('antes de restaurar os dados de fábrica');
+  DB=clone(SEED); ensureCollections(); _localSujo=true; saveDB();
+  toast('Dados de fábrica restaurados. Para desfazer, use Pontos de restauração.');
+  location.hash='dashboard'; router(); }
 
 function buscaGlobal(q){ q=q.trim().toLowerCase(); if(!q){toast('Digite algo para buscar.');return;}
   const kq=q.replace(/[^a-z0-9]/g,'');
@@ -4980,7 +5120,7 @@ function exportarChecklist(id){ const c=DB.checklists.find(x=>x.id===id); if(!c)
   const blob=new Blob([JSON.stringify({_tipo:'checklist_planeta',dados:c},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); const v=veiculo(c.veiculoId);
   a.download='checklist-'+((v||{}).placa||'')+'-'+(c.data||'')+'.json'; a.click(); toast('Check-list exportado.'); }
-function importarChecklist(ev){ const f=ev.target.files[0]; if(!f)return; const r=new FileReader();
+function importarChecklist(ev){ const f=ev.target.files[0]; if(!f)return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(f); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } }  const r=new FileReader();
   r.onload=()=>{ try{ const o=JSON.parse(r.result); const c=o&&o._tipo==='checklist_planeta'?o.dados:o; if(!c||!c.itensCavalo&&!c.itensCarreta) throw 0;
     c.id=c.id&&!DB.checklists.some(x=>x.id===c.id)?c.id:uid('ck'); DB.checklists.push(c); saveDB(); toast('Check-list importado.'); router(); }
     catch(e){ toast('Arquivo de check-list inválido.','err'); } };
@@ -5566,7 +5706,12 @@ function viewPedagios(){
     ${mesSel}
     <div class="seg2">${tpChip('todos','Tudo')}${tpChip('Pedágio','Pagos')}${tpChip('Vale-pedágio','Vale-pedágio')}</div>
     <div class="spacer"></div>
-    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Relatório</button>
+    <!-- v12.8 (CQ) — este botão se chamava "Relatório", igualzinho ao do
+         cabeçalho e chamando a MESMA função: dois botões com o mesmo nome
+         e o mesmo efeito na mesma tela. Em todas as outras nove telas este
+         atalho se chama "Imprimir"; só Pedágios destoava. Renomeado para
+         acompanhar o resto — o atalho continua, a duplicidade sai. -->
+    <button class="btn no-print" onclick="imprimirRelatorio()">${svg('print')} Imprimir</button>
   </div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
@@ -7067,7 +7212,7 @@ function modalImportarViagem(){
   window._vgImp=[];
 }
 async function viagemImpLer(input){
-  const file=input.files&&input.files[0]; if(!file) return;
+  const file=input.files&&input.files[0]; if(!file) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(file); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
   const nomeEl=document.getElementById('vgImpNome'); if(nomeEl) nomeEl.textContent=file.name;
   const prev=document.getElementById('vgImpPreview');
   prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
@@ -7434,7 +7579,7 @@ function modalImportarDescarga(){
   window._dscImp=[];
 }
 async function descImpLer(input){
-  const file=input.files&&input.files[0]; if(!file) return;
+  const file=input.files&&input.files[0]; if(!file) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(file); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
   const nomeEl=document.getElementById('dscImpNome'); if(nomeEl) nomeEl.textContent=file.name;
   const prev=document.getElementById('dscImpPreview');
   prev.innerHTML=`<div class="muted" style="padding:14px 2px">${svg('gauge')} Lendo a planilha…</div>`;
@@ -8113,7 +8258,7 @@ function finImportar(){
   const inp = document.createElement('input');
   inp.type='file'; inp.accept='.xlsx,.xls,.csv';
   inp.onchange = async function(){
-    const f = inp.files && inp.files[0]; if(!f) return;
+    const f = inp.files && inp.files[0]; if(!f) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(f); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
     if(typeof cpidLerPlanilha!=='function'){ toast('O leitor de planilhas não está disponível.','err'); return; }
     toast('Lendo a planilha…');
     let grid=null;
@@ -9248,6 +9393,7 @@ const PEX_CMDS=[
 /* ---- Paleta de comandos (Ctrl+K / Ctrl+N) ---- */
 let PEXCMD={sel:0, items:[]};
 function pexCmdOpen(mode){
+  if(pexTrancado()) return;           /* v12.7: sem login, a busca global não responde */
   let el=document.getElementById('pexCmd'); if(!el){ el=document.createElement('div'); el.id='pexCmd'; el.className='cmdk'; document.body.appendChild(el); }
   el.innerHTML=`<div class="cmdk-back" onclick="pexCmdClose()"></div>
     <div class="cmdk-box" role="dialog" aria-label="Busca e comandos">
@@ -9408,7 +9554,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '12.6';
+var PEX_VER = '12.9';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9496,6 +9642,59 @@ async function pexBuscarAgora(){
     toast('Não consegui buscar agora: '+((e&&e.message)||'sem conexão')+'. Continuo tentando sozinho.','err');
   }
 }
+/* Compara "12.10" com "12.9" do jeito certo: por número, parte por parte.
+   Texto puro diria que "12.10" é menor que "12.9", e a partir da v12.10 o
+   celular pararia de avisar — calado, como sempre acontece com esse tipo
+   de erro. Devolve 1 se `a` é mais nova, -1 se é mais velha, 0 se igual. */
+function pexCompararVersao(a, b){
+  const A=String(a||'').split('.').map(n=>parseInt(n,10)||0);
+  const B=String(b||'').split('.').map(n=>parseInt(n,10)||0);
+  for(let i=0;i<Math.max(A.length,B.length);i++){
+    const x=A[i]||0, y=B[i]||0;
+    if(x>y) return 1;
+    if(x<y) return -1;
+  }
+  return 0;
+}
+/* 🔴 v12.7 — O APLICATIVO INSTALADO PODIA RODAR CÓDIGO VELHO POR DIAS.
+
+   (encontrado depois de o dono avisar que o sistema **já está instalado**
+    no celular dele — e aplicativo instalado é o caso mais difícil, não o
+    mais fácil: ele praticamente nunca é fechado.)
+
+   Quem procurava versão nova era um temporizador de 1 em 1 minuto no
+   `index.html`. Celular **congela temporizador de aplicativo em segundo
+   plano** — então podiam passar dias sem nenhuma verificação. E o arquivo
+   único era pior ainda: conferia uma vez, no arranque, e nunca mais.
+
+   Pior de tudo: o sistema JÁ conferia os DADOS ao voltar para a tela (ele
+   busca a nuvem no `visibilitychange`), mas **não conferia o CÓDIGO**.
+   Números novos rodando num sistema velho — que é exatamente o "não está
+   atualizando no mobile" de que ele reclamou.
+
+   Agora, toda vez que ele volta para o aplicativo, pega foco ou a internet
+   volta, pergunta-se tudo de uma vez:
+     1. ao service worker, se há versão nova (só no site);
+     2. ao `versao.json`, qual é a versão publicada (só no site) — porque o
+        service worker já travou antes, e aí só esta responde;
+     3. ao `versao.json`, se este ARQUIVO do celular envelheceu.
+
+   ⚠️ Isto mora aqui, no app.js, e não no index.html: o `build_celular.sh`
+   apaga o script do index ao gerar o arquivo único. Posto lá, valia só
+   para o site — e eu só descobri porque testei o celular. */
+let _pexConfUlt=0;
+function pexConferirAtualizacao(){
+  try{
+    if(!navigator.onLine) return;
+    if(Date.now()-_pexConfUlt < 20000) return;   /* alternar de aba não vira enxurrada */
+    _pexConfUlt=Date.now();
+    if(location.protocol.indexOf('http')===0){
+      try{ if(window._pexSWreg) window._pexSWreg.update(); }catch(e){}
+      try{ if(typeof pexConferirVersaoDoSite==='function') pexConferirVersaoDoSite(); }catch(e){}
+    }
+    pexConferirVersao();            /* no site ele mesmo sai fora */
+  }catch(e){}
+}
 async function pexConferirVersao(){
   try{
     if(!PEX_VERSAO) return;                       /* rodando no site: o SW cuida */
@@ -9503,7 +9702,14 @@ async function pexConferirVersao(){
     const r = await fetch('https://planetaexpress02-sys.github.io/planeta-express/versao.json?t='+Date.now(), {cache:'no-store'});
     if(!r.ok) return;
     const j = await r.json();
-    if(!j || !j.versao || j.versao===PEX_VERSAO) return;
+    /* ⚠️ v12.7 — era `j.versao===PEX_VERSAO`: QUALQUER diferença virava
+       aviso, inclusive para mais. Logo depois de eu gerar o arquivo do
+       celular e antes de o site ser publicado, o telefone está ADIANTE do
+       site — e ficava mandando o dono "abrir a versão nova", que era a
+       velha. Aviso errado ensina a ignorar aviso. Agora só avisa quando o
+       site está mesmo na frente. */
+    if(!j || !j.versao) return;
+    if(pexCompararVersao(j.versao, PEX_VERSAO) <= 0) return;
     _pexAvisarVersao(j.versao, j.site||'https://planetaexpress02-sys.github.io/planeta-express/');
   }catch(e){ /* sem internet ou site fora: não atrapalha o uso offline */ }
 }
@@ -9511,20 +9717,65 @@ function _pexAvisarVersao(nova, site){
   if(document.getElementById('pexVerNova')) return;
   const d=document.createElement('div');
   d.id='pexVerNova';
+  /* 🔴 v12.7 — ESTE AVISO ESTAVA FICANDO ATRÁS DA TELA DE LOGIN.
+     A tranca nova do login cobre tudo com z-index altíssimo. O aviso
+     ficava no DOM, com o texto certo, e INVISÍVEL — justamente na tela em
+     que o celular velho mais aparece. Peguei na foto; a medição dizia que
+     estava lá. Por isso o empilhamento vai aqui no elemento também, e não
+     só no .css: se a folha de estilo não carregar, o aviso ainda sobe. */
+  d.style.position='fixed'; d.style.inset='0'; d.style.zIndex='2147483100';
+  /* v12.7 — o aviso agora resolve o problema em vez de adiá-lo.
+     Antes dizia "abra a versão do site": ele abria uma vez, e na vez
+     seguinte voltava para o arquivo velho — e tudo recomeçava. O pedido
+     foi *"não quero cópia velha, quero todo o sistema interligado
+     sempre"*, então o aviso ensina o caminho que acaba com o arquivo:
+     instalar o site na tela de início. Instalado, ele se atualiza
+     sozinho, funciona sem internet e não existe arquivo para copiar. */
   d.innerHTML='<div class="pexvn-box">'
-    + '<b>Existe uma versão mais nova</b>'
-    + '<span>Este arquivo está na v'+esc(PEX_VERSAO)+' e já saiu a <b>v'+esc(nova)+'</b>. '
-    + 'Abra a versão do site para ter as novidades e continuar sincronizado com os outros.</span>'
+    + '<b>Este arquivo ficou para trás</b>'
+    + '<span>Ele está na v'+esc(PEX_VERSAO)+' e já saiu a <b>v'+esc(nova)+'</b>. '
+    + 'Enquanto estiver assim, você pode não ver o que os outros lançaram.</span>'
+    + '<span style="opacity:.85">Para não precisar mais trocar arquivo: abra o site, '
+    + 'toque no menu do navegador e escolha <b>“Adicionar à tela de início”</b>. '
+    + 'Instalado assim, ele se atualiza sozinho e funciona sem internet.</span>'
     + '<div class="pexvn-bts">'
-    +   '<a class="btn primary" href="'+esc(site)+'">Abrir a versão nova</a>'
+    +   '<a class="btn primary" href="'+esc(site)+'">Abrir o site</a>'
     +   '<button class="btn" onclick="document.getElementById(\'pexVerNova\').remove()">Agora não</button>'
     + '</div></div>';
   document.body.appendChild(d);
 }
-/* ---------- Tela de login (modo online) ---------- */
+/* ---------- Tela de login (modo online) ----------
+
+   🔴 v12.7 — O ACESSO DEPENDIA DE UMA FOLHA DE ESTILO.
+
+   O `init()` roda `router()` ANTES de saber quem entrou: a tela cheia, com
+   os dados do aparelho, já está montada quando o login aparece. O que
+   escondia tudo isso era uma linha de CSS — `.login-screen{position:fixed;
+   inset:0}` com fundo opaco, no estilo2.css.
+
+   Então a tranca era o arquivo de estilo. Se o estilo2.css não chegasse
+   (cache corrompido, rede caindo no meio, um erro meu numa regra de
+   segurança), o login virava uma caixinha no meio da página e **o sistema
+   inteiro ficava visível e clicável atrás, sem senha**. Access control não
+   pode morar numa folha de estilo.
+
+   Três travas que não dependem de CSS:
+   1. a tela é esvaziada — o dado sai do HTML, não fica só escondido;
+   2. o login recebe os estilos de cobertura no próprio elemento (`style=`),
+      que valem mesmo sem nenhum .css carregado;
+   3. `body[data-trancado]` barra a paleta (Ctrl+K) e o `router()`, senão a
+      busca global devolveria motorista e viagem por cima do login. */
+function pexTrancado(){ return document.body.getAttribute('data-trancado')==='1'; }
 function mostrarLogin(msg){
   const el=document.getElementById('loginScreen'); if(!el) return;
-  el.style.display='flex';
+  document.body.setAttribute('data-trancado','1');
+  /* o conteúdo sai do HTML: sem senha, não há o que ler nem no inspetor */
+  const v=document.getElementById('view'); if(v) v.innerHTML='';
+  const ov=document.getElementById('overlay'); if(ov){ ov.innerHTML=''; ov.classList.remove('show'); }
+  const cmd=document.getElementById('pexCmd'); if(cmd) cmd.classList.remove('show');
+  /* cobertura garantida pelo próprio elemento, não pelo .css */
+  el.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;'
+    +'align-items:center;justify-content:center;padding:20px;background:#05070b';
   el.innerHTML=`<div class="login-box">
     <div class="login-logo"><img src="assets/logo-claro.png" alt="Planeta Express"></div>
     <p class="login-sub">Sistema de Gestão · acesso</p>
@@ -9536,7 +9787,10 @@ function mostrarLogin(msg){
   </div>`;
   const em=document.getElementById('lg_email'); if(em) em.focus();
 }
-function esconderLogin(){ const el=document.getElementById('loginScreen'); if(el){ el.style.display='none'; el.innerHTML=''; } }
+function esconderLogin(){
+  document.body.removeAttribute('data-trancado');
+  const el=document.getElementById('loginScreen');
+  if(el){ el.style.cssText='display:none'; el.innerHTML=''; } }
 async function fazerLogin(){
   const email=(document.getElementById('lg_email')||{}).value||'';
   const senha=(document.getElementById('lg_senha')||{}).value||'';
@@ -9673,20 +9927,48 @@ try{
    exatamente o caso do celular com a resposta velha do cache. O sistema
    continua aplicando (a nuvem é a fonte), mas o cliente é avisado e o
    ponto de restauração já está guardado, então ele desfaz num clique. */
+/* 🔴 v12.7 — CONTAR REGISTRO NÃO DETECTA PERDA.
+
+   Esta conferência comparava QUANTIDADE. E quantidade engana: num
+   conflito real de teste, este aparelho tinha 91 viagens e o outro
+   também 91 — mas não eram as mesmas. O lançamento dele sumiu e o
+   sistema anunciou "nada mudou nas contagens". Número igual, conteúdo
+   diferente: o pior tipo de erro, porque tranquiliza.
+
+   Agora a comparação é por IDENTIFICADOR: quais registros existem aqui e
+   NÃO existem do outro lado. É exato, pega o caso de contagem igual, e
+   ainda diz quantos de cada tipo. */
+const _PEX_COLECOES=[['viagens','viagem','viagens'],['anexos','anexo/documento','anexos/documentos'],
+  ['pagamentos','gasto','gastos'],['vales','vale','vales'],['vencimentos','vencimento','vencimentos'],
+  ['motoristas','motorista','motoristas'],['veiculos','veículo','veículos'],
+  ['manutencoes','manutenção','manutenções'],['pneus','pneu','pneus'],['ctes','CT-e','CT-es'],
+  ['descargas','descarga','descargas'],['seguros','seguro','seguros'],['licencas','licença','licenças']];
+function _pexQueSumiu(local, remoto){
+  const fora=[];
+  try{
+    _PEX_COLECOES.forEach(function(c){
+      const A=(local&&local[c[0]])||[], B=(remoto&&remoto[c[0]])||[];
+      if(!Array.isArray(A) || !Array.isArray(B) || !A.length) return;
+      const temB={}; B.forEach(function(r){ if(r&&r.id!=null) temB[r.id]=1; });
+      /* registro sem id não dá para rastrear: cai na diferença de quantidade */
+      const semId=A.filter(function(r){ return !r || r.id==null; }).length
+                - B.filter(function(r){ return !r || r.id==null; }).length;
+      let n=A.filter(function(r){ return r && r.id!=null && !temB[r.id]; }).length;
+      if(semId>0) n+=semId;
+      if(n>0) fora.push(n+' '+(n===1?c[1]:c[2]));
+    });
+  }catch(e){}
+  return fora;
+}
 function _pexAvisarSeEncolheu(local, remoto){
   try{
     if(!local || !remoto) return;
-    const a=_pexResumo(local), b=_pexResumo(remoto);
-    const perdas=[];
-    [['viagens','viagens'],['anexos','anexos/documentos'],['pagamentos','gastos'],
-     ['vales','vales'],['vencimentos','vencimentos'],['motoristas','motoristas'],
-     ['veiculos','veículos']].forEach(function(p){
-      if(b[p[0]] < a[p[0]]) perdas.push((a[p[0]]-b[p[0]])+' '+p[1]);
-    });
+    const perdas=_pexQueSumiu(local, remoto);
     if(!perdas.length) return;
+    const a=_pexResumo(local), b=_pexResumo(remoto);
     setTimeout(function(){
-      toast('Atenção: os dados que vieram da nuvem têm MENOS registros que os deste aparelho ('
-        + perdas.join(', ') + ' a menos). Se isso estiver errado, abra Configurações → Pontos de restauração e volte.','warn');
+      toast('Atenção: ' + perdas.join(', ') + (perdas.length>1?' que estavam neste aparelho não vieram':' que estava neste aparelho não veio') + ' na versão da nuvem. '
+        + 'Se isso estiver errado, abra Configurações → Pontos de restauração e volte.','warn');
     }, 1200);
     try{ console.warn('[dados] a nuvem trouxe menos:', a, b); }catch(_){}
   }catch(e){}
@@ -9800,7 +10082,18 @@ async function bootOnline(){
     await nuvemSessao();
     if(!nuvemUser()){ await esperarSplash(5000); hideSplash(); mostrarLogin(); return; }  // abertura charmosa, depois login
     await esperarSplash(3600); await aposLogin();
-  }catch(e){ await esperarSplash(2800); toast('Sem conexão com a nuvem — abrindo offline.','err'); router(); hideSplash(); }
+  }catch(e){
+    await esperarSplash(2800);
+    /* ⚠️ A ORDEM IMPORTA, e eu errei aqui primeiro.
+       Este é o plano B: a nuvem não respondeu, então o sistema abre com o
+       que está no aparelho. Mas se a tela de login já tinha subido antes, a
+       tranca da v12.7 estava ligada — e o `router()` abaixo não desenhava
+       nada: o cliente ficava olhando um login que não ia a lugar nenhum.
+       `esconderLogin()` destranca e tira o login; só então desenha. */
+    esconderLogin();
+    toast('Sem conexão com a nuvem — abrindo offline.','err');
+    router(); hideSplash();
+  }
 }
 
 async function init(){
@@ -9836,12 +10129,29 @@ async function init(){
   window.addEventListener('pagehide', flushNuvem);
   document.addEventListener('visibilitychange', async ()=>{
     if(document.hidden){ flushNuvem(); return; }
+    /* v12.7: ao voltar, conferir o CÓDIGO também — não só os dados.
+       Era isto que faltava para o aplicativo instalado no celular. */
+    pexConferirAtualizacao();
     if(typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser()){
       try{ const r=await nuvemCarregar(); if(r) aplicarRemoto(r); }catch(e){}
     }
   });
-  router();
+  window.addEventListener('focus',  pexConferirAtualizacao);
+  window.addEventListener('online', pexConferirAtualizacao);
+  window.addEventListener('pageshow', e=>{ if(e.persisted) pexConferirAtualizacao(); });
+  /* 🔴 v12.7 — NÃO DESENHA NADA ANTES DE SABER QUEM ENTROU.
+
+     Era `router()` aqui, solto, e só depois o `bootOnline()`. Ou seja: a
+     tela cheia com a base do aparelho era montada ANTES de qualquer
+     verificação de login — ficava pronta no HTML, e o que a escondia era o
+     splash por cima. Quem tem a conta vê o mesmo de antes; o que muda é
+     que a base não é mais desenhada para depois ser tapada.
+
+     Modo nuvem: quem desenha é o `bootOnline()` — na entrada (`aposLogin`)
+     ou, se a nuvem não responder, no próprio `catch` dele, que abre
+     offline. Sem conta, ninguém desenha.
+     Modo offline (sem a biblioteca da nuvem): desenha aqui, como sempre. */
   if(typeof nuvemAtiva==='function' && nuvemAtiva()){ bootOnline(); }
-  else { setTimeout(hideSplash, 5000); }
+  else { router(); setTimeout(hideSplash, 5000); }
 }
 document.addEventListener('DOMContentLoaded',init);

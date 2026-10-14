@@ -119,7 +119,7 @@ function relGraficoBarras(g){
    a mesma degradação do avatarFoto() da tela.
    `sinal` ('+' devedor / '-' a favor) só muda o rótulo, nunca o número.
    ------------------------------------------------------------------ */
-function relCartoesHTML(cartoes, titulo){
+function relCartoesHTML(cartoes, titulo, nota){
   if(!cartoes || !cartoes.length) return '';
   const cs = cartoes.map(function(c){
     const foto = c.foto
@@ -132,6 +132,7 @@ function relCartoesHTML(cartoes, titulo){
   }).join('');
   return '<section class="rel-cards">'
     + (titulo? '<div class="rel-sec-t">'+esc(titulo)+'</div>' : '')
+    + (nota?   '<div class="rel-sec-n">'+esc(nota)+'</div>'   : '')
     + '<div class="rel-cards-g">'+cs+'</div></section>';
 }
 
@@ -332,14 +333,17 @@ function relMontarPaginas(spec){
     let i = 0, primeiro = true, guarda = 0;
     while(i < cartoes.length && guarda++ < 500){
       const tit = primeiro ? (spec.tituloCartoes||'') : (spec.tituloCartoes? spec.tituloCartoes+' (continuação)' : '');
+      /* a observação da seção só na PRIMEIRA folha, junto do título — e
+         dentro da mesma medição, senão ela estoura a página. */
+      const nota = primeiro ? (spec.notaCartoes||'') : '';
       const base = atual || '';
       let n = 1;
       /* cresce enquanto o acumulado ainda couber na folha */
       while(i+n < cartoes.length
-            && medir(base + relCartoesHTML(cartoes.slice(i,i+n+1), tit)) <= disponivel){ n++; }
+            && medir(base + relCartoesHTML(cartoes.slice(i,i+n+1), tit, nota)) <= disponivel){ n++; }
       /* nem um cartão coube e a página já tem coisa: abre folha nova */
-      if(base && medir(base + relCartoesHTML(cartoes.slice(i,i+n), tit)) > disponivel && n===1){ fechar(); continue; }
-      atual = base + relCartoesHTML(cartoes.slice(i,i+n), tit);
+      if(base && medir(base + relCartoesHTML(cartoes.slice(i,i+n), tit, nota)) > disponivel && n===1){ fechar(); continue; }
+      atual = base + relCartoesHTML(cartoes.slice(i,i+n), tit, nota);
       i += n; primeiro = false;
       if(i < cartoes.length) fechar();
     }
@@ -998,13 +1002,36 @@ const PEX_RELATORIOS = [
       const vales = v.filter(function(x){ return x.tipo!=='Pagamento'; });
       const pagos = v.filter(function(x){ return x.tipo==='Pagamento'; });
       const sv=_relSoma(vales,'valor'), sp=_relSoma(pagos,'valor');
-      /* saldo por motorista — mesma conta da tela (valeSaldo), inclusive o
-         mesmo filtro "só quem tem saldo diferente de zero". Se o número da
-         tela e o do papel saíssem de contas diferentes, um dia discordariam. */
-      const comSaldo = (DB.motoristas||[]).map(function(m){
-        return {m:m, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
-      }).filter(function(s){ return s.valor!==0; }).sort(function(a,b){ return b.valor-a.valor; });
+      /* 🔴 v12.9 — "VEJA OS VALES E AS SOMAS EMBAIXO".
+         O cliente mandou o relatório: a lista do período somava R$ 1.900,00
+         e os cartões de baixo somavam R$ 7.100,00 — com um motorista
+         (Reinaldo) aparecendo devendo R$ 1.100,00 **sem um único lançamento
+         na lista**. Parecia erro de soma. Não era: metade da folha respeitava
+         o período declarado no cabeçalho e a outra metade o ignorava.
+
+         O saldo CONTINUA sendo de toda a história, e tem de ser: dívida de
+         motorista não tem período — se eu cortasse pelo período, o papel
+         diria que o Marcelo deve R$ 1.400,00 quando ele deve R$ 3.600,00.
+         Número errado é pior que número que precisa de explicação.
+
+         O que muda:
+         • o filtro de MOTORISTA, que era declarado em `filtros` e estava
+           sendo ignorado aqui, agora vale (defeito de verdade: filtrar um
+           motorista imprimia os cartões de todos);
+         • a seção passa a dizer, no próprio papel, que é a posição de hoje
+           e por que não fecha com a lista de cima.
+
+         ⚠️ Já tinha acontecido antes, na tela: v10.0, cartão do Financeiro
+         mostrando 7.200 de toda a história ("eu só quero o mês vigente").
+         A tela foi corrigida; o relatório ficou para trás. */
+      const soDeste = (f.motorista && f.motorista!=='todos') ? f.motorista : null;
+      const comSaldo = (DB.motoristas||[])
+        .filter(function(m){ return !soDeste || m.id===soDeste; })
+        .map(function(m){
+          return {m:m, valor:(typeof valeSaldo==='function')? valeSaldo(m.id) : 0};
+        }).filter(function(s){ return s.valor!==0; }).sort(function(a,b){ return b.valor-a.valor; });
       const emAberto = comSaldo.reduce(function(s,x){ return s+Math.max(0,x.valor); },0);
+      const temAFavor = comSaldo.some(function(s){ return s.valor<0; });
       /* os mesmos saldos como cartão com foto, como o cliente vê na tela.
          ⚠️ Havia também um gráfico de barras "Saldo por motorista" no topo.
          Saiu na v7.0 a pedido do cliente: com os cartões embaixo virou o
@@ -1025,12 +1052,18 @@ const PEX_RELATORIOS = [
            e aí a DIFERENÇA repetia o mesmo número dos VALES. Três linhas
            para dizer uma coisa só. O saldo em aberto continua, que é o que
            ele cobra do motorista. */
-        kpis:[{rotulo:'Lançamentos',valor:relNum(v.length)},
-              {rotulo:'Vales adiantados',valor:relMoney(sv),nota:vales.length+' lançamento(s)'},
-              {rotulo:'Saldo em aberto',valor:relMoney(emAberto),
-               nota:'devedor dos motoristas'}],
-        totais: v.length? [{rotulo:'VALES', valor:relMoney(sv)}] : [],
+        /* Os dois primeiros indicadores são DO PERÍODO; o terceiro é a
+           posição de hoje. Lado a lado sem dizer isso, viram "erro de
+           soma" aos olhos de quem lê — foi exatamente a reclamação. */
+        kpis:[{rotulo:'Lançamentos no período',valor:relNum(v.length)},
+              {rotulo:'Vales no período',valor:relMoney(sv),nota:vales.length+' lançamento(s)'},
+              {rotulo:'Saldo em aberto hoje',valor:relMoney(emAberto),
+               nota:'todo o histórico, não só o período'}],
+        totais: v.length? [{rotulo:'VALES DO PERÍODO', valor:relMoney(sv)}] : [],
         tituloCartoes:'Saldo de vales por motorista',
+        notaCartoes:'Posição de hoje: soma todos os vales e pagamentos de cada motorista, '
+          + 'inclusive os anteriores a este período — por isso não fecha com o total dos lançamentos acima.'
+          + (temAFavor? ' Quem está "a favor do motorista" não entra no saldo em aberto.' : ''),
         cartoes: cartoes
       };
     }},
@@ -1318,7 +1351,7 @@ function PEXRelExecutar(){
        jogado fora silenciosamente. Foi o que aconteceu com os cartões na
        v6.98 — o renderizador funcionava, a folha nunca recebia os dados.
        Campo novo no `gerar()` tem que ser acrescentado AQUI também. */
-    cartoes: ds.cartoes, tituloCartoes: ds.tituloCartoes,
+    cartoes: ds.cartoes, tituloCartoes: ds.tituloCartoes, notaCartoes: ds.notaCartoes,
     orientacao: ds.orientacao || r.orientacao
   });
 }

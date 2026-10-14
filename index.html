@@ -3,6 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- ==========================================================================
+       TRAVA DE DESTINO (Content-Security-Policy)
+
+       Para que serve, em uma frase: mesmo que um dia entre código estranho
+       nesta página, ele não consegue MANDAR os dados da empresa para fora,
+       porque o navegador só deixa este site falar com os endereços da lista
+       abaixo — e mais nenhum.
+
+       Cada linha tem motivo:
+       • script-src .............. só os nossos arquivos e o CDN das bibliotecas
+                                   (Supabase, pdf.js, OCR, Excel).
+         'unsafe-inline' ......... o sistema é todo feito de botões com onclick=;
+                                   tirar isso é reescrever as 25 telas. Fica
+                                   anotado como limitação conhecida, não como
+                                   descuido — e a defesa real contra injeção é o
+                                   esc() em toda saída, que foi testado.
+         'wasm-unsafe-eval' ...... o OCR (Tesseract) roda em WebAssembly. Sem
+                                   isto o Chrome bloqueia a leitura de documento
+                                   escaneado — e falha calado.
+       • connect-src ............. AQUI é o cadeado que importa: a lista exata de
+                                   para onde os dados PODEM ir. Só o banco da
+                                   empresa, o CDN das bibliotecas, o arquivo de
+                                   idioma do OCR e o próprio site.
+       • worker-src blob: ....... pdf.js e o OCR criam trabalhador em blob:.
+       • img-src data: blob: .... fotos e anexos ficam guardados assim.
+       • object-src 'none' ...... ninguém embute Flash/plugin aqui.
+       • base-uri / form-action .. ninguém redireciona o envio de formulário
+                                   nem reescreve o endereço-base da página.
+
+       ⚠️ Esta trava vale para o SITE. O arquivo único do celular monta o
+       próprio <head> (build_celular.sh), e lá 'self' não existe — endereço
+       file:// não tem origem. Se esta meta fosse para o celular, o telefone
+       perderia a nuvem inteira. Por isso ela mora só aqui.
+       ========================================================================== -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob: https://kxwcwpxaovwgwviqhelh.supabase.co;
+    font-src 'self' data:;
+    media-src 'self' data: blob:;
+    worker-src 'self' blob: https://cdn.jsdelivr.net;
+    connect-src 'self' data: blob: https://kxwcwpxaovwgwviqhelh.supabase.co wss://kxwcwpxaovwgwviqhelh.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://planetaexpress02-sys.github.io;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-src 'none';
+  ">
   <title>Planeta Express — Sistema de Gestão</title>
   <meta name="theme-color" content="#050609">
   <meta name="description" content="Sistema de Gestão Operacional — Planeta Express Transportes">
@@ -14,8 +62,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=249">
-  <link rel="stylesheet" href="assets/estilo2.css?v=249">
+  <link rel="stylesheet" href="assets/estilo.css?v=252">
+  <link rel="stylesheet" href="assets/estilo2.css?v=252">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -54,7 +102,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v12.6</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v12.9</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -107,35 +155,156 @@
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script src="assets/viagens.js?v=249"></script>
-  <script src="assets/dados.js?v=249"></script>
-  <script src="assets/alarmes.js?v=249"></script>
-  <script src="assets/arquivos.js?v=249"></script>
-  <script src="assets/importar.js?v=249"></script>
-  <script src="assets/app.js?v=249"></script>
-  <script src="assets/central.js?v=249"></script>
-  <script src="assets/contabilidade.js?v=249"></script>
-  <script src="assets/aniversarios.js?v=249"></script>
-  <script src="assets/relatorios.js?v=249"></script>
+  <script src="assets/viagens.js?v=252"></script>
+  <script src="assets/dados.js?v=252"></script>
+  <script src="assets/alarmes.js?v=252"></script>
+  <script src="assets/arquivos.js?v=252"></script>
+  <script src="assets/importar.js?v=252"></script>
+  <script src="assets/app.js?v=252"></script>
+  <script src="assets/central.js?v=252"></script>
+  <script src="assets/contabilidade.js?v=252"></script>
+  <script src="assets/aniversarios.js?v=252"></script>
+  <script src="assets/relatorios.js?v=252"></script>
   <script>
-    /* Modo app offline + atualização automática (sem ficar preso em versão antiga) */
+    /* Modo app offline + atualização automática (sem ficar preso em versão antiga)
+
+       🔴 P0 — A ATUALIZAÇÃO RECARREGAVA A PÁGINA NO MEIO DO TRABALHO.
+       Era `location.reload()` seco assim que chegasse versão nova. Se ele
+       estivesse com um cadastro aberto, ou com lançamento ainda não
+       sincronizado, perdia. Agora só recarrega quando é seguro; se não
+       for, avisa e deixa ELE escolher a hora. */
+    function pexSeguroRecarregar(){
+      try{
+        var ov=document.getElementById('overlay');
+        if(ov && ov.classList.contains('show')) return false;      /* formulário aberto */
+        if(typeof _localSujo!=='undefined' && _localSujo) return false; /* falta subir */
+        var el=document.activeElement;
+        if(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false; /* digitando */
+      }catch(e){}
+      return true;
+    }
+    function pexAvisarVersaoNova(){
+      if(document.getElementById('pexUpd')) return;
+      var d=document.createElement('div');
+      d.id='pexUpd';
+      d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:2147483100;'
+        +'display:flex;gap:10px;align-items:center;background:#11161f;color:#e8eef7;'
+        +'border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:11px 14px;'
+        +'box-shadow:0 10px 30px rgba(0,0,0,.5);font:14px system-ui,sans-serif;max-width:92vw';
+      d.innerHTML='<span>Nova versão disponível.</span>'
+        +'<button id="pexUpdJa" style="cursor:pointer;border:0;border-radius:8px;padding:7px 13px;'
+        +'background:#1e90ff;color:#fff;font-weight:700">Atualizar</button>'
+        +'<button id="pexUpdDepois" style="cursor:pointer;background:none;border:0;color:#9fb0c6">Depois</button>';
+      document.body.appendChild(d);
+      document.getElementById('pexUpdJa').onclick=function(){ _pexRefreshing=true; location.reload(); };
+      document.getElementById('pexUpdDepois').onclick=function(){ d.remove(); };
+    }
+    function pexAtualizar(){
+      if(_pexRefreshing) return;
+      if(pexSeguroRecarregar()){ _pexRefreshing=true; location.reload(); }
+      else pexAvisarVersaoNova();
+    }
+    /* 🟠 v12.7 — PLANO B DO AVISO DE VERSÃO NOVA.
+
+       Todo o aviso de "saiu versão nova" depende do service worker. Se ele
+       não registrar — e isso acontece por motivos que não dependem de mim
+       (navegador em modo anônimo, política do aparelho, cota de
+       armazenamento, uma extensão) — o `catch` era vazio: **o cliente
+       simplesmente nunca mais era avisado**, sem nada na tela. É o mesmo
+       defeito do "salvo em silêncio", aplicado à atualização.
+
+       E isso bate de frente com a regra dele: *"TODAS as atualizações
+       devem ser feitas em todos os locais acessados"*.
+
+       Então: se o service worker não subir, o próprio sistema passa a
+       conferir o `versao.json` do site de 2 em 2 minutos e compara com o
+       `?v=` que ESTA página carregou. Mudou, aparece a mesma barra de
+       sempre. Sem service worker o sistema perde o modo offline — mas não
+       perde o aviso de versão. */
+    function pexVersaoDestaPagina(){
+      try{
+        var s=document.querySelector('script[src*="assets/app.js?v="]');
+        return s ? (s.getAttribute('src').split('?v=')[1]||'') : '';
+      }catch(e){ return ''; }
+    }
+    /* Pergunta ao site qual é a versão publicada e compara com a que ESTA
+       página carregou. É um arquivo de 200 bytes; pode ser chamado à
+       vontade. Não depende de service worker nenhum. */
+    var _pexUltimaConferida=0;
+    function pexConferirVersaoDoSite(){
+      if(!navigator.onLine) return;
+      if(Date.now()-_pexUltimaConferida < 20000) return;   /* no máximo a cada 20s */
+      _pexUltimaConferida=Date.now();
+      var minha=pexVersaoDestaPagina();
+      if(!minha) return;
+      fetch('versao.json?t='+Date.now(), {cache:'no-store'})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ if(j && j.assets && String(j.assets)!==String(minha)) pexAvisarVersaoNova(); })
+        .catch(function(){});
+    }
+    function pexPlanoBdeVersao(motivo){
+      try{ console.warn('[sw] sem service worker ('+motivo+') — ligando a conferência por versao.json'); }catch(e){}
+      try{ (window._pexSyncErros=window._pexSyncErros||[]).push(
+             {passo:'service worker', erro:String(motivo), quando:new Date().toISOString()}); }catch(e){}
+      setTimeout(pexConferirVersaoDoSite, 15000);
+      setInterval(pexConferirVersaoDoSite, 120000);
+      window.addEventListener('online', pexConferirVersaoDoSite);
+    }
+
+    /* 🔴 v12.7 — O APLICATIVO INSTALADO PODIA RODAR CÓDIGO VELHO POR DIAS.
+       (encontrado depois que o dono avisou que o sistema já está instalado
+        no celular dele — este é o caso mais difícil, não o mais fácil)
+
+       Quem procurava versão nova era `setInterval(reg.update(), 60s)`. Num
+       aplicativo instalado no celular isso quase não acontece: o aparelho
+       **congela os temporizadores** do que está em segundo plano, e um app
+       instalado praticamente nunca é fechado. Então ele podia passar dias
+       sem nenhuma verificação.
+
+       E o sistema já conferia os DADOS ao voltar para a tela (busca a nuvem
+       no `visibilitychange`), mas **não conferia o CÓDIGO**. Resultado:
+       números novos rodando em cima de um sistema velho — que é exatamente
+       o "não está atualizando no mobile" de que ele reclamou.
+
+       Agora, toda vez que ele volta para o aplicativo (e toda vez que a
+       internet volta), duas perguntas são feitas de uma vez:
+         1. ao service worker, se existe versão nova para instalar;
+         2. direto ao site, qual é a versão publicada — porque o service
+            worker já travou antes, e aí só esta segunda pergunta responde. */
+    /* ⚠️ Os GATILHOS (voltar para o app, foco, internet) NÃO moram aqui.
+       Moram no app.js, em `pexConferirAtualizacao()`.
+
+       Motivo, descoberto testando: o `build_celular.sh` **remove este
+       script inteiro** ao gerar o arquivo único — e com razão, porque é
+       aqui que fica o service worker, que não faz sentido num arquivo
+       solto. Eu tinha posto os gatilhos aqui, e no celular eles
+       simplesmente não existiam: `pexConferirAtualizacaoAgora` saía como
+       `undefined`. A correção valia só para o site, calada.
+
+       O que fica aqui é só o que é do site: a conferência pelo `?v=` da
+       própria página (`pexConferirVersaoDoSite`) e o registro do service
+       worker em `window._pexSWreg`. O app.js chama os dois se existirem. */
+
     if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){
       var _pexRefreshing=false;
-      navigator.serviceWorker.addEventListener('controllerchange', function(){ if(_pexRefreshing) return; _pexRefreshing=true; location.reload(); });
+      navigator.serviceWorker.addEventListener('controllerchange', function(){ pexAtualizar(); });
       /* updateViaCache:'none' — o próprio service-worker.js vem com
          max-age=600 do GitHub Pages, então sem isto o navegador podia passar
          até 10 minutos sem NEM PERCEBER que existe versão nova. Com 'none'
          ele busca o arquivo do SW direto do servidor a cada verificação. */
       navigator.serviceWorker.register('service-worker.js', {updateViaCache:'none'}).then(function(reg){
+        window._pexSWreg = reg;          /* v12.7: para poder perguntar ao voltar para o app */
         try{ reg.update(); }catch(e){}
         setInterval(function(){ try{ reg.update(); }catch(e){} }, 60000); /* verifica atualização a cada 1 min */
         reg.addEventListener('updatefound', function(){
           var nw = reg.installing;
           if(nw){ nw.addEventListener('statechange', function(){
-            if(nw.state==='installed' && navigator.serviceWorker.controller && !_pexRefreshing){ _pexRefreshing=true; location.reload(); }
+            if(nw.state==='installed' && navigator.serviceWorker.controller) pexAtualizar();
           }); }
         });
-      }).catch(function(){});
+      }).catch(function(e){ pexPlanoBdeVersao((e&&e.message)||'falha ao registrar'); });
+    } else if(location.protocol.startsWith('http')){
+      pexPlanoBdeVersao('navegador sem suporte a service worker');
     }
   </script>
 </body>

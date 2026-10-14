@@ -157,13 +157,68 @@ perl -pe '
   s{assets/fotos/m4\.png}{}g; s{assets/fotos/m5\.jpg}{}g; s{assets/fotos/m8.png}{}g;
 ' "$TMP/artifact_raw.html" > "$ART"
 
+# ==========================================================================
+# v12.7 — UM ARQUIVO DO CELULAR. UM SO. SEMPRE.
+#
+# Pedido do dono, com todas as letras: "nao quero copia velha, quero todo o
+# sistema interligado sempre".
+#
+# O que acontecia: o build grava na PASTA DA EMPRESA (um nivel acima), mas
+# sobrava um "Planeta Express - CELULAR.html" dentro da pasta do sistema,
+# de 21/09, na v12.5 — nove versoes atras. O .gitignore impede que ele va
+# para o site, mas nao impede o cliente de abrir o arquivo errado. Duas
+# copias com o mesmo nome e uma delas velha e armadilha, nao redundancia.
+#
+# Agora o build varre e remove qualquer copia extra, e so termina quando
+# existe EXATAMENTE UMA. Copia dentro de pasta de backup nao conta: backup
+# e para ser antigo mesmo.
+# ==========================================================================
+echo "--- um arquivo do celular, um so ---"
+EXTRAS=0
+while IFS= read -r -d '' velho; do
+  [ "$velho" = "$OUT_CEL" ] && continue
+  case "$velho" in *"/Backup Planeta Express"*|*"/.claude/"*) continue;; esac
+  echo "   removendo copia velha: $velho"
+  rm -f "$velho"; EXTRAS=$((EXTRAS+1))
+done < <(find "$COMP" -maxdepth 3 -name "Planeta Express - CELULAR.html" -print0 2>/dev/null)
+[ "$EXTRAS" -eq 0 ] && echo "   nenhuma copia extra (certo)"
+
+RESTANTES=$(find "$COMP" -maxdepth 3 -name "Planeta Express - CELULAR.html" \
+  -not -path "*/Backup Planeta Express*" -not -path "*/.claude/*" 2>/dev/null | wc -l)
+if [ "$RESTANTES" -ne 1 ]; then
+  echo "ERRO: deveria existir 1 arquivo do celular e existem $RESTANTES." >&2; exit 1
+fi
+
+# E a versao gravada no arquivo TEM de bater com a do versao.json que vai
+# para o site. Se divergirem, o celular nunca descobre que envelheceu --
+# que e exatamente o defeito que o aviso de versao existe para evitar.
+VJ=$(grep -o '"versao": *"[0-9.]*"' versao.json | head -1 | sed 's/.*"\([0-9.]*\)"$/\1/')
+if [ "$VJ" != "$VERSAO" ]; then
+  echo "ERRO: versao.json diz v$VJ e este build e v$VERSAO. Acerte o versao.json" >&2
+  echo "      antes de publicar, senao o celular nao descobre que envelheceu." >&2
+  exit 1
+fi
+echo "   versao do arquivo e do versao.json batem: v$VERSAO"
+
 echo "=== GERADO ==="
 ls -la "$OUT_CEL" | awk '{print $5, $NF}'
 ls -la "$ART"     | awk '{print $5, $NF}'
 echo "--- checagens celular ---"
-echo -n "assets/ restantes (deve ser 0): "; grep -o "assets/" "$OUT_CEL" | wc -l
-echo -n "data:image no celular (deve ser >6): "; grep -o "data:image" "$OUT_CEL" | wc -l
-echo -n "chkResultadoBadge presente: "; grep -c "chkResultadoBadge" "$OUT_CEL"
+# v12.7 — a checagem contava QUALQUER "assets/", inclusive dentro de
+# comentario. Tres comentarios explicativos a faziam acusar 3 sobras que nao
+# existiam, e uma checagem que acusa errado deixa de ser lida. Agora so conta
+# referencia de verdade: src=, href= ou url() apontando para assets/.
+#
+# ⚠️ E o `|| true` NAO e enfeite. O script roda com `set -euo pipefail`:
+# `grep` sem nenhuma ocorrencia sai com codigo 1 e DERRUBA o build. Quer
+# dizer que esta checagem so sobrevivia enquanto estivesse ERRADA (os 3
+# comentarios); assim que passou a contar 0 — o resultado certo — o build
+# morreu exatamente ali, e as tres checagens obrigatorias de baixo, que ja
+# pegaram um celular sem nuvem, nem chegavam a rodar.
+echo -n "assets/ de verdade (src/href/url — deve ser 0): "
+{ grep -o -E "(src|href)=[\"']assets/|url\([\"']?assets/" "$OUT_CEL" || true; } | wc -l
+echo -n "data:image no celular (deve ser >6): "; { grep -o "data:image" "$OUT_CEL" || true; } | wc -l
+echo -n "chkResultadoBadge presente: "; grep -c "chkResultadoBadge" "$OUT_CEL" || true
 # v11.1 — estas tres viraram OBRIGATORIAS. Antes a checagem exigia
 # "supabase: 0", o que carimbava como correto justamente o defeito: um
 # celular sem nuvem, que nunca sincronizava. Se qualquer uma destas vier 0,
