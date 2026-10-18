@@ -147,6 +147,17 @@ const SEED = {
       segurado:"Funcionários — Planeta Express", grupo:"func", objeto:"Vida em grupo (funcionários)", placa:"",
       inicio:"2025-11-06", fim:"2026-11-06", premio:1521.28, pagamento:"12x Boleto",
       cobertura:"", status:"Ativo", obs:"" },
+    /* v13.2 — RENOVAÇÃO da s4, lida da apólice que o cliente entregou
+       ("Apólice - A5.pdf", HDI, emitida em 15/10/2026). A s4 vence em
+       06/11/2026 e esta entra no dia seguinte da vigência dela, sem buraco.
+       Os números saíram do PDF, não de estimativa: prêmio total R$ 1.585,47
+       = 1ª parcela 132,15 + 11 × 132,12. Capital global 942.492,64 =
+       706.869,49 (6 funcionários) + 235.623,17 (2 sócios). */
+    { id:"s10", ramo:"vida", tipo:"Seguro de Vida em Grupo", seguradora:"HDI", apolice:"065722026002909820000179", endosso:"",
+      segurado:"Funcionários e sócios — Planeta Express", grupo:"func", objeto:"Vida em grupo (6 funcionários + 2 sócios)", placa:"",
+      inicio:"2026-11-06", fim:"2027-11-06", premio:1585.47, pagamento:"12x Boleto Carnê (vence dia 15)",
+      cobertura:"Capital global R$ 942.492,64 — IEA (morte acidental) e IPA (invalidez total ou parcial por acidente)", status:"Ativo",
+      obs:"Produto PME Capital Global. RENOVA a apólice 065722025002909820000240 (a s4 deste controle), que vence em 06/11/2026. 8 vidas. Proposta 0499422, emitida em 15/10/2026. Processo SUSEP 15414.651512/2023-49. Adesão compulsória, custeio não contributário. Prêmio líquido R$ 1.579,47 + IOF R$ 6,00." },
     { id:"s5", ramo:"vida", tipo:"Seguro de Vida em Grupo", seguradora:"HDI / Icatu", apolice:"93752384", endosso:"93752384",
       segurado:"Funcionários — Planeta Express", grupo:"func", objeto:"Vida em grupo (funcionários)", placa:"",
       inicio:"2025-10-25", fim:"2026-10-25", premio:1530.72, pagamento:"12x Boleto",

@@ -66,4 +66,10 @@ const ARQUIVOS_EMPRESA = [
 
   /* Faturas Sem Parar (pedágios) */
   {id:"sp1",nome:"Fatura Sem Parar 26176725165 - 08-2026.pdf",categoria:"Pedágio",entidade:"empresa",refId:"empresa",path:"../Documentos Internos/Faturas Sem Parar/Fatura Sem Parar 26176725165 - 08-2026.pdf"},
+  /* Apólices de seguro (v13.2 — primeira da categoria).
+     ⚠️ Isto registra o arquivo da PASTA: abre com um clique em Documentos,
+     no computador. NÃO é o mesmo que anexar a apólice pela tela de Seguros
+     — aquilo sobe o PDF para a nuvem e abre também no celular. Os dois
+     caminhos existem de propósito e não se substituem. */
+  {id:"sg1",nome:"Apólice - A5.pdf",categoria:"Seguro",entidade:"empresa",refId:"empresa",path:"../Apólice - A5.pdf"},
 ];

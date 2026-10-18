@@ -171,6 +171,10 @@ const SEED_ENTREGAS = [
      `Documentos Motoristas\Edson Carlos Barufo\*.pexmot.json`, que fica
      na pasta da empresa e se importa em Motoristas → Importar ficha. */
   { v:'11.8', motoristas:['m8'], vencimentos:['c8','t8','a8'] },
+  /* v13.2 — apólice HDI de vida em grupo 2026/2027, entregue pelo cliente em
+     18/10/2026 ("Apólice - A5.pdf"). Renova a s4, que vence em 06/11/2026.
+     Vai junto o registro do PDF na pasta (sg1), que aparece em Documentos. */
+  { v:'13.2', seguros:['s10'], arquivos:['sg1'] },
 ];
 function importarCadastroSeed(){
   if(!SEED) return;
@@ -180,6 +184,11 @@ function importarCadastroSeed(){
     [['motoristas','motoristasRemovidos'],
      ['vencimentos','vencimentosRemovidos'],
      ['arquivos','arquivosRemovidos'],
+     /* v13.2 — 'seguros' entrou aqui. A base dele já existe, então uma
+        apólice nova no SEED não chegava nela: a entrega só sabia mexer nas
+        coleções listadas. Como todas as outras, respeita o que ele apagou
+        de propósito (segurosRemovidos). */
+     ['seguros','segurosRemovidos'],
      ['processos','processosRemovidos'],
      ['pedagios','pedagiosRemovidos'],
      ['pedFaturas','pedFaturasRemovidos'],
@@ -5401,7 +5410,11 @@ function salvarSeguro(id){
   else { d.id=uid('s'); (DB.seguros=DB.seguros||[]).push(d); }
   saveDB(); closeModal(); toast('Seguro salvo.'); router();
 }
-function excluirSeguro(id){ if(!confirm('Excluir esta apólice do controle?'))return; DB.seguros=(DB.seguros||[]).filter(x=>x.id!==id); saveDB(); closeModal(); toast('Apólice excluída.'); router(); }
+/* v13.2 — `marcarRemovido` entrou aqui junto com a entrega de apólices pelo
+   SEED. Sem isto, apagar uma apólice entregue pelo seed a traria de volta na
+   próxima abertura — o acidente de ressurreição que já aconteceu com um
+   motorista desligado na v6.91. Apagar tem de ser para valer. */
+function excluirSeguro(id){ if(!confirm('Excluir esta apólice do controle?'))return; DB.seguros=(DB.seguros||[]).filter(x=>x.id!==id); marcarRemovido('segurosRemovidos',id); saveDB(); closeModal(); toast('Apólice excluída.'); router(); }
 
 /* ---------- ENVIAR APÓLICE (lê o arquivo, detecta o seguro certo e anexa) ---------- */
 /* Leitura profissional: pdf.js extrai o texto real (inclui apólices da Tokio/
@@ -9569,7 +9582,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '13.1';
+var PEX_VER = '13.2';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
