@@ -8,309 +8,310 @@
    As regras do relatorio A4 (.rel-) ficam de fora: papel ja e branco.
    ================================================================== */
 :root[data-theme="claro"] #splash{background:radial-gradient(1200px 700px at 50% 30%,#f1f3f6 0%,#f1f3f6 45%,#f6f7f9 100%)}
-:root[data-theme="claro"] .sp-logo{box-shadow:0 40px 90px rgba(184,137,43,.30),0 0 0 1px rgba(214,178,92,.35),0 0 0 6px rgba(214,178,92,.06),inset 0 1px 0 rgba(23,36,60,.06)}
+:root[data-theme="claro"] .sp-logo{box-shadow:0 40px 90px rgba(184,137,43,.30),0 0 0 1px rgba(214,178,92,.35),0 0 0 6px rgba(214,178,92,.06),inset 0 1px 0 rgba(20,35,59,.06)}
 :root[data-theme="claro"] .sp-logo .sp-shine{background:linear-gradient(90deg,transparent,rgba(241,243,246,.06),transparent)}
 :root[data-theme="claro"] .sp-tag{color:#B45309}
-:root[data-theme="claro"] .banner{color:#2563EB}
-:root[data-theme="claro"] .banner>svg{color:#2563EB}
-:root[data-theme="claro"] .banner b{color:#64748B}
-:root[data-theme="claro"] .banner span{color:#2563EB}
-:root[data-theme="claro"] .card .card-h{border-bottom-color:#E3EAF2}
+:root[data-theme="claro"] .banner{color:#1D4ED8}
+:root[data-theme="claro"] .banner>svg{color:#1D4ED8}
+:root[data-theme="claro"] .banner b{color:#3D5578}
+:root[data-theme="claro"] .banner span{color:#1D4ED8}
+:root[data-theme="claro"] .card .card-h{border-bottom-color:#D9E3F0}
 :root[data-theme="claro"] .plate.rebo{background:linear-gradient(180deg,#3b4a63,#f1f3f6)}
 :root[data-theme="claro"] .alarm-code{color:#B45309}
-:root[data-theme="claro"] .chk-opt.na.on{border-color:#E3EAF2;color:#2563EB}
-:root[data-theme="claro"] .ini-hero-tag{color:#2563EB}
-:root[data-theme="claro"] .ini-logo{box-shadow:0 12px 30px rgba(23,36,60,.10),0 0 0 1px rgba(214,178,92,.3)}
-:root[data-theme="claro"] .ini-hero-txt{color:#64748B}
-:root[data-theme="claro"] .ini-hero-txt p{color:#2563EB}
-:root[data-theme="claro"] .ini-chips span{background:rgba(241,243,246,.1);border:1px solid rgba(23,36,60,.14);color:#2563EB}
-:root[data-theme="claro"] .etica-head{border-bottom:2px solid #E3EAF2}
-:root[data-theme="claro"] .etica-logo{box-shadow:0 4px 14px rgba(23,36,60,.12)}
+:root[data-theme="claro"] .chk-opt.na.on{border-color:#D9E3F0;color:#1D4ED8}
+:root[data-theme="claro"] .ini-hero-tag{color:#1D4ED8}
+:root[data-theme="claro"] .ini-logo{box-shadow:0 12px 30px rgba(20,35,59,.10),0 0 0 1px rgba(214,178,92,.3)}
+:root[data-theme="claro"] .ini-hero-txt{color:#3D5578}
+:root[data-theme="claro"] .ini-hero-txt p{color:#1D4ED8}
+:root[data-theme="claro"] .ini-chips span{background:rgba(241,243,246,.1);border:1px solid rgba(20,35,59,.14);color:#1D4ED8}
+:root[data-theme="claro"] .etica-head{border-bottom:2px solid #D9E3F0}
+:root[data-theme="claro"] .etica-logo{box-shadow:0 4px 14px rgba(20,35,59,.12)}
 :root[data-theme="claro"] .alarme-det-code{color:#B45309}
-:root[data-theme="claro"] .alarme-block.sol{border-color:#E3EAF2}
-:root[data-theme="claro"] .tm-pin{color:#64748B;box-shadow:0 2px 6px rgba(23,36,60,.10);border:2px solid #E3EAF2}
-:root[data-theme="claro"] .tm-num{color:#64748B}
+:root[data-theme="claro"] .alarme-block.sol{border-color:#D9E3F0}
+:root[data-theme="claro"] .tm-pin{color:#3D5578;box-shadow:0 2px 6px rgba(20,35,59,.10);border:2px solid #D9E3F0}
+:root[data-theme="claro"] .tm-num{color:#3D5578}
 :root[data-theme="claro"] .login-screen{background:radial-gradient(1200px 700px at 50% 28%,#f1f3f6 0%,#f1f3f6 55%,#f6f7f9 100%)}
-:root[data-theme="claro"] .login-box{background:#f1f3f6;box-shadow:0 30px 80px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .login-logo{box-shadow:0 10px 26px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .login-box{background:#f1f3f6;box-shadow:0 30px 80px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .login-logo{box-shadow:0 10px 26px rgba(20,35,59,.10)}
 :root[data-theme="claro"] .login-sub{color:#B45309}
-:root[data-theme="claro"] .login-box .field label{color:#2563EB}
-:root[data-theme="claro"] .login-box .field input{color:#64748B}
-:root[data-theme="claro"] .login-box .field input:focus{border-color:#E3EAF2}
-:root[data-theme="claro"] .login-msg{color:#DC2626}
-:root[data-theme="claro"] .login-foot{color:#2563EB}
+:root[data-theme="claro"] .login-box .field label{color:#1D4ED8}
+:root[data-theme="claro"] .login-box .field input{color:#3D5578}
+:root[data-theme="claro"] .login-box .field input:focus{border-color:#D9E3F0}
+:root[data-theme="claro"] .login-msg{color:#B91C1C}
+:root[data-theme="claro"] .login-foot{color:#1D4ED8}
 :root[data-theme="claro"] .fin-lock{color:#B45309}
-:root[data-theme="claro"] .sp-logo,:root[data-theme="claro"] .login-logo,:root[data-theme="claro"] .ini-logo,:root[data-theme="claro"] .etica-logo,:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 8px 24px rgba(23,36,60,.10),0 0 0 1px rgba(214,178,92,.28),inset 0 1px 0 rgba(23,36,60,.06)}
+:root[data-theme="claro"] .sp-logo,:root[data-theme="claro"] .login-logo,:root[data-theme="claro"] .ini-logo,:root[data-theme="claro"] .etica-logo,:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 8px 24px rgba(20,35,59,.10),0 0 0 1px rgba(214,178,92,.28),inset 0 1px 0 rgba(20,35,59,.06)}
 :root[data-theme="claro"] .card::before,:root[data-theme="claro"] .kpi::before{background:linear-gradient(180deg,rgba(241,243,246,.05),transparent 26%)}
-:root[data-theme="claro"] .card:hover{border-color:#E3EAF2}
-:root[data-theme="claro"] .kpi:hover{border-color:#E3EAF2}
-:root[data-theme="claro"] .pex-tip{color:#64748B}
-:root[data-theme="claro"] .pex-veh .vc{stroke:#64748B}
-:root[data-theme="claro"] .pex-base text{fill:#64748B}
-:root[data-theme="claro"] .pex-map-hero .pex-city text{fill:#2563EB}
-:root[data-theme="claro"] .pex-map-hero .pex-city.hub circle{fill:#2563EB}
-:root[data-theme="claro"] .pex-map-hero .pex-city.hub text{fill:#2563EB}
-:root[data-theme="claro"] .pex-truck{filter:drop-shadow(0 2px 3px rgba(23,36,60,.10))}
+:root[data-theme="claro"] .card:hover{border-color:#D9E3F0}
+:root[data-theme="claro"] .kpi:hover{border-color:#D9E3F0}
+:root[data-theme="claro"] .pex-tip{color:#3D5578}
+:root[data-theme="claro"] .pex-veh .vc{stroke:#3D5578}
+:root[data-theme="claro"] .pex-base text{fill:#3D5578}
+:root[data-theme="claro"] .pex-map-hero .pex-city text{fill:#1D4ED8}
+:root[data-theme="claro"] .pex-map-hero .pex-city.hub circle{fill:#1D4ED8}
+:root[data-theme="claro"] .pex-map-hero .pex-city.hub text{fill:#1D4ED8}
+:root[data-theme="claro"] .pex-truck{filter:drop-shadow(0 2px 3px rgba(20,35,59,.10))}
 :root[data-theme="claro"] .pex-map-hero .pex-skel-ov{background:linear-gradient(90deg,#f1f3f6,#f1f3f6,#f1f3f6)}
 :root[data-theme="claro"] .ini-cmd .btn.sm{background:rgba(241,243,246,.06)}
 :root[data-theme="claro"] .ini-cmd .pex-live{color:#15803D}
-:root[data-theme="claro"] .ini-brand .mk{box-shadow:0 6px 18px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-brand .tx b{color:#2563EB}
-:root[data-theme="claro"] .ini-brand .tx span{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .card{background:rgba(241,244,246,.55);box-shadow:0 24px 60px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-veh .dot{fill:#2563EB}
-:root[data-theme="claro"] .ini-veh:hover .dot{fill:#2563EB}
+:root[data-theme="claro"] .ini-brand .mk{box-shadow:0 6px 18px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-brand .tx b{color:#1D4ED8}
+:root[data-theme="claro"] .ini-brand .tx span{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .card{background:rgba(241,244,246,.55);box-shadow:0 24px 60px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-veh .dot{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-veh:hover .dot{fill:#1D4ED8}
 :root[data-theme="claro"] .ini-vpanel{background:rgba(241,244,246,.9)}
-:root[data-theme="claro"] .ini-vpanel .x{color:#2563EB}
-:root[data-theme="claro"] .ini-vpanel .x:hover{color:#64748B}
-:root[data-theme="claro"] .ini-vpanel .vp-route small{color:#2563EB}
-:root[data-theme="claro"] .ini-vpanel .vp-grid small{color:#2563EB}
-:root[data-theme="claro"] .ini-vpanel .vp-links a{color:#2563EB}
-:root[data-theme="claro"] .ini-kpi{background:rgba(241,244,246,.5);box-shadow:0 12px 30px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-kpi:hover{box-shadow:0 20px 46px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .ini-vpanel .x{color:#1D4ED8}
+:root[data-theme="claro"] .ini-vpanel .x:hover{color:#3D5578}
+:root[data-theme="claro"] .ini-vpanel .vp-route small{color:#1D4ED8}
+:root[data-theme="claro"] .ini-vpanel .vp-grid small{color:#1D4ED8}
+:root[data-theme="claro"] .ini-vpanel .vp-links a{color:#1D4ED8}
+:root[data-theme="claro"] .ini-kpi{background:rgba(241,244,246,.5);box-shadow:0 12px 30px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-kpi:hover{box-shadow:0 20px 46px rgba(20,35,59,.10)}
 :root[data-theme="claro"] .ini-kpi.gold .ic{color:#B45309}
-:root[data-theme="claro"] .ini-kpi.crit .ic{color:#DC2626}
+:root[data-theme="claro"] .ini-kpi.crit .ic{color:#B91C1C}
 :root[data-theme="claro"] .ini-kpi.ok .ic{color:#15803D}
 :root[data-theme="claro"] .ini-flag{color:#15803D}
-:root[data-theme="claro"] .ini-cmd .card .card-h .sub{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .barchart .bar-val{fill:#2563EB}
-:root[data-theme="claro"] .ini-cmd .legend .li{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .empty b{color:#2563EB}
-:root[data-theme="claro"] #view[data-route="manutencao"] .banner{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .card{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.16),0 0 60px rgba(var(--au3-rgb),.10),0 22px 52px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .ini-cmd .card .card-h .sub{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .barchart .bar-val{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .legend .li{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .empty b{color:#1D4ED8}
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .card{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.16),0 0 60px rgba(var(--au3-rgb),.10),0 22px 52px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(20,35,59,.10)}
 :root[data-theme="claro"] #view[data-route="manutencao"] .k-ico.i-amber{color:#B45309}
 :root[data-theme="claro"] #view[data-route="manutencao"] .k-ico.i-green{color:#15803D}
-:root[data-theme="claro"] #view[data-route="manutencao"] .kpi.link:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 20px 46px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .barchart .bar-val{fill:#2563EB}
-:root[data-theme="claro"] #view[data-route="manutencao"] .vcard{box-shadow:0 0 16px rgba(var(--au-rgb),.05),0 14px 30px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .vcard:hover{box-shadow:0 0 24px rgba(var(--au-rgb),.16),0 20px 44px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view[data-route="manutencao"] .plate{box-shadow:0 0 0 1px rgba(var(--au-rgb),.2),0 2px 6px rgba(23,36,60,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi.link:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 20px 46px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .barchart .bar-val{fill:#1D4ED8}
+:root[data-theme="claro"] #view[data-route="manutencao"] .vcard{box-shadow:0 0 16px rgba(var(--au-rgb),.05),0 14px 30px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .vcard:hover{box-shadow:0 0 24px rgba(var(--au-rgb),.16),0 20px 44px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view[data-route="manutencao"] .plate{box-shadow:0 0 0 1px rgba(var(--au-rgb),.2),0 2px 6px rgba(20,35,59,.10)}
 :root[data-theme="claro"] #view[data-route="manutencao"] .st.ok{color:#15803D}
 :root[data-theme="claro"] #view[data-route="manutencao"] .st.ok::before{box-shadow:0 0 6px #15803D}
 :root[data-theme="claro"] #view[data-route="manutencao"] .st.warn{color:#B45309}
 :root[data-theme="claro"] #view[data-route="manutencao"] .st.warn::before{box-shadow:0 0 6px #B45309}
-:root[data-theme="claro"] #view[data-route="manutencao"] .st.crit,:root[data-theme="claro"] #view[data-route="manutencao"] .st.vencido{color:#DC2626}
-:root[data-theme="claro"] #view[data-route="manutencao"] .btn:not(.primary):hover{color:#64748B}
-:root[data-theme="claro"] #view[data-route="manutencao"] .empty b{color:#2563EB}
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.crit,:root[data-theme="claro"] #view[data-route="manutencao"] .st.vencido{color:#B91C1C}
+:root[data-theme="claro"] #view[data-route="manutencao"] .btn:not(.primary):hover{color:#3D5578}
+:root[data-theme="claro"] #view[data-route="manutencao"] .empty b{color:#1D4ED8}
 :root[data-theme="claro"] .sidebar{background:linear-gradient(180deg,var(--bg) 0%,#f1f3f6 100%)}
-:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 0 18px rgba(var(--au-rgb),.16),0 6px 16px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .rail-toggle{background:#f1f3f6;box-shadow:0 4px 12px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .nav a{color:#2563EB}
-:root[data-theme="claro"] .nav a:hover{color:#2563EB}
+:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 0 18px rgba(var(--au-rgb),.16),0 6px 16px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .rail-toggle{background:#f1f3f6;box-shadow:0 4px 12px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .nav a{color:#1D4ED8}
+:root[data-theme="claro"] .nav a:hover{color:#1D4ED8}
 @media(min-width:961px){
-:root[data-theme="claro"] body.rail .sidebar .foot b{color:#2563EB}
-:root[data-theme="claro"] body.rail .nav a::after{background:#f1f3f6;box-shadow:0 10px 30px rgba(23,36,60,.10)}
+:root[data-theme="claro"] body.rail .sidebar .foot b{color:#1D4ED8}
+:root[data-theme="claro"] body.rail .nav a::after{background:#f1f3f6;box-shadow:0 10px 30px rgba(20,35,59,.10)}
 }
-:root[data-theme="claro"] .cock-search:hover{border-color:#E3EAF2}
-:root[data-theme="claro"] .cock-kbd{color:#2563EB}
-:root[data-theme="claro"] .cock-badge{box-shadow:0 0 0 2px #64748B}
+:root[data-theme="claro"] .cock-search:hover{border-color:#D9E3F0}
+:root[data-theme="claro"] .cock-kbd{color:#1D4ED8}
+:root[data-theme="claro"] .cock-badge{box-shadow:0 0 0 2px #3D5578}
 :root[data-theme="claro"] .cock-status.on{color:#15803D}
-:root[data-theme="claro"] .cock-status.off{color:#2563EB}
+:root[data-theme="claro"] .cock-status.off{color:#1D4ED8}
 :root[data-theme="claro"] .cmdk-back{background:rgba(242,244,247,.55)}
-:root[data-theme="claro"] .cmdk-box{background:rgba(241,243,246,.94);box-shadow:0 0 44px rgba(var(--au-rgb),.12),0 30px 80px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .cock-notif{background:rgba(241,243,246,.95);box-shadow:0 0 34px rgba(var(--au-rgb),.1),0 24px 60px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .cn-cat.crit{color:#DC2626}
+:root[data-theme="claro"] .cmdk-box{background:rgba(241,243,246,.94);box-shadow:0 0 44px rgba(var(--au-rgb),.12),0 30px 80px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .cock-notif{background:rgba(241,243,246,.95);box-shadow:0 0 34px rgba(var(--au-rgb),.1),0 24px 60px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .cn-cat.crit{color:#B91C1C}
 :root[data-theme="claro"] .cn-cat.warn{color:#B45309}
 :root[data-theme="claro"] .cn-dot.warn{box-shadow:0 0 6px #B45309}
-:root[data-theme="claro"] #view.cyber .banner{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .card{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.14),0 0 60px rgba(var(--au3-rgb),.09),0 22px 52px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .kpi.link:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.16),0 20px 46px rgba(23,36,60,.10)}
+:root[data-theme="claro"] #view.cyber .banner{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .card{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.14),0 0 60px rgba(var(--au3-rgb),.09),0 22px 52px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .kpi.link:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.16),0 20px 46px rgba(20,35,59,.10)}
 :root[data-theme="claro"] #view.cyber .i-green{color:#15803D}
 :root[data-theme="claro"] #view.cyber .i-amber{color:#B45309}
-:root[data-theme="claro"] #view.cyber .i-red{color:#DC2626}
+:root[data-theme="claro"] #view.cyber .i-red{color:#B91C1C}
 :root[data-theme="claro"] #view.cyber .i-orange{color:#C2410C}
 :root[data-theme="claro"] #view.cyber .st.ok{color:#15803D}
 :root[data-theme="claro"] #view.cyber .st.ok::before{box-shadow:0 0 6px #15803D}
 :root[data-theme="claro"] #view.cyber .st.warn{color:#B45309}
 :root[data-theme="claro"] #view.cyber .st.warn::before{box-shadow:0 0 6px #B45309}
-:root[data-theme="claro"] #view.cyber .st.crit,:root[data-theme="claro"] #view.cyber .st.vencido{color:#DC2626}
+:root[data-theme="claro"] #view.cyber .st.crit,:root[data-theme="claro"] #view.cyber .st.vencido{color:#B91C1C}
 :root[data-theme="claro"] #view.cyber .borracha-badge{color:#B45309}
-:root[data-theme="claro"] #view.cyber .plate{box-shadow:0 0 0 1px rgba(var(--au-rgb),.2),0 2px 6px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .vcard{box-shadow:0 0 16px rgba(var(--au-rgb),.05),0 14px 30px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .vcard:hover{box-shadow:0 0 24px rgba(var(--au-rgb),.16),0 20px 44px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #view.cyber .btn:hover{color:#64748B}
-:root[data-theme="claro"] #view.cyber .btn.danger{color:#DC2626}
+:root[data-theme="claro"] #view.cyber .plate{box-shadow:0 0 0 1px rgba(var(--au-rgb),.2),0 2px 6px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .vcard{box-shadow:0 0 16px rgba(var(--au-rgb),.05),0 14px 30px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .vcard:hover{box-shadow:0 0 24px rgba(var(--au-rgb),.16),0 20px 44px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #view.cyber .btn:hover{color:#3D5578}
+:root[data-theme="claro"] #view.cyber .btn.danger{color:#B91C1C}
 :root[data-theme="claro"] #view.cyber select option{background:#f1f4f6}
-:root[data-theme="claro"] #view.cyber .barchart .bar-val{fill:#2563EB}
-:root[data-theme="claro"] #view.cyber .legend .li{color:#2563EB}
-:root[data-theme="claro"] #view.cyber .a-ico.i-red{color:#DC2626}
+:root[data-theme="claro"] #view.cyber .barchart .bar-val{fill:#1D4ED8}
+:root[data-theme="claro"] #view.cyber .legend .li{color:#1D4ED8}
+:root[data-theme="claro"] #view.cyber .a-ico.i-red{color:#B91C1C}
 :root[data-theme="claro"] #view.cyber .a-ico.i-orange{color:#C2410C}
 :root[data-theme="claro"] #view.cyber .a-ico.i-amber{color:#B45309}
 :root[data-theme="claro"] #view.cyber .a-ico.i-green{color:#15803D}
 :root[data-theme="claro"] #view.cyber .truckmap{background:linear-gradient(180deg,#f1f3f6,#f2f4f7)}
-:root[data-theme="claro"] #view.cyber .empty b{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .ini-brand .mk{box-shadow:0 0 18px rgba(var(--au-rgb),.25),0 6px 18px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-cmd .card,:root[data-theme="claro"] .ini-cmd .ini-stage{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-cmd .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 0 60px rgba(var(--au3-rgb),.10),0 22px 52px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-cmd .card .card-h .sub{color:#2563EB}
+:root[data-theme="claro"] #view.cyber .empty b{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .ini-brand .mk{box-shadow:0 0 18px rgba(var(--au-rgb),.25),0 6px 18px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-cmd .card,:root[data-theme="claro"] .ini-cmd .ini-stage{box-shadow:0 0 20px rgba(var(--au-rgb),.08),0 0 40px rgba(var(--au3-rgb),.04),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-cmd .card:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 0 60px rgba(var(--au3-rgb),.10),0 22px 52px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-cmd .card .card-h .sub{color:#1D4ED8}
 :root[data-theme="claro"] .ini-cmd .pex-live{color:#15803D}
-:root[data-theme="claro"] .ini-cmd .ini-kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-cmd .ini-kpi:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 20px 46px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .ini-cmd .ini-kpi .l{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .ini-kpi.crit .ic{color:#DC2626}
+:root[data-theme="claro"] .ini-cmd .ini-kpi{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-cmd .ini-kpi:hover{box-shadow:0 0 26px rgba(var(--au-rgb),.18),0 20px 46px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .ini-cmd .ini-kpi .l{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .ini-kpi.crit .ic{color:#B91C1C}
 :root[data-theme="claro"] .ini-cmd .ini-kpi.ok .ic{color:#15803D}
-:root[data-theme="claro"] .ini-cmd .donut-s{fill:#2563EB}
-:root[data-theme="claro"] .ini-cmd .barchart .bar-val{fill:#2563EB}
-:root[data-theme="claro"] .ini-cmd .barchart .bar-lbl{fill:#2563EB}
-:root[data-theme="claro"] .ini-cmd .legend .li{color:#2563EB}
-:root[data-theme="claro"] .ini-cmd .a-ico.i-red{color:#DC2626}
+:root[data-theme="claro"] .ini-cmd .donut-s{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .barchart .bar-val{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .barchart .bar-lbl{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .legend .li{color:#1D4ED8}
+:root[data-theme="claro"] .ini-cmd .a-ico.i-red{color:#B91C1C}
 :root[data-theme="claro"] .ini-cmd .a-ico.i-orange{color:#B45309}
 :root[data-theme="claro"] .ini-cmd .a-ico.i-amber{color:#B45309}
 :root[data-theme="claro"] .ini-cmd .a-ico.i-green{color:#15803D}
 :root[data-theme="claro"] .ini-cmd .st.ok{color:#15803D}
 :root[data-theme="claro"] .ini-cmd .st.ok::before{box-shadow:0 0 6px #15803D}
-:root[data-theme="claro"] .ini-cmd .st.crit,:root[data-theme="claro"] .ini-cmd .st.vencido{color:#DC2626}
+:root[data-theme="claro"] .ini-cmd .st.crit,:root[data-theme="claro"] .ini-cmd .st.vencido{color:#B91C1C}
 :root[data-theme="claro"] .ini-cmd .st.warn{color:#B45309}
 :root[data-theme="claro"] .ini-cmd .st.warn::before{box-shadow:0 0 6px #B45309}
-:root[data-theme="claro"] .ini-cmd .ini-veh:hover .dot{fill:#2563EB}
-:root[data-theme="claro"] .hm-v{color:#64748B}
-:root[data-theme="claro"] .pn-tire rect.pn-tire-edge{stroke:rgba(23,36,60,.22)}
-:root[data-theme="claro"] .pn-tire.has:hover rect{filter:brightness(1.15) drop-shadow(0 0 6px rgba(23,36,60,.06))}
-:root[data-theme="claro"] .pn-tire.sel rect{stroke:#64748B}
+:root[data-theme="claro"] .ini-cmd .ini-veh:hover .dot{fill:#1D4ED8}
+:root[data-theme="claro"] .hm-v{color:#3D5578}
+:root[data-theme="claro"] .pn-tire rect.pn-tire-edge{stroke:rgba(20,35,59,.22)}
+:root[data-theme="claro"] .pn-tire.has:hover rect{filter:brightness(1.15) drop-shadow(0 0 6px rgba(20,35,59,.06))}
+:root[data-theme="claro"] .pn-tire.sel rect{stroke:#3D5578}
 :root[data-theme="claro"] .pn-ok{color:#15803D}
-:root[data-theme="claro"] .pn-panel{background:rgba(241,243,246,.96);box-shadow:-16px 0 50px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .pn-x{color:#2563EB}
-:root[data-theme="claro"] .pn-x:hover{color:#64748B}
-:root[data-theme="claro"] .pn-f b{color:#2563EB}
-:root[data-theme="claro"] .dsc-month{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .dsc-month.open{box-shadow:0 0 24px rgba(var(--au-rgb),.12),0 16px 40px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .pn-panel{background:rgba(241,243,246,.96);box-shadow:-16px 0 50px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .pn-x{color:#1D4ED8}
+:root[data-theme="claro"] .pn-x:hover{color:#3D5578}
+:root[data-theme="claro"] .pn-f b{color:#1D4ED8}
+:root[data-theme="claro"] .dsc-month{box-shadow:0 0 18px rgba(var(--au-rgb),.06),0 14px 34px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .dsc-month.open{box-shadow:0 0 24px rgba(var(--au-rgb),.12),0 16px 40px rgba(20,35,59,.10)}
 :root[data-theme="claro"] .topbar{background:rgba(241,243,246,.82)!important}
-:root[data-theme="claro"] .cock-search span{color:#2563EB}
+:root[data-theme="claro"] .cock-search span{color:#1D4ED8}
 :root[data-theme="claro"] .cock-status.on{color:#15803D}
-:root[data-theme="claro"] .topbar .btn:hover{color:#64748B}
-:root[data-theme="claro"] #overlay .modal{background:linear-gradient(180deg,rgba(241,243,246,.98),rgba(241,243,246,.98));box-shadow:0 0 46px rgba(var(--au-rgb),.1),0 30px 80px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .topbar .btn:hover{color:#3D5578}
+:root[data-theme="claro"] #overlay .modal{background:linear-gradient(180deg,rgba(241,243,246,.98),rgba(241,243,246,.98));box-shadow:0 0 46px rgba(var(--au-rgb),.1),0 30px 80px rgba(20,35,59,.10)}
 :root[data-theme="claro"] #overlay .modal .m-f{background:rgba(241,244,246,.6)}
 :root[data-theme="claro"] #overlay .modal select option{background:#f1f4f6}
-:root[data-theme="claro"] #overlay .modal .btn:hover{color:#64748B}
-:root[data-theme="claro"] #overlay .modal .btn.danger{color:#DC2626}
+:root[data-theme="claro"] #overlay .modal .btn:hover{color:#3D5578}
+:root[data-theme="claro"] #overlay .modal .btn.danger{color:#B91C1C}
 :root[data-theme="claro"] #overlay .modal .st.ok{color:#15803D}
 :root[data-theme="claro"] #overlay .modal .st.warn{color:#B45309}
-:root[data-theme="claro"] #overlay .modal .st.crit,:root[data-theme="claro"] #overlay .modal .st.vencido{color:#DC2626}
-:root[data-theme="claro"] #overlay .modal .empty b{color:#2563EB}
-:root[data-theme="claro"] .alm-card{box-shadow:0 10px 26px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .alm-card:hover{box-shadow:0 0 22px -4px var(--ac),0 18px 40px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .alm-desc{color:#2563EB}
+:root[data-theme="claro"] #overlay .modal .st.crit,:root[data-theme="claro"] #overlay .modal .st.vencido{color:#B91C1C}
+:root[data-theme="claro"] #overlay .modal .empty b{color:#1D4ED8}
+:root[data-theme="claro"] .alm-card{box-shadow:0 10px 26px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .alm-card:hover{box-shadow:0 0 22px -4px var(--ac),0 18px 40px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .alm-desc{color:#1D4ED8}
 :root[data-theme="claro"] .scrim{background:rgba(243,244,247,.5)}
 @media(max-width:860px){
-:root[data-theme="claro"] .tb-logo{box-shadow:0 0 14px rgba(var(--au-rgb),.18),0 2px 8px rgba(23,36,60,.10)}
+:root[data-theme="claro"] .tb-logo{box-shadow:0 0 14px rgba(var(--au-rgb),.18),0 2px 8px rgba(20,35,59,.10)}
 }
 @media(min-width:861px){
 :root[data-theme="claro"] .topbar .cock-search,:root[data-theme="claro"] .topbar .cock-ico,:root[data-theme="claro"] .topbar .cock-weather,:root[data-theme="claro"] .topbar .cock-clock,:root[data-theme="claro"] .topbar .cock-status,:root[data-theme="claro"] .topbar .relbtn,:root[data-theme="claro"] .topbar .userbadge{background:rgba(241,243,246,.45)!important}
-:root[data-theme="claro"] .topbar .cock-search>svg{color:#2563EB}
-:root[data-theme="claro"] .topbar .cock-search span{color:#2563EB}
-:root[data-theme="claro"] .topbar .cock-ico{color:#2563EB}
+:root[data-theme="claro"] .topbar .cock-search>svg{color:#1D4ED8}
+:root[data-theme="claro"] .topbar .cock-search span{color:#1D4ED8}
+:root[data-theme="claro"] .topbar .cock-ico{color:#1D4ED8}
 :root[data-theme="claro"] .topbar .cock-status.on{color:#15803D}
 }
 :root[data-theme="claro"] .cc-map{background:radial-gradient(700px 460px at 50% 42%, rgba(0,120,255,.10), transparent 62%),
   radial-gradient(520px 380px at 12% 96%, rgba(var(--au-rgb),.06), transparent 60%),
   linear-gradient(160deg,#f1f4f6 0%,#f1f4f6 78%)!important}
-:root[data-theme="claro"] .cc-flow{stroke:#2563EB}
-:root[data-theme="claro"] .cc-core{fill:#2563EB}
-:root[data-theme="claro"] .cc-core2{fill:#64748B}
-:root[data-theme="claro"] .cc-baseName{fill:#2563EB}
-:root[data-theme="claro"] .cc-baseSub{fill:#2563EB}
-:root[data-theme="claro"] .cc-wx text{fill:#2563EB}
-:root[data-theme="claro"] .cc-cdot{fill:#2563EB}
-:root[data-theme="claro"] .cc-city:hover .cc-cdot{fill:#64748B}
-:root[data-theme="claro"] .cc-cname{fill:#2563EB}
+:root[data-theme="claro"] .cc-flow{stroke:#1D4ED8}
+:root[data-theme="claro"] .cc-core{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-core2{fill:#3D5578}
+:root[data-theme="claro"] .cc-baseName{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-baseSub{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-wx text{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-cdot{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-city:hover .cc-cdot{fill:#3D5578}
+:root[data-theme="claro"] .cc-cname{fill:#1D4ED8}
 :root[data-theme="claro"] .cc-csig circle{fill:#15803D;filter:drop-shadow(0 0 4px #15803D)}
-:root[data-theme="claro"] .cc-csig text{fill:#2563EB}
-:root[data-theme="claro"] .cc-road text{fill:#2563EB}
-:root[data-theme="claro"] .ini-veh .tk-cab{fill:#2563EB}
-:root[data-theme="claro"] .ini-veh .tk-head{fill:#2563EB;filter:drop-shadow(0 0 4px #2563EB)}
-:root[data-theme="claro"] .ini-veh .tk-tail{fill:#DC2626}
-:root[data-theme="claro"] .ini-veh:hover .tk-cab{fill:#2563EB}
-:root[data-theme="claro"] .cc-ctl{background:rgba(241,243,246,.6);color:#2563EB}
-:root[data-theme="claro"] .cc-ctl:hover{color:#2563EB}
-:root[data-theme="claro"] .apo-row{background:rgba(241,243,246,.04);border:1px solid rgba(23,36,60,.07) }
-:root[data-theme="claro"] .doc-step{color:#2563EB;background:rgba(241,243,246,.04);border:1px solid rgba(23,36,60,.06)}
+:root[data-theme="claro"] .cc-csig text{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-road text{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-veh .tk-cab{fill:#1D4ED8}
+:root[data-theme="claro"] .ini-veh .tk-head{fill:#1D4ED8;filter:drop-shadow(0 0 4px #1D4ED8)}
+:root[data-theme="claro"] .ini-veh .tk-tail{fill:#B91C1C}
+:root[data-theme="claro"] .ini-veh:hover .tk-cab{fill:#1D4ED8}
+:root[data-theme="claro"] .cc-ctl{background:rgba(241,243,246,.6);color:#1D4ED8}
+:root[data-theme="claro"] .cc-ctl:hover{color:#1D4ED8}
+:root[data-theme="claro"] .apo-row{background:rgba(241,243,246,.04);border:1px solid rgba(20,35,59,.07) }
+:root[data-theme="claro"] .doc-step{color:#1D4ED8;background:rgba(241,243,246,.04);border:1px solid rgba(20,35,59,.06)}
 :root[data-theme="claro"] .doc-step.ok{color:#15803D}
-:root[data-theme="claro"] .doc-meta{color:#2563EB}
+:root[data-theme="claro"] .doc-meta{color:#1D4ED8}
 :root[data-theme="claro"] .doc-conf.ok{color:#15803D}
 :root[data-theme="claro"] .doc-conf.warn{color:#B45309}
-:root[data-theme="claro"] .doc-conf.crit{color:#DC2626}
-:root[data-theme="claro"] .doc-reg{background:rgba(241,243,246,.03);border:1px solid rgba(23,36,60,.06)}
+:root[data-theme="claro"] .doc-conf.crit{color:#B91C1C}
+:root[data-theme="claro"] .doc-reg{background:rgba(241,243,246,.03);border:1px solid rgba(20,35,59,.06)}
 :root[data-theme="claro"] .antt-badge.ok{color:#15803D}
-:root[data-theme="claro"] .antt-badge.no{color:#DC2626}
+:root[data-theme="claro"] .antt-badge.no{color:#B91C1C}
 :root[data-theme="claro"] .seg2{background:rgba(241,244,246,.35)}
-:root[data-theme="claro"] .seg2 .seg-b{color:#2563EB}
+:root[data-theme="claro"] .seg2 .seg-b{color:#1D4ED8}
 :root[data-theme="claro"] .pdm-map{background:radial-gradient(120% 120% at 50% 0%, #f1f3f6 0%, #f1f3f6 70%)}
-:root[data-theme="claro"] .pdm-dot{stroke:#2563EB}
+:root[data-theme="claro"] .pdm-dot{stroke:#1D4ED8}
 :root[data-theme="claro"] .pdm-dot.base{fill:#B45309;stroke:#B45309}
-:root[data-theme="claro"] .pdm-lbl{fill:#2563EB}
+:root[data-theme="claro"] .pdm-lbl{fill:#1D4ED8}
 :root[data-theme="claro"] .pdm-lbl.base{fill:#B45309}
-:root[data-theme="claro"] .pn-item{background:rgba(241,243,246,.04);border:1px solid rgba(23,36,60,.06)}
+:root[data-theme="claro"] .pn-item{background:rgba(241,243,246,.04);border:1px solid rgba(20,35,59,.06)}
 :root[data-theme="claro"] #overlay .modal .alarme-det-code{background:radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--ac,var(--au2)) 30%, var(--surf)), #f1f3f6)}
-:root[data-theme="claro"] #overlay .modal .alarme-det-title{color:#2563EB}
-:root[data-theme="claro"] #overlay .modal .alarme-block-h{color:#2563EB}
+:root[data-theme="claro"] #overlay .modal .alarme-det-title{color:#1D4ED8}
+:root[data-theme="claro"] #overlay .modal .alarme-block-h{color:#1D4ED8}
 :root[data-theme="claro"] #overlay .modal .alarme-block.sol .alarme-block-h{color:#15803D }
-:root[data-theme="claro"] #overlay .modal .alarme-block p{color:#2563EB}
+:root[data-theme="claro"] #overlay .modal .alarme-block p{color:#1D4ED8}
 :root[data-theme="claro"] #overlay .modal .alarme-aviso{color:#B45309}
 :root[data-theme="claro"] #overlay .modal .alarme-aviso svg{color:#B45309}
 :root[data-theme="claro"] .pex-ripple{background:rgba(241,243,246,.32)}
 @media(max-width:860px){
 :root[data-theme="claro"] .topbar{background:rgba(241,243,246,.9)!important}
 :root[data-theme="claro"] .mob-ctx{background:rgba(241,243,246,.85)}
-:root[data-theme="claro"] .mob-ctx-title{color:#2563EB}
+:root[data-theme="claro"] .mob-ctx-title{color:#1D4ED8}
 :root[data-theme="claro"] .sidebar{background:linear-gradient(158deg, rgba(241,243,246,.97), rgba(241,243,246,.99))!important}
-:root[data-theme="claro"] table.tbl.mob-cards td::before{color:#2563EB}
+:root[data-theme="claro"] table.tbl.mob-cards td::before{color:#1D4ED8}
 }
 @media(max-width:860px){
 :root[data-theme="claro"] .mob-nav{background:rgba(241,243,246,.93)}
-:root[data-theme="claro"] .mob-nav-b{color:#2563EB}
+:root[data-theme="claro"] .mob-nav-b{color:#1D4ED8}
 }
-:root[data-theme="claro"] .lic-card{background:linear-gradient(160deg,rgba(241,244,246,.62),rgba(241,244,246,.72));box-shadow:0 4px 18px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .lic-card:hover{box-shadow:0 10px 30px rgba(23,36,60,.10),0 0 26px rgba(var(--au3-rgb),.2) }
+:root[data-theme="claro"] .lic-card{background:linear-gradient(160deg,rgba(241,244,246,.62),rgba(241,244,246,.72));box-shadow:0 4px 18px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .lic-card:hover{box-shadow:0 10px 30px rgba(20,35,59,.10),0 0 26px rgba(var(--au3-rgb),.2) }
 :root[data-theme="claro"] .lic-renov .card-h svg{color:#C2410C }
-:root[data-theme="claro"] .lic-steps .lic-step{color:#2563EB}
+:root[data-theme="claro"] .lic-steps .lic-step{color:#1D4ED8}
 :root[data-theme="claro"] .lic-steps .lic-step.done{color:#15803D }
-:root[data-theme="claro"] .lic-steps .lic-step.done i{border-color:#E3EAF2}
-:root[data-theme="claro"] .lic-doc{color:#2563EB}
+:root[data-theme="claro"] .lic-steps .lic-step.done i{border-color:#D9E3F0}
+:root[data-theme="claro"] .lic-doc{color:#1D4ED8}
 :root[data-theme="claro"] .lic-doc.ok{color:#15803D}
 :root[data-theme="claro"] .lic-tl-c::before{background:#f1f3f6}
 :root[data-theme="claro"] .cp-drop{background:linear-gradient(160deg,rgba(241,244,246,.5),rgba(241,244,246,.6))}
-:root[data-theme="claro"] .cp-fl{color:#2563EB}
-:root[data-theme="claro"] .cp-item{background:linear-gradient(160deg,rgba(241,244,246,.58),rgba(241,244,246,.7));box-shadow:0 4px 18px rgba(23,36,60,.10)}
-:root[data-theme="claro"] .cp-et{color:#2563EB}
+:root[data-theme="claro"] .cp-fl{color:#1D4ED8}
+:root[data-theme="claro"] .cp-item{background:linear-gradient(160deg,rgba(241,244,246,.58),rgba(241,244,246,.7));box-shadow:0 4px 18px rgba(20,35,59,.10)}
+:root[data-theme="claro"] .cp-et{color:#1D4ED8}
 :root[data-theme="claro"] .cp-et.done{color:#15803D }
-:root[data-theme="claro"] .cp-et.done i{border-color:#E3EAF2}
+:root[data-theme="claro"] .cp-et.done i{border-color:#D9E3F0}
 :root[data-theme="claro"] .cp-ocr{color:#C2410C}
-:root[data-theme="claro"] .cp-porque svg{color:#1E3A5F}
+:root[data-theme="claro"] .cp-porque svg{color:#1E40AF}
 :root[data-theme="claro"] .cp-rel{color:#15803D }
 :root[data-theme="claro"] .cp-ok{color:#15803D}
 :root[data-theme="claro"] .cp-aviso{color:#C2410C}
-:root[data-theme="claro"] .cp-erro{color:#DC2626}
-:root[data-theme="claro"] .cp-chk{color:#2563EB}
-:root[data-theme="claro"] .cb-aba{color:#2563EB}
-:root[data-theme="claro"] .fin-saldos-t{color:#2563EB}
+:root[data-theme="claro"] .cp-erro{color:#B91C1C}
+:root[data-theme="claro"] .cp-chk{color:#1D4ED8}
+:root[data-theme="claro"] .cb-aba{color:#1D4ED8}
+:root[data-theme="claro"] .fin-saldos-t{color:#1D4ED8}
 :root[data-theme="claro"] .fin-saldo{background:rgba(241,244,246,.42) }
-:root[data-theme="claro"] .fin-saldo-b b{color:#2563EB}
-:root[data-theme="claro"] .fin-saldo-b span{color:#2563EB }
+:root[data-theme="claro"] .fin-saldo-b b{color:#1D4ED8}
+:root[data-theme="claro"] .fin-saldo-b span{color:#1D4ED8 }
 :root[data-theme="claro"] .fin-imp-aviso svg{color:#B45309}
 :root[data-theme="claro"] .fin-imp-aviso b{color:#B45309 }
 :root[data-theme="claro"] .fin-imp-aviso span{color:#B45309}
-:root[data-theme="claro"] .sel-bar svg{color:#2563EB }
-:root[data-theme="claro"] .sel-del{color:#DC2626!important }
-:root[data-theme="claro"] .sp-logo,:root[data-theme="claro"] .login-logo,:root[data-theme="claro"] .ini-logo,:root[data-theme="claro"] .etica-logo,:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 8px 24px rgba(23,36,60,.10), 0 0 0 1px rgba(var(--au-rgb),.18), inset 0 1px 0 rgba(23,36,60,.06)!important}
+:root[data-theme="claro"] .sel-bar svg{color:#1D4ED8 }
+:root[data-theme="claro"] .sel-del{color:#B91C1C!important }
+:root[data-theme="claro"] .sp-logo,:root[data-theme="claro"] .login-logo,:root[data-theme="claro"] .ini-logo,:root[data-theme="claro"] .etica-logo,:root[data-theme="claro"] .brand .logo-badge{box-shadow:0 8px 24px rgba(20,35,59,.10), 0 0 0 1px rgba(var(--au-rgb),.18), inset 0 1px 0 rgba(20,35,59,.06)!important}
 :root[data-theme="claro"] #pexVerNova{background:rgba(250,250,252,.72)}
-:root[data-theme="claro"] #pexVerNova .pexvn-box{background:var(--surf2,#f1f3f6);border:1px solid rgba(23,36,60,.10);box-shadow:0 20px 60px rgba(23,36,60,.10)}
-:root[data-theme="claro"] #pexVerNova b{color:var(--text,#2563EB)}
-:root[data-theme="claro"] #pexVerNova span{color:var(--text-mute,#2563EB)}
-:root[data-theme="claro"] #pexVerTag{background:rgba(241,243,246,.05);border:1px solid rgba(23,36,60,.10);color:var(--text-mute,#2563EB)}
-:root[data-theme="claro"] #pexVerTag b{color:var(--text,#2563EB)}
+:root[data-theme="claro"] #pexVerNova .pexvn-box{background:var(--surf2,#f1f3f6);border:1px solid rgba(20,35,59,.10);box-shadow:0 20px 60px rgba(20,35,59,.10)}
+:root[data-theme="claro"] #pexVerNova b{color:var(--text,#1D4ED8)}
+:root[data-theme="claro"] #pexVerNova span{color:var(--text-mute,#1D4ED8)}
+:root[data-theme="claro"] #pexVerTag{background:rgba(241,243,246,.05);border:1px solid rgba(20,35,59,.10);color:var(--text-mute,#1D4ED8)}
+:root[data-theme="claro"] #pexVerTag b{color:var(--text,#1D4ED8)}
 :root[data-theme="claro"] #pexVerTag:hover{background:rgba(241,243,246,.09)}
 :root[data-theme="claro"] #pexVerTag.arq b,:root[data-theme="claro"] #pexVerTag.arq span{color:var(--warn,#B45309)}
 @media(max-width:860px){
-:root[data-theme="claro"] #pexVerTag{background:rgba(241,243,246,.92);border-color:rgba(23,36,60,.14);box-shadow:0 4px 14px rgba(23,36,60,.10)}
+:root[data-theme="claro"] #pexVerTag{background:rgba(241,243,246,.92);border-color:rgba(20,35,59,.14);box-shadow:0 4px 14px rgba(20,35,59,.10)}
 :root[data-theme="claro"] #pexVerTag.arq{background:rgba(246,244,241,.94)}
 }
-:root[data-theme="claro"] .conf-box{border-bottom:1px solid rgba(23,36,60,.07)}
-:root[data-theme="claro"] .conf-txt b{color:var(--text,#2563EB)}
-:root[data-theme="claro"] .conf-txt a{color:var(--danger,#DC2626)}
+:root[data-theme="claro"] .conf-box{border-bottom:1px solid rgba(23regras geradas: 281
+,36,60,.07)}
+:root[data-theme="claro"] .conf-txt b{color:var(--text,#1D4ED8)}
+:root[data-theme="claro"] .conf-txt a{color:var(--danger,#B91C1C)}
 :root[data-theme="claro"] .conf-selo{background:rgba(241,243,246,.03)}
 :root[data-theme="claro"] .conf-barra{background:rgba(241,243,246,.07)}
    AJUSTES À MÃO (v13.5) — o que a conversão automática não resolve.
@@ -333,7 +334,7 @@
    no tema claro ele some e a marca escura fica direto sobre o branco */
 :root[data-theme="claro"] .brand .logo-badge,
 :root[data-theme="claro"] .login-logo,
-:root[data-theme="claro"] .sp-logo{ background:#fff;border:1px solid rgba(23,36,60,.10) }
+:root[data-theme="claro"] .sp-logo{ background:#fff;border:1px solid rgba(20,35,59,.10) }
 
 /* 2. RÓTULO DE CARTÃO FRACO DEMAIS.
    Os rótulos em maiúsculas (`CONJUNTOS ATIVOS`) eram cinza-claro sobre
@@ -350,7 +351,7 @@
 :root[data-theme="claro"] .tb-word{ color:var(--tx) }
 
 /* 4. A PLACA FICOU BRANCA SOBRE BRANCA.
-   A base (estilo.css) define `.plate{background:#17243C;color:#fff}` —
+   A base (estilo.css) define `.plate{background:#14233B;color:#fff}` —
    pastilha escura, texto branco. O tema escuro troca só o FUNDO por
    `linear-gradient(var(--surf3),var(--surf))`, que no claro vira branco —
    e o texto branco da base continuou lá. As placas dos cavalos sumiram.
@@ -358,11 +359,11 @@
    com a borda marcando o contorno. A carreta segue mais acinzentada, para
    continuar distinguível de relance. */
 :root[data-theme="claro"] .plate{
-  background:linear-gradient(180deg,#ffffff,#eef2f7); color:#17243C;
-  border:1px solid rgba(23,36,60,.22); box-shadow:0 1px 2px rgba(23,36,60,.10) }
+  background:linear-gradient(180deg,#ffffff,#eef2f7); color:#14233B;
+  border:1px solid rgba(20,35,59,.22); box-shadow:0 1px 2px rgba(20,35,59,.10) }
 :root[data-theme="claro"] .plate.rebo{
   background:linear-gradient(180deg,#e7ecf4,#dbe2ec); color:#1E3A5F;
-  border-color:rgba(23,36,60,.28) }
+  border-color:rgba(20,35,59,.28) }
 
 /* 5. AS CORES QUE VÊM DO JAVASCRIPT.
    O `app.js` injeta a cor da categoria no elemento (`--ac`), e é por isso
@@ -382,7 +383,7 @@
 :root[data-theme="claro"] .alm-ico,
 :root[data-theme="claro"] .alm-card .alm-go,
 :root[data-theme="claro"] .doc-type{
-  color:color-mix(in srgb, var(--ac, var(--au2)) 72%, #17243C) }
+  color:color-mix(in srgb, var(--ac, var(--au2)) 72%, #14233B) }
 :root[data-theme="claro"] .alm-ico svg{ color:inherit }
 /* o brilho em volta do ícone era néon sobre preto: no claro vira contorno */
 :root[data-theme="claro"] .alm-ico{
@@ -390,7 +391,7 @@
   border-color:color-mix(in srgb, var(--ac, var(--au2)) 38%, transparent);
   text-shadow:none }
 :root[data-theme="claro"] .alm-card::before{
-  background:color-mix(in srgb, var(--ac, var(--au2)) 70%, #17243C) }
+  background:color-mix(in srgb, var(--ac, var(--au2)) 70%, #14233B) }
 
 /* 6. ETIQUETAS COLORIDAS: três jeitos diferentes de receber a cor.
    Levantei um por um, porque cada um exige um remédio diferente.
@@ -399,7 +400,7 @@
       seguro): dá para misturar, igual aos alarmes. */
 :root[data-theme="claro"] .ped-tag,
 :root[data-theme="claro"] .seg-tag{
-  color:color-mix(in srgb, var(--c, var(--au2)) 72%, #17243C);
+  color:color-mix(in srgb, var(--c, var(--au2)) 72%, #14233B);
   background:color-mix(in srgb, var(--c, var(--au2)) 12%, #ffffff);
   border:1px solid color-mix(in srgb, var(--c, var(--au2)) 30%, transparent) }
 
@@ -412,7 +413,7 @@
 /* c) `.seg-b.on` é o botão de filtro ATIVO: tinha texto quase preto sobre
       ciano. No claro o acento virou azul forte, e texto escuro sobre azul
       forte não se lê — tem de ser branco. */
-:root[data-theme="claro"] .seg2 .seg-b.on{ color:#fff; box-shadow:0 1px 3px rgba(23,36,60,.18) }
+:root[data-theme="claro"] .seg2 .seg-b.on{ color:#fff; box-shadow:0 1px 3px rgba(20,35,59,.18) }
 :root[data-theme="claro"] .seg2 .seg-b{ color:var(--tx2) }
 
 /* d) o "Apto a realizar o transporte" da ANTT é verde-néon no elemento */
@@ -431,117 +432,178 @@
    tela que ele vê. Ganha borda, sombra e os textos nos tons certos.
    A marca aqui também era a arte branca; já trocada pela escura acima. */
 :root[data-theme="claro"] .login-box{
-  background:#fff; border:1px solid rgba(23,36,60,.12);
-  box-shadow:0 18px 50px rgba(23,36,60,.12), 0 2px 6px rgba(23,36,60,.06) }
+  background:#fff; border:1px solid rgba(20,35,59,.12);
+  box-shadow:0 18px 50px rgba(20,35,59,.12), 0 2px 6px rgba(20,35,59,.06) }
 :root[data-theme="claro"] .login-sub{ color:var(--tx3) }
 :root[data-theme="claro"] .login-box .field label{ color:var(--tx2) }
 :root[data-theme="claro"] .login-box .field input{
-  background:#fff; border-color:rgba(23,36,60,.18); color:var(--tx) }
+  background:#fff; border-color:rgba(20,35,59,.18); color:var(--tx) }
 :root[data-theme="claro"] .login-box .field input:focus{
   border-color:var(--au); box-shadow:0 0 0 3px rgba(var(--au-rgb),.14) }
 :root[data-theme="claro"] .login-foot{ color:var(--tx3) }
-:root[data-theme="claro"] .login-logo{
-  background:#fff; border:1px solid rgba(23,36,60,.10); box-shadow:0 6px 18px rgba(23,36,60,.10) }
 
 /* ==================================================================
-   8. REFINAMENTO CROMÁTICO (v13.6)
-   O dono olhou a v13.5: "muito azulada, acinzentada e sem sofisticação".
-   Tinha razão — a conversão automática preservava o matiz do tema escuro
-   (azul-marinho + ciano), então card, menu e cabeçalho ficaram com véu
-   azul. Aqui as superfícies principais voltam a ser BRANCAS e a
-   profundidade passa a vir de sombra suave e borda discreta, não de cor.
-   Nada de layout, tamanho ou posição muda: só cor.
+   8. REFINAMENTO PREMIUM (v13.7)
+   Pedido: "não quero algo pálido, quero vivido, suave, porém com
+   detalhes vibrantes e premium, escritas mais fortes".
+   A v13.6 estava correta e sem graça — neutra demais. Aqui o conjunto
+   ganha presença SEM virar colorido: a base segue clara e calma, e a
+   cor aparece onde significa alguma coisa (estado, ação, seleção).
+   Só cor, peso de fonte e sombra. Layout, tamanhos e estrutura intactos.
    ================================================================== */
 
-/* 8.1 CABEÇALHO branco, sem névoa azulada nem brilho */
-:root[data-theme="claro"] .topbar{
-  background:#FFFFFF !important;
-  border-bottom:1px solid var(--line) !important;
-  backdrop-filter:none; -webkit-backdrop-filter:none;
-  box-shadow:0 1px 2px rgba(23,36,60,.04) }
-:root[data-theme="claro"] .cock-search{
-  background:#F7F9FC; border:1px solid var(--line); box-shadow:none }
-:root[data-theme="claro"] .cock-search:hover{
-  background:#FFFFFF; border-color:#CBD7E6; box-shadow:0 1px 3px rgba(23,36,60,.07) }
-:root[data-theme="claro"] .cock-search span{ color:var(--tx3) }
-:root[data-theme="claro"] .cock-ico{ color:var(--tx2); border-color:transparent }
-:root[data-theme="claro"] .cock-ico:hover{ background:#F2F5FA; color:var(--au); border-color:var(--line) }
-:root[data-theme="claro"] .cock-clock b{ color:var(--tx) }
-:root[data-theme="claro"] .cock-clock span{ color:var(--tx3) }
-:root[data-theme="claro"] .userbadge{ background:var(--accent-soft); color:var(--au3) }
-:root[data-theme="claro"] .topbar .relbtn{ background:#FFFFFF; border:1px solid var(--line); color:var(--tx2) }
-:root[data-theme="claro"] .topbar .relbtn:hover{ border-color:var(--au); color:var(--au) }
-
-/* 8.2 MENU LATERAL branco, seleção em azul suave (sem brilho) */
-:root[data-theme="claro"] .sidebar{ background:#FFFFFF; border-right:1px solid var(--line) }
-:root[data-theme="claro"] .nav a{ color:var(--tx2); border-color:transparent }
-:root[data-theme="claro"] .nav a:hover{ background:#F2F5FA; color:var(--tx); border-color:transparent }
-:root[data-theme="claro"] .nav a.active{
-  background:var(--accent-soft); color:var(--au3); border-color:transparent;
-  box-shadow:none; font-weight:650 }
-:root[data-theme="claro"] .nav a.active::before{ background:var(--au); box-shadow:none }
-:root[data-theme="claro"] .nav .group{ color:var(--tx3) }
-:root[data-theme="claro"] .sidebar .foot{ color:var(--tx3); border-top:1px solid var(--line-2) }
-:root[data-theme="claro"] .brand .btxt b{ color:var(--tx) }
-:root[data-theme="claro"] .brand .btxt span{ color:var(--tx3) }
-
-/* 8.3 CARDS brancos, separados do fundo por sombra sutil — não por cinza */
-:root[data-theme="claro"] .card,
-:root[data-theme="claro"] .ini-kpi,
-:root[data-theme="claro"] .socio-card{
-  background:#FFFFFF; border:1px solid var(--line); box-shadow:var(--shadow) }
-:root[data-theme="claro"] .card-h{ border-bottom:1px solid var(--line-2) }
-
-/* 8.4 TABELAS: cabeçalho discreto, linhas zebradas quase imperceptíveis */
-:root[data-theme="claro"] .tbl thead th{
-  background:#F7F9FC; color:var(--tx2); border-bottom:1px solid var(--line) }
-:root[data-theme="claro"] .tbl tbody tr:hover{ background:#F7F9FC }
-:root[data-theme="claro"] .tbl td{ border-bottom:1px solid var(--line-2); color:var(--tx) }
-
-/* 8.5 NÚMEROS dos indicadores: escuros e nítidos; legenda discreta */
-:root[data-theme="claro"] .ini-k-val,
-:root[data-theme="claro"] .k-val,
-:root[data-theme="claro"] .num{ color:var(--tx) }
-:root[data-theme="claro"] .ini-k-rot,
-:root[data-theme="claro"] .k-rot{ color:var(--tx2) }
-
-/* 8.6 BOTÕES: o primário é o azul da marca; o neutro é branco com borda */
-:root[data-theme="claro"] .btn{ background:#FFFFFF; border:1px solid var(--line); color:var(--tx2) }
-:root[data-theme="claro"] .btn:hover{ border-color:#CBD7E6; color:var(--tx) }
-:root[data-theme="claro"] .btn.primary{
-  background:var(--au); border-color:var(--au); color:#fff; box-shadow:0 1px 2px rgba(37,99,235,.24) }
-:root[data-theme="claro"] .btn.primary:hover{ background:#1D4ED8; border-color:#1D4ED8 }
-:root[data-theme="claro"] .btn.danger{ background:var(--danger); border-color:var(--danger); color:#fff }
-:root[data-theme="claro"] .btn.ghost{ background:transparent; border-color:transparent; color:var(--tx2) }
-:root[data-theme="claro"] .btn.ghost:hover{ background:#F2F5FA; color:var(--tx) }
-
-/* 8.7 SELOS de situação: cor semântica, fundo lavado, sem saturação gritante */
-:root[data-theme="claro"] .st.ok{ color:var(--ok); background:var(--ok-bg) }
-:root[data-theme="claro"] .st.warn{ color:var(--warn); background:var(--warn-bg) }
-:root[data-theme="claro"] .st.crit,
-:root[data-theme="claro"] .st.err{ color:var(--danger); background:var(--danger-bg) }
-
-/* 8.8 ESPECIFICIDADE — o que ainda perdia para o tema escuro.
-   Medi no navegador em vez de supor: o card continuava
-   `rgba(241,244,246,.55)` porque `#view.cyber .card` (id + classe) vence
-   um seletor só de classes. Aqui a regra sobe ao mesmo nível. */
+/* 8.1 TRÊS SUPERFÍCIES BEM SEPARADAS — era disso que vinha o "lavado":
+   fundo, menu e card quase idênticos. Agora cada um tem o seu tom. */
+:root[data-theme="claro"] body,
+:root[data-theme="claro"] .content{ background:#F4F7FB }
+:root[data-theme="claro"] .sidebar{
+  background:#EEF3F9; border-right:1px solid var(--line) }
 :root[data-theme="claro"] #view.cyber .card,
 :root[data-theme="claro"] #view.cyber .ini-kpi,
-:root[data-theme="claro"] #view.cyber .socio-card{
+:root[data-theme="claro"] #view.cyber .socio-card,
+:root[data-theme="claro"] .card,
+:root[data-theme="claro"] .ini-kpi{
   background:#FFFFFF; border:1px solid var(--line);
   box-shadow:var(--shadow); backdrop-filter:none; -webkit-backdrop-filter:none }
-:root[data-theme="claro"] #view.cyber .card-h{ border-bottom:1px solid var(--line-2) }
-:root[data-theme="claro"] #view.cyber .tbl thead th{ background:#F7F9FC; color:var(--tx2) }
 
-/* 8.9 A LOGO, por ARQUIVO e não por lugar.
-   Eu tinha listado os cinco lugares onde a marca aparece, e um deles (a
-   do menu) continuava com a arte branca — invisível no claro. Mirar no
-   `src` pega todos de uma vez, hoje e em qualquer tela nova.
-   A arte é a do cliente (`logo-escuro.png`, a mesma do relatório A4);
-   não há nada redesenhado aqui. */
+/* 8.2 CABEÇALHO branco, busca com presença */
+:root[data-theme="claro"] .topbar{
+  background:#FFFFFF !important; border-bottom:1px solid var(--line) !important;
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+  box-shadow:0 1px 3px rgba(20,35,59,.05) }
+:root[data-theme="claro"] .cock-search{
+  background:#F4F7FB; border:1px solid var(--line); color:var(--tx) }
+:root[data-theme="claro"] .cock-search:hover,
+:root[data-theme="claro"] .cock-search:focus-within{
+  background:#FFFFFF; border-color:var(--au); box-shadow:0 0 0 3px #DBEAFE }
+:root[data-theme="claro"] .cock-search span{ color:var(--tx2); font-weight:500 }
+:root[data-theme="claro"] .cock-search>svg{ color:var(--au) }
+:root[data-theme="claro"] .cock-kbd{ background:#FFFFFF; border:1px solid var(--line); color:var(--tx3) }
+:root[data-theme="claro"] .cock-ico{ color:var(--tx2); border:1px solid var(--line); background:#FFFFFF }
+:root[data-theme="claro"] .cock-ico:hover{ background:#DBEAFE; color:var(--au2); border-color:var(--au) }
+:root[data-theme="claro"] .cock-clock b{ color:var(--tx); font-weight:700 }
+:root[data-theme="claro"] .cock-clock span{ color:var(--tx2) }
+:root[data-theme="claro"] .userbadge{ background:#DBEAFE; color:var(--au3); font-weight:600 }
+:root[data-theme="claro"] .topbar .relbtn{ background:#FFFFFF; border:1px solid var(--line); color:var(--tx2); font-weight:600 }
+:root[data-theme="claro"] .topbar .relbtn:hover{ border-color:var(--au); color:var(--au2); background:#F5F9FF }
+
+/* 8.3 MENU LATERAL com nomes FORTES e seleção vibrante.
+   Os nomes dos módulos eram o caso mais gritante de texto apagado. */
+:root[data-theme="claro"] .nav a{ color:#243B5A; font-weight:560; border-color:transparent }
+:root[data-theme="claro"] .nav a svg{ color:#5F7493 }
+:root[data-theme="claro"] .nav a:hover{ background:#E3EDFA; color:var(--au3) }
+:root[data-theme="claro"] .nav a:hover svg{ color:var(--au2) }
+:root[data-theme="claro"] .nav a.active{
+  background:#DBEAFE; color:var(--au3); font-weight:700;
+  border-color:transparent; box-shadow:inset 0 0 0 1px rgba(37,99,235,.18) }
+:root[data-theme="claro"] .nav a.active svg{ color:var(--au2) }
+:root[data-theme="claro"] .nav a.active::before{ background:var(--au); box-shadow:none }
+:root[data-theme="claro"] .nav .group{ color:#4A6287; font-weight:800 }
+:root[data-theme="claro"] .sidebar .foot{ color:var(--tx2); border-top:1px solid var(--line) }
+:root[data-theme="claro"] .brand .btxt b{ color:var(--tx) }
+:root[data-theme="claro"] .brand .btxt span{ color:var(--tx2) }
+:root[data-theme="claro"] .brand .logo-badge{
+  background:#FFFFFF; border:1px solid var(--line); box-shadow:0 2px 6px rgba(20,35,59,.08) }
+
+/* 8.4 OS NÚMEROS E AS LEGENDAS DOS INDICADORES.
+   Número em azul-marinho profundo; a descrição em azul corporativo
+   forte, não em cinza. Era o pedido explícito: "CONJUNTOS ATIVOS",
+   "MOTORISTAS ATIVOS", "DOCUMENTOS VENCIDOS" precisam saltar. */
+:root[data-theme="claro"] .ini-k-val,
+:root[data-theme="claro"] .k-val,
+:root[data-theme="claro"] .num,
+:root[data-theme="claro"] .kpi b,
+:root[data-theme="claro"] .cb-k-val{ color:#14233B }
+:root[data-theme="claro"] .ini-k-rot,
+:root[data-theme="claro"] .k-rot,
+:root[data-theme="claro"] .cb-k-rot,
+:root[data-theme="claro"] .kpi .l{ color:#1D4ED8; font-weight:700 }
+:root[data-theme="claro"] .it .l{ color:var(--tx2); font-weight:600 }
+:root[data-theme="claro"] .it .v{ color:var(--tx) }
+:root[data-theme="claro"] .card-h h3{ color:var(--tx) }
+:root[data-theme="claro"] .card-h .sub,
+:root[data-theme="claro"] .muted,
+:root[data-theme="claro"] .hint{ color:var(--tx2) }
+
+/* 8.5 VERDE COM PROTAGONISMO.
+   O verde é o "está tudo certo" — o que ele mais olha. Texto em verde
+   fechado sobre fundo verde suave: vibrante e legível ao mesmo tempo. */
+:root[data-theme="claro"] .st.ok,
+:root[data-theme="claro"] .badge.ok,
+:root[data-theme="claro"] .tag.ok{
+  color:#15803D; background:#DCFCE7; border:1px solid #86EFAC; font-weight:700 }
+:root[data-theme="claro"] .ini-kpi.ok,
+:root[data-theme="claro"] #view.cyber .ini-kpi.ok{
+  border-color:#86EFAC; box-shadow:0 1px 2px rgba(20,35,59,.06),0 6px 18px rgba(22,163,74,.10) }
+:root[data-theme="claro"] .ini-kpi.ok .ini-k-rot{ color:#15803D }
+:root[data-theme="claro"] .dot.ok,
+:root[data-theme="claro"] .st.ok i{ background:#22C55E }
+
+/* 8.6 ÂMBAR e VERMELHO: mesma lógica — fundo lavado, texto forte */
+:root[data-theme="claro"] .st.warn,
+:root[data-theme="claro"] .tag.warn{
+  color:#B45309; background:#FEF3C7; border:1px solid #FCD34D; font-weight:700 }
+:root[data-theme="claro"] .st.crit,
+:root[data-theme="claro"] .st.err,
+:root[data-theme="claro"] .tag.crit{
+  color:#B91C1C; background:#FEE2E2; border:1px solid #FCA5A5; font-weight:700 }
+:root[data-theme="claro"] .ini-kpi.crit,
+:root[data-theme="claro"] #view.cyber .ini-kpi.crit{
+  border-color:#FCA5A5; box-shadow:0 1px 2px rgba(20,35,59,.06),0 6px 18px rgba(220,38,38,.10) }
+:root[data-theme="claro"] .ini-kpi.crit .ini-k-rot{ color:#B91C1C }
+
+/* 8.7 BOTÕES com definição */
+:root[data-theme="claro"] .btn{ background:#FFFFFF; border:1px solid var(--line); color:var(--tx2); font-weight:600 }
+:root[data-theme="claro"] .btn:hover{ border-color:var(--au); color:var(--au2); background:#F5F9FF }
+:root[data-theme="claro"] .btn.primary{
+  background:var(--au); border-color:var(--au); color:#fff; font-weight:650;
+  box-shadow:0 1px 2px rgba(29,78,216,.26) }
+:root[data-theme="claro"] .btn.primary:hover{ background:var(--au2); border-color:var(--au2) }
+:root[data-theme="claro"] .btn.danger{ background:#DC2626; border-color:#DC2626; color:#fff }
+:root[data-theme="claro"] .btn.ghost{ background:transparent; border-color:transparent; color:var(--tx2) }
+:root[data-theme="claro"] .btn.ghost:hover{ background:#E3EDFA; color:var(--au2) }
+
+/* 8.8 TABELAS: cabeçalho com peso, linhas com separação clara */
+:root[data-theme="claro"] .tbl thead th,
+:root[data-theme="claro"] #view.cyber .tbl thead th{
+  background:#EEF3F9; color:#243B5A; font-weight:700; border-bottom:1px solid var(--line) }
+:root[data-theme="claro"] .tbl td{ border-bottom:1px solid var(--line-2); color:var(--tx) }
+:root[data-theme="claro"] .tbl tbody tr:hover{ background:#F5F9FF }
+
+/* 8.9 A LOGO por arquivo (vale para qualquer tela, hoje e no futuro) */
 :root[data-theme="claro"] img[src$="logo-claro.png"],
 :root[data-theme="claro"] img[src$="logo-marca.png"],
 :root[data-theme="claro"] img[src$="logo-sm.png"]{ content:url("logo-escuro.png") }
-:root[data-theme="claro"] .brand .logo-badge{
-  background:#FFFFFF; border:1px solid var(--line); box-shadow:0 1px 3px rgba(23,36,60,.07) }
 :root[data-theme="claro"] .tb-brand .tb-logo{ background:transparent; box-shadow:none }
+:root[data-theme="claro"] .tb-word{ color:var(--tx); font-weight:700 }
+
+/* 8.10 PESO — a classe real do rótulo é `.ini-kpi .l`, não `.kpi .l`.
+   Medi no navegador: a COR já estava certa (#1D4ED8), o que fazia
+   parecer apagado era a espessura 400 num texto pequeno, em maiúsculas
+   e com espaçamento entre letras. Só o peso muda aqui — família,
+   tamanho e estrutura continuam os mesmos. */
+:root[data-theme="claro"] .ini-kpi .l{ color:#1D4ED8; font-weight:700 }
+:root[data-theme="claro"] .ini-kpi .num{ color:#14233B; font-weight:800 }
+:root[data-theme="claro"] .ini-kpi .ic{ color:var(--au2) }
+/* o cartão "tudo em dia" assume o verde: é o estado que ele mais procura */
+:root[data-theme="claro"] .ini-kpi.ok .l{ color:#15803D }
+:root[data-theme="claro"] .ini-kpi.ok .ic{ color:#16A34A }
+:root[data-theme="claro"] .ini-kpi.crit .l{ color:#B91C1C }
+:root[data-theme="claro"] .ini-kpi.crit .ic{ color:#DC2626 }
+/* selo verde do canto do cartão */
+:root[data-theme="claro"] .ini-kpi .ok-chip,
+:root[data-theme="claro"] .ini-kpi .chip.ok{
+  color:#15803D; background:#DCFCE7; border:1px solid #86EFAC; font-weight:700 }
+
+/* 8.11 O MENU LATERAL precisava de tom PRÓPRIO.
+   A camada gerada converteu o degradê do tema escuro e ele continuava
+   vencendo (medi: `background-color` saía transparente, sinal de que um
+   `background-image` estava por cima). Com `.app .sidebar` a regra sobe
+   de nível e o menu passa a ser um degrau abaixo do branco — é essa
+   diferença entre fundo, menu e card que tira o ar de "lavado". */
+:root[data-theme="claro"] .app .sidebar{
+  /* o !important aqui NAO e preguica: a camada gerada emitiu o degrade
+     do tema escuro com !important (linha ~259), e so outro !important
+     vence isso. Medido, nao suposto. */
+  background:#EEF3F9 !important; background-image:none !important;
+  border-right:1px solid var(--line) }

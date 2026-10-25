@@ -3192,34 +3192,36 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
    ================================================================== */
 :root[data-theme="claro"]{
   /* base: do fundo para a superfície — agora claro */
-  /* ---- PALETA v13.6 — refinamento cromatico pedido pelo dono.
-     O claro da v13.5 saiu azulado e acinzentado porque a conversao
-     automatica PRESERVA O MATIZ, e o tema escuro era azul-marinho com
-     ciano: tudo herdou esse viés. Aqui a base vira off-white quase
-     neutro, e o azul deixa de pintar superficie -- so acento. ---- */
-  /* superficies: neutras, com um fio de frio. Card e cabecalho BRANCOS. */
-  --void:#EEF2F7;  --bg:#F7F9FC;   --bg2:#F2F5FA;
-  --surf:#FFFFFF;  --surf2:#FFFFFF; --surf3:#F8FAFD;
-  --surf-rgb:255,255,255;  --surf2-rgb:255,255,255;  --surf3-rgb:248,250,253;
-  /* ACENTO — azul institucional da marca. --au e o azul de acao (#2563EB),
-     --au3 o azul escuro institucional, usado em texto sobre claro. */
-  --au:#2563EB;  --au2:#2563EB;  --au3:#1E3A5F;
-  --au-rgb:37,99,235;  --au3-rgb:30,58,95;
-  /* texto: escuro e nitido no principal, cinza neutro no secundario */
-  --tx:#17243C;  --tx2:#64748B;  --tx3:#5E6C80;  --tx3-rgb:94,108,128;
+  /* ---- PALETA v13.7 — "vivido, suave, porem com detalhes vibrantes e
+     premium, escritas mais fortes". A v13.6 ficou correta e sem graca:
+     neutra demais. Aqui a base continua clara e calma, mas o AZUL e o
+     VERDE ganham presenca, e o texto para de ser timido. ---- */
+  /* superficies: base levemente fria, sidebar um degrau abaixo do branco,
+     card BRANCO -- e a diferenca entre os tres que da leitura de blocos */
+  --void:#E7EEF7;  --bg:#F4F7FB;   --bg2:#EEF3F9;
+  --surf:#FFFFFF;  --surf2:#FFFFFF; --surf3:#EEF3F9;
+  --surf-rgb:255,255,255;  --surf2-rgb:255,255,255;  --surf3-rgb:238,243,249;
+  /* AZUL institucional, agora com forca */
+  --au:#2563EB;  --au2:#1D4ED8;  --au3:#1E40AF;
+  --au-rgb:37,99,235;  --au3-rgb:29,78,216;
+  /* VERDE com protagonismo: e a cor de "esta tudo certo", e o cliente
+     olha isso o dia inteiro */
+  --vd:#22C55E;  --vd2:#16A34A;  --vd3:#15803D;  --vd-rgb:34,197,94;
+  --vd-soft:#DCFCE7;
+  /* texto: azul-marinho profundo no principal, nada de cinza lavado */
+  --tx:#14233B;  --tx2:#3D5578;  --tx3:#5F7493;  --tx3-rgb:95,116,147;
   --content:var(--bg); --card:var(--surf);
-  /* bordas: cinza-azulado CLARO, nada de nevoa */
-  --line:#E3EAF2; --line-2:#EDF1F7;
+  --line:#D9E3F0; --line-2:#E6EDF6;
   --text:var(--tx); --text-soft:var(--tx2); --text-mute:var(--tx3);
-  --accent:var(--au); --accent-2:var(--au3); --accent-soft:#EFF4FE;
-  --gold:var(--au); --gold-2:var(--au2); --gold-soft:#EFF4FE;
-  /* status: semanticos, sem saturacao exagerada */
-  --ok:#16A34A;     --ok-bg:#E8F6EC;
-  --warn:#D97706;   --warn-bg:#FDF3E3;
-  --crit:#EA580C;   --crit-bg:#FDEEE4;
-  --danger:#DC2626; --danger-bg:#FCEAEA;
-  /* sombras: cinza neutro, muito suaves -- profundidade sem brilho */
-  --shadow:0 1px 2px rgba(23,36,60,.05),0 4px 14px rgba(23,36,60,.05);
-  --shadow-lg:0 14px 38px rgba(23,36,60,.12);
+  --accent:var(--au); --accent-2:var(--au2); --accent-soft:#DBEAFE;
+  --gold:var(--au); --gold-2:var(--au2); --gold-soft:#DBEAFE;
+  /* status: vibrantes, porem com o TEXTO em tom forte para ler bem */
+  --ok:#15803D;     --ok-bg:#DCFCE7;
+  --warn:#B45309;   --warn-bg:#FEF3C7;
+  --crit:#C2410C;   --crit-bg:#FFEDD5;
+  --danger:#B91C1C; --danger-bg:#FEE2E2;
+  /* sombras com um fio de azul: dao "nobreza" ao card sem sujar */
+  --shadow:0 1px 2px rgba(20,35,59,.06),0 6px 18px rgba(20,35,59,.07);
+  --shadow-lg:0 16px 42px rgba(20,35,59,.14);
   color-scheme: light;
 }
