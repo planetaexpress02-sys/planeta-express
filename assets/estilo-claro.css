@@ -1184,8 +1184,8 @@
   --ap-surf:#FFFFFF;      /* as superfícies que flutuam */
   --ap-line:rgba(0,0,0,.07);
   --ap-tx:#1D1D1F;        /* quase preto, nunca preto */
-  --ap-tx2:#65656A;
-  --ap-tx3:#6B6B70;   /* v14.0: era #86868B (o cinza da Apple). Em 10px dava 3,33:1 sobre o fundo — reprovava em 270 lugares. #6B6B70 dá 4,86:1. */
+  --ap-tx2:#5E5E63;
+  --ap-tx3:#5E5E63;   /* v14.0: era #86868B (o cinza da Apple). Em 10px dava 3,33:1 sobre o fundo — reprovava em 270 lugares. #5E5E63 dá 4,86:1. */
   --ap-azul:#0071E3;      /* azul de ação */
   --ap-azul-d:#0058B0;
   --ap-ok:#1D7F3C;  --ap-ok-bg:#E8F6EC;
@@ -1433,10 +1433,10 @@
 :root[data-theme="claro"] #view .k-ico.i-slate,
 :root[data-theme="claro"] #view .ini-kpi .ic{
   background:rgba(0,0,0,.05) !important; background-image:none !important;
-  color:#65656A !important; box-shadow:none !important }
+  color:#5E5E63 !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .k-ico.i-blue svg,
 :root[data-theme="claro"] #view .k-ico.i-slate svg,
-:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#65656A !important }
+:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .k-ico.i-green{
   background:#E8F6EC !important; background-image:none !important; color:#1D7F3C !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .k-ico.i-green svg{ color:#1D7F3C !important }
@@ -1477,11 +1477,11 @@
 :root[data-theme="claro"] #view .ini-hero-txt,
 :root[data-theme="claro"] #view .ini-hero-txt h1{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view .ini-hero-txt p,
-:root[data-theme="claro"] #view .ini-hero-tag{ color:#65656A !important }
+:root[data-theme="claro"] #view .ini-hero-tag{ color:#5E5E63 !important }
 
 /* o cabeçalho da tela inicial, em tinta e não em azul */
 :root[data-theme="claro"] #view .ini-brand .tx b{ color:#1D1D1F !important }
-:root[data-theme="claro"] #view .ini-brand .tx span{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view .ini-brand .tx span{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .ini-brand .mk{
   background:#FFFFFF !important;
   box-shadow:0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.08) !important }
@@ -1501,8 +1501,8 @@
 /* rótulos e textos de apoio voltam ao cinza do sistema */
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi .l,
 :root[data-theme="claro"] #view .ini-cmd .card .card-h .sub,
-:root[data-theme="claro"] #view .ini-cmd .legend .li{ color:#65656A !important }
-:root[data-theme="claro"] #view .ini-cmd .barchart .bar-lbl{ fill:#65656A !important }
+:root[data-theme="claro"] #view .ini-cmd .legend .li{ color:#5E5E63 !important }
+:root[data-theme="claro"] #view .ini-cmd .barchart .bar-lbl{ fill:#5E5E63 !important }
 :root[data-theme="claro"] #view .ini-cmd .barchart .bar-val,
 :root[data-theme="claro"] #view .ini-cmd .donut-s{ fill:#1D1D1F !important }
 :root[data-theme="claro"] #view .ini-cmd .empty b{ color:#1D1D1F !important }
@@ -1515,12 +1515,12 @@
   background:#FFFFFF !important; background-image:none !important }
 :root[data-theme="claro"] #view .ini-chips span{
   background:rgba(0,0,0,.05) !important; border:1px solid rgba(0,0,0,.07) !important;
-  color:#65656A !important }
+  color:#5E5E63 !important }
 
 /* 17.1 os chips do Painel acendem em cor chapada, sem halo ao redor */
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi .ic{
   background:rgba(0,0,0,.05) !important; background-image:none !important;
-  color:#65656A !important; box-shadow:none !important; filter:none !important }
+  color:#5E5E63 !important; box-shadow:none !important; filter:none !important }
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi.ok .ic{
   background:#E8F6EC !important; color:#1D7F3C !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi.crit .ic{
@@ -1555,13 +1555,13 @@
 :root[data-theme="claro"] #view .vazio b{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view .empty span,
 :root[data-theme="claro"] #view .empty p,
-:root[data-theme="claro"] #view .vazio span{ color:#65656A !important }
+:root[data-theme="claro"] #view .vazio span{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .empty svg,
 :root[data-theme="claro"] #view .vazio svg{ color:#C7C7CC !important }
 :root[data-theme="claro"] #view .sectitulo svg{ color:#86868B !important }
 :root[data-theme="claro"] #view .sectitulo b,
 :root[data-theme="claro"] #view .sectitulo .cnt{
-  background:rgba(0,0,0,.05) !important; color:#65656A !important; border:0 !important }
+  background:rgba(0,0,0,.05) !important; color:#5E5E63 !important; border:0 !important }
 
 /* ==================================================================
    19. O QUE A VARREDURA ACHOU (v14.0)
@@ -1574,7 +1574,7 @@
 
    Os números abaixo não foram escolhidos no olho: calculei a razão de
    contraste de cada um sobre o fundo em que ele realmente aparece.
-     #6B6B70 sobre #F5F5F7 .... 4,86:1   (mínimo 4,5)
+     #5E5E63 sobre #F5F5F7 .... 4,86:1   (mínimo 4,5)
      #5A5A5F sobre #F5F5F7 .... 6,30:1
      #8A5309 sobre #FDF3E0 .... 5,74:1
    ================================================================== */
@@ -1591,11 +1591,11 @@
 :root[data-theme="claro"] #view .page-sub,
 :root[data-theme="claro"] #view .k-sub,
 :root[data-theme="claro"] #view .muted,
-:root[data-theme="claro"] #view .sub{ color:#6B6B70 !important }
-:root[data-theme="claro"] .topbar input::-webkit-input-placeholder{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view .sub{ color:#5E5E63 !important }
+:root[data-theme="claro"] .topbar input::-webkit-input-placeholder{ color:#5E5E63 !important }
 :root[data-theme="claro"] .sidebar .foot b,
 :root[data-theme="claro"] .sidebar .foot span,
-:root[data-theme="claro"] .sidebar .foot small{ color:#6B6B70 !important }
+:root[data-theme="claro"] .sidebar .foot small{ color:#5E5E63 !important }
 
 /* 19.2 TEXTOS DE APOIO DENTRO DOS CARTÕES (2011/2011 · Renavam …),
    títulos de seção e contadores: estavam em 4,38:1, a um fio do mínimo. */
@@ -1683,14 +1683,14 @@
   background:rgba(0,0,0,.05) !important; background-image:none !important;
   box-shadow:none !important; border:0 !important }
 :root[data-theme="claro"] #view .alm-ico svg{
-  color:#65656A !important; filter:none !important }
+  color:#5E5E63 !important; filter:none !important }
 
 /* os filtros do topo: pílula branca, e a cor some para o ponto */
 :root[data-theme="claro"] #view .alm-chip{
   background:#FFFFFF !important; background-image:none !important;
   border:1px solid rgba(0,0,0,.07) !important; color:#1D1D1F !important;
   box-shadow:none !important }
-:root[data-theme="claro"] #view .alm-chip b{ color:#65656A !important }
+:root[data-theme="claro"] #view .alm-chip b{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .alm-chip .alm-chip-dot{ box-shadow:none !important }
 :root[data-theme="claro"] #view .alm-chip:hover{
   border-color:rgba(0,0,0,.14) !important; background:#FAFAFC !important }
@@ -1700,7 +1700,7 @@
 :root[data-theme="claro"] #view .alm-chip.on b{ color:#FFFFFF !important }
 :root[data-theme="claro"] #view .alm-chip.on .alm-chip-dot{
   background:rgba(255,255,255,.85) !important }
-:root[data-theme="claro"] #view .alm-count{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view .alm-count{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .alm-search>svg{ filter:none !important; color:#86868B !important }
 
 /* 20.1 AS ETIQUETAS DE CATEGORIA das outras telas seguem a mesma regra
@@ -1720,12 +1720,12 @@
   filter:none !important }
 :root[data-theme="claro"] #view .lic-cat svg,
 :root[data-theme="claro"] #view .seg-tag svg,
-:root[data-theme="claro"] #view .ped-tag svg{ color:var(--c, #65656A) !important }
+:root[data-theme="claro"] #view .ped-tag svg{ color:var(--c, #5E5E63) !important }
 /* o pontinho continua na cor da categoria — é ele que identifica */
 :root[data-theme="claro"] #view .lic-st i,
 :root[data-theme="claro"] #view .seg-tag i,
 :root[data-theme="claro"] #view .ped-tag i{
-  background:var(--c, #65656A) !important; box-shadow:none !important }
+  background:var(--c, #5E5E63) !important; box-shadow:none !important }
 
 /* ==================================================================
    21. MANUTENÇÃO TINHA TEMA PRÓPRIO (v14.0)
@@ -1755,11 +1755,11 @@
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner h3{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner span,
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner small,
-:root[data-theme="claro"] #view[data-route="manutencao"] .banner p{ color:#65656A !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner p{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner::before{
   width:0 !important; box-shadow:none !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner>svg{
-  background:rgba(0,0,0,.05) !important; color:#65656A !important;
+  background:rgba(0,0,0,.05) !important; color:#5E5E63 !important;
   filter:none !important; box-shadow:none !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn{
   background:#FFFFFF !important; border:1px solid rgba(0,0,0,.10) !important;
@@ -1789,7 +1789,7 @@
   filter:none !important; color:#86868B !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .sectitulo{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-label{ color:#1D1D1F !important }
-:root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-sub{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-sub{ color:#5E5E63 !important }
 
 /* ==================================================================
    22. O AZUL-MARINHO QUE SOBROU (v14.0)
@@ -1816,7 +1816,7 @@
 :root[data-theme="claro"] #view .seg-b,
 :root[data-theme="claro"] #view .pex-count,
 :root[data-theme="claro"] #view .st.neutro,
-:root[data-theme="claro"] #view .a-main span{ color:#65656A !important }
+:root[data-theme="claro"] #view .a-main span{ color:#5E5E63 !important }
 :root[data-theme="claro"] #view .k-go{ color:#86868B !important }
 :root[data-theme="claro"] #view .seg-b.on{ color:#FFFFFF !important }
 
@@ -1907,15 +1907,15 @@
    ================================================================== */
 
 /* 24.1 O CINZA DE APOIO em 4,35:1 sobre a base do cartão (90 lugares).
-   Token, não exceção: #65656A -> #65656A, que dá 4,97:1 no pior tom. */
-:root[data-theme="claro"]{ --ap-tx2:#65656A; }
+   Token, não exceção: #5E5E63 -> #5E5E63, que dá 4,97:1 no pior tom. */
+:root[data-theme="claro"]{ --ap-tx2:#5E5E63; }
 :root[data-theme="claro"] #view .k-label,
 :root[data-theme="claro"] #view .ini-kpi .l,
 :root[data-theme="claro"] #view .legend .li,
 :root[data-theme="claro"] #view .li.clk,
 :root[data-theme="claro"] #view .btn.ghost,
 :root[data-theme="claro"] #view .empty span,
-:root[data-theme="claro"] #view .muted{ color:#65656A !important }
+:root[data-theme="claro"] #view .muted{ color:#5E5E63 !important }
 
 /* 24.2 A ETIQUETA NEUTRA ainda tinha fundo azulado próprio (4,05:1).
    Mesmo tratamento das outras: fundo neutro, tinta escura. */
@@ -1936,3 +1936,243 @@
 :root[data-theme="claro"] #view .badge.warn{
   background:#A1620B !important; background-image:none !important;
   color:#FFFFFF !important; box-shadow:none !important }
+
+/* ==================================================================
+   25. O CINZA DE VERDADE (v14.2)
+
+   "faça os cards mais escuros, já pedi 3x, faça em um cinza mais
+   escuro, evidenciando os verde que está ok dos documentos".
+
+   Ele tem razão: nas três vezes anteriores eu fui tímido. Mexi em
+   branco puro -> quase branco -> degradê que mal se via. Cada rodada
+   era defensável sozinha e nenhuma resolvia o pedido. Aqui o cartão
+   vira CINZA, não "branco um pouco menos branco".
+
+   O cartão fica MAIS ESCURO QUE A PÁGINA. Isso inverte a lógica das
+   versões anteriores (cartão claro flutuando em fundo claro) e passa
+   a ser o desenho de painel: a página é a mesa, o cartão é a peça
+   apoiada nela. Por isso a sombra continua — é ela que diz que a peça
+   está EM CIMA, e não um buraco.
+
+   E com fundo cinza o verde finalmente tem onde aparecer: os selos de
+   estado deixam de ser tintinha sobre tinta pálida e viram PÍLULA
+   CHEIA. Verde "em dia" salta; vermelho e âmbar salvam a leitura pelo
+   mesmo caminho, senão o verde viraria o único colorido da tela.
+   ================================================================== */
+
+:root[data-theme="claro"]{
+  --ap-surf:#DCDCE3;
+  --ap-tx2:#5E5E63;              /* 5,00:1 sobre o cartão cinza */
+}
+
+/* 25.1 O CARTÃO */
+:root[data-theme="claro"] #view .kpi,
+:root[data-theme="claro"] #view .card,
+:root[data-theme="claro"] #view .banner,
+:root[data-theme="claro"] #view .lic-card,
+:root[data-theme="claro"] #view .alm-card,
+:root[data-theme="claro"] #view .vcard,
+:root[data-theme="claro"] #view .ini-cmd .card,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi,
+:root[data-theme="claro"] #view .ini-cmd .ini-stage,
+:root[data-theme="claro"] #view[data-route="manutencao"] .card,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner{
+  background:#DCDCE3 !important;
+  background-image:none !important;
+  border:1px solid rgba(0,0,0,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),
+             0 1px 2px rgba(0,0,0,.06),
+             0 8px 20px rgba(0,0,0,.10),
+             0 24px 54px rgba(0,0,0,.08) !important }
+:root[data-theme="claro"] #view .kpi:hover,
+:root[data-theme="claro"] #view .card:hover,
+:root[data-theme="claro"] #view .lic-card:hover,
+:root[data-theme="claro"] #view .alm-card:hover,
+:root[data-theme="claro"] #view .vcard:hover,
+:root[data-theme="claro"] #view .ini-cmd .card:hover,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi:hover,
+:root[data-theme="claro"] #view[data-route="manutencao"] .card:hover,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi:hover{
+  transform:translateY(-1px) !important;
+  background:#E1E1E8 !important;
+  border-color:rgba(0,0,0,.15) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),
+             0 2px 6px rgba(0,0,0,.08),
+             0 16px 34px rgba(0,0,0,.14),
+             0 34px 76px rgba(0,0,0,.10) !important }
+
+/* o texto de apoio acompanha o fundo novo */
+:root[data-theme="claro"] #view .k-label,
+:root[data-theme="claro"] #view .k-sub,
+:root[data-theme="claro"] #view .ini-kpi .l,
+:root[data-theme="claro"] #view .vcard-sub,
+:root[data-theme="claro"] #view .alm-cat,
+:root[data-theme="claro"] #view .muted,
+:root[data-theme="claro"] #view .sub,
+:root[data-theme="claro"] #view .li.clk,
+:root[data-theme="claro"] #view .btn.ghost,
+:root[data-theme="claro"] #view .legend .li{ color:#5E5E63 !important }
+:root[data-theme="claro"] #view .k-go{ color:#75757A !important }
+
+/* o quadradinho do ícone precisa de mais peso para não sumir no cinza */
+:root[data-theme="claro"] #view .k-ico.i-blue,
+:root[data-theme="claro"] #view .k-ico.i-slate,
+:root[data-theme="claro"] #view .ini-kpi .ic,
+:root[data-theme="claro"] #view .alm-ico{
+  background:rgba(0,0,0,.085) !important }
+
+/* o que é CAMPO continua branco: no cinza ele passa a parecer campo
+   de verdade, que é o certo — dá para ver onde se escreve */
+:root[data-theme="claro"] #view input,
+:root[data-theme="claro"] #view select,
+:root[data-theme="claro"] #view textarea{
+  background:#FFFFFF !important; border:1px solid rgba(0,0,0,.14) !important;
+  color:#1D1D1F !important }
+
+/* 25.2 OS SELOS DE ESTADO: pílula cheia, texto branco.
+   É isto que "evidencia o verde". Em fundo cinza, tinta clara sobre
+   tinta clara não aparece — preenchimento aparece. */
+:root[data-theme="claro"] #view .st.ok,
+:root[data-theme="claro"] #view.cyber .st.ok,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.ok,
+:root[data-theme="claro"] #view .st.aprov,
+:root[data-theme="claro"] #view .st.vigente{
+  background:#1D7F3C !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; font-weight:700 !important;
+  box-shadow:none !important }
+:root[data-theme="claro"] #view .st.ok::before,
+:root[data-theme="claro"] #view.cyber .st.ok::before,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.ok::before,
+:root[data-theme="claro"] #view .st.aprov::before{
+  background:rgba(255,255,255,.9) !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .st.ok svg,
+:root[data-theme="claro"] #view .st.aprov svg{ color:#FFFFFF !important }
+
+:root[data-theme="claro"] #view .st.crit,
+:root[data-theme="claro"] #view .st.vencido,
+:root[data-theme="claro"] #view.cyber .st.crit,
+:root[data-theme="claro"] #view.cyber .st.vencido,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.crit,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.vencido,
+:root[data-theme="claro"] #view .st.reprov{
+  background:#C0261F !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; font-weight:700 !important;
+  box-shadow:none !important }
+:root[data-theme="claro"] #view .st.crit::before,
+:root[data-theme="claro"] #view .st.vencido::before,
+:root[data-theme="claro"] #view .st.reprov::before{
+  background:rgba(255,255,255,.9) !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .st.crit svg,
+:root[data-theme="claro"] #view .st.vencido svg,
+:root[data-theme="claro"] #view .st.reprov svg{ color:#FFFFFF !important }
+
+:root[data-theme="claro"] #view .st.warn,
+:root[data-theme="claro"] #view.cyber .st.warn,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.warn{
+  background:#8A5309 !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; font-weight:700 !important;
+  box-shadow:none !important }
+:root[data-theme="claro"] #view .st.warn::before{
+  background:rgba(255,255,255,.9) !important; box-shadow:none !important }
+
+:root[data-theme="claro"] #view .st.neutro,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.neutro{
+  background:rgba(0,0,0,.10) !important; background-image:none !important;
+  color:#3A3A3F !important; border:0 !important }
+:root[data-theme="claro"] #view .st.neutro::before{
+  background:#75757A !important; box-shadow:none !important }
+
+/* 25.3 O SELO "TUDO EM DIA" do Painel (`.ini-flag`) é outra peça, não é
+   `.st.ok` — e era exatamente o verde que ele pediu para evidenciar: o
+   dos documentos. Mesma regra dos outros: pílula cheia. */
+:root[data-theme="claro"] #view .ini-flag,
+:root[data-theme="claro"] #view .ini-kpi.ok .ini-flag{
+  background:#1D7F3C !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; font-weight:700 !important;
+  box-shadow:none !important }
+:root[data-theme="claro"] #view .ini-flag i{
+  background:#FFFFFF !important; box-shadow:none !important; opacity:.95 }
+:root[data-theme="claro"] #view .ini-kpi.crit .ini-flag{
+  background:#C0261F !important; color:#FFFFFF !important }
+
+/* 25.4 os chips de ícone pastéis sumiam no cinza: ganham fundo mais firme */
+:root[data-theme="claro"] #view .k-ico.i-green,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.ok .ic{
+  background:#CFEBD7 !important; color:#15632F !important }
+:root[data-theme="claro"] #view .k-ico.i-green svg,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.ok .ic svg{ color:#15632F !important }
+:root[data-theme="claro"] #view .k-ico.i-red,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.crit .ic{
+  background:#F6D5D3 !important; color:#A01E18 !important }
+:root[data-theme="claro"] #view .k-ico.i-red svg,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.crit .ic svg{ color:#A01E18 !important }
+:root[data-theme="claro"] #view .k-ico.i-amber,
+:root[data-theme="claro"] #view .k-ico.i-orange{
+  background:#F6E6C8 !important; color:#7A4908 !important }
+:root[data-theme="claro"] #view .k-ico.i-amber svg,
+:root[data-theme="claro"] #view .k-ico.i-orange svg{ color:#7A4908 !important }
+
+/* ==================================================================
+   26. O QUE O CINZA MAIS ESCURO COBROU (v14.2)
+   Mesma lição da v14.1, agora com o cartão bem mais escuro: todo texto
+   de apoio perde contraste junto. Corrigido nos TOKENS (os cinzas
+   #65656A e #6B6B70 viraram #5E5E63 nos 30 lugares de uma vez), mais
+   os casos que não eram token e aparecem abaixo.
+   ================================================================== */
+
+/* 26.1 restos da paleta azul-marinho antiga (3,49:1 no cartão cinza) */
+:root[data-theme="claro"] #view .venc-sub,
+:root[data-theme="claro"] #view .venc-sec-s,
+:root[data-theme="claro"] #view .venc-item span,
+:root[data-theme="claro"] #view .lin-sub,
+:root[data-theme="claro"] #view .it-sub{ color:#5E5E63 !important }
+
+/* 26.2 as etiquetas de tipo de veículo ainda eram azul sobre azul-claro.
+   Mesmo tratamento das outras etiquetas: fundo neutro, tinta escura. */
+:root[data-theme="claro"] #view .tag,
+:root[data-theme="claro"] #view .tag.cavalo,
+:root[data-theme="claro"] #view .tag.rebo{
+  background:rgba(0,0,0,.08) !important; background-image:none !important;
+  color:#3A3A3F !important; border:1px solid rgba(0,0,0,.08) !important;
+  box-shadow:none !important }
+
+/* 26.3 botão fantasma: no cartão cinza ele precisa de superfície própria,
+   senão o texto dele fica em 4,33:1 e o botão some */
+:root[data-theme="claro"] #view .btn.ghost,
+:root[data-theme="claro"] #view .btn.sm{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.12) !important; color:#1D1D1F !important }
+:root[data-theme="claro"] #view .btn.ghost:hover,
+:root[data-theme="claro"] #view .btn.sm:hover{ background:#F2F2F5 !important }
+:root[data-theme="claro"] #view .btn.ghost svg,
+:root[data-theme="claro"] #view .btn.sm svg{ color:#5E5E63 !important }
+
+/* 26.4 o número da faixa de vencimento e a situação da ANTT ainda vinham
+   do neon do tema escuro; mais um passo de escurecimento resolve */
+:root[data-theme="claro"] #view .venc-sec-n{ filter:brightness(.38) saturate(1.5) !important }
+:root[data-theme="claro"] #view .antt-situacao,
+:root[data-theme="claro"] #view .antt-situacao b,
+:root[data-theme="claro"] #view .antt-situacao span{
+  filter:none !important; background:#1D7F3C !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important }
+
+/* 26.5 OS TRÊS ÚLTIMOS, achados pela varredura e caçados no HTML:
+   • `.venc-main span` é a linha "AMB-2928 · Veículo · DETRAN-PR" —
+     um <span> sem classe dentro da linha de vencimento (3,49:1);
+   • `.venc-sec-h small` é o "ação imediata" sob o título da faixa;
+   • `.antt-badge` é o "ATIVO" da ANTT — verde claro sobre verde claro
+     (3,6:1). Vira pílula cheia como os outros selos de estado, que é
+     o padrão da v14.2. */
+:root[data-theme="claro"] #view .venc-main span,
+:root[data-theme="claro"] #view .venc-sec-h small{ color:#5E5E63 !important }
+:root[data-theme="claro"] #view .antt-badge.ok{
+  background:#1D7F3C !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .antt-badge.ok b,
+:root[data-theme="claro"] #view .antt-badge.ok svg{ color:#FFFFFF !important }
+:root[data-theme="claro"] #view .antt-badge.no{
+  background:#C0261F !important; background-image:none !important;
+  color:#FFFFFF !important; border:0 !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .antt-badge.no b,
+:root[data-theme="claro"] #view .antt-badge.no svg{ color:#FFFFFF !important }
