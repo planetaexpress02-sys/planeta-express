@@ -62,8 +62,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png">
   <link rel="apple-touch-icon" href="assets/logo.png">
-  <link rel="stylesheet" href="assets/estilo.css?v=255">
-  <link rel="stylesheet" href="assets/estilo2.css?v=255">
+  <link rel="stylesheet" href="assets/estilo.css?v=256">
+  <link rel="stylesheet" href="assets/estilo2.css?v=256">
 </head>
 <body>
   <!-- SPLASH / ABERTURA -->
@@ -102,7 +102,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
       <nav class="nav" id="nav"></nav>
-      <div class="foot">Sistema de Gestão Operacional<br><b>v13.2</b> · dados locais e seguros</div>
+      <div class="foot">Sistema de Gestão Operacional<br><b>v13.3</b> · dados locais e seguros</div>
     </aside>
     <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
@@ -129,7 +129,15 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           </button>
           <div class="cock-clock" title="Data e hora"><b id="cockTime">--:--:--</b><span id="cockDate"></span></div>
-          <div class="cock-status on" id="cockStatus"><i></i><span>Online</span></div>
+          <!-- v13.3 — o indicador "Online" saiu do topo a pedido do dono
+               ("tire do topo da página as opções online... quero um visual
+               mais clean"). A informação não se perdeu: a bolinha do selo
+               de versão, ao lado, já diz o estado da conexão — verde quando
+               os dados vieram da nuvem, âmbar quando é a cópia do aparelho
+               — e o detalhe inteiro está no modal do selo. Era a mesma
+               coisa dita duas vezes na mesma barra.
+               `pexCockStatus()` continua existindo e sai sozinha quando não
+               acha o elemento, então nada quebra. -->
           <button class="btn sm relbtn" onclick="imprimirRelatorio()" title="Tirar relatório desta tela (imprimir ou salvar em PDF)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg><span>Relatório</span>
           </button>
@@ -155,15 +163,15 @@
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <script src="assets/viagens.js?v=255"></script>
-  <script src="assets/dados.js?v=255"></script>
-  <script src="assets/alarmes.js?v=255"></script>
-  <script src="assets/arquivos.js?v=255"></script>
-  <script src="assets/importar.js?v=255"></script>
-  <script src="assets/app.js?v=255"></script>
-  <script src="assets/central.js?v=255"></script>
-  <script src="assets/aniversarios.js?v=255"></script>
-  <script src="assets/relatorios.js?v=255"></script>
+  <script src="assets/viagens.js?v=256"></script>
+  <script src="assets/dados.js?v=256"></script>
+  <script src="assets/alarmes.js?v=256"></script>
+  <script src="assets/arquivos.js?v=256"></script>
+  <script src="assets/importar.js?v=256"></script>
+  <script src="assets/app.js?v=256"></script>
+  <script src="assets/central.js?v=256"></script>
+  <script src="assets/aniversarios.js?v=256"></script>
+  <script src="assets/relatorios.js?v=256"></script>
   <script>
     /* Modo app offline + atualização automática (sem ficar preso em versão antiga)
 

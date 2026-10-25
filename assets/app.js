@@ -9582,7 +9582,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '13.2';
+var PEX_VER = '13.3';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9620,7 +9620,11 @@ function pexSeloVersao(){
     var sincro = temNuvem && _nuvemRecebida;
     var estado = !temNuvem ? 'local' : (sincro ? 'nuvem' : 'esperando');
     el.className='no-print'+(onde==='arquivo'?' arq':'')+' est-'+estado;
-    el.innerHTML='<i class="pvt-dot"></i><b>v'+esc(v)+'</b><span>'+onde+'</span>';
+    /* v13.3 — a palavra "site"/"arquivo" saiu do selo, a pedido do dono
+       ("o modelo do site... quero um visual mais clean"). Fica só a versão,
+       que é o que ele conferia. O "onde" não sumiu do sistema: continua no
+       modal do selo (um toque) e no rodapé da barra lateral. */
+    el.innerHTML='<i class="pvt-dot"></i><b>v'+esc(v)+'</b>';
     el.title = estado==='nuvem'     ? 'v'+v+' · dados da nuvem, sincronizado'
              : estado==='esperando' ? 'v'+v+' · AINDA NÃO recebi os dados da nuvem — você está vendo a cópia deste aparelho'
              : 'v'+v+' · sem conta conectada: dados só deste aparelho';
