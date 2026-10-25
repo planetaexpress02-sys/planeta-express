@@ -607,3 +607,228 @@
      vence isso. Medido, nao suposto. */
   background:#EEF3F9 !important; background-image:none !important;
   border-right:1px solid var(--line) }
+
+/* ==================================================================
+   9. FUNDO MAIS FUNDO + CARDS COM LED (v13.8)
+
+   Pedido: "quero um fundo um pouco mais escuro, com cards com led,
+   algo mais motivacional, está muito sem graça".
+
+   A ideia: o card não fica mais vivo pintando o card — fica vivo
+   quando o FUNDO recua e uma luz marca o estado dele. Então:
+
+   • três superfícies em escada, agora com mais distância entre elas:
+       conteúdo #E7EEF8  (o mais fundo)
+       menu     #F2F6FB  (meio)
+       card     #FFFFFF  (o mais claro — é ele que salta)
+   • a barra de 3px que já existia na lateral do card vira um LED:
+     cor viva, com halo por dentro da borda. O card tem
+     `overflow:hidden`, então a luz vaza para DENTRO — que é
+     exatamente o efeito de fita de LED embutida.
+   • a luz fala o estado: azul = operação, VERDE = tudo em dia,
+     âmbar = atenção, vermelho = vencido. Olhar o painel de longe já
+     diz como está o dia.
+   • ao passar o mouse, o card levanta e o halo abre.
+
+   Só cor, sombra e brilho. Layout, tamanhos, fontes e estrutura
+   seguem intactos.
+   ================================================================== */
+
+/* 9.1 A ESCADA DE SUPERFÍCIES — mais contraste entre fundo e card */
+:root[data-theme="claro"] body,
+:root[data-theme="claro"] .content{ background:#E7EEF8 }
+:root[data-theme="claro"] .app .sidebar{
+  background:#F2F6FB !important; background-image:none !important;
+  border-right:1px solid #D3DFEF }
+:root[data-theme="claro"] .topbar{
+  background:#FFFFFF !important; border-bottom:1px solid #D3DFEF !important;
+  box-shadow:0 1px 3px rgba(20,35,59,.07) }
+
+/* 9.2 O CARD: branco puro sobre fundo recuado, com sombra que dá corpo */
+:root[data-theme="claro"] #view.cyber .card,
+:root[data-theme="claro"] .card,
+:root[data-theme="claro"] #view.cyber .ini-kpi,
+:root[data-theme="claro"] .ini-kpi{
+  background:#FFFFFF; border:1px solid #DCE6F3;
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 10px 26px rgba(20,35,59,.09) }
+
+/* 9.3 O LED.
+   A barra lateral ganha cor viva + halo. Como o card tem
+   `overflow:hidden`, o brilho acende a borda por dentro. */
+:root[data-theme="claro"] .ini-kpi::before,
+:root[data-theme="claro"] .ini-cmd .ini-kpi::before{
+  width:4px;
+  background:linear-gradient(180deg,#3B82F6,#1D4ED8);
+  box-shadow:0 0 10px 1px rgba(37,99,235,.65), 0 0 26px 3px rgba(37,99,235,.28) }
+:root[data-theme="claro"] .ini-kpi.ok::before,
+:root[data-theme="claro"] .ini-cmd .ini-kpi.ok::before{
+  background:linear-gradient(180deg,#4ADE80,#16A34A);
+  box-shadow:0 0 10px 1px rgba(34,197,94,.70), 0 0 26px 3px rgba(34,197,94,.30) }
+:root[data-theme="claro"] .ini-kpi.crit::before,
+:root[data-theme="claro"] .ini-cmd .ini-kpi.crit::before{
+  background:linear-gradient(180deg,#F87171,#DC2626);
+  box-shadow:0 0 10px 1px rgba(239,68,68,.65), 0 0 26px 3px rgba(239,68,68,.28) }
+:root[data-theme="claro"] .ini-kpi.warn::before{
+  background:linear-gradient(180deg,#FBBF24,#D97706);
+  box-shadow:0 0 10px 1px rgba(245,158,11,.65), 0 0 26px 3px rgba(245,158,11,.28) }
+
+/* 9.4 O CHIP DO ÍCONE acende junto — é o detalhe que dá "produto caro" */
+:root[data-theme="claro"] .ini-kpi .ic{
+  background:#EFF5FF; color:#1D4ED8;
+  box-shadow:inset 0 0 0 1px rgba(37,99,235,.18), 0 2px 8px rgba(37,99,235,.14) }
+:root[data-theme="claro"] .ini-kpi.ok .ic{
+  background:#E8FBEF; color:#15803D;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.26), 0 2px 10px rgba(34,197,94,.20) }
+:root[data-theme="claro"] .ini-kpi.crit .ic{
+  background:#FEF0F0; color:#B91C1C;
+  box-shadow:inset 0 0 0 1px rgba(239,68,68,.24), 0 2px 10px rgba(239,68,68,.18) }
+
+/* 9.5 BORDA DO CARD tingida pelo estado — reforça a leitura de longe */
+:root[data-theme="claro"] .ini-kpi.ok,
+:root[data-theme="claro"] #view.cyber .ini-kpi.ok{
+  border-color:#A7E8BF;
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 10px 26px rgba(22,163,74,.16) }
+:root[data-theme="claro"] .ini-kpi.crit,
+:root[data-theme="claro"] #view.cyber .ini-kpi.crit{
+  border-color:#F7B4B4;
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 10px 26px rgba(220,38,38,.15) }
+
+/* 9.6 AO PASSAR O MOUSE o LED abre e o card sobe — resposta viva */
+:root[data-theme="claro"] .ini-kpi:hover{
+  border-color:#B9CFEE;
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 18px 40px rgba(29,78,216,.20) }
+:root[data-theme="claro"] .ini-kpi:hover::before{
+  box-shadow:0 0 14px 2px rgba(37,99,235,.85), 0 0 36px 6px rgba(37,99,235,.38) }
+:root[data-theme="claro"] .ini-kpi.ok:hover{
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 18px 40px rgba(22,163,74,.26) }
+:root[data-theme="claro"] .ini-kpi.ok:hover::before{
+  box-shadow:0 0 14px 2px rgba(34,197,94,.9), 0 0 36px 6px rgba(34,197,94,.42) }
+:root[data-theme="claro"] .ini-kpi.crit:hover{
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 18px 40px rgba(220,38,38,.24) }
+:root[data-theme="claro"] .ini-kpi.crit:hover::before{
+  box-shadow:0 0 14px 2px rgba(239,68,68,.85), 0 0 36px 6px rgba(239,68,68,.40) }
+
+/* 9.7 O SELO "TUDO EM DIA" — o que ele mais quer ver.
+   Verde vivo, com um pulso MUITO lento. O brilho pulsa, o texto não:
+   nada de conteúdo refém de animação (já aprendemos essa). */
+:root[data-theme="claro"] .ini-flag{
+  color:#15803D; background:#DCFCE7; border:1px solid #86EFAC; font-weight:700;
+  box-shadow:0 0 10px rgba(34,197,94,.26) }
+:root[data-theme="claro"] .ini-flag i{ background:#22C55E; box-shadow:0 0 6px rgba(34,197,94,.9) }
+@keyframes pexLedOk{
+  0%,100%{ box-shadow:0 0 8px rgba(34,197,94,.22) }
+  50%    { box-shadow:0 0 16px rgba(34,197,94,.45) }
+}
+:root[data-theme="claro"] .ini-flag{ animation:pexLedOk 3.4s ease-in-out infinite }
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="claro"] .ini-flag{ animation:none }
+}
+
+/* 9.8 CARTÕES COMUNS (não-KPI) também ganham um fio de luz no topo
+   quando carregam estado — sem exagero, só o suficiente para o olho
+   encontrar o bloco. */
+:root[data-theme="claro"] .card .card-h{ border-bottom:1px solid #E6EDF6 }
+:root[data-theme="claro"] .card:hover{
+  box-shadow:0 1px 2px rgba(20,35,59,.06), 0 14px 32px rgba(20,35,59,.12) }
+
+/* 9.9 A BUSCA e os botões acompanham o fundo mais fundo */
+:root[data-theme="claro"] .cock-search{ background:#F4F8FD; border:1px solid #D3DFEF }
+:root[data-theme="claro"] .cock-search:hover,
+:root[data-theme="claro"] .cock-search:focus-within{
+  background:#FFFFFF; border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.14) }
+:root[data-theme="claro"] .btn{ background:#FFFFFF; border:1px solid #D3DFEF }
+:root[data-theme="claro"] .btn.primary{
+  background:linear-gradient(180deg,#3B82F6,#2563EB); border-color:#1D4ED8; color:#fff;
+  box-shadow:0 1px 2px rgba(29,78,216,.30), 0 4px 14px rgba(37,99,235,.24) }
+:root[data-theme="claro"] .btn.primary:hover{
+  background:linear-gradient(180deg,#2563EB,#1D4ED8);
+  box-shadow:0 2px 4px rgba(29,78,216,.34), 0 8px 22px rgba(37,99,235,.34) }
+
+/* ==================================================================
+   10. LED NOS CARTÕES `.kpi` (v13.8)
+
+   Os cartões do Painel (`.ini-kpi`) ganharam LED na seção 9, mas os das
+   outras telas são outra peça: `.kpi`. Dois problemas ali:
+
+   1. o fundo era `rgba(255,255,255,.6)` — branco TRANSLÚCIDO. Sobre um
+      fundo azulado isso vira azul-claro: era parte do ar de "lavado".
+      Agora é branco sólido, e o card salta do fundo recuado.
+   2. não havia barra de acento. A cor do estado estava só no ÍCONE
+      (`.k-ico.i-green`, `.i-red`, `.i-amber`…). Uso essa mesma classe,
+      com `:has()`, para acender o cartão inteiro na cor certa — sem
+      tocar no HTML nem no JavaScript.
+
+   O LED é uma faixa de 3px no topo, feita com `box-shadow: inset`, mais
+   um halo externo na mesma cor. Olhando o painel de longe, a cor já diz
+   se o assunto está bem ou mal.
+   ================================================================== */
+:root[data-theme="claro"] #view.cyber .kpi,
+:root[data-theme="claro"] .kpi{
+  background:#FFFFFF;
+  border:1px solid #DCE6F3;
+  box-shadow:inset 0 3px 0 0 #2563EB,
+             0 0 0 1px rgba(37,99,235,.10),
+             0 10px 26px rgba(20,35,59,.10);
+  transition:box-shadow .2s, transform .2s, border-color .2s }
+
+/* --- cada estado acende na sua cor, lida do ícone --- */
+:root[data-theme="claro"] .kpi:has(.i-green){
+  box-shadow:inset 0 3px 0 0 #16A34A,
+             0 0 0 1px rgba(34,197,94,.18),
+             0 10px 26px rgba(22,163,74,.18) }
+:root[data-theme="claro"] .kpi:has(.i-red){
+  box-shadow:inset 0 3px 0 0 #DC2626,
+             0 0 0 1px rgba(239,68,68,.18),
+             0 10px 26px rgba(220,38,38,.17) }
+:root[data-theme="claro"] .kpi:has(.i-amber),
+:root[data-theme="claro"] .kpi:has(.i-orange){
+  box-shadow:inset 0 3px 0 0 #D97706,
+             0 0 0 1px rgba(245,158,11,.20),
+             0 10px 26px rgba(217,119,6,.17) }
+:root[data-theme="claro"] .kpi:has(.i-slate){
+  box-shadow:inset 0 3px 0 0 #64748B,
+             0 0 0 1px rgba(100,116,139,.16),
+             0 10px 26px rgba(20,35,59,.10) }
+
+/* --- ao passar o mouse, o LED abre e o cartão sobe --- */
+:root[data-theme="claro"] .kpi:hover{
+  transform:translateY(-2px);
+  box-shadow:inset 0 3px 0 0 #1D4ED8,
+             0 0 0 1px rgba(37,99,235,.26),
+             0 18px 40px rgba(29,78,216,.24) }
+:root[data-theme="claro"] .kpi:has(.i-green):hover{
+  box-shadow:inset 0 3px 0 0 #15803D,
+             0 0 0 1px rgba(34,197,94,.34),
+             0 18px 40px rgba(22,163,74,.30) }
+:root[data-theme="claro"] .kpi:has(.i-red):hover{
+  box-shadow:inset 0 3px 0 0 #B91C1C,
+             0 0 0 1px rgba(239,68,68,.32),
+             0 18px 40px rgba(220,38,38,.28) }
+:root[data-theme="claro"] .kpi:has(.i-amber):hover,
+:root[data-theme="claro"] .kpi:has(.i-orange):hover{
+  box-shadow:inset 0 3px 0 0 #B45309,
+             0 0 0 1px rgba(245,158,11,.34),
+             0 18px 40px rgba(217,119,6,.28) }
+
+/* --- o chip do ícone acende junto, cada um na sua cor --- */
+:root[data-theme="claro"] .k-ico{ box-shadow:inset 0 0 0 1px rgba(37,99,235,.16) }
+:root[data-theme="claro"] .k-ico.i-blue{ background:#EFF5FF; color:#1D4ED8;
+  box-shadow:inset 0 0 0 1px rgba(37,99,235,.20), 0 2px 10px rgba(37,99,235,.16) }
+:root[data-theme="claro"] .k-ico.i-green{ background:#E8FBEF; color:#15803D;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.26), 0 2px 10px rgba(34,197,94,.22) }
+:root[data-theme="claro"] .k-ico.i-red{ background:#FEF0F0; color:#B91C1C;
+  box-shadow:inset 0 0 0 1px rgba(239,68,68,.24), 0 2px 10px rgba(239,68,68,.20) }
+:root[data-theme="claro"] .k-ico.i-amber,
+:root[data-theme="claro"] .k-ico.i-orange{ background:#FFF6E6; color:#B45309;
+  box-shadow:inset 0 0 0 1px rgba(245,158,11,.28), 0 2px 10px rgba(217,119,6,.20) }
+:root[data-theme="claro"] .k-ico.i-slate{ background:#F1F5FA; color:#3D5578;
+  box-shadow:inset 0 0 0 1px rgba(100,116,139,.20) }
+
+/* --- cartões comuns também param de ser translúcidos --- */
+:root[data-theme="claro"] #view.cyber .card,
+:root[data-theme="claro"] .card{ background:#FFFFFF }
+
+/* --- o banner do topo de cada tela ganha o mesmo fio de luz --- */
+:root[data-theme="claro"] .banner{
+  background:#FFFFFF; border:1px solid #DCE6F3;
+  box-shadow:inset 4px 0 0 0 #2563EB, 0 8px 22px rgba(20,35,59,.09) }

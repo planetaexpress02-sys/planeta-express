@@ -3198,9 +3198,9 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
      VERDE ganham presenca, e o texto para de ser timido. ---- */
   /* superficies: base levemente fria, sidebar um degrau abaixo do branco,
      card BRANCO -- e a diferenca entre os tres que da leitura de blocos */
-  --void:#E7EEF7;  --bg:#F4F7FB;   --bg2:#EEF3F9;
-  --surf:#FFFFFF;  --surf2:#FFFFFF; --surf3:#EEF3F9;
-  --surf-rgb:255,255,255;  --surf2-rgb:255,255,255;  --surf3-rgb:238,243,249;
+  --void:#CEDCEF;  --bg:#DCE7F5;   --bg2:#D5E2F2;
+  --surf:#FFFFFF;  --surf2:#FFFFFF; --surf3:#F2F6FB;
+  --surf-rgb:255,255,255;  --surf2-rgb:255,255,255;  --surf3-rgb:242,246,251;
   /* AZUL institucional, agora com forca */
   --au:#2563EB;  --au2:#1D4ED8;  --au3:#1E40AF;
   --au-rgb:37,99,235;  --au3-rgb:29,78,216;
