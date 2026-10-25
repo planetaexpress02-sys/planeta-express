@@ -3192,33 +3192,34 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
    ================================================================== */
 :root[data-theme="claro"]{
   /* base: do fundo para a superfície — agora claro */
-  --void:#e9edf3;  --bg:#f4f7fa;   --bg2:#eef2f7;
-  --surf:#ffffff;  --surf2:#f7f9fc; --surf3:#eef2f7;
-  --surf-rgb:255,255,255;  --surf2-rgb:247,249,252;  --surf3-rgb:238,242,247;
-
-  /* ACENTO — o mesmo azul do sistema, porém ESCURECIDO.
-     O ciano #00e5ff é lindo no preto e ilegível no branco (contraste
-     1,3:1). Aqui ele vira azul forte, que mantém a identidade e passa
-     a ser legível. */
-  --au:#0b63d6;  --au2:#0b63d6;  --au3:#0b4ea8;
-  --au-rgb:11,99,214;  --au3-rgb:11,78,168;
-
-  /* texto: inverte a escada (claro sobre escuro -> escuro sobre claro) */
-  --tx:#0f1b2d;  --tx2:#47566b;  --tx3:#76839a;  --tx3-rgb:118,131,154;
-
+  /* ---- PALETA v13.6 — refinamento cromatico pedido pelo dono.
+     O claro da v13.5 saiu azulado e acinzentado porque a conversao
+     automatica PRESERVA O MATIZ, e o tema escuro era azul-marinho com
+     ciano: tudo herdou esse viés. Aqui a base vira off-white quase
+     neutro, e o azul deixa de pintar superficie -- so acento. ---- */
+  /* superficies: neutras, com um fio de frio. Card e cabecalho BRANCOS. */
+  --void:#EEF2F7;  --bg:#F7F9FC;   --bg2:#F2F5FA;
+  --surf:#FFFFFF;  --surf2:#FFFFFF; --surf3:#F8FAFD;
+  --surf-rgb:255,255,255;  --surf2-rgb:255,255,255;  --surf3-rgb:248,250,253;
+  /* ACENTO — azul institucional da marca. --au e o azul de acao (#2563EB),
+     --au3 o azul escuro institucional, usado em texto sobre claro. */
+  --au:#2563EB;  --au2:#2563EB;  --au3:#1E3A5F;
+  --au-rgb:37,99,235;  --au3-rgb:30,58,95;
+  /* texto: escuro e nitido no principal, cinza neutro no secundario */
+  --tx:#17243C;  --tx2:#64748B;  --tx3:#5E6C80;  --tx3-rgb:94,108,128;
   --content:var(--bg); --card:var(--surf);
-  --line:rgba(16,32,60,.12); --line-2:rgba(16,32,60,.07);
+  /* bordas: cinza-azulado CLARO, nada de nevoa */
+  --line:#E3EAF2; --line-2:#EDF1F7;
   --text:var(--tx); --text-soft:var(--tx2); --text-mute:var(--tx3);
-  --accent:var(--au); --accent-2:var(--au3); --accent-soft:rgba(var(--au-rgb),.10);
-  --gold:var(--au); --gold-2:var(--au2); --gold-soft:rgba(var(--au-rgb),.12);
-
-  /* estados: os mesmos nomes, tons que funcionam sobre branco */
-  --ok:#0f7a4f;     --ok-bg:#e4f5ee;
-  --warn:#a06c00;   --warn-bg:#fbf1d9;
-  --crit:#c2410c;   --crit-bg:#fdeee2;
-  --danger:#b91c1c; --danger-bg:#fbe7e7;
-
-  --shadow:0 1px 2px rgba(16,32,60,.06),0 6px 20px rgba(16,32,60,.07);
-  --shadow-lg:0 12px 40px rgba(16,32,60,.16);
+  --accent:var(--au); --accent-2:var(--au3); --accent-soft:#EFF4FE;
+  --gold:var(--au); --gold-2:var(--au2); --gold-soft:#EFF4FE;
+  /* status: semanticos, sem saturacao exagerada */
+  --ok:#16A34A;     --ok-bg:#E8F6EC;
+  --warn:#D97706;   --warn-bg:#FDF3E3;
+  --crit:#EA580C;   --crit-bg:#FDEEE4;
+  --danger:#DC2626; --danger-bg:#FCEAEA;
+  /* sombras: cinza neutro, muito suaves -- profundidade sem brilho */
+  --shadow:0 1px 2px rgba(23,36,60,.05),0 4px 14px rgba(23,36,60,.05);
+  --shadow-lg:0 14px 38px rgba(23,36,60,.12);
   color-scheme: light;
 }
