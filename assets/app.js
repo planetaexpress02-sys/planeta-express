@@ -9476,19 +9476,13 @@ function cockTick(){ const d=new Date();
   const dt=document.getElementById('cockDate'); if(dt) dt.textContent=(DIAS[d.getDay()]||'')+' · '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
 
 /* ---- Status do sistema (online/backup/sincronização/banco) ---- */
-function pexCockStatus(){ const el=document.getElementById('cockStatus'); if(!el) return;
-  const on=!!(typeof nuvemAtiva==='function' && nuvemAtiva() && typeof nuvemUser==='function' && nuvemUser());
-  el.className='cock-status '+(on?'on':'off');
-  el.innerHTML=`<i></i><span>${on?'Online':'Local'}</span>`;
-  const quem=on?(nomeUsuario()||'usuário'):'';
-  el.title=on ? ('Servidor online · '+quem+' · 1 usuário conectado · Backup 03:00 · Banco de dados sincronizado') : 'Modo local — dados salvos com segurança neste aparelho'; }
+/* v13.4 — `pexCockStatus` foi embora com o indicador "Online"/"Local".
+   Era a unica coisa que ainda escrevia a palavra "Local" no topo, e
+   escrevia num elemento que nao existe mais desde a v13.3. */
 
 /* ---- Inicialização do cockpit ---- */
 function pexCockInit(){
   cockTick(); setInterval(cockTick,1000);
-  pexCockStatus(); setInterval(pexCockStatus,15000);
-  window.addEventListener('online', pexCockStatus);
-  window.addEventListener('offline', pexCockStatus);
   document.addEventListener('keydown', function(e){ if(!(e.ctrlKey||e.metaKey)) return; const k=(e.key||'').toLowerCase();
     if(k==='k'){ e.preventDefault(); pexCmdOpen(); }
     else if(k==='n'){ e.preventDefault(); pexCmdOpen('new'); }
@@ -9582,7 +9576,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '13.3';
+var PEX_VER = '13.4';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9605,10 +9599,26 @@ function pexSeloVersao(){
        medições, e o cliente não via nada. Só o screenshot mostrou.
        No celular ele vai para o `body`; no computador fica na barra
        de cima, ao lado do título. */
-    var paiCerto = (typeof _pexMob==='function' && _pexMob())
-                 ? document.body
-                 : (document.querySelector('.topbar') || document.body);
-    if(el.parentElement!==paiCerto) paiCerto.appendChild(el);
+    /* 🔴 v13.4 — O SELO SAIU DA BARRA DE CIMA.
+       Pedido: *"tire o v12.12 de cima"*, junto com *"não quero nada disso
+       em cima"*. A barra fica só com busca, ações, hora, Relatório e o
+       nome de quem entrou.
+
+       ⚠️ No CELULAR ele FICA. O selo nunca morou na barra lá — é fixo no
+       canto de baixo —, e foi ele mesmo que pediu: *"quero que apareça a
+       versão que está sendo usada no mobile também para sempre conferir"*.
+       Tirar do computador é o pedido de hoje; tirar do celular seria
+       desfazer o de antes.
+
+       No computador a versão continua à vista, no rodapé do menu lateral
+       ("v13.4 · site"), que é alimentado por esta mesma função — então os
+       dois nunca divergem. */
+    var noCelular = (typeof _pexMob==='function' && _pexMob());
+    if(!noCelular){
+      if(el.parentElement) el.parentElement.removeChild(el);
+    } else if(el.parentElement!==document.body){
+      document.body.appendChild(el);
+    }
     /* ⚠️ v11.3 — o selo passa a dizer também SE OS DADOS SÃO OS DA NUVEM.
        No celular a barra de cima esconde o "Online" e o "Olá, fulano"
        (não cabe), então lá não havia nenhum jeito de perceber que a tela
