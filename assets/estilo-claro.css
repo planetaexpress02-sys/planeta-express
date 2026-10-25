@@ -1184,7 +1184,7 @@
   --ap-surf:#FFFFFF;      /* as superfícies que flutuam */
   --ap-line:rgba(0,0,0,.07);
   --ap-tx:#1D1D1F;        /* quase preto, nunca preto */
-  --ap-tx2:#6E6E73;
+  --ap-tx2:#65656A;
   --ap-tx3:#6B6B70;   /* v14.0: era #86868B (o cinza da Apple). Em 10px dava 3,33:1 sobre o fundo — reprovava em 270 lugares. #6B6B70 dá 4,86:1. */
   --ap-azul:#0071E3;      /* azul de ação */
   --ap-azul-d:#0058B0;
@@ -1433,10 +1433,10 @@
 :root[data-theme="claro"] #view .k-ico.i-slate,
 :root[data-theme="claro"] #view .ini-kpi .ic{
   background:rgba(0,0,0,.05) !important; background-image:none !important;
-  color:#6E6E73 !important; box-shadow:none !important }
+  color:#65656A !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .k-ico.i-blue svg,
 :root[data-theme="claro"] #view .k-ico.i-slate svg,
-:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#65656A !important }
 :root[data-theme="claro"] #view .k-ico.i-green{
   background:#E8F6EC !important; background-image:none !important; color:#1D7F3C !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .k-ico.i-green svg{ color:#1D7F3C !important }
@@ -1477,7 +1477,7 @@
 :root[data-theme="claro"] #view .ini-hero-txt,
 :root[data-theme="claro"] #view .ini-hero-txt h1{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view .ini-hero-txt p,
-:root[data-theme="claro"] #view .ini-hero-tag{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .ini-hero-tag{ color:#65656A !important }
 
 /* o cabeçalho da tela inicial, em tinta e não em azul */
 :root[data-theme="claro"] #view .ini-brand .tx b{ color:#1D1D1F !important }
@@ -1501,8 +1501,8 @@
 /* rótulos e textos de apoio voltam ao cinza do sistema */
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi .l,
 :root[data-theme="claro"] #view .ini-cmd .card .card-h .sub,
-:root[data-theme="claro"] #view .ini-cmd .legend .li{ color:#6E6E73 !important }
-:root[data-theme="claro"] #view .ini-cmd .barchart .bar-lbl{ fill:#6E6E73 !important }
+:root[data-theme="claro"] #view .ini-cmd .legend .li{ color:#65656A !important }
+:root[data-theme="claro"] #view .ini-cmd .barchart .bar-lbl{ fill:#65656A !important }
 :root[data-theme="claro"] #view .ini-cmd .barchart .bar-val,
 :root[data-theme="claro"] #view .ini-cmd .donut-s{ fill:#1D1D1F !important }
 :root[data-theme="claro"] #view .ini-cmd .empty b{ color:#1D1D1F !important }
@@ -1515,12 +1515,12 @@
   background:#FFFFFF !important; background-image:none !important }
 :root[data-theme="claro"] #view .ini-chips span{
   background:rgba(0,0,0,.05) !important; border:1px solid rgba(0,0,0,.07) !important;
-  color:#6E6E73 !important }
+  color:#65656A !important }
 
 /* 17.1 os chips do Painel acendem em cor chapada, sem halo ao redor */
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi .ic{
   background:rgba(0,0,0,.05) !important; background-image:none !important;
-  color:#6E6E73 !important; box-shadow:none !important; filter:none !important }
+  color:#65656A !important; box-shadow:none !important; filter:none !important }
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi.ok .ic{
   background:#E8F6EC !important; color:#1D7F3C !important; box-shadow:none !important }
 :root[data-theme="claro"] #view .ini-cmd .ini-kpi.crit .ic{
@@ -1555,13 +1555,13 @@
 :root[data-theme="claro"] #view .vazio b{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view .empty span,
 :root[data-theme="claro"] #view .empty p,
-:root[data-theme="claro"] #view .vazio span{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .vazio span{ color:#65656A !important }
 :root[data-theme="claro"] #view .empty svg,
 :root[data-theme="claro"] #view .vazio svg{ color:#C7C7CC !important }
 :root[data-theme="claro"] #view .sectitulo svg{ color:#86868B !important }
 :root[data-theme="claro"] #view .sectitulo b,
 :root[data-theme="claro"] #view .sectitulo .cnt{
-  background:rgba(0,0,0,.05) !important; color:#6E6E73 !important; border:0 !important }
+  background:rgba(0,0,0,.05) !important; color:#65656A !important; border:0 !important }
 
 /* ==================================================================
    19. O QUE A VARREDURA ACHOU (v14.0)
@@ -1683,14 +1683,14 @@
   background:rgba(0,0,0,.05) !important; background-image:none !important;
   box-shadow:none !important; border:0 !important }
 :root[data-theme="claro"] #view .alm-ico svg{
-  color:#6E6E73 !important; filter:none !important }
+  color:#65656A !important; filter:none !important }
 
 /* os filtros do topo: pílula branca, e a cor some para o ponto */
 :root[data-theme="claro"] #view .alm-chip{
   background:#FFFFFF !important; background-image:none !important;
   border:1px solid rgba(0,0,0,.07) !important; color:#1D1D1F !important;
   box-shadow:none !important }
-:root[data-theme="claro"] #view .alm-chip b{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .alm-chip b{ color:#65656A !important }
 :root[data-theme="claro"] #view .alm-chip .alm-chip-dot{ box-shadow:none !important }
 :root[data-theme="claro"] #view .alm-chip:hover{
   border-color:rgba(0,0,0,.14) !important; background:#FAFAFC !important }
@@ -1720,12 +1720,12 @@
   filter:none !important }
 :root[data-theme="claro"] #view .lic-cat svg,
 :root[data-theme="claro"] #view .seg-tag svg,
-:root[data-theme="claro"] #view .ped-tag svg{ color:var(--c, #6E6E73) !important }
+:root[data-theme="claro"] #view .ped-tag svg{ color:var(--c, #65656A) !important }
 /* o pontinho continua na cor da categoria — é ele que identifica */
 :root[data-theme="claro"] #view .lic-st i,
 :root[data-theme="claro"] #view .seg-tag i,
 :root[data-theme="claro"] #view .ped-tag i{
-  background:var(--c, #6E6E73) !important; box-shadow:none !important }
+  background:var(--c, #65656A) !important; box-shadow:none !important }
 
 /* ==================================================================
    21. MANUTENÇÃO TINHA TEMA PRÓPRIO (v14.0)
@@ -1755,11 +1755,11 @@
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner h3{ color:#1D1D1F !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner span,
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner small,
-:root[data-theme="claro"] #view[data-route="manutencao"] .banner p{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner p{ color:#65656A !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner::before{
   width:0 !important; box-shadow:none !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner>svg{
-  background:rgba(0,0,0,.05) !important; color:#6E6E73 !important;
+  background:rgba(0,0,0,.05) !important; color:#65656A !important;
   filter:none !important; box-shadow:none !important }
 :root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn{
   background:#FFFFFF !important; border:1px solid rgba(0,0,0,.10) !important;
@@ -1816,6 +1816,123 @@
 :root[data-theme="claro"] #view .seg-b,
 :root[data-theme="claro"] #view .pex-count,
 :root[data-theme="claro"] #view .st.neutro,
-:root[data-theme="claro"] #view .a-main span{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .a-main span{ color:#65656A !important }
 :root[data-theme="claro"] #view .k-go{ color:#86868B !important }
 :root[data-theme="claro"] #view .seg-b.on{ color:#FFFFFF !important }
+
+/* ==================================================================
+   23. OS CARTÕES COM PESO (v14.1) — "faça somente os cards um pouco
+   mais escuros e com vida".
+
+   Só os cartões. Fundo da página, menu, cabeçalho, tipografia e cores
+   de estado: intactos.
+
+   O branco puro sobre o cinza claro deixava o cartão sem superfície —
+   ele não parecia um objeto, parecia um recorte. Duas mudanças, as
+   duas sutis de propósito, porque "um pouco":
+
+   1. A SUPERFÍCIE deixa de ser chapada e passa a ter um leve degradê
+      do topo (branco) para a base (#EFEFF3). É assim que uma
+      superfície real se comporta com luz vindo de cima — o topo pega
+      mais luz que a base. Em média o cartão fica MAIS ESCURO que
+      antes, mas o topo continua mais claro que a página, que é o que
+      mantém ele à frente e não atrás.
+   2. A SOMBRA ganha uma terceira camada, bem aberta e fraca. É ela
+      que dá o "descolado do fundo" — profundidade vem da sombra, não
+      de borda grossa nem de brilho colorido (que foi o que ele já
+      reprovou duas vezes).
+
+   O movimento ao passar o mouse fica: o cartão sobe 1px e a sombra
+   abre. É pouco e é o bastante — é a "vida" sem virar enfeite.
+   ================================================================== */
+:root[data-theme="claro"]{
+  --ap-surf:#FAFAFC;
+  --ap-surf-grad:linear-gradient(180deg,#FFFFFF 0%,#F6F6F9 50%,#EDEDF2 100%);
+  --ap-sombra:0 1px 2px rgba(0,0,0,.06), 0 7px 18px rgba(0,0,0,.09), 0 22px 50px rgba(0,0,0,.07);
+  --ap-sombra-f:0 2px 6px rgba(0,0,0,.07), 0 14px 30px rgba(0,0,0,.11), 0 30px 70px rgba(0,0,0,.08);
+}
+
+:root[data-theme="claro"] #view .kpi,
+:root[data-theme="claro"] #view .card,
+:root[data-theme="claro"] #view .banner,
+:root[data-theme="claro"] #view .lic-card,
+:root[data-theme="claro"] #view .alm-card,
+:root[data-theme="claro"] #view .vcard,
+:root[data-theme="claro"] #view .ini-cmd .card,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi,
+:root[data-theme="claro"] #view .ini-cmd .ini-stage,
+:root[data-theme="claro"] #view[data-route="manutencao"] .card,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner{
+  background:#FAFAFC !important;
+  background-image:linear-gradient(180deg,#FFFFFF 0%,#F6F6F9 50%,#EDEDF2 100%) !important;
+  border:1px solid rgba(0,0,0,.085) !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.06), 0 7px 18px rgba(0,0,0,.09), 0 22px 50px rgba(0,0,0,.07) !important;
+  transition:box-shadow .22s ease, transform .22s ease, border-color .22s ease }
+
+:root[data-theme="claro"] #view .kpi:hover,
+:root[data-theme="claro"] #view .card:hover,
+:root[data-theme="claro"] #view .lic-card:hover,
+:root[data-theme="claro"] #view .alm-card:hover,
+:root[data-theme="claro"] #view .vcard:hover,
+:root[data-theme="claro"] #view .ini-cmd .card:hover,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi:hover,
+:root[data-theme="claro"] #view[data-route="manutencao"] .card:hover,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi:hover{
+  transform:translateY(-1px) !important;
+  border-color:rgba(0,0,0,.13) !important;
+  box-shadow:0 2px 6px rgba(0,0,0,.07), 0 14px 30px rgba(0,0,0,.11), 0 30px 70px rgba(0,0,0,.08) !important }
+
+/* o quadradinho do ícone acompanha o tom novo, senão ele “boia” claro
+   demais sobre a base mais escura do cartão */
+:root[data-theme="claro"] #view .k-ico.i-blue,
+:root[data-theme="claro"] #view .k-ico.i-slate,
+:root[data-theme="claro"] #view .ini-kpi .ic,
+:root[data-theme="claro"] #view .alm-ico{
+  background:rgba(0,0,0,.055) !important }
+
+/* ==================================================================
+   24. O QUE ESCURECER O CARTÃO COBROU (v14.1)
+
+   Deixar o cartão com tom tem um preço: todo texto que vive dentro
+   dele perde um pouco de contraste. Rodei a varredura de novo e ela
+   cobrou três coisas — duas consequência da mudança, uma que já
+   existia e só agora ficou visível.
+
+   DE QUEBRA, UM ACHADO DO MEDIDOR: enquanto o cartão era branco
+   chapado a auditoria conseguia medir; com degradê ela desistia e
+   marcava tudo como "não sei". Ensinei-a a medir o degradê pela
+   PARADA MAIS ESCURA dele — se passa no pior tom, passa no cartão
+   inteiro. Foi aí que a etiqueta âmbar apareceu.
+   ================================================================== */
+
+/* 24.1 O CINZA DE APOIO em 4,35:1 sobre a base do cartão (90 lugares).
+   Token, não exceção: #65656A -> #65656A, que dá 4,97:1 no pior tom. */
+:root[data-theme="claro"]{ --ap-tx2:#65656A; }
+:root[data-theme="claro"] #view .k-label,
+:root[data-theme="claro"] #view .ini-kpi .l,
+:root[data-theme="claro"] #view .legend .li,
+:root[data-theme="claro"] #view .li.clk,
+:root[data-theme="claro"] #view .btn.ghost,
+:root[data-theme="claro"] #view .empty span,
+:root[data-theme="claro"] #view .muted{ color:#65656A !important }
+
+/* 24.2 A ETIQUETA NEUTRA ainda tinha fundo azulado próprio (4,05:1).
+   Mesmo tratamento das outras: fundo neutro, tinta escura. */
+:root[data-theme="claro"] #view .st.neutro{
+  background:rgba(0,0,0,.05) !important; background-image:none !important;
+  color:#3A3A3F !important; border:1px solid rgba(0,0,0,.07) !important }
+:root[data-theme="claro"] #view .st.neutro::before{
+  background:#86868B !important; box-shadow:none !important }
+
+/* 24.3 DEFEITO QUE JÁ EXISTIA: a bolinha âmbar do menu (o "4" ao lado
+   de Seguros) era BRANCO SOBRE ÂMBAR CLARO — 2,42:1. Estava escondida
+   atrás do "não sei" do medidor desde sempre. O vermelho ao lado dela
+   usa texto branco sobre fundo escuro e passa; então a correção é
+   escurecer o âmbar, não trocar a cor do texto — assim as duas
+   bolinhas continuam iguais entre si. #A1620B dá 4,92:1. */
+:root[data-theme="claro"] .nav a .badge.warn,
+:root[data-theme="claro"] .sidebar .badge.warn,
+:root[data-theme="claro"] #view .badge.warn{
+  background:#A1620B !important; background-image:none !important;
+  color:#FFFFFF !important; box-shadow:none !important }
