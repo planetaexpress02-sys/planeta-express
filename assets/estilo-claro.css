@@ -832,3 +832,324 @@
 :root[data-theme="claro"] .banner{
   background:#FFFFFF; border:1px solid #DCE6F3;
   box-shadow:inset 4px 0 0 0 #2563EB, 0 8px 22px rgba(20,35,59,.09) }
+
+/* ==================================================================
+   11. ESTRUTURA (v13.9) — "crie um site que seja cativante, moderno,
+   coloque cores, estrutura".
+
+   POR QUE AS RODADAS ANTERIORES RENDERAM POUCO
+   O tema claro nasceu como CONVERSÃO do tema escuro: mesma estrutura
+   (tudo chapado, bordas finas), só com as cores invertidas. O escuro
+   se sustenta no brilho sobre o preto; tirando o preto, sobra a
+   estrutura chapada — e nenhum ajuste de tom conserta isso. Então
+   aqui muda a ESTRUTURA, não o tom.
+
+   TRÊS MOVIMENTOS
+   1. MENU ESCURO + conteúdo claro. É o desenho dos painéis modernos:
+      a barra escura ancora a tela, o conteúdo claro respira, e o
+      contraste entre os dois dá a "espinha" que faltava. De quebra, a
+      logo volta a ser a arte branca original, que é onde ela brilha.
+   2. BANNER DE CADA TELA EM DEGRADÊ, com cor própria por módulo. É o
+      que dá identidade: Frota tem uma cor, Viagens outra, Financeiro
+      outra. A tela se apresenta antes de o olho chegar nos números.
+   3. CARDS COM COR DE VERDADE: chip do ícone em degradê, LED no topo,
+      número grande e escuro. Não mais branco sobre branco.
+
+   Layout, posições, tamanhos, fontes e dados: intactos.
+   ================================================================== */
+
+/* ---------- 11.1 O MENU ESCURO ---------- */
+:root[data-theme="claro"] .app .sidebar{
+  background:linear-gradient(180deg,#132A4F 0%,#0E2142 55%,#0B1B37 100%) !important;
+  background-image:linear-gradient(180deg,#132A4F 0%,#0E2142 55%,#0B1B37 100%) !important;
+  border-right:1px solid rgba(255,255,255,.07);
+  box-shadow:4px 0 24px rgba(11,27,55,.18) }
+:root[data-theme="claro"] .sidebar .brand .btxt b{ color:#FFFFFF }
+:root[data-theme="claro"] .sidebar .brand .btxt span{ color:#8FB3E0 }
+:root[data-theme="claro"] .sidebar .brand .logo-badge{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 2px 10px rgba(0,0,0,.25) }
+/* a logo volta a ser a arte BRANCA aqui — é o fundo dela de origem */
+:root[data-theme="claro"] .sidebar img[src$="logo-claro.png"],
+:root[data-theme="claro"] .sidebar img[src$="logo-marca.png"]{ content:normal }
+
+:root[data-theme="claro"] .nav a{ color:#C3D6EE; font-weight:560 }
+:root[data-theme="claro"] .nav a svg{ color:#7FA4D4 }
+:root[data-theme="claro"] .nav a:hover{ background:rgba(255,255,255,.07); color:#FFFFFF }
+:root[data-theme="claro"] .nav a:hover svg{ color:#5EEAD4 }
+:root[data-theme="claro"] .nav a.active{
+  background:linear-gradient(90deg, rgba(56,189,248,.22), rgba(37,99,235,.10));
+  color:#FFFFFF; font-weight:700;
+  box-shadow:inset 0 0 0 1px rgba(94,234,212,.22) }
+:root[data-theme="claro"] .nav a.active svg{ color:#5EEAD4 }
+:root[data-theme="claro"] .nav a.active::before{
+  background:linear-gradient(180deg,#5EEAD4,#22C55E);
+  box-shadow:0 0 12px rgba(94,234,212,.85) }
+:root[data-theme="claro"] .nav .group{ color:#6E93C4; font-weight:800 }
+:root[data-theme="claro"] .sidebar .foot{
+  color:#7FA4D4; border-top:1px solid rgba(255,255,255,.08) }
+:root[data-theme="claro"] .nav a .badge{ box-shadow:0 0 10px rgba(239,68,68,.55) }
+:root[data-theme="claro"] .rail-toggle{
+  background:rgba(255,255,255,.10); color:#C3D6EE; border:1px solid rgba(255,255,255,.14) }
+
+/* ---------- 11.2 CONTEÚDO CLARO, com um respiro de cor ---------- */
+:root[data-theme="claro"] body,
+:root[data-theme="claro"] .content,
+:root[data-theme="claro"] #view{ background:#EFF4FB }
+:root[data-theme="claro"] .main{
+  background-image:
+    radial-gradient(900px 500px at 10% -5%, rgba(37,99,235,.07), transparent 60%),
+    radial-gradient(700px 420px at 95% 0%, rgba(34,197,94,.06), transparent 60%) }
+
+/* ---------- 11.3 O BANNER DE CADA TELA: degradê com identidade ----------
+   Cor por módulo. É o que faz a tela "se apresentar". */
+:root[data-theme="claro"] .banner{
+  background:linear-gradient(120deg,#1D4ED8 0%,#2563EB 48%,#3B82F6 100%);
+  border:0; color:#FFFFFF; border-radius:16px;
+  box-shadow:0 10px 30px rgba(29,78,216,.26) }
+:root[data-theme="claro"] .banner b,
+:root[data-theme="claro"] .banner h3,
+:root[data-theme="claro"] .banner>div>b{ color:#FFFFFF }
+:root[data-theme="claro"] .banner span,
+:root[data-theme="claro"] .banner small{ color:rgba(255,255,255,.88) }
+:root[data-theme="claro"] .banner svg{ color:#FFFFFF; opacity:.95 }
+:root[data-theme="claro"] .banner .btn{
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.30); color:#FFFFFF }
+:root[data-theme="claro"] .banner .btn:hover{ background:rgba(255,255,255,.26); color:#FFFFFF }
+:root[data-theme="claro"] .banner .btn.primary{
+  background:#FFFFFF; border-color:#FFFFFF; color:#1D4ED8; font-weight:700;
+  box-shadow:0 2px 10px rgba(0,0,0,.14) }
+:root[data-theme="claro"] .banner .btn.primary:hover{ background:#EAF2FF; color:#1E40AF }
+
+/* cada módulo com a sua cor — identidade sem mexer no HTML */
+:root[data-theme="claro"] #view[data-route="frota"] .banner{
+  background:linear-gradient(120deg,#0E7490 0%,#0891B2 50%,#22D3EE 100%);
+  box-shadow:0 10px 30px rgba(8,145,178,.26) }
+:root[data-theme="claro"] #view[data-route="motoristas"] .banner{
+  background:linear-gradient(120deg,#6D28D9 0%,#7C3AED 50%,#A78BFA 100%);
+  box-shadow:0 10px 30px rgba(124,58,237,.26) }
+:root[data-theme="claro"] #view[data-route="viagens"] .banner{
+  background:linear-gradient(120deg,#15803D 0%,#16A34A 50%,#4ADE80 100%);
+  box-shadow:0 10px 30px rgba(22,163,74,.26) }
+:root[data-theme="claro"] #view[data-route="financeiro"] .banner{
+  background:linear-gradient(120deg,#115E59 0%,#0D9488 50%,#2DD4BF 100%);
+  box-shadow:0 10px 30px rgba(13,148,136,.26) }
+:root[data-theme="claro"] #view[data-route="vencimentos"] .banner,
+:root[data-theme="claro"] #view[data-route="seguros"] .banner{
+  background:linear-gradient(120deg,#B45309 0%,#D97706 50%,#FBBF24 100%);
+  box-shadow:0 10px 30px rgba(217,119,6,.26) }
+:root[data-theme="claro"] #view[data-route="pedagios"] .banner{
+  background:linear-gradient(120deg,#9F1239 0%,#BE123C 50%,#FB7185 100%);
+  box-shadow:0 10px 30px rgba(190,18,60,.24) }
+:root[data-theme="claro"] #view[data-route="pneus"] .banner,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner,
+:root[data-theme="claro"] #view[data-route="km"] .banner{
+  background:linear-gradient(120deg,#334155 0%,#475569 50%,#94A3B8 100%);
+  box-shadow:0 10px 30px rgba(51,65,85,.24) }
+
+/* ---------- 11.4 O TÍTULO DA TELA ---------- */
+:root[data-theme="claro"] .ini-head h1,
+:root[data-theme="claro"] .page-title{ color:#0F1E3A }
+
+/* ---------- 11.5 CARDS: chip do ícone com COR, não pastel ---------- */
+:root[data-theme="claro"] .k-ico.i-blue,
+:root[data-theme="claro"] .ini-kpi .ic{
+  background:linear-gradient(145deg,#3B82F6,#1D4ED8); color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(29,78,216,.34) }
+:root[data-theme="claro"] .k-ico.i-green,
+:root[data-theme="claro"] .ini-kpi.ok .ic{
+  background:linear-gradient(145deg,#4ADE80,#16A34A); color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(22,163,74,.34) }
+:root[data-theme="claro"] .k-ico.i-red,
+:root[data-theme="claro"] .ini-kpi.crit .ic{
+  background:linear-gradient(145deg,#F87171,#DC2626); color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(220,38,38,.32) }
+:root[data-theme="claro"] .k-ico.i-amber,
+:root[data-theme="claro"] .k-ico.i-orange{
+  background:linear-gradient(145deg,#FBBF24,#D97706); color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(217,119,6,.32) }
+:root[data-theme="claro"] .k-ico.i-slate{
+  background:linear-gradient(145deg,#94A3B8,#475569); color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(71,85,105,.28) }
+
+/* ---------- 11.6 O CABEÇALHO acompanha ---------- */
+:root[data-theme="claro"] .topbar{
+  background:#FFFFFF !important; border-bottom:1px solid #DCE6F3 !important;
+  box-shadow:0 2px 10px rgba(15,30,58,.06) }
+:root[data-theme="claro"] .tb-word{ color:#0F1E3A }
+
+/* ==================================================================
+   12. ESPECIFICIDADE (v13.9)
+   O tema escuro prefixa quase tudo com `#view.cyber …` (id + classe),
+   que vence um seletor só de classes. Duas coisas da seção 11 estavam
+   perdendo por isso — e perdendo FEIO:
+     • o texto do banner continuava azul-escuro sobre o degradê
+       colorido: ILEGÍVEL. Defeito, não gosto.
+     • o chip do ícone continuava pastel em vez do degradê.
+   Numa camada de TEMA, `!important` é o uso legítimo: ela existe
+   justamente para vencer o tema de baixo.
+   ================================================================== */
+
+/* 12.1 TEXTO DO BANNER — branco sobre o degradê, sempre */
+:root[data-theme="claro"] #view .banner,
+:root[data-theme="claro"] #view.cyber .banner{ color:#FFFFFF !important }
+:root[data-theme="claro"] #view .banner b,
+:root[data-theme="claro"] #view .banner h3,
+:root[data-theme="claro"] #view .banner strong,
+:root[data-theme="claro"] #view.cyber .banner b{ color:#FFFFFF !important }
+:root[data-theme="claro"] #view .banner span,
+:root[data-theme="claro"] #view .banner small,
+:root[data-theme="claro"] #view .banner p,
+:root[data-theme="claro"] #view.cyber .banner span{ color:rgba(255,255,255,.90) !important }
+:root[data-theme="claro"] #view .banner>svg{ color:#FFFFFF !important; opacity:.95 }
+/* os botões dentro do banner: vidro sobre a cor, e o primário invertido */
+:root[data-theme="claro"] #view .banner .btn{
+  background:rgba(255,255,255,.16) !important; border:1px solid rgba(255,255,255,.34) !important;
+  color:#FFFFFF !important }
+:root[data-theme="claro"] #view .banner .btn:hover{ background:rgba(255,255,255,.28) !important }
+:root[data-theme="claro"] #view .banner .btn.primary{
+  background:#FFFFFF !important; border-color:#FFFFFF !important; color:#1D4ED8 !important;
+  box-shadow:0 2px 12px rgba(0,0,0,.18) !important }
+:root[data-theme="claro"] #view .banner .btn.primary:hover{ background:#EAF2FF !important; color:#1E40AF !important }
+
+/* 12.2 CHIP DO ÍCONE com degradê de verdade */
+:root[data-theme="claro"] #view .k-ico.i-blue,
+:root[data-theme="claro"] #view .ini-kpi .ic{
+  background:linear-gradient(145deg,#3B82F6,#1D4ED8) !important; color:#FFFFFF !important;
+  box-shadow:0 4px 12px rgba(29,78,216,.34) !important }
+:root[data-theme="claro"] #view .k-ico.i-green,
+:root[data-theme="claro"] #view .ini-kpi.ok .ic{
+  background:linear-gradient(145deg,#4ADE80,#16A34A) !important; color:#FFFFFF !important;
+  box-shadow:0 4px 12px rgba(22,163,74,.34) !important }
+:root[data-theme="claro"] #view .k-ico.i-red,
+:root[data-theme="claro"] #view .ini-kpi.crit .ic{
+  background:linear-gradient(145deg,#F87171,#DC2626) !important; color:#FFFFFF !important;
+  box-shadow:0 4px 12px rgba(220,38,38,.32) !important }
+:root[data-theme="claro"] #view .k-ico.i-amber,
+:root[data-theme="claro"] #view .k-ico.i-orange{
+  background:linear-gradient(145deg,#FBBF24,#D97706) !important; color:#FFFFFF !important;
+  box-shadow:0 4px 12px rgba(217,119,6,.32) !important }
+:root[data-theme="claro"] #view .k-ico.i-slate{
+  background:linear-gradient(145deg,#94A3B8,#475569) !important; color:#FFFFFF !important;
+  box-shadow:0 4px 12px rgba(71,85,105,.28) !important }
+:root[data-theme="claro"] #view .k-ico svg,
+:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#FFFFFF !important }
+
+/* 12.3 O MENU ESCURO também precisa vencer o `.app .sidebar` do tema */
+:root[data-theme="claro"] .app .sidebar .nav a{ color:#C3D6EE !important }
+:root[data-theme="claro"] .app .sidebar .nav a.active{ color:#FFFFFF !important }
+:root[data-theme="claro"] .app .sidebar .nav .group{ color:#6E93C4 !important }
+:root[data-theme="claro"] .app .sidebar .foot{ color:#7FA4D4 !important }
+:root[data-theme="claro"] .app .sidebar .brand .btxt b{ color:#FFFFFF !important }
+:root[data-theme="claro"] .app .sidebar .brand .btxt span{ color:#8FB3E0 !important }
+
+/* ==================================================================
+   13. OS NÚMEROS GRANDES ESTAVAM MEIO APAGADOS (v13.9)
+
+   Achado medindo, não olhando: `.kpi .k-val` não usa cor — usa um
+   DEGRADÊ APLICADO AO TEXTO (`background-clip:text` + `color:transparent`).
+   No tema escuro isso dá brilho metálico. No claro o degradê ia de
+   `--surf3` (quase branco) até `#33415c`, então o TOPO DE CADA NÚMERO
+   ficava quase invisível no papel branco. Era parte do "sem graça":
+   o dado mais importante da tela entrando pela metade.
+
+   Aqui o degradê sai e o número vira tinta sólida, forte. O brilho
+   (`text-shadow`) também sai: halo azul sobre branco só suja.
+   ================================================================== */
+:root[data-theme="claro"] #view .kpi .k-val,
+:root[data-theme="claro"] #view.cyber .kpi .k-val,
+:root[data-theme="claro"] #view .ini-kpi .num,
+:root[data-theme="claro"] #view .num,
+:root[data-theme="claro"] #view .k-val{
+  background:none !important;
+  background-image:none !important;
+  -webkit-background-clip:border-box !important;
+  background-clip:border-box !important;
+  -webkit-text-fill-color:#14233B !important;
+  color:#14233B !important;
+  text-shadow:none !important }
+
+/* o mesmo vale para os números "dourados" do Financeiro */
+:root[data-theme="claro"] #view .fin-gold .kpi .k-val{
+  -webkit-text-fill-color:#B45309 !important; color:#B45309 !important }
+
+/* e para os cartões de estado, o número acompanha a cor do estado */
+:root[data-theme="claro"] #view .ini-kpi.ok .num{
+  -webkit-text-fill-color:#15803D !important; color:#15803D !important }
+:root[data-theme="claro"] #view .ini-kpi.crit .num{
+  -webkit-text-fill-color:#B91C1C !important; color:#B91C1C !important }
+:root[data-theme="claro"] #view .kpi:has(.i-green) .k-val{
+  -webkit-text-fill-color:#15803D !important; color:#15803D !important }
+:root[data-theme="claro"] #view .kpi:has(.i-red) .k-val{
+  -webkit-text-fill-color:#B91C1C !important; color:#B91C1C !important }
+:root[data-theme="claro"] #view .kpi:has(.i-amber) .k-val,
+:root[data-theme="claro"] #view .kpi:has(.i-orange) .k-val{
+  -webkit-text-fill-color:#B45309 !important; color:#B45309 !important }
+
+/* o rótulo embaixo do número, forte e na cor do estado */
+:root[data-theme="claro"] #view .kpi .k-lab,
+:root[data-theme="claro"] #view .kpi .l,
+:root[data-theme="claro"] #view .ini-kpi .l{ font-weight:700 }
+
+/* ==================================================================
+   14. O BANNER PRECISA DO MESMO PESO NO FUNDO (v13.9)
+
+   Erro meu, pego na medição: eu tinha posto `!important` no TEXTO do
+   banner (branco) mas não no FUNDO. Em algumas telas — Descargas,
+   CT-e, Abastecimento — um seletor mais forte do tema escuro mantinha
+   o banner BRANCO, e o resultado era branco sobre branco: o título da
+   tela sumia. Dezoito textos ficaram ilegíveis assim.
+
+   Regra aprendida: ao forçar a cor do texto, forçar o fundo junto.
+   Os dois andam em par ou um deles vira defeito.
+   ================================================================== */
+:root[data-theme="claro"] #view .banner,
+:root[data-theme="claro"] #view.cyber .banner{
+  background:linear-gradient(120deg,#1D4ED8 0%,#2563EB 48%,#3B82F6 100%) !important;
+  background-image:linear-gradient(120deg,#1D4ED8 0%,#2563EB 48%,#3B82F6 100%) !important;
+  border:0 !important; border-radius:16px;
+  box-shadow:0 10px 30px rgba(29,78,216,.26) !important }
+
+/* a cor de cada módulo, agora com o mesmo peso */
+:root[data-theme="claro"] #view[data-route="frota"] .banner{
+  background-image:linear-gradient(120deg,#155E75,#0E7490 50%,#0891B2) !important;
+  box-shadow:0 10px 30px rgba(8,145,178,.26) !important }
+:root[data-theme="claro"] #view[data-route="motoristas"] .banner{
+  background-image:linear-gradient(120deg,#4C1D95,#6D28D9 50%,#7C3AED) !important;
+  box-shadow:0 10px 30px rgba(124,58,237,.26) !important }
+:root[data-theme="claro"] #view[data-route="viagens"] .banner{
+  background-image:linear-gradient(120deg,#14532D,#15803D 50%,#16A34A) !important;
+  box-shadow:0 10px 30px rgba(22,163,74,.26) !important }
+:root[data-theme="claro"] #view[data-route="descargas"] .banner{
+  background-image:linear-gradient(120deg,#831843,#9D174D 50%,#DB2777) !important;
+  box-shadow:0 10px 30px rgba(219,39,119,.24) !important }
+:root[data-theme="claro"] #view[data-route="ctes"] .banner{
+  background-image:linear-gradient(120deg,#172554,#1E3A8A 50%,#2563EB) !important;
+  box-shadow:0 10px 30px rgba(37,99,235,.26) !important }
+:root[data-theme="claro"] #view[data-route="abastecimento"] .banner{
+  background-image:linear-gradient(120deg,#633110,#7C4A0C 50%,#A16207) !important;
+  box-shadow:0 10px 30px rgba(202,138,4,.24) !important }
+:root[data-theme="claro"] #view[data-route="financeiro"] .banner{
+  background-image:linear-gradient(120deg,#134E4A,#115E59 50%,#0D9488) !important;
+  box-shadow:0 10px 30px rgba(13,148,136,.26) !important }
+:root[data-theme="claro"] #view[data-route="vencimentos"] .banner,
+:root[data-theme="claro"] #view[data-route="seguros"] .banner{
+  background-image:linear-gradient(120deg,#92400E,#B45309 50%,#D97706) !important;
+  box-shadow:0 10px 30px rgba(217,119,6,.26) !important }
+:root[data-theme="claro"] #view[data-route="pedagios"] .banner{
+  background-image:linear-gradient(120deg,#881337,#9F1239 50%,#BE123C) !important;
+  box-shadow:0 10px 30px rgba(190,18,60,.24) !important }
+:root[data-theme="claro"] #view[data-route="pneus"] .banner,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner,
+:root[data-theme="claro"] #view[data-route="km"] .banner,
+:root[data-theme="claro"] #view[data-route="baterias"] .banner{
+  background-image:linear-gradient(120deg,#1E293B,#334155 50%,#475569) !important;
+  box-shadow:0 10px 30px rgba(51,65,85,.24) !important }
+:root[data-theme="claro"] #view[data-route="licencas"] .banner,
+:root[data-theme="claro"] #view[data-route="antt"] .banner{
+  background-image:linear-gradient(120deg,#312E81,#3730A3 50%,#4F46E5) !important;
+  box-shadow:0 10px 30px rgba(79,70,229,.26) !important }
+:root[data-theme="claro"] #view[data-route="notas"] .banner,
+:root[data-theme="claro"] #view[data-route="checklist"] .banner{
+  background-image:linear-gradient(120deg,#134E4A,#115E59 50%,#0F766E) !important;
+  box-shadow:0 10px 30px rgba(20,184,166,.24) !important }
