@@ -408,7 +408,7 @@
       e estilo inline vence qualquer seletor. Não dá para trocar por CSS:
       o jeito honesto é escurecer o que está lá, com filtro. Mantém a
       escala de urgência (âmbar → laranja → vermelho) e ganha contraste. */
-:root[data-theme="claro"] .venc-dias{ filter:brightness(.62) saturate(1.35) }
+:root[data-theme="claro"] .venc-dias{ filter:brightness(.45) saturate(1.5) }   /* v14.0: .62 deixava o âmbar em 3,65:1 */
 
 /* c) `.seg-b.on` é o botão de filtro ATIVO: tinha texto quase preto sobre
       ciano. No claro o acento virou azul forte, e texto escuro sobre azul
@@ -418,13 +418,13 @@
 
 /* d) o "Apto a realizar o transporte" da ANTT é verde-néon no elemento */
 :root[data-theme="claro"] .antt-ok,
-:root[data-theme="claro"] .antt-situacao{ filter:brightness(.68) saturate(1.3) }
+:root[data-theme="claro"] .antt-situacao{ filter:brightness(.45) saturate(1.5) }
 
 /* e) a linha "Apto a realizar o transporte" da ANTT é um `div` sem classe,
       com a cor cravada no próprio elemento (app.js). Sem classe, só dá
       para alcançá-la pelo cartão que a contém. Mesmo remédio: escurece
       mantendo verde (apto) e vermelho (verificar). */
-:root[data-theme="claro"] .antt-topo div[style*="color"]{ filter:brightness(.66) saturate(1.3) }
+:root[data-theme="claro"] .antt-topo div[style*="color"]{ filter:brightness(.45) saturate(1.5) }
 
 /* 7. A TELA DE LOGIN.
    No escuro a caixa se destacava sozinha (clara sobre preto). No claro ela
@@ -1153,3 +1153,669 @@
 :root[data-theme="claro"] #view[data-route="checklist"] .banner{
   background-image:linear-gradient(120deg,#134E4A,#115E59 50%,#0F766E) !important;
   box-shadow:0 10px 30px rgba(20,184,166,.24) !important }
+
+/* ==================================================================
+   15. LINGUAGEM ÚNICA (v14.0) — "uma cor só, mais sólida, mais premium,
+   leve, profissional. apple, minimalista, futurista, moderno."
+
+   O QUE EU ESTAVA FAZENDO ERRADO
+   Eu vinha ADICIONANDO cor na interface: degradê por módulo, LED, chip
+   colorido, menu escuro. Quanto mais eu acrescentava, mais amador
+   ficava — porque enfeite não é acabamento. O caminho é o inverso:
+   TIRAR cor da interface e deixar a cor só no DADO.
+
+   AS QUATRO REGRAS DESTA SEÇÃO
+   1. UMA COR DE FUNDO SÓ (#F5F5F7) em tudo: menu, cabeçalho, conteúdo.
+      Sem degradê, sem véu, sem bloco escuro.
+   2. As superfícies brancas FLUTUAM sobre ela. A separação vem de
+      SOMBRA e espaço, não de borda grossa nem de cor.
+   3. A interface é monocromática. Azul só em AÇÃO (botão, link,
+      seleção). Verde/âmbar/vermelho só em ESTADO de dado.
+   4. Nada de brilho, néon ou degradê. Se precisa brilhar para chamar
+      atenção, o desenho está errado.
+
+   Isto desfaz, de propósito, o banner colorido e o LED das seções
+   anteriores. Layout, posições, tamanhos e dados: intactos.
+   ================================================================== */
+
+/* ---------- 15.1 UMA COR SÓ ---------- */
+:root[data-theme="claro"]{
+  --ap-bg:#F5F5F7;        /* o fundo, em tudo */
+  --ap-surf:#FFFFFF;      /* as superfícies que flutuam */
+  --ap-line:rgba(0,0,0,.07);
+  --ap-tx:#1D1D1F;        /* quase preto, nunca preto */
+  --ap-tx2:#6E6E73;
+  --ap-tx3:#6B6B70;   /* v14.0: era #86868B (o cinza da Apple). Em 10px dava 3,33:1 sobre o fundo — reprovava em 270 lugares. #6B6B70 dá 4,86:1. */
+  --ap-azul:#0071E3;      /* azul de ação */
+  --ap-azul-d:#0058B0;
+  --ap-ok:#1D7F3C;  --ap-ok-bg:#E8F6EC;
+  --ap-wa:#A1620B;  --ap-wa-bg:#FDF3E0;
+  --ap-cr:#C9261F;  --ap-cr-bg:#FCEBEA;
+  --ap-sombra:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  --ap-sombra-f:0 2px 6px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.10);
+}
+:root[data-theme="claro"] body,
+:root[data-theme="claro"] .content,
+:root[data-theme="claro"] #view,
+:root[data-theme="claro"] .app,
+:root[data-theme="claro"] .main{
+  background:var(--ap-bg) !important; background-image:none !important }
+:root[data-theme="claro"] .app .sidebar{
+  background:var(--ap-bg) !important; background-image:none !important;
+  border-right:1px solid var(--ap-line) !important; box-shadow:none !important }
+:root[data-theme="claro"] .topbar{
+  background:var(--ap-bg) !important; background-image:none !important;
+  border-bottom:1px solid var(--ap-line) !important; box-shadow:none !important;
+  backdrop-filter:saturate(1.6) blur(20px); -webkit-backdrop-filter:saturate(1.6) blur(20px) }
+
+/* ---------- 15.2 TIPOGRAFIA: hierarquia por tom, não por cor ---------- */
+:root[data-theme="claro"] #view,
+:root[data-theme="claro"] .page-title,
+:root[data-theme="claro"] .card-h h3,
+:root[data-theme="claro"] .tbl td{ color:var(--ap-tx) }
+:root[data-theme="claro"] .muted,
+:root[data-theme="claro"] .hint,
+:root[data-theme="claro"] .card-h .sub,
+:root[data-theme="claro"] .it .l{ color:var(--ap-tx2) !important }
+:root[data-theme="claro"] .ini-head h1{ color:var(--ap-tx) !important; letter-spacing:-.02em }
+
+/* ---------- 15.3 O MENU: seleção é uma pastilha branca ---------- */
+:root[data-theme="claro"] .app .sidebar .brand .btxt b{ color:var(--ap-tx) !important }
+:root[data-theme="claro"] .app .sidebar .brand .btxt span{ color:var(--ap-tx3) !important }
+:root[data-theme="claro"] .sidebar .brand .logo-badge{
+  background:var(--ap-surf) !important; border:1px solid var(--ap-line) !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.06) !important }
+/* no fundo claro a marca volta a ser a arte ESCURA */
+:root[data-theme="claro"] .sidebar img[src$="logo-claro.png"],
+:root[data-theme="claro"] .sidebar img[src$="logo-marca.png"]{ content:url("logo-escuro.png") }
+:root[data-theme="claro"] .app .sidebar .nav a{
+  color:var(--ap-tx2) !important; font-weight:500; border:0 !important; box-shadow:none !important;
+  background:transparent !important }
+:root[data-theme="claro"] .app .sidebar .nav a svg{ color:var(--ap-tx3) }
+:root[data-theme="claro"] .app .sidebar .nav a:hover{
+  background:rgba(0,0,0,.04) !important; color:var(--ap-tx) !important }
+:root[data-theme="claro"] .app .sidebar .nav a.active{
+  background:var(--ap-surf) !important; color:var(--ap-tx) !important; font-weight:600;
+  box-shadow:0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.06) !important }
+:root[data-theme="claro"] .app .sidebar .nav a.active svg{ color:var(--ap-azul) }
+:root[data-theme="claro"] .app .sidebar .nav a.active::before{
+  background:none !important; box-shadow:none !important; width:0 !important }
+:root[data-theme="claro"] .app .sidebar .nav .group{
+  color:var(--ap-tx3) !important; font-weight:600; letter-spacing:.08em }
+:root[data-theme="claro"] .app .sidebar .foot{
+  color:var(--ap-tx3) !important; border-top:1px solid var(--ap-line) !important }
+
+/* ---------- 15.4 CABEÇALHO monocromático ---------- */
+:root[data-theme="claro"] .cock-search{
+  background:rgba(0,0,0,.04) !important; border:1px solid transparent !important;
+  box-shadow:none !important; border-radius:12px }
+:root[data-theme="claro"] .cock-search:hover,
+:root[data-theme="claro"] .cock-search:focus-within{
+  background:var(--ap-surf) !important; border-color:var(--ap-line) !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.08) !important }
+:root[data-theme="claro"] .cock-search span{ color:var(--ap-tx3) !important; font-weight:400 }
+:root[data-theme="claro"] .cock-search>svg{ color:var(--ap-tx3) !important }
+:root[data-theme="claro"] .cock-kbd{ background:transparent; border:1px solid var(--ap-line); color:var(--ap-tx3) }
+:root[data-theme="claro"] .cock-ico{
+  background:transparent !important; border:1px solid var(--ap-line) !important;
+  color:var(--ap-tx2) !important }
+:root[data-theme="claro"] .cock-ico:hover{
+  background:rgba(0,0,0,.04) !important; color:var(--ap-tx) !important; border-color:var(--ap-line) !important }
+:root[data-theme="claro"] .cock-clock b{ color:var(--ap-tx) !important; font-weight:600 }
+:root[data-theme="claro"] .cock-clock span{ color:var(--ap-tx3) !important }
+:root[data-theme="claro"] .userbadge{
+  background:transparent !important; border:1px solid var(--ap-line); color:var(--ap-tx2) !important }
+:root[data-theme="claro"] .topbar .relbtn{
+  background:transparent !important; border:1px solid var(--ap-line) !important;
+  color:var(--ap-tx2) !important; font-weight:500 }
+:root[data-theme="claro"] .topbar .relbtn:hover{
+  background:rgba(0,0,0,.04) !important; color:var(--ap-tx) !important; border-color:var(--ap-line) !important }
+:root[data-theme="claro"] .tb-word{ color:var(--ap-tx) !important; font-weight:600 }
+
+/* ---------- 15.5 SUPERFÍCIES QUE FLUTUAM ---------- */
+:root[data-theme="claro"] #view .card,
+:root[data-theme="claro"] #view.cyber .card,
+:root[data-theme="claro"] #view .ini-kpi,
+:root[data-theme="claro"] #view .kpi,
+:root[data-theme="claro"] #view .socio-card{
+  background:var(--ap-surf) !important; background-image:none !important;
+  border:1px solid var(--ap-line) !important;
+  border-radius:18px !important;
+  box-shadow:var(--ap-sombra) !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important }
+:root[data-theme="claro"] #view .card:hover,
+:root[data-theme="claro"] #view .kpi:hover,
+:root[data-theme="claro"] #view .ini-kpi:hover{
+  box-shadow:var(--ap-sombra-f) !important; border-color:var(--ap-line) !important;
+  transform:translateY(-1px) }
+:root[data-theme="claro"] #view .card-h,
+:root[data-theme="claro"] #view.cyber .card-h{ border-bottom:1px solid var(--ap-line) !important }
+
+/* o LED das versões anteriores sai: era enfeite, não acabamento */
+:root[data-theme="claro"] #view .ini-kpi::before,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi::before{
+  width:0 !important; box-shadow:none !important; background:none !important }
+
+/* ---------- 15.6 O BANNER vira uma superfície calma ---------- */
+:root[data-theme="claro"] #view .banner,
+:root[data-theme="claro"] #view.cyber .banner{
+  background:var(--ap-surf) !important; background-image:none !important;
+  border:1px solid var(--ap-line) !important; border-radius:18px !important;
+  box-shadow:var(--ap-sombra) !important; color:var(--ap-tx) !important }
+:root[data-theme="claro"] #view .banner b,
+:root[data-theme="claro"] #view .banner h3,
+:root[data-theme="claro"] #view.cyber .banner b{
+  color:var(--ap-tx) !important; letter-spacing:-.01em }
+:root[data-theme="claro"] #view .banner span,
+:root[data-theme="claro"] #view .banner small,
+:root[data-theme="claro"] #view.cyber .banner span{ color:var(--ap-tx2) !important }
+:root[data-theme="claro"] #view .banner>svg{ color:var(--ap-tx3) !important; opacity:1 }
+:root[data-theme="claro"] #view .banner .btn{
+  background:rgba(0,0,0,.04) !important; border:1px solid transparent !important;
+  color:var(--ap-tx) !important }
+:root[data-theme="claro"] #view .banner .btn:hover{ background:rgba(0,0,0,.07) !important }
+:root[data-theme="claro"] #view .banner .btn.primary{
+  background:var(--ap-azul) !important; border-color:var(--ap-azul) !important;
+  color:#fff !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .banner .btn.primary:hover{
+  background:var(--ap-azul-d) !important; border-color:var(--ap-azul-d) !important }
+
+/* ---------- 15.7 BOTÕES: um azul sólido, sem degradê ---------- */
+:root[data-theme="claro"] .btn{
+  background:var(--ap-surf) !important; background-image:none !important;
+  border:1px solid var(--ap-line) !important; color:var(--ap-tx) !important;
+  font-weight:500; border-radius:11px; box-shadow:none !important }
+:root[data-theme="claro"] .btn:hover{ background:#FAFAFC !important; border-color:rgba(0,0,0,.12) !important }
+:root[data-theme="claro"] .btn.primary{
+  background:var(--ap-azul) !important; background-image:none !important;
+  border-color:var(--ap-azul) !important; color:#fff !important; font-weight:600 }
+:root[data-theme="claro"] .btn.primary:hover{
+  background:var(--ap-azul-d) !important; border-color:var(--ap-azul-d) !important }
+:root[data-theme="claro"] .btn.danger{
+  background:var(--ap-cr) !important; border-color:var(--ap-cr) !important; color:#fff !important }
+:root[data-theme="claro"] .btn.ghost{
+  background:transparent !important; border-color:transparent !important; color:var(--ap-tx2) !important }
+:root[data-theme="claro"] .btn.ghost:hover{ background:rgba(0,0,0,.05) !important; color:var(--ap-tx) !important }
+
+/* ---------- 15.8 OS NÚMEROS: tipografia, não efeito ---------- */
+:root[data-theme="claro"] #view .kpi .k-val,
+:root[data-theme="claro"] #view.cyber .kpi .k-val,
+:root[data-theme="claro"] #view .ini-kpi .num,
+:root[data-theme="claro"] #view .num,
+:root[data-theme="claro"] #view .k-val{
+  background:none !important; background-image:none !important;
+  -webkit-background-clip:border-box !important; background-clip:border-box !important;
+  -webkit-text-fill-color:var(--ap-tx) !important; color:var(--ap-tx) !important;
+  text-shadow:none !important; letter-spacing:-.02em }
+:root[data-theme="claro"] #view .kpi .k-lab,
+:root[data-theme="claro"] #view .kpi .l,
+:root[data-theme="claro"] #view .ini-kpi .l{
+  color:var(--ap-tx2) !important; font-weight:500 }
+
+/* o chip do ícone: cinza discreto. Cor só quando o estado pede. */
+:root[data-theme="claro"] #view .k-ico,
+:root[data-theme="claro"] #view .ini-kpi .ic{
+  background:rgba(0,0,0,.05) !important; background-image:none !important;
+  color:var(--ap-tx2) !important; box-shadow:none !important; border:0 !important }
+:root[data-theme="claro"] #view .k-ico svg,
+:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:var(--ap-tx2) !important }
+:root[data-theme="claro"] #view .k-ico.i-green,
+:root[data-theme="claro"] #view .ini-kpi.ok .ic{ background:var(--ap-ok-bg) !important; color:var(--ap-ok) !important }
+:root[data-theme="claro"] #view .k-ico.i-green svg,
+:root[data-theme="claro"] #view .ini-kpi.ok .ic svg{ color:var(--ap-ok) !important }
+:root[data-theme="claro"] #view .k-ico.i-red,
+:root[data-theme="claro"] #view .ini-kpi.crit .ic{ background:var(--ap-cr-bg) !important; color:var(--ap-cr) !important }
+:root[data-theme="claro"] #view .k-ico.i-red svg,
+:root[data-theme="claro"] #view .ini-kpi.crit .ic svg{ color:var(--ap-cr) !important }
+:root[data-theme="claro"] #view .k-ico.i-amber,
+:root[data-theme="claro"] #view .k-ico.i-orange{ background:var(--ap-wa-bg) !important; color:var(--ap-wa) !important }
+:root[data-theme="claro"] #view .k-ico.i-amber svg,
+:root[data-theme="claro"] #view .k-ico.i-orange svg{ color:var(--ap-wa) !important }
+
+/* o número herda o estado, discretamente */
+:root[data-theme="claro"] #view .ini-kpi.crit .num,
+:root[data-theme="claro"] #view .kpi:has(.i-red) .k-val{
+  -webkit-text-fill-color:var(--ap-cr) !important; color:var(--ap-cr) !important }
+
+/* ---------- 15.9 SELOS de estado: discretos, sem brilho ---------- */
+:root[data-theme="claro"] .st.ok,  :root[data-theme="claro"] .tag.ok,
+:root[data-theme="claro"] .ini-flag{
+  color:var(--ap-ok) !important; background:var(--ap-ok-bg) !important;
+  border:0 !important; box-shadow:none !important; animation:none !important; font-weight:600 }
+:root[data-theme="claro"] .st.warn, :root[data-theme="claro"] .tag.warn{
+  color:var(--ap-wa) !important; background:var(--ap-wa-bg) !important; border:0 !important; font-weight:600 }
+:root[data-theme="claro"] .st.crit, :root[data-theme="claro"] .st.err,
+:root[data-theme="claro"] .tag.crit{
+  color:var(--ap-cr) !important; background:var(--ap-cr-bg) !important; border:0 !important; font-weight:600 }
+:root[data-theme="claro"] #view .ini-kpi.ok,
+:root[data-theme="claro"] #view .ini-kpi.crit,
+:root[data-theme="claro"] #view .kpi{ border-color:var(--ap-line) !important }
+
+/* ---------- 15.10 TABELAS: linhas, não grades ---------- */
+:root[data-theme="claro"] .tbl thead th,
+:root[data-theme="claro"] #view.cyber .tbl thead th{
+  background:transparent !important; color:var(--ap-tx2) !important; font-weight:600;
+  border-bottom:1px solid var(--ap-line) !important }
+:root[data-theme="claro"] .tbl td{ border-bottom:1px solid rgba(0,0,0,.05) !important }
+:root[data-theme="claro"] .tbl tbody tr:hover{ background:rgba(0,0,0,.025) !important }
+
+/* ---------- 15.11 placa e pastilhas ---------- */
+:root[data-theme="claro"] .plate{
+  background:rgba(0,0,0,.05) !important; color:var(--ap-tx) !important;
+  border:0 !important; box-shadow:none !important }
+:root[data-theme="claro"] .plate.rebo{ background:rgba(0,0,0,.08) !important }
+
+/* ==================================================================
+   16. LIMPEZA DOS RESÍDUOS (v14.0)
+   Medi o que sobrou na tela depois da seção 15: o card e o banner já
+   estavam limpos (sombra suave, borda fina, fundo branco), mas ainda
+   apareciam faixas coloridas — e elas não vinham de borda nem de
+   sombra: são PSEUDO-ELEMENTOS (`::before`/`::after`) das camadas
+   anteriores. E o chip do ícone continuava em degradê azul porque
+   `#view .k-ico.i-blue` é mais específico que `#view .k-ico`.
+   Aqui os dois somem de vez. Enfeite fora; sobra o conteúdo.
+   ================================================================== */
+
+/* 16.1 nenhuma faixa colorida em cartão ou banner */
+:root[data-theme="claro"] #view .kpi::before,
+:root[data-theme="claro"] #view .kpi::after,
+:root[data-theme="claro"] #view .card::before,
+:root[data-theme="claro"] #view .banner::before,
+:root[data-theme="claro"] #view .banner::after,
+:root[data-theme="claro"] #view .ini-kpi::before,
+:root[data-theme="claro"] #view .ini-kpi::after{
+  background:none !important; background-image:none !important;
+  box-shadow:none !important; width:0 !important; height:0 !important;
+  border:0 !important; content:none !important }
+
+/* 16.2 o chip do ícone, cinza por padrão; cor só no estado */
+:root[data-theme="claro"] #view .k-ico.i-blue,
+:root[data-theme="claro"] #view .k-ico.i-slate,
+:root[data-theme="claro"] #view .ini-kpi .ic{
+  background:rgba(0,0,0,.05) !important; background-image:none !important;
+  color:#6E6E73 !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .k-ico.i-blue svg,
+:root[data-theme="claro"] #view .k-ico.i-slate svg,
+:root[data-theme="claro"] #view .ini-kpi .ic svg{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .k-ico.i-green{
+  background:#E8F6EC !important; background-image:none !important; color:#1D7F3C !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .k-ico.i-green svg{ color:#1D7F3C !important }
+:root[data-theme="claro"] #view .k-ico.i-red{
+  background:#FCEBEA !important; background-image:none !important; color:#C9261F !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .k-ico.i-red svg{ color:#C9261F !important }
+:root[data-theme="claro"] #view .k-ico.i-amber,
+:root[data-theme="claro"] #view .k-ico.i-orange{
+  background:#FDF3E0 !important; background-image:none !important; color:#A1620B !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .k-ico.i-amber svg,
+:root[data-theme="claro"] #view .k-ico.i-orange svg{ color:#A1620B !important }
+:root[data-theme="claro"] #view .ini-kpi.ok .ic,
+:root[data-theme="claro"] #view .ini-kpi.ok .ic svg{ background-image:none !important }
+
+/* 16.3 nada de halo no hover: a sombra já diz que levantou */
+:root[data-theme="claro"] #view .kpi:hover,
+:root[data-theme="claro"] #view .ini-kpi:hover{
+  box-shadow:0 2px 6px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.10) !important }
+
+/* ==================================================================
+   17. O PAINEL TINHA O PRÓPRIO FUNDO (v14.0)
+   A tela inicial não usa o fundo do sistema: `.ini-cmd` traz um fundo
+   próprio de três camadas (dois halos radiais + um degradê diagonal),
+   herdado do "centro de comando" do tema escuro. Convertido para o
+   claro, virava aquela lavagem azul atrás dos cartões — justamente o
+   contrário de "um fundo com uma cor só". Aqui ele vira a mesma cor
+   do resto, e o cabeçalho da tela perde o azul: no desenho que ele
+   pediu, a cor fica no dado, não na moldura.
+   ================================================================== */
+:root[data-theme="claro"] #view .ini-cmd,
+:root[data-theme="claro"] #view.cyber .ini-cmd{
+  background:#F5F5F7 !important; background-image:none !important }
+:root[data-theme="claro"] #view .ini-hero,
+:root[data-theme="claro"] #view .ini-hero-bg{
+  background:#FFFFFF !important; background-image:none !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important;
+  opacity:1 !important }
+:root[data-theme="claro"] #view .ini-hero-txt,
+:root[data-theme="claro"] #view .ini-hero-txt h1{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .ini-hero-txt p,
+:root[data-theme="claro"] #view .ini-hero-tag{ color:#6E6E73 !important }
+
+/* o cabeçalho da tela inicial, em tinta e não em azul */
+:root[data-theme="claro"] #view .ini-brand .tx b{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .ini-brand .tx span{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view .ini-brand .mk{
+  background:#FFFFFF !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.08) !important }
+
+/* os cartões do Painel: brancos sólidos, não translúcidos, sem halo */
+:root[data-theme="claro"] #view .ini-cmd .card,
+:root[data-theme="claro"] #view .ini-cmd .ini-stage,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important }
+:root[data-theme="claro"] #view .ini-cmd .card:hover,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi:hover{
+  box-shadow:0 2px 6px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.10) !important }
+
+/* rótulos e textos de apoio voltam ao cinza do sistema */
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi .l,
+:root[data-theme="claro"] #view .ini-cmd .card .card-h .sub,
+:root[data-theme="claro"] #view .ini-cmd .legend .li{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .ini-cmd .barchart .bar-lbl{ fill:#6E6E73 !important }
+:root[data-theme="claro"] #view .ini-cmd .barchart .bar-val,
+:root[data-theme="claro"] #view .ini-cmd .donut-s{ fill:#1D1D1F !important }
+:root[data-theme="claro"] #view .ini-cmd .empty b{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .ini-atalho{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important }
+:root[data-theme="claro"] #view .ini-atalho:hover{
+  background:#FAFAFC !important; border-color:rgba(0,0,0,.12) !important }
+:root[data-theme="claro"] #view .ini-etica{
+  background:#FFFFFF !important; background-image:none !important }
+:root[data-theme="claro"] #view .ini-chips span{
+  background:rgba(0,0,0,.05) !important; border:1px solid rgba(0,0,0,.07) !important;
+  color:#6E6E73 !important }
+
+/* 17.1 os chips do Painel acendem em cor chapada, sem halo ao redor */
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi .ic{
+  background:rgba(0,0,0,.05) !important; background-image:none !important;
+  color:#6E6E73 !important; box-shadow:none !important; filter:none !important }
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.ok .ic{
+  background:#E8F6EC !important; color:#1D7F3C !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.crit .ic{
+  background:#FCEBEA !important; color:#C9261F !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.warn .ic,
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi.alerta .ic{
+  background:#FDF3E0 !important; color:#A1620B !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .ini-cmd .ini-kpi .ic svg{ color:inherit !important }
+
+/* ==================================================================
+   18. OS TRÊS ÚLTIMOS RESÍDUOS (v14.0)
+   Vistos na foto, não no código:
+   1. o ícone dentro dos botões claros continuava BRANCO (herança do
+      tema escuro, onde o botão é escuro). Em "Limpar" e "Enviar
+      documento" ele sumia: branco sobre branco. É defeito, não gosto.
+   2. títulos de seção ("CAVALOS", "CARRETAS") e o texto do estado
+      vazio ("Nada por aqui") ainda vinham em azul. No desenho que ele
+      pediu a moldura é monocromática — azul só em ação.
+   3. a etiqueta de tipo do veículo continuava azul-claro desbotada.
+   ================================================================== */
+:root[data-theme="claro"] #view .btn svg,
+:root[data-theme="claro"] #view .btn.sm svg,
+:root[data-theme="claro"] .topbar .btn svg{ color:inherit !important }
+:root[data-theme="claro"] #view .btn.primary svg,
+:root[data-theme="claro"] #view .banner .btn.primary svg{ color:#FFFFFF !important }
+
+:root[data-theme="claro"] #view .sec-h,
+:root[data-theme="claro"] #view .sectitulo,
+:root[data-theme="claro"] #view .grupo-h,
+:root[data-theme="claro"] #view .list-h b,
+:root[data-theme="claro"] #view .empty b,
+:root[data-theme="claro"] #view .vazio b{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .empty span,
+:root[data-theme="claro"] #view .empty p,
+:root[data-theme="claro"] #view .vazio span{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .empty svg,
+:root[data-theme="claro"] #view .vazio svg{ color:#C7C7CC !important }
+:root[data-theme="claro"] #view .sectitulo svg{ color:#86868B !important }
+:root[data-theme="claro"] #view .sectitulo b,
+:root[data-theme="claro"] #view .sectitulo .cnt{
+  background:rgba(0,0,0,.05) !important; color:#6E6E73 !important; border:0 !important }
+
+/* ==================================================================
+   19. O QUE A VARREDURA ACHOU (v14.0)
+
+   Rodei a auditoria de contraste nas 24 telas: 773 ocorrências abaixo
+   do mínimo WCAG AA, em 51 casos distintos. Parte era limitação da
+   minha própria medição (ela desiste quando o fundo é degradê, e lê
+   `color-mix` errado) — conferi essas na foto, uma a uma. O resto é
+   defeito de verdade e está corrigido aqui.
+
+   Os números abaixo não foram escolhidos no olho: calculei a razão de
+   contraste de cada um sobre o fundo em que ele realmente aparece.
+     #6B6B70 sobre #F5F5F7 .... 4,86:1   (mínimo 4,5)
+     #5A5A5F sobre #F5F5F7 .... 6,30:1
+     #8A5309 sobre #FDF3E0 .... 5,74:1
+   ================================================================== */
+
+/* 19.1 O CINZA PEQUENO ERA CLARO DEMAIS — 270 ocorrências em 24 telas.
+   `#86868B` é o cinza da Apple, mas ela o usa em texto maior; em 10px
+   ele dá 3,33:1. Escurece o necessário para passar, e só isso. */
+:root[data-theme="claro"] .sidebar .nav .group,
+:root[data-theme="claro"] .sidebar .foot,
+:root[data-theme="claro"] .sidebar .brand .btxt span,
+:root[data-theme="claro"] .topbar .cock-kbd,
+:root[data-theme="claro"] .topbar input::placeholder,
+:root[data-theme="claro"] .topbar .tb-sub,
+:root[data-theme="claro"] #view .page-sub,
+:root[data-theme="claro"] #view .k-sub,
+:root[data-theme="claro"] #view .muted,
+:root[data-theme="claro"] #view .sub{ color:#6B6B70 !important }
+:root[data-theme="claro"] .topbar input::-webkit-input-placeholder{ color:#6B6B70 !important }
+:root[data-theme="claro"] .sidebar .foot b,
+:root[data-theme="claro"] .sidebar .foot span,
+:root[data-theme="claro"] .sidebar .foot small{ color:#6B6B70 !important }
+
+/* 19.2 TEXTOS DE APOIO DENTRO DOS CARTÕES (2011/2011 · Renavam …),
+   títulos de seção e contadores: estavam em 4,38:1, a um fio do mínimo. */
+:root[data-theme="claro"] #view .vcard-sub,
+:root[data-theme="claro"] #view .frt-sec-h,
+:root[data-theme="claro"] #view .card-h .sub,
+:root[data-theme="claro"] #view .lin-sub,
+:root[data-theme="claro"] #view .it-sub{ color:#5A5A5F !important }
+:root[data-theme="claro"] #view .frt-sec-h b,
+:root[data-theme="claro"] #view .frt-sec-h .cnt,
+:root[data-theme="claro"] #view .frt-sec-h span{
+  background:rgba(0,0,0,.05) !important; color:#5A5A5F !important }
+
+/* 19.3 A ETIQUETA ÂMBAR estava em 4,47:1 — reprova por 0,03. */
+:root[data-theme="claro"] #view .st.warn,
+:root[data-theme="claro"] #view.cyber .st.warn,
+:root[data-theme="claro"] #view[data-route="manutencao"] .st.warn{
+  background:#FDF3E0 !important; color:#8A5309 !important }
+:root[data-theme="claro"] #view .st.warn::before{
+  background:#8A5309 !important; box-shadow:none !important }
+
+/* 19.4 CORES QUE VÊM DO JAVASCRIPT (`style="color:#FF4D4D"`), herdadas
+   do tema escuro: neon, feitas para brilhar no preto. Em CSS não dá
+   para trocar o valor — então escurece o que chegou. O mesmo truque já
+   funcionava em `.venc-dias` desde a v13.4; aqui ele cobre os irmãos
+   que tinham ficado de fora. O filtro pega texto e fundo juntos, que é
+   justamente o que mantém a etiqueta legível. */
+:root[data-theme="claro"] #view .venc-sec-n{ filter:brightness(.45) saturate(1.5) }
+
+/* 19.5 OS CARTÕES DE LICENÇAS tinham fundo em degradê tingido e um
+   trilho colorido na lateral — a única tela que ainda fugia do
+   "um fundo com uma cor só". Fundo branco; o trilho fica, fino: ali
+   ele não é enfeite, é o estado do documento. */
+:root[data-theme="claro"] #view .lic-card{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important }
+:root[data-theme="claro"] #view .lic-card:hover{
+  border-color:rgba(0,0,0,.12) !important;
+  box-shadow:0 2px 6px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.10) !important }
+:root[data-theme="claro"] #view .lic-card::before{ width:3px !important; opacity:.85 }
+:root[data-theme="claro"] #view .lic-chip{
+  background:#FFFFFF !important; border:1px solid rgba(0,0,0,.07) !important;
+  color:#1D1D1F !important }
+:root[data-theme="claro"] #view .lic-chip.on{
+  background:#0071E3 !important; border-color:#0071E3 !important; color:#FFFFFF !important }
+:root[data-theme="claro"] #view .lic-chip.on b,
+:root[data-theme="claro"] #view .lic-chip.on span,
+:root[data-theme="claro"] #view .lic-chip.on svg{ color:#FFFFFF !important }
+
+/* ==================================================================
+   20. ALARMES, O ÚLTIMO FORA DO PADRÃO (v14.0)
+
+   137 etiquetas de categoria (SENSOR, TEMPERATURA, ENERGIA…) em
+   2,36:1 a 4,11:1 — num texto de 9,5px. Era o maior defeito que
+   sobrou, e também a última tela com cartão tingido e trilho aceso
+   na lateral.
+
+   A causa é a mesma dos outros casos: a cor da categoria (`--ac`) foi
+   desenhada para brilhar no preto. Sobre papel branco ela não tem
+   peso nenhum. A saída NÃO é apagar a cor — ela diz a que sistema o
+   alarme pertence, e isso é informação. A saída é separar os papéis:
+   a COR fica no trilho e no ponto, que é onde ela precisa só ser
+   notada; o TEXTO vira tinta escura, que é onde ele precisa ser lido.
+   É o mesmo padrão do resto do sistema depois da v14.0.
+   ================================================================== */
+:root[data-theme="claro"] #view .alm-card{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important }
+:root[data-theme="claro"] #view .alm-card:hover{
+  transform:none !important; border-color:rgba(0,0,0,.12) !important;
+  box-shadow:0 2px 6px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.10) !important }
+:root[data-theme="claro"] #view .alm-card::before{
+  width:3px !important; box-shadow:none !important; opacity:1 }
+
+/* a etiqueta de categoria: tinta, não cor */
+:root[data-theme="claro"] #view .alm-cat{ color:#5A5A5F !important; opacity:1 !important }
+:root[data-theme="claro"] #view .alm-desc{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .alm-code{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .alm-go{ color:#86868B !important }
+
+/* o quadradinho do ícone acompanha: cinza, sem brilho */
+:root[data-theme="claro"] #view .alm-ico{
+  background:rgba(0,0,0,.05) !important; background-image:none !important;
+  box-shadow:none !important; border:0 !important }
+:root[data-theme="claro"] #view .alm-ico svg{
+  color:#6E6E73 !important; filter:none !important }
+
+/* os filtros do topo: pílula branca, e a cor some para o ponto */
+:root[data-theme="claro"] #view .alm-chip{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important; color:#1D1D1F !important;
+  box-shadow:none !important }
+:root[data-theme="claro"] #view .alm-chip b{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .alm-chip .alm-chip-dot{ box-shadow:none !important }
+:root[data-theme="claro"] #view .alm-chip:hover{
+  border-color:rgba(0,0,0,.14) !important; background:#FAFAFC !important }
+:root[data-theme="claro"] #view .alm-chip.on{
+  background:#0071E3 !important; border-color:#0071E3 !important;
+  color:#FFFFFF !important; box-shadow:none !important }
+:root[data-theme="claro"] #view .alm-chip.on b{ color:#FFFFFF !important }
+:root[data-theme="claro"] #view .alm-chip.on .alm-chip-dot{
+  background:rgba(255,255,255,.85) !important }
+:root[data-theme="claro"] #view .alm-count{ color:#6B6B70 !important }
+:root[data-theme="claro"] #view .alm-search>svg{ filter:none !important; color:#86868B !important }
+
+/* 20.1 AS ETIQUETAS DE CATEGORIA das outras telas seguem a mesma regra
+   que arrumou Alarmes: a cor identifica, a tinta é que se lê. Vale para
+   Licenças (`.lic-cat`, `.lic-st`), Seguros (`.seg-tag`) e Pedágios
+   (`.ped-tag`) — todas pintam texto, fundo e borda com a MESMA cor
+   (`color-mix` sobre `--c`), herdada do neon do tema escuro. Sobre
+   papel isso dá de 1,5:1 a 2,3:1: a etiqueta vira uma mancha.
+   A cor sobrevive no pontinho e no ícone, que é onde ela só precisa
+   ser notada; o nome vira tinta escura, que é onde precisa ser lido. */
+:root[data-theme="claro"] #view .lic-cat,
+:root[data-theme="claro"] #view .lic-st,
+:root[data-theme="claro"] #view .seg-tag,
+:root[data-theme="claro"] #view .ped-tag{
+  background:rgba(0,0,0,.05) !important; color:#3A3A3F !important;
+  border:1px solid rgba(0,0,0,.07) !important; box-shadow:none !important;
+  filter:none !important }
+:root[data-theme="claro"] #view .lic-cat svg,
+:root[data-theme="claro"] #view .seg-tag svg,
+:root[data-theme="claro"] #view .ped-tag svg{ color:var(--c, #6E6E73) !important }
+/* o pontinho continua na cor da categoria — é ele que identifica */
+:root[data-theme="claro"] #view .lic-st i,
+:root[data-theme="claro"] #view .seg-tag i,
+:root[data-theme="claro"] #view .ped-tag i{
+  background:var(--c, #6E6E73) !important; box-shadow:none !important }
+
+/* ==================================================================
+   21. MANUTENÇÃO TINHA TEMA PRÓPRIO (v14.0)
+
+   Esta tela não usa o tema do sistema: ela declara o próprio conjunto
+   de variáveis em `#view[data-route="manutencao"]`, herdado de quando
+   ela foi feita como "painel neon". Duas consequências na foto:
+
+     • o banner ficou QUASE PRETO com o texto escuro por cima — o
+       título "Relatório de Manutenção" praticamente sumia, e o botão
+       "Enviar documento" junto. Mesmo defeito dos banners brancos da
+       v13.4, ao contrário: fundo e texto decididos em lugares
+       diferentes, e ninguém conferiu o par.
+     • a causa é `rgba(var(--surf2-rgb),.6)`, e `--surf2-rgb` nunca foi
+       convertida para o claro. Como o seletor tem rota + classe, ele
+       vencia a regra geral da seção 15.
+
+   Regra que fica: quando eu forçar o FUNDO de um lugar, forço a COR
+   DO TEXTO no mesmo bloco. Os dois sempre juntos.
+   ================================================================== */
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important; color:#1D1D1F !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner b,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner h3{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner span,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner small,
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner p{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner::before{
+  width:0 !important; box-shadow:none !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner>svg{
+  background:rgba(0,0,0,.05) !important; color:#6E6E73 !important;
+  filter:none !important; box-shadow:none !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn{
+  background:#FFFFFF !important; border:1px solid rgba(0,0,0,.10) !important;
+  color:#1D1D1F !important; box-shadow:none !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn:hover{
+  background:#FAFAFC !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn.primary{
+  background:#0071E3 !important; border-color:#0071E3 !important; color:#FFFFFF !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .banner .btn.primary:hover{
+  background:#0058B0 !important }
+
+/* e o resto do mini-tema da tela acompanha o sistema */
+:root[data-theme="claro"] #view[data-route="manutencao"] .card,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi{
+  background:#FFFFFF !important; background-image:none !important;
+  border:1px solid rgba(0,0,0,.07) !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06) !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .card::before,
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi::before{
+  background:none !important; content:none !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-val{
+  text-shadow:none !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .card .card-h>svg,
+:root[data-theme="claro"] #view[data-route="manutencao"] .mnt-graphs .card-h>svg,
+:root[data-theme="claro"] #view[data-route="manutencao"] .sectitulo svg{
+  filter:none !important; color:#86868B !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .sectitulo{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-label{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view[data-route="manutencao"] .kpi .k-sub{ color:#6B6B70 !important }
+
+/* ==================================================================
+   22. O AZUL-MARINHO QUE SOBROU (v14.0)
+
+   Sondei a tela de Pedágios procurando tudo que ainda puxava para o
+   azul. Não é defeito de contraste — esses tons passam no WCAG, e a
+   varredura não reclama deles. É defeito de CONSISTÊNCIA: são a tinta
+   da paleta anterior (`#14233B`, `#3D5578`, `#5F7493`), de quando o
+   sistema era azul. Ao lado do cinza neutro da v14.0 eles aparecem
+   como "quase azul", e é isso que faz uma tela parecer montada por
+   partes. Um sistema premium tem UMA tinta.
+
+   Mantenho a hierarquia que já existe — título, rótulo, apoio — só
+   troco a família de cor. A tabela continua em tinta forte, porque
+   ali o texto é o dado.
+   ================================================================== */
+:root[data-theme="claro"] #view td,
+:root[data-theme="claro"] #view td.mono,
+:root[data-theme="claro"] #view td b,
+:root[data-theme="claro"] #view .legend .li b,
+:root[data-theme="claro"] #view .card-h h3{ color:#1D1D1F !important }
+:root[data-theme="claro"] #view .k-label,
+:root[data-theme="claro"] #view .legend .li,
+:root[data-theme="claro"] #view .seg-b,
+:root[data-theme="claro"] #view .pex-count,
+:root[data-theme="claro"] #view .st.neutro,
+:root[data-theme="claro"] #view .a-main span{ color:#6E6E73 !important }
+:root[data-theme="claro"] #view .k-go{ color:#86868B !important }
+:root[data-theme="claro"] #view .seg-b.on{ color:#FFFFFF !important }
