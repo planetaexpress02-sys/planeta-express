@@ -9576,7 +9576,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '13.4';
+var PEX_VER = '13.5';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9815,9 +9815,17 @@ function mostrarLogin(msg){
   const v=document.getElementById('view'); if(v) v.innerHTML='';
   const ov=document.getElementById('overlay'); if(ov){ ov.innerHTML=''; ov.classList.remove('show'); }
   const cmd=document.getElementById('pexCmd'); if(cmd) cmd.classList.remove('show');
-  /* cobertura garantida pelo próprio elemento, não pelo .css */
+  /* cobertura garantida pelo próprio elemento, não pelo .css
+
+     v13.5 — a cor saiu de `#05070b` fixo para `var(--bg,#05070b)`. O fixo
+     deixava a tela de login PRETA mesmo com o sistema no tema claro — a
+     única tela que não acompanhava, e logo a primeira que ele vê. O
+     fallback continua escuro de propósito: se o CSS não carregar, a
+     variável não existe, a cobertura fica preta e a tranca da v12.7
+     continua valendo. Tema certo quando há CSS; tranca garantida quando
+     não há. */
   el.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;'
-    +'align-items:center;justify-content:center;padding:20px;background:#05070b';
+    +'align-items:center;justify-content:center;padding:20px;background:var(--bg,#05070b)';
   el.innerHTML=`<div class="login-box">
     <div class="login-logo"><img src="assets/logo-claro.png" alt="Planeta Express"></div>
     <p class="login-sub">Sistema de Gestão · acesso</p>

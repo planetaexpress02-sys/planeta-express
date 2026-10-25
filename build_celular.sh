@@ -57,7 +57,9 @@ awk '
 ' index.html > "$TMP/body.html"
 
 # ---------- 3. CSS e JS concatenados ----------
-cat assets/estilo.css assets/estilo2.css > "$TMP/all.css"
+# v13.5 — o estilo-claro.css entra DEPOIS do escuro, mesma ordem do site.
+# Fora daqui, o celular ficaria escuro e o computador claro.
+cat assets/estilo.css assets/estilo2.css assets/estilo-claro.css > "$TMP/all.css"
 # v13.0 — a lista abaixo era repetida A MAO e divergiu do index.html assim que
 # a Contabilidade saiu: o `cat` apontava para um arquivo que nao existe mais.
 # Com `set -euo pipefail` isso derruba o build, o que ja e melhor que passar
@@ -86,7 +88,7 @@ echo "   site e celular carregam os mesmos arquivos"
 {
 cat <<'HEAD'
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="claro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
