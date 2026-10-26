@@ -5897,50 +5897,18 @@ function pedPeriodoModal(){
     <div class="m-f"><button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="pedDe=val('f_de');pedAte=val('f_ate');pedFiltro='personalizado';closeModal();router()">Aplicar</button></div>`);
 }
-/* ---- Importar extrato (PDF Sem Parar / imagem / CSV) ---- */
-let PED_FILA=[];
+/* ---- IMPORTAR EXTRATO DO SEM PARAR — REMOVIDO (v14.3) ----
+   Saiu junto com a Central de Documentos: era o mesmo motor de
+   leitura (PDF/OCR) por trás do botão "Importar extrato".
+   Com o botão fora, estas funções ficaram sem ninguém que as
+   chamasse — `_pedImportLer` não era mais chamada de lugar nenhum.
 
-function _pedImpFilaHTML(){
-  if(!PED_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhuma passagem lida ainda.</div>`;
-  const novas=PED_FILA.filter(x=>x._ok).length, dup=PED_FILA.filter(x=>x._dup).length;
-  return `<div class="muted" style="margin:12px 0 8px">Encontradas <b>${PED_FILA.length}</b> passagens · ${novas} novas${dup?' · '+dup+' já existem (ignoradas)':''}</div>
-    <div class="tbl-wrap" style="max-height:320px;overflow:auto"><table class="tbl"><thead><tr><th></th><th>Data</th><th>Placa</th><th>Praça</th><th>Conc.</th><th class="ta-r">Valor</th></tr></thead>
-    <tbody>${PED_FILA.map((x,i)=>`<tr style="${x._dup?'opacity:.5':''}"><td><input type="checkbox" ${x._ok?'checked':''} ${x._dup?'disabled':''} onchange="PED_FILA[${i}]._ok=this.checked;_pedImpRefresh()"></td>
-      <td class="mono">${fmtD(x.data)} ${esc(x.hora||'')}</td><td>${esc(x.placa)}</td><td>${esc(_pedInfo(x.praca).cidade||x.praca)}</td><td>${esc(x.conc)}</td><td class="ta-r mono">${money(x.valor)}${x._dup?' <span class="st neutro">existe</span>':''}</td></tr>`).join('')}</tbody></table></div>`;
-}
-function _pedImpRefresh(){ const el=document.getElementById('pedImpFila'); if(el)el.innerHTML=_pedImpFilaHTML();
-  const b=document.getElementById('pedImpBtn'); if(b){ const n=PED_FILA.filter(x=>x._ok).length; b.disabled=!n; b.innerHTML='Importar '+(n||''); } }
-async function _pedImportLer(fileList){
-  const files=[].slice.call(fileList||[]); if(!files.length) return;
-  if(typeof pexBar==='function') pexBar(true);
-  try{ for(const f of files){ let txt=''; try{ txt=await pexLerApoliceTexto(f); }catch(e){}
-      _pedParseSemParar(txt||'').forEach(r=>PED_FILA.push(r)); } }
-  finally{ if(typeof pexBar==='function') pexBar(false); }
-  // marca duplicados (mesma placa+data+hora+valor já no banco ou na fila)
-  const existe=new Set((DB.pedagios||[]).map(p=>p.placa+'|'+p.data+'|'+p.hora+'|'+p.valor));
-  const naFila=new Set();
-  PED_FILA.forEach(x=>{ const k=x.placa+'|'+x.data+'|'+x.hora+'|'+x.valor; x._dup=existe.has(k)||naFila.has(k); naFila.add(k); x._ok=!x._dup; });
-  _pedImpRefresh();
-}
-/* Extrai passagens de um extrato Sem Parar (texto do PDF) — melhor esforço */
-function _pedParseSemParar(txt){
-  const out=[]; if(!txt) return out;
-  const anoBase='20'+((txt.match(/Data de Emiss[aã]o[:\s]*\d{2}\/\d{2}\/(\d{2})/i)||[])[1]||new Date().getFullYear().toString().slice(2));
-  // placa atual (aparece em "Descritivo: XXX0X00" antes de cada bloco)
-  const re=/([A-Z]{3}\d[A-Z0-9]\d{2})|(\d{2}\/\d{2}\/\d{2})\s+(\d{2}:\d{2}:\d{2})\s+([A-ZÂÁÃÀÉÊÍÓÔÕÚÜÇ.\/\- ]+?)\s+((?:F\.\s*FLOW|BR|PR|RODOVIA)[^\n]*?)\s+(\d)\s+([\d.]+,\d{2})\s*([CD])/gi;
-  let m, placa='', tag='';
-  while((m=re.exec(txt))){
-    if(m[1]){ placa=m[1].replace(/([A-Z]{3})(\d[A-Z0-9]\d{2})/,'$1-$2'); continue; }
-    const data=m[2].split('/').reverse(); const iso='20'+data[0]+'-'+data[1]+'-'+data[2];
-    const conc=(m[4]||'').trim().replace(/\s+/g,' ');
-    const dc=m[8];
-    if(dc==='C') continue;  // crédito/reembolso não é passagem nova
-    out.push({ data:iso, hora:m[3], placa:placa||'', conc:conc, praca:(m[5]||'').trim().replace(/\s+/g,' '),
-      cat:parseInt(m[6])||'', valor:parseFloat(m[7].replace(/\./g,'').replace(',','.'))||0,
-      tipo: /vale|embarcador/i.test(conc)?'Vale-pedágio':'Pedágio', emb:'', viagem:'', tag:tag });
-  }
-  return out;
-}
+   As passagens de pedágio passam a ser lançadas à mão, em
+   "Novo pedágio".
+
+   ⚠️ NENHUM DADO FOI APAGADO: `DB.pedagios` continua inteiro — as
+   101 passagens já importadas seguem na tela, nos relatórios e na
+   nuvem. Saiu a forma de LER o extrato, não o que já foi lido. */
 
 /* Count-up dos KPIs (roda no pexAfterRender p/ a rota pedagios) */
 function pedCountUp(){
@@ -6277,7 +6245,7 @@ function viewLicencas(){
   ${chips}
 
   ${ordem.length? ordem.map(grupoCard).join('')
-    : `<div class="card"><div class="card-b">${emptyState(todas.length?'Nenhuma licença encontrada com esse filtro. Limpe a busca ou troque a categoria.':'Nenhuma licença cadastrada ainda. Use "Enviar documento" para o sistema ler o PDF e preencher sozinho, ou "Nova licença".')}</div></div>`}
+    : `<div class="card"><div class="card-b">${emptyState(todas.length?'Nenhuma licença encontrada com esse filtro. Limpe a busca ou troque a categoria.':'Nenhuma licença cadastrada ainda. Use "Nova licença" para cadastrar.')}</div></div>`}
 
   <div class="pn-panel" id="licPanel"></div>`;
 }
@@ -7795,7 +7763,7 @@ function valesDoMes(){
    MOTORISTAS; o resto vai para GASTOS. Data, descrição e valor saem
    da própria planilha.
 
-   A LEITURA reusa `pexLerPlanilha` da Central de Documentos — não há
+   A LEITURA reusa `pexLerPlanilha` (assets/importar.js) — não há
    leitor de Excel novo aqui (regra: um pipeline só para documento).
    Nada é gravado sem a sua conferência na prévia.
    ================================================================== */
@@ -9298,7 +9266,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.3';
+var PEX_VER = '14.4';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

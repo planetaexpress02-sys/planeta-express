@@ -330,7 +330,7 @@ window.PEXImport = (function(){
     return out;
   }
 
-  /* unzip/inflate expostos: a Central de Documentos usa para ZIP e DOCX
+  /* unzip/inflate expostos (a Central de Documentos, que os usava, saiu na v14.3)
      (que também é um ZIP), sem precisar de biblioteca externa. */
   return { lerArquivo, serialToISO, suportaXLSX, detectarVencimentos, canonTipo,
            unzip, inflateRaw, decode, _lerXLSX:lerXLSX, _lerCSV:lerCSV };
