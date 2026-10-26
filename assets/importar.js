@@ -335,3 +335,90 @@ window.PEXImport = (function(){
   return { lerArquivo, serialToISO, suportaXLSX, detectarVencimentos, canonTipo,
            unzip, inflateRaw, decode, _lerXLSX:lerXLSX, _lerCSV:lerCSV };
 })();
+
+/* ==================================================================
+   LEITOR DE PLANILHA (v14.3)
+   ------------------------------------------------------------------
+   Esta função vinha de `central.js`, que foi REMOVIDO a pedido do
+   dono ("exclua a central de documentos"). Ela não é parte do motor
+   de leitura inteligente que saiu: é só o leitor de planilha Excel,
+   e a importação da planilha de viagens da BRF depende dele. Por
+   isso ele foi trazido para cá em vez de ser apagado junto — o
+   pedido foi tirar a Central, não tirar a importação de viagens.
+   ================================================================== */
+async function pexLerPlanilha(file, p){
+  if(typeof XLSX!=='undefined' && XLSX.read){
+    try{
+      if(p) p('lendo com SheetJS');
+      const buf = await file.arrayBuffer();
+      const wb  = XLSX.read(buf, {type:'array', cellDates:true});
+      /* ⚠️ v9.6 — SEGUNDA leitura, CRUA, e o motivo é um defeito real que
+         embaralhou a planilha de vales do cliente:
+
+         a leitura formatada (`raw:false`) devolve a data JÁ ESCRITA usando o
+         formato da célula. A planilha dele usa o formato padrão de data do
+         Excel (numFmtId 14), que o SheetJS escreve em AMERICANO — 02/09/2026
+         virava a string "9/2/26". O sistema lia como brasileiro (dia 9, mês
+         2) e jogava o lançamento em FEVEREIRO. Todas as datas viraram outro
+         mês: set/02→fev, set/03→mar, set/04→abr, set/08→ago, set/10→out.
+
+         A leitura CRUA devolve o número de série do Excel (46267), que não
+         tem formato nem ambiguidade — 46267 é sempre 02/09/2026. É esta que
+         a importação do Financeiro usa para a coluna de data.
+
+         Lemos sem `cellDates` de propósito: com ele o SheetJS devolveria
+         objetos Date, e aí voltaria a depender de fuso horário. */
+      let grid=[], cruas=[];
+      let wbRaw=null; try{ wbRaw = XLSX.read(buf, {type:'array', cellDates:false}); }catch(e){}
+      (wb.SheetNames||[]).forEach(function(nome){
+        const linhas = XLSX.utils.sheet_to_json(wb.Sheets[nome], {header:1, raw:false, defval:''});
+        grid = grid.concat(linhas);
+        if(wbRaw && wbRaw.Sheets[nome]){
+          cruas = cruas.concat(XLSX.utils.sheet_to_json(wbRaw.Sheets[nome], {header:1, raw:true, defval:''}));
+        } else { cruas = cruas.concat(linhas); }
+      });
+      if(grid.length){ try{ grid._cru = cruas; }catch(e){} return grid; }
+    }catch(e){}
+  }
+  try{
+    if(p) p('lendo planilha (modo offline)');
+    if(typeof PEXImport!=='undefined'){
+      const r = await PEXImport.lerArquivo(file);
+      return (r.sheets||[]).reduce(function(a,sh){ return a.concat(sh.grid||[]); },[]);
+    }
+  }catch(e){
+    if(/\.xls$/i.test(file.name||'')) throw new Error('.xls antigo só abre com internet (SheetJS). Salve como .xlsx ou conecte-se.');
+    throw e;
+  }
+  return null;
+}
+
+/* ==================================================================
+   LIMITE DE TAMANHO DE ARQUIVO (v14.3 — vinha de central.js)
+   ------------------------------------------------------------------
+   `pexArquivoAceito` é chamado em 14 lugares, em todo botão que
+   recebe arquivo. Não tem nada a ver com a leitura inteligente que
+   foi removida: é só o guarda que impede um arquivo gigante de
+   travar a aba. Veio junto com o leitor de planilha para cá.
+   ================================================================== */
+const PEX_LIM = {
+  arquivo:      40*1024*1024,   /* 40 MB por arquivo */
+  zipEntradas:  300,            /* itens dentro de um ZIP */
+  zipTotal:    120*1024*1024,   /* 120 MB somando o que sai do ZIP */
+  zipItem:      40*1024*1024    /* 40 MB por item de dentro do ZIP */
+};
+function pexFormatoTamanho(b){
+  if(b>=1048576) return (b/1048576).toFixed(1).replace('.',',')+' MB';
+  if(b>=1024) return Math.round(b/1024)+' KB';
+  return b+' bytes';
+}
+/* Devolve a mensagem do impedimento, ou '' quando o arquivo pode entrar. */
+function pexArquivoAceito(file){
+  if(!file) return 'Arquivo vazio.';
+  if(file.size > PEX_LIM.arquivo){
+    return 'O arquivo "'+(file.name||'')+'" tem '+pexFormatoTamanho(file.size)
+         + ' e o limite é '+pexFormatoTamanho(PEX_LIM.arquivo)
+         + '. Divida o arquivo ou envie uma versão menor.';
+  }
+  return '';
+}

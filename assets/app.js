@@ -1598,11 +1598,6 @@ function kpi(ico,cor,val,label,sub,href){
 }
 function stBadge(validade){ const s=situacao(validade); return `<span class="st ${s.cls}">${s.label}</span>`; }
 function plate(placa,tipo){ const cls=(tipo&&tipo.indexOf('Reboque')>=0)?'plate rebo':'plate'; return `<span class="${cls}">${esc(placa)}</span>`; }
-/* Botão padrão de leitura de documento — a MESMA tecnologia em toda aba.
-   O motor vive em central.js; aqui é só a porta de entrada do módulo. */
-function docBtn(modulo, rotulo){
-  return `<button class="btn no-print" onclick="docEnviar('${modulo}')" title="Envie PDF, Excel, XML ou foto: eu leio, extraio os dados e lanço aqui — você confere antes">${svg('upload')} ${rotulo||'Enviar documento'}</button>`;
-}
 function emptyState(txt){ return `<div class="empty">${svg('folder')}<b>Nada por aqui</b><span>${esc(txt)}</span></div>`; }
 function avatarFoto(m, size){ size=size||56;
   const st=`width:${size}px;height:${size}px;font-size:${size*0.34}px`;
@@ -1966,7 +1961,6 @@ function viewFrota(){
     <div class="seg">${fb('todos','Todos')}${fb('cavalo','Cavalos')}${fb('reboque','Carretas')}${fb('arquivado','Arquivados')}</div>
     <div class="spacer"></div>
     <button class="btn primary" onclick="modalVeiculo()">${svg('plus')} Novo veículo</button>
-    ${docBtn('Frota')}
   </div>
   ${corpo}`;
 }
@@ -2002,19 +1996,20 @@ function detalheVeiculoHead(v, acaoHtml){
     <div class="dh-actions no-print">${acaoHtml||''}</div>
   </div>`;
 }
-/* ---------- CRLV na ficha da placa (v8.8) ----------
+/* ---------- CRLV na ficha da placa (v8.8, leitura removida na v14.3) ----------
    O cliente pediu, dentro de cada placa, um lugar para anexar o CRLV que
    "leia o PDF e retire dados".
 
-   ⚠️ A leitura NÃO é escrita aqui. Ela vai pelo pipeline da Central
-   (`cpidProcessar`), onde entrou o tipo `crlv` — é a regra do projeto: um
-   documento, um leitor. Se amanhã o CRLV mudar de desenho, conserta-se num
-   lugar só e a Central e a ficha melhoram juntas.
+   ⚠️ A LEITURA SAIU na v14.3, junto com a Central de Documentos
+   ("exclua a central de documentos, até porque você não conseguiu fazer
+   algo eficiente"). O que sobra aqui é o ANEXO, que era a primeira
+   metade do pedido original: o arquivo fica guardado na ficha da placa
+   e sobe para a nuvem. Os campos da ficha passam a ser preenchidos à
+   mão, como nos outros cadastros.
 
-   ⚠️ E nada é gravado sozinho: o que foi lido aparece lado a lado com o que
-   já está na ficha, e o cliente confirma. Documento de veículo lido errado e
-   gravado calado é pior do que não ler. */
-let _crlvLido=null;
+   Não recrie um leitor só para esta tela. Se um dia a leitura voltar,
+   ela volta como caminho único de novo — era essa a regra que valia, e
+   ela continua valendo. */
 /* Situação do CRLV pelo EXERCÍCIO — o ano do licenciamento. É isto que o
    cliente entende por "em dia", e foi a correção que ele pediu na v9.0: o
    selo verde na ficha tem que falar do DOCUMENTO, não de onde o arquivo está
@@ -2058,68 +2053,15 @@ async function veicAnexarCRLV(vid){
             cliente pediu primeiro; a leitura vem depois e é um bônus */
       if(!await anexarOuAvisar(file,'veiculo',vid,'CRLV')) return;
       await reloadFiles(); saveDB();
-      /* 2) lê pelo pipeline da Central */
-      let campos=null, resumo='';
-      try{
-        if(typeof cpidProcessar==='function'){
-          const item={file:file};
-          await cpidProcessar(item, null);
-          campos=(item.ex&&item.ex.campos)||null; resumo=item.resumo||'';
-        }
-      }catch(err){ resumo='Não consegui ler o conteúdo: '+(err.message||''); }
-      if(!campos || !Object.keys(campos).length){
-        toast('CRLV anexado. Não consegui extrair os dados — se for um PDF digitalizado, o texto pode não estar legível.','warn');
-        router(); return;
-      }
-      _crlvLido={vid:vid, campos:campos};
-      modalCRLVConferir(vid, campos, resumo);
+      /* v14.3 — a leitura automática saiu junto com a Central de
+         Documentos. O anexo continua: o arquivo fica guardado na ficha
+         do veículo e sobe para a nuvem, que era o principal do pedido.
+         ("o anexo é o que o cliente pediu primeiro" — comentário da v8.4). */
+      toast('CRLV anexado na ficha do veículo.');
+      router();
     } finally { if(typeof pexBar==='function') pexBar(false); }
   };
   inp.click();
-}
-const _CRLV_CAMPOS=[
-  ['renavam',   'Renavam',          'renavam'],
-  ['chassi',    'Chassi',           'chassi'],
-  ['crlvAno',   'CRLV (exercício)', 'crlvAno'],
-  ['anoModelo', 'Ano/Modelo',       'anoModelo'],
-  ['cor',       'Cor',              'cor']
-];
-function modalCRLVConferir(vid, campos, resumo){
-  const v=veiculo(vid); if(!v) return;
-  const linhas=_CRLV_CAMPOS.map(function(c){
-    const lido=campos[c[0]]||''; if(!lido) return '';
-    const atual=v[c[2]]||'';
-    const igual=String(atual).trim().toUpperCase()===String(lido).trim().toUpperCase();
-    return `<tr><td><b>${esc(c[1])}</b></td>
-      <td class="mono">${esc(atual||'—')}</td>
-      <td class="mono"><b>${esc(lido)}</b></td>
-      <td>${igual?'<span class="st ok">igual</span>':(atual?'<span class="st warn">muda</span>':'<span class="st neutro">preenche</span>')}</td></tr>`;
-  }).filter(Boolean).join('');
-  const placaLida=(campos.placa||'').toUpperCase();
-  const alerta = placaLida && String(v.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'')!==placaLida.replace(/[^A-Z0-9]/g,'')
-    ? `<div class="hint" style="border-color:#f2686b;color:#f2686b">⚠️ A placa lida no documento é <b>${esc(placaLida)}</b>, diferente da placa desta ficha (<b>${esc(v.placa)}</b>). Confira se o CRLV é deste veículo antes de aplicar.</div>` : '';
-  openModal(`<div class="m-h">${svg('doc')}<h3>CRLV lido — ${esc(v.placa)}</h3><button class="x" onclick="closeModal()">×</button></div>
-    <div class="m-b">
-      <p class="muted" style="margin-bottom:12px">${esc(resumo||'')}</p>
-      ${alerta}
-      ${linhas? `<div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Campo</th><th>Na ficha hoje</th><th>No CRLV</th><th>—</th></tr></thead>
-        <tbody>${linhas}</tbody></table></div>`
-        : emptyState('Não achei nenhum campo aproveitável neste documento.')}
-      <div class="hint" style="margin-top:12px">O arquivo <b>já foi anexado</b> na placa. Aplicar só troca os campos da ficha.</div>
-    </div>
-    <div class="m-f"><button class="btn" onclick="closeModal();router()">Só anexar</button>
-      ${linhas?`<button class="btn primary" onclick="veicAplicarCRLV('${vid}')">${svg('check')} Aplicar na ficha</button>`:''}</div>`);
-}
-function veicAplicarCRLV(vid){
-  const v=veiculo(vid); const c=_crlvLido&&_crlvLido.vid===vid? _crlvLido.campos : null;
-  if(!v||!c){ closeModal(); return; }
-  let n=0;
-  _CRLV_CAMPOS.forEach(function(f){ const lido=c[f[0]]; if(!lido) return;
-    if(String(v[f[2]]||'').trim()!==String(lido).trim()){ v[f[2]]=lido; n++; } });
-  _crlvLido=null; saveDB(); closeModal();
-  toast(n? n+' campo(s) atualizado(s) na ficha pelo CRLV.' : 'A ficha já estava igual ao CRLV.');
-  router();
 }
 
 
@@ -2272,7 +2214,6 @@ function viewMotoristas(){
       </div></div>`;
   }).join('');
   return `<div class="toolbar"><div class="spacer"></div>
-    ${docBtn('Motoristas')}
     <button class="btn" onclick="motImportarFicha()" title="Importa cadastro, vencimentos e documentos de um arquivo de ficha">${svg('upload')} Importar ficha</button>
     <button class="btn primary" onclick="modalMotorista()">${svg('plus')} Novo motorista</button></div>
     <div class="grid mgrid">${cards}</div>`;
@@ -2381,7 +2322,6 @@ function viewMotorista(id){
 
    "Todos, de agora e os futuros" sai de graça: o card é montado por
    `viewMotResumo`, então vale para todo motorista que existir. */
-let _cnhLida=null;
 function _motCNHSituacao(m){
   const v=(m&&m.cnhValidade)||'';
   if(!v) return {cls:'neutro', txt:'Sem validade informada'};
@@ -2422,77 +2362,16 @@ async function motAnexarCNH(mid){
       /* 1) guardar o arquivo é o principal do pedido — vem antes da leitura */
       if(!await anexarOuAvisar(file,'motorista',mid,'CNH')) return;
       await reloadFiles(); saveDB();
-      /* 2) ler pelo pipeline da Central */
-      let campos=null, resumo='';
-      try{
-        if(typeof cpidProcessar==='function'){
-          const item={file:file};
-          await cpidProcessar(item, null);
-          campos=(item.ex&&item.ex.campos)||null; resumo=item.resumo||'';
-        }
-      }catch(err){ resumo='Não consegui ler o conteúdo: '+(err.message||''); }
-      if(!campos || !Object.keys(campos).length){
-        toast('CNH anexada. Não consegui extrair os dados — se for um PDF digitalizado, o texto pode não estar legível.','warn');
-        router(); return;
-      }
-      _cnhLida={mid:mid, campos:campos};
-      modalCNHConferir(mid, campos, resumo);
+      /* v14.3 — a leitura automática saiu junto com a Central de
+         Documentos. O anexo continua: o arquivo fica guardado na ficha
+         do motorista e sobe para a nuvem, que era o principal do pedido.
+         ("o anexo é o que o cliente pediu primeiro" — comentário da v8.4). */
+      toast('CNH anexada na ficha do motorista.');
+      router();
     } finally { if(typeof pexBar==='function') pexBar(false); }
   };
   inp.click();
 }
-const _CNH_CAMPOS=[
-  ['cnh',         'CNH nº',         'cnh'],
-  ['cnhValidade', 'Validade',       'cnhValidade'],
-  ['categoria',   'Categoria',      'categoria'],
-  ['primeiraHab', '1ª habilitação', 'primeiraHab'],
-  ['emissaoCnh',  'Emissão',        'emissaoCnh'],
-  ['renach',      'RENACH',         'renach'],
-  ['espelho',     'Espelho',        'espelho']
-];
-function modalCNHConferir(mid, campos, resumo){
-  const m=motorista(mid); if(!m) return;
-  const ehData=function(k){ return /Validade|primeiraHab|emissaoCnh/.test(k); };
-  const linhas=_CNH_CAMPOS.map(function(c){
-    const lido=campos[c[0]]||''; if(!lido) return '';
-    const atual=m[c[2]]||'';
-    const mostra=function(v){ return v? (ehData(c[0])? fmtD(v) : v) : '—'; };
-    const igual=String(atual).trim().toUpperCase()===String(lido).trim().toUpperCase();
-    return '<tr><td><b>'+esc(c[1])+'</b></td>'
-      + '<td class="mono">'+esc(mostra(atual))+'</td>'
-      + '<td class="mono"><b>'+esc(mostra(lido))+'</b></td>'
-      + '<td>'+(igual?'<span class="st ok">igual</span>':(atual?'<span class="st warn">muda</span>':'<span class="st neutro">preenche</span>'))+'</td></tr>';
-  }).filter(Boolean).join('');
-  /* CPF é o documento que identifica a pessoa: divergir aqui quase sempre
-     quer dizer CNH anexada no colaborador errado */
-  const soDig=function(s){ return String(s||'').replace(/\D/g,''); };
-  const alerta = (campos.cpf && soDig(m.cpf) && soDig(campos.cpf)!==soDig(m.cpf))
-    ? '<div class="hint" style="border-color:#f2686b;color:#f2686b">⚠️ O CPF do documento (<b>'+esc(campos.cpf)+'</b>) é diferente do CPF desta ficha (<b>'+esc(m.cpf)+'</b>). Confira se a CNH é deste colaborador antes de aplicar.</div>'
-    : '';
-  openModal('<div class="m-h">'+svg('idcard')+'<h3>CNH lida — '+esc(m.nome)+'</h3><button class="x" onclick="closeModal()">×</button></div>'
-    + '<div class="m-b">'
-    + '<p class="muted" style="margin-bottom:12px">'+esc(resumo||'')+'</p>'
-    + alerta
-    + (linhas
-        ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campo</th><th>Na ficha hoje</th><th>Na CNH</th><th>—</th></tr></thead><tbody>'+linhas+'</tbody></table></div>'
-        : emptyState('Não achei nenhum campo aproveitável neste documento.'))
-    + '<div class="hint" style="margin-top:12px">O arquivo <b>já foi anexado</b> ao colaborador. Aplicar só troca os campos da ficha.</div>'
-    + '</div>'
-    + '<div class="m-f"><button class="btn" onclick="closeModal();router()">Só anexar</button>'
-    + (linhas? '<button class="btn primary" onclick="motAplicarCNH(\''+mid+'\')">'+svg('check')+' Aplicar na ficha</button>' : '')
-    + '</div>');
-}
-function motAplicarCNH(mid){
-  const m=motorista(mid); const c=_cnhLida&&_cnhLida.mid===mid? _cnhLida.campos : null;
-  if(!m||!c){ closeModal(); return; }
-  let n=0;
-  _CNH_CAMPOS.forEach(function(f){ const lido=c[f[0]]; if(!lido) return;
-    if(String(m[f[2]]||'').trim()!==String(lido).trim()){ m[f[2]]=lido; n++; } });
-  _cnhLida=null; saveDB(); closeModal();
-  toast(n? n+' campo(s) atualizado(s) na ficha pela CNH.' : 'A ficha já estava igual à CNH.');
-  router();
-}
-
 function viewMotResumo(m,vencs,info){
   const anexos=filesDe('motorista',m.id);
   return `
@@ -2901,7 +2780,7 @@ function viewVencimentos(){
   <div class="banner">${svg('bell')}<div><b>Vencimentos — ${vendoEmDia?'em dia':'faixa de atenção'}</b><span>${vendoEmDia
       ?'Tudo o que está em dia: validade acima de 30 dias, nada a fazer agora. Use os cartões acima para voltar à faixa de atenção.'
       :'Mostra apenas o que está vencido ou vence nos próximos 30 dias, agrupado por prazo. O que está em dia (mais de 30 dias) aparece no cartão verde.'}</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Vencimentos')}</div></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalVencimento()">${svg('plus')} Novo</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
     ${kpiV('emdia')}${kpiV('venc')}${kpiV('d10')}${kpiV('d20')}${kpiV('d30')}
   </div>
@@ -3038,7 +2917,7 @@ function viewManutencao(){
     return `<div class="mnt-cardfoot"><div class="r"><span class="st neutro">${s.length} serviço(s)</span><span class="mnt-cost ${g>0?'has':''}">${money(g)}</span></div>${mix}</div>`; };
   return `
   <div class="banner">${svg('wrench')}<div><b>Relatório de Manutenção</b><span>Controle operacional de reparos e serviços — cavalos e carretas separados por placa, com tipo (corretiva/preventiva), gastos e gráficos. As trocas de óleo ficam na ficha de cada placa, em <b>Frota</b> — e as que têm valor entram aqui como preventiva.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Manutenção')}</div></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalServico()">${svg('plus')} Novo serviço</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kpiF('coins','i-blue',money(total),'Gasto total',todos.length+' lançamentos','todas')}
     ${kpiF('wrench','i-amber',money(corr),'Corretiva',corrN+' serviço(s)','corretiva')}
@@ -3153,7 +3032,7 @@ function viewBaterias(){
       ${kpi('shield','i-green',emGarantia,'Dentro da garantia','')}
       ${kpi('export','i-amber',money(total),'Investimento total','')}</div>
     <div class="toolbar"><div class="muted no-print">Clique em uma placa para ver as baterias daquele veículo. A garantia aparece <b>só aqui</b> — não gera alerta no painel.</div>
-      <div class="spacer"></div>${docBtn('Baterias')}<button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
+      <div class="spacer"></div><button class="btn primary" onclick="modalBateria()">${svg('plus')} Nova bateria</button></div>
     ${vcardsSecoes('baterias', foot)}
     ${orfBlocos?`<div class="sectitulo" style="margin-top:22px">${svg('battery')} Outras placas (fora da frota atual)</div><div class="grid" style="gap:14px">${orfBlocos}</div>`:''}
     ${estoqueBateriasSecao()}`;
@@ -3301,7 +3180,7 @@ function viewDocumentos(){
   return `
   ${_docAvisoPendentes()}
   <div class="banner">${svg('doc')}<div><b>Documentos da empresa</b><span>Todos os arquivos da pasta (CRLV, ASO, toxicológicos, CNH, jurídicos...) já ficam aqui para abrir e baixar. Você também pode enviar arquivos novos, que ficam guardados dentro do sistema.</span></div>
-    <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Documentos')}</div></div>
+    <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label></div>
 
   <div class="toolbar"><div class="seg">${fb('todos','Todos')}${fb('empresa','Empresa')}${fb('motorista','Motoristas')}${fb('veiculo','Veículos')}</div>
     <div class="spacer"></div><div class="muted">${REG.length} arquivo(s) na pasta · ${totalArquivos()} enviado(s)${_online()?' · ☁ sincronizado':''}</div></div>
@@ -4575,7 +4454,7 @@ function viewNotas(){
   return `
   <div class="banner">${svg('money')}<div><b>Soma de Notas Fiscais</b><span>Envie a NF em PDF (fica anexada e eu sugiro o valor) ou digite os valores no padrão R$ (ex.: 50.490,84). Despesas somadas por período.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar PDF<input type="file" accept="application/pdf,.pdf" onchange="notaNfUpload(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Soma de Notas Fiscais')}</div></div>
+    <button class="btn primary no-print" onclick="modalNota()">${svg('plus')} Novo período</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('money','i-green', money(mes.total), 'Mês vigente', rotMes)}
     ${kpi('doc','i-blue', money(mes.alexandria), 'Alexandria (mês)','')}
@@ -4675,7 +4554,7 @@ function viewPneus(){
     return t? `<span class="st ok">${t} pneu(s)</span>` : `<span class="st neutro">sem pneus</span>`; };
   return `
   <div class="banner">${svg('tire')}<div><b>Pneus</b><span>Controle de pneus por veículo e o estoque de reserva. Clique numa placa para ver e cadastrar. Ao instalar um pneu, você pode dar baixa automática no estoque.</span></div>
-    <button class="btn primary no-print" style="margin-left:auto" onclick="modalPneu()">${svg('plus')} Novo pneu</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Pneus')}</div></div>
+    <button class="btn primary no-print" style="margin-left:auto" onclick="modalPneu()">${svg('plus')} Novo pneu</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
     ${kpi('tire','i-blue',total,'Pneus no total','instalados na frota')}
     ${kpi('truck','i-amber', comPneus, 'Veículos com pneus','')}
@@ -5083,7 +4962,7 @@ function viewChecklist(){
   }).join('');
   return `
   <div class="banner">${svg('check')}<div><b>Check-list mensal de frota</b><span>Inspeção do cavalo e da carreta (OK / NOK). Pode ser preenchido no computador ou no celular. Feito no celular? Toque em exportar e envie o arquivo — no computador use "Importar" para atualizar automaticamente.</span></div>
-    <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar<input type="file" accept="application/json" onchange="importarChecklist(event)" style="display:none"></label><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Check-list')}</div></div>
+    <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar<input type="file" accept="application/json" onchange="importarChecklist(event)" style="display:none"></label></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('check','i-blue',cls.length,'Check-lists realizados','')}
     ${kpi('cal','i-green',mes,'Neste mês','')}
@@ -5329,7 +5208,6 @@ function viewSeguros(){
   return `
   <div class="banner">${svg('umbrella')}<div><b>Seguros — apólices e vigências</b><span>Controle de todas as apólices da empresa e dos sócios: seguradora, número, vigência, prêmio e avisos de renovação. As apólices ativas também aparecem em Vencimentos e no Painel de Controle.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="docEnviar('Seguros')" title="Leio a apólice e identifico a qual seguro pertence">${svg('upload')} Enviar apólice</button>
       <button class="btn primary" onclick="modalSeguro()">${svg('plus')} Novo seguro</button>
     </div></div>
 
@@ -5725,7 +5603,6 @@ function viewPedagios(){
   return `
   <div class="banner">${svg('toll')}<div><b>Pedágios — centro de inteligência</b><span>Todas as passagens de pedágio da frota (extrato Sem Parar), com custos, praças, concessionárias, rotas e integração com viagens e financeiro.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="docEnviar('Pedágios')" title="Leio o extrato e lanço as passagens">${svg('upload')} Importar extrato</button>
       <button class="btn primary" onclick="pedModal()">${svg('plus')} Novo pedágio</button>
     </div></div>
 
@@ -6102,8 +5979,7 @@ function viewAntt(){
         <div class="muted" style="font-size:12.5px">RNTRC <b>${esc(a.rntrc||'—')}</b> · Categoria ${esc(a.categoria||'—')} · CNPJ ${esc(a.cnpj||'')}</div>
         <div style="color:${apto?'#16c98d':'#f2686b'};font-size:12.5px;font-weight:600;margin-top:4px">${apto?'✓ Apto a realizar o transporte remunerado de cargas.':'⚠ Verificar situação do registro.'}</div></div>
       <div class="antt-acoes no-print">
-        <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button>
-        ${docBtn('ANTT')}<button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div>
+        <button class="btn" onclick="modalAnttDados()">${svg('edit')} Editar dados</button><button class="btn primary" onclick="modalAnttVeiculo()">${svg('plus')} Veículo</button></div>
     </div></div>
 
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
@@ -6379,7 +6255,6 @@ function viewLicencas(){
     <span>Alvarás, vigilância sanitária, inscrições e certidões da empresa, veículos, filiais e parceiros. A situação é calculada sozinha pela validade e os vencimentos aparecem no Painel, nas notificações e na IA.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="licRelatoriosModal()">${svg('print')} Relatórios</button>
-      <button class="btn" onclick="docEnviar('Licenças')" title="Vai para a Central de Documentos, que lê a licença e preenche os campos">${svg('upload')} Enviar documento</button>
       <button class="btn primary" onclick="modalLicenca()">${svg('plus')} Nova licença</button>
     </div></div>
 
@@ -7084,7 +6959,7 @@ function viewViagens(){
   <div class="banner">${svg('route')}<div><b>Controle de Viagens BRF</b><span>Registre a saída do motorista com o número de transporte e o termo pallet. Filtre por mês e por placa.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarViagem()">${svg('upload')} Importar Planilha Excel</button>
-      <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Viagens')}</div></div>
+      <button class="btn primary" onclick="modalViagem()">${svg('plus')} Nova viagem</button></div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpiV('route','i-blue', registradas, 'Viagens registradas', "viagemFiltro='todas';viagemMes='todos';router()", viagemFiltro==='todas')}
     ${kpiV('check','i-green', baixadas, 'Viagens baixadas', "viagemFiltro='baixadas';viagemMes='todos';router()", viagemFiltro==='baixadas')}
@@ -7407,7 +7282,7 @@ function viewDescargas(){
   <div class="banner">${svg('box')}<div><b>Descargas</b><span>Senhas e valores de descarga (pagos via Bradesco), organizados por mês.</span></div>
     <div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="modalImportarDescarga()">${svg('upload')} Importar Planilha Excel</button>
-      <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Descargas')}</div></div>
+      <button class="btn primary" onclick="modalDescarga()">${svg('plus')} Nova descarga</button></div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     ${kpi('box','i-blue',DB.descargas.length,'Descargas registradas','')}
     ${kpi('money','i-green',money(totalMes),'Valor no mês atual',mesAtual.length+' descarga(s)')}
@@ -7705,7 +7580,7 @@ function viewAbastecimento(){
   return `
   <div class="banner">${svg('fuel')}<div><b>Abastecimentos e médias</b><span>Envie a NF em PDF que eu tento preencher sozinho (litros, valor, KM/horas). Cavalos: KM. Carretas: horas do Thermo King. A média de consumo é calculada automaticamente.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('upload')} Enviar NF (PDF)<input type="file" accept="application/pdf,.pdf" onchange="abastecNfUpload(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('Abastecimentos')}</div></div>
+    <button class="btn primary no-print" onclick="modalAbastec()">${svg('plus')} Novo abastecimento</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
     ${kpi('fuel','i-blue', num(totL)+' L', 'Litros lançados','')}
     ${kpi('money','i-amber', money(totR), 'Valor total','')}
@@ -7920,7 +7795,7 @@ function valesDoMes(){
    MOTORISTAS; o resto vai para GASTOS. Data, descrição e valor saem
    da própria planilha.
 
-   A LEITURA reusa `cpidLerPlanilha` da Central de Documentos — não há
+   A LEITURA reusa `pexLerPlanilha` da Central de Documentos — não há
    leitor de Excel novo aqui (regra: um pipeline só para documento).
    Nada é gravado sem a sua conferência na prévia.
    ================================================================== */
@@ -8292,10 +8167,10 @@ function finImportar(){
   inp.type='file'; inp.accept='.xlsx,.xls,.csv';
   inp.onchange = async function(){
     const f = inp.files && inp.files[0]; if(!f) return;if(typeof pexArquivoAceito==='function'){ const _imp=pexArquivoAceito(f); if(_imp){ if(typeof toast==='function') toast(_imp,'err'); return; } } 
-    if(typeof cpidLerPlanilha!=='function'){ toast('O leitor de planilhas não está disponível.','err'); return; }
+    if(typeof pexLerPlanilha!=='function'){ toast('O leitor de planilhas não está disponível.','err'); return; }
     toast('Lendo a planilha…');
     let grid=null;
-    try{ grid = await cpidLerPlanilha(f, function(){}); }
+    try{ grid = await pexLerPlanilha(f, function(){}); }
     catch(e){ toast(e.message||'Não consegui ler a planilha.','err'); return; }
     if(!grid || !grid.length){ toast('A planilha veio vazia.','err'); return; }
 
@@ -8720,171 +8595,18 @@ function viewFinConteudo(){
   ${pagCard}`;
 }
 
-/* ---------- IMPORTAR FATURAMENTO DO CONTADOR (PDF / Excel / XML) ---------- */
-let FAT_FILA=[];
-function _capitaliza(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
-function _fatCompLabel(comp){ if(!comp)return '—'; const p=String(comp).split('-'); return MESES_L[(+p[1])-1]+' '+p[0]; }
+/* ---------- IMPORTADOR DE FATURAMENTO — REMOVIDO (v14.3) ----------
+   Aqui vivia um SEGUNDO leitor de documento com OCR, próprio do
+   importador de faturamento do contador. Ele já estava inalcançável
+   desde a v13.0, quando a tela de Faturamento saiu: nenhuma rota, e
+   `_faturLer` não era chamada por ninguém.
 
-function _faturImpFilaHTML(){
-  if(!FAT_FILA.length) return `<div class="hint" style="margin-top:12px">Nenhum documento na fila. Solte um ou vários arquivos acima.</div>`;
-  return `<div class="doc-fila">`+FAT_FILA.map(function(item,ci){
-    if(item.status==='fila'||item.status==='proc'){
-      const etapas=DOC_ETAPAS.map(function(nm,i){ const st=item.etapa>i?'ok':(item.etapa===i?'now':''); return `<span class="doc-step ${st}">${esc(nm)}${(item.etapa===i&&item.etapaMsg)?' · '+esc(item.etapaMsg):''}</span>`; }).join('');
-      return `<div class="doc-card proc"><div class="doc-head"><span class="doc-spin"></span><b>${esc(item.nome)}</b></div><div class="doc-steps">${etapas}</div></div>`;
-    }
-    const regs=item.regs||[]; const conf=item.conf||0; const confc=conf>=85?'ok':(conf>=60?'warn':'crit');
-    const rows=regs.map(function(r,ri){ return `<label class="doc-reg ${r._dup?'dup':''}"><input type="checkbox" ${r._ok?'checked':''} ${r._dup?'disabled':''} onchange="FAT_FILA[${ci}].regs[${ri}]._ok=this.checked;_faturImpRefresh()">
-      <span>${r._tipo==='mensal'?esc(_fatCompLabel(r.competencia)):(r.data?fmtD(r.data):'—')}${r.placa?' · '+esc(r.placa):''} · ${esc((r.cliente||r.obs||'').slice(0,40))}</span><b class="mono">${money(r.valor)}</b>${r._dup?'<span class="st neutro">existe</span>':''}</label>`; }).join('');
-    return `<div class="doc-card"><div class="doc-head">${svg(item.ico||'doc')}<b>${esc(item.nome)}</b><span class="doc-type">${esc(item.tipo||'Documento')}</span></div>
-      <div class="doc-meta"><span class="doc-conf ${confc}">Confiança ${conf}%</span><span>${item.campos||0} lançamento(s)</span><span>${(item.pend&&item.pend.length)?('<b style="color:#ffb020">'+item.pend.length+' pendência(s)</b>'):'sem pendências'}</span><span>${(item.tempo||0).toFixed(1)}s</span></div>
-      ${regs.length?`<div class="doc-regs">${rows}</div>`:`<div class="hint" style="margin:8px 0 0">Nada reconhecido automaticamente neste arquivo.</div>`}
-    </div>`;
-  }).join('')+`</div>`;
-}
-function _faturImpRefresh(){ const el=document.getElementById('fatImpFila'); if(el)el.innerHTML=_faturImpFilaHTML();
-  const b=document.getElementById('fatImpBtn'); if(b){ const proc=FAT_FILA.some(function(i){ return i.status==='proc'||i.status==='fila'; });
-    let n=0; FAT_FILA.forEach(function(i){ (i.regs||[]).forEach(function(r){ if(r._ok&&!r._dup) n++; }); });
-    b.disabled=proc||!n; b.innerHTML=proc?'Processando…':('Importar '+(n||'')); } }
-async function _faturLer(fileList){
-  const files=[].slice.call(fileList||[]); if(!files.length) return;
-  files.forEach(function(f){ FAT_FILA.push({file:f, nome:f.name, tipo:'', conf:0, ico:'doc', regs:[], pend:[], campos:0, tempo:0, etapa:0, etapaMsg:'', status:'fila'}); });
-  _faturImpRefresh();
-  for(const item of FAT_FILA){ if(item.status!=='fila') continue; item.status='proc'; _faturImpRefresh();
-    try{ await _docProcessar(item, function(e,msg){ item.etapa=e; item.etapaMsg=msg||''; _faturImpRefresh(); }); }
-    catch(e){ item.status='done'; item.tipo=item.tipo||'Documento'; }
-    _faturImpRefresh();
-  }
-}
-/* ===== PIPELINE INTELIGENTE DE DOCUMENTOS (OCR + reconhecimento) ===== */
-const DOC_ETAPAS=['Lendo documento','Extraindo texto','Interpretando','Relacionando','Conferindo','Concluído'];
-function _docWait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-/* Classifica o tipo do documento por padrões (fiscais BR), sem posição fixa */
-function _docClassificar(txt, nome){
-  const t=_pedNorm(txt||''), n=_pedNorm(nome||'');
-  const has=function(re){ return re.test(t)||re.test(n); };
-  if(/\.xml$/.test(n)){
-    if(/inftecte|vtprest|\bcte\b|conhecimento/.test(t)) return {tipo:'CT-e (XML)',conf:96,ico:'ctedoc'};
-    if(/infnfe|\bnfe\b|\bvnf\b/.test(t)) return {tipo:'NF-e (XML)',conf:96,ico:'doc'};
-    return {tipo:'XML fiscal',conf:85,ico:'ctedoc'};
-  }
-  if(has(/relatorio de faturamento|saidas r\$|servicos r\$/)) return {tipo:'Relatório de Faturamento',conf:97,ico:'money'};
-  if(has(/dacte|conhecimento de transporte|\bct-?e\b|rntrc|vtprest/)) return {tipo:'CT-e',conf:93,ico:'ctedoc'};
-  if(has(/nota fiscal de servic|\bnfs-?e\b|iss\s|codigo do servico/)) return {tipo:'NFS-e',conf:90,ico:'doc'};
-  if(has(/danfe|nota fiscal eletr|\bnf-?e\b|natureza da operacao/)) return {tipo:'NF-e',conf:91,ico:'doc'};
-  if(has(/ficha de compensacao|linha digitavel|nosso numero|cedente|beneficiario/)) return {tipo:'Boleto',conf:86,ico:'wallet'};
-  if(has(/duplicata|\bfatura\b|vencimento/)) return {tipo:'Fatura/Duplicata',conf:68,ico:'money'};
-  if(/\.(xlsx|xls|csv)$/.test(n)) return {tipo:'Planilha',conf:80,ico:'doc'};
-  return {tipo:'Documento',conf:45,ico:'doc'};
-}
-/* Extrai valor/data/chave de CT-e, NF-e ou fatura em TEXTO (fallback) */
-function _faturParseNotaTexto(txt, tipo){
-  const out=[]; if(!txt) return out;
-  const num=function(s){ return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; };
-  const mv=txt.match(/(valor\s+total\s+(?:da\s+nota|da\s+presta[çc][aã]o|dos?\s+servi[çc]os?)|valor\s+do\s+servi[çc]o|v(?:alor)?\s*total|vtprest)[^\d]{0,24}([\d.]+,\d{2})/i)
-        || txt.match(/([\d.]+,\d{2})\s*$/m);
-  if(!mv) return out;
-  const md=txt.match(/(?:data\s+de\s+emiss[aã]o|emiss[aã]o|dh?emi)[^\d]{0,14}(\d{2}[\/-]\d{2}[\/-]\d{2,4})/i);
-  const chave=(txt.match(/\b(\d{44})\b/)||[])[1]||'';
-  const numDoc=(txt.match(/(?:n[ºo°.]|numero|n\.?)\s*[:\-]?\s*(\d{3,9})/i)||[])[1]||'';
-  let dISO=''; if(md){ let d=md[1].replace(/-/g,'/'); if(/\/\d{2}$/.test(d)) d=d.replace(/\/(\d{2})$/,'/20$1'); dISO=(typeof _impISO==='function')?_impISO(d):''; }
-  out.push({ data:dISO, cliente:'', valor:num(mv[mv.length-1]), obs:(tipo||'Documento')+(numDoc?' nº '+numDoc:''), chave:chave.replace(/\D/g,''), fonte:'contador', _tipo:'nota' });
-  return out;
-}
-/* Processa UM arquivo: etapas com callback de progresso, classificação, extração, relacionamento, conferência */
-async function _docProcessar(item, onEtapa){
-  const t0=(window.performance&&performance.now)?performance.now():Date.now();
-  const f=item.file, nome=f.name||''; let txt='', xmlText='', grid=null;
-  onEtapa(0,'');
-  if(/\.xml$/i.test(nome)){ try{ xmlText=await f.text(); txt=xmlText; }catch(e){} onEtapa(1,''); }
-  else if(/\.(xlsx|xls|csv)$/i.test(nome)){ onEtapa(1,'');
-    try{ if(typeof PEXImport!=='undefined'){ const r=await PEXImport.lerArquivo(f); grid=[]; (r.sheets||[]).forEach(function(sh){ grid=grid.concat(sh.grid||[]); }); txt=grid.map(function(row){ return (row||[]).join(' '); }).join('\n'); } }catch(e){} }
-  else { onEtapa(1,''); try{ txt=await pexLerApoliceTexto(f, function(m){ onEtapa(1, m||''); }); }catch(e){} }
-  onEtapa(2,''); await _docWait(140);
-  const cls=_docClassificar(txt, nome);
-  let regs=[];
-  if(grid) regs=_faturDetectExcel(grid);
-  else if(/\.xml$/i.test(nome)) regs=_faturParseXml(xmlText||txt);
-  else { regs=_faturParseRelatorio(txt); if(!regs.length) regs=_faturParseNotaTexto(txt, cls.tipo); }
-  onEtapa(3,''); await _docWait(140);
-  /* relacionamento automático (placa → veículo da frota) */
-  regs.forEach(function(r){ const pm=(txt.toUpperCase().match(/[A-Z]{3}[-\s]?\d[A-Z0-9]\d{2}/)||[])[0];
-    if(pm && !r.placa){ const v=(typeof veiculoByPlaca==='function')?veiculoByPlaca(pm):null; if(v){ r.placa=v.placa; r._veic=v.id; } } });
-  onEtapa(4,''); await _docWait(140);
-  /* conferência / pendências + dedup */
-  const pend=[]; const compExiste=new Set((DB.faturamento||[]).map(function(x){ return (x.data||'').slice(0,7); }));
-  const chaveExiste=new Set((DB.faturamento||[]).map(function(x){ return x.chave; }).filter(Boolean));
-  const naFila={};
-  regs.forEach(function(r){ if(!r.valor) pend.push('valor'); if(!r.data && r._tipo!=='mensal') pend.push('data');
-    if(r._tipo==='mensal'){ const k='M'+r.competencia; r._dup=compExiste.has(r.competencia)||naFila[k]; naFila[k]=1; }
-    else { const k=r.chave||('D'+r.data+'|'+r.valor); r._dup=(r.chave&&chaveExiste.has(r.chave))||naFila[k]; naFila[k]=1; }
-    r._ok=!r._dup; });
-  onEtapa(5,'');
-  item.tipo=cls.tipo; item.conf=cls.conf; item.ico=cls.ico; item.regs=regs; item.pend=[...new Set(pend)];
-  item.campos=regs.length; item.tempo=(((window.performance&&performance.now)?performance.now():Date.now())-t0)/1000;
-  item.status = txt && txt.replace(/\s/g,'').length>20 ? 'done' : (regs.length?'done':'vazio');
-}
-/* Log auditável do processamento */
+   Saiu junto com a Central de Documentos (v14.3). Deixá-lo seria
+   contradizer a remoção — era um segundo motor de OCR parado dentro
+   do arquivo, esperando alguém religar.
 
-/* Relatório de faturamento do contador (PDF/texto): linhas "Mês Ano Saídas Serviços Outros Total" */
-function _faturParseRelatorio(txt){
-  const out=[]; if(!txt) return out;
-  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
-  const num=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0;
-  const add=function(mesNome,ano,saidas,servicos,outros,total){ const mes=MES[_pedNorm(mesNome)]; if(!mes) return; const comp=ano+'-'+String(mes).padStart(2,'0');
-    if(out.some(function(o){ return o.competencia===comp; })) return;
-    out.push({ data:comp+'-01', cliente:'', valor:total,
-      obs:'Faturamento '+_capitaliza(mesNome)+'/'+ano+((saidas||servicos)?' — Saídas '+money(saidas)+' · Serviços '+money(servicos):'')+(outros?' · Outros '+money(outros):'')+' (relatório do contador)',
-      competencia:comp, saidas:saidas, servicos:servicos, outros:outros, fonte:'contador', _tipo:'mensal' }); };
-  let m;
-  // 1) formato completo: Mês Ano Saídas Serviços Outros Total
-  const reFull=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})/gi;
-  while((m=reFull.exec(txt))){ add(m[1],m[2],num(m[3]),num(m[4]),num(m[5]),num(m[6])); }
-  // 2) fallback flexível: Mês Ano + 1..6 valores (o ÚLTIMO é o Total) — tolera espaçamento/colunas variáveis do pdf.js
-  if(!out.length){ const reFlex=/(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})((?:\s+[\d.]+,\d{2}){1,6})/gi;
-    while((m=reFlex.exec(txt))){ const vals=(m[3].match(/[\d.]+,\d{2}/g)||[]).map(num); if(!vals.length) continue;
-      add(m[1], m[2], vals[0]||0, vals.length>=3?vals[1]:0, 0, vals[vals.length-1]); } }
-  return out;
-}
-/* XML de NF-e / CT-e (uma nota por arquivo) */
-function _faturParseXml(txt){
-  const out=[]; let doc; try{ doc=new DOMParser().parseFromString(txt,'text/xml'); }catch(e){ return out; }
-  const tag=(root,name)=>{ const el=(root||doc).getElementsByTagName(name); return el.length?el[el.length-1].textContent.trim():''; };
-  const first=(root,name)=>{ const el=(root||doc).getElementsByTagName(name); return el.length?el[0].textContent.trim():''; };
-  const money2=s=>parseFloat(String(s).replace(/[^\d.]/g,''))||0;
-  const vNF=tag(doc,'vNF');
-  if(vNF){ const dh=first(doc,'dhEmi')||first(doc,'dEmi'); let destNome=''; const dest=doc.getElementsByTagName('dest'); if(dest.length) destNome=first(dest[0],'xNome');
-    out.push({ data:(dh||'').slice(0,10), cliente:destNome, valor:money2(vNF), obs:'NF-e nº '+first(doc,'nNF'), chave:(first(doc,'chNFe')||'').replace(/\D/g,''), fonte:'contador', _tipo:'nota' }); return out; }
-  const vTP=tag(doc,'vTPrest');
-  if(vTP){ const dh=first(doc,'dhEmi'); let nome=''; const rem=doc.getElementsByTagName('rem'); if(rem.length) nome=first(rem[0],'xNome');
-    out.push({ data:(dh||'').slice(0,10), cliente:nome, valor:money2(vTP), obs:'CT-e nº '+first(doc,'nCT'), chave:(first(doc,'chCTe')||'').replace(/\D/g,''), fonte:'contador', _tipo:'nota' }); return out; }
-  const vNFS=tag(doc,'ValorServicos')||tag(doc,'ValorLiquidoNfse')||tag(doc,'vServ');
-  if(vNFS){ const dh=first(doc,'DataEmissao')||first(doc,'dhEmi'); out.push({ data:(dh||'').slice(0,10), cliente:first(doc,'RazaoSocial')||'', valor:money2(vNFS), obs:'NFS-e', chave:'', fonte:'contador', _tipo:'nota' }); return out; }
-  return out;
-}
-/* Planilha Excel/CSV do contador (mensal ou por nota) */
-function _faturDetectExcel(grid){
-  const out=[]; if(!grid||!grid.length) return out;
-  const norm=s=>_pedNorm(String(s==null?'':s));
-  const num=s=>{ s=String(s==null?'':s).replace(/[^\d.,-]/g,''); if(!s)return 0; if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.'); return parseFloat(s)||0; };
-  const MES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
-  let hIdx=-1; const cols={};
-  for(let i=0;i<Math.min(grid.length,20);i++){ const row=(grid[i]||[]).map(norm);
-    if(row.some(c=>/total|valor/.test(c)) && row.some(c=>/mes|m e s|data|compet|periodo|ano/.test(c))){ hIdx=i;
-      row.forEach((c,j)=>{ if(/^m ?e ?s$|^mes|mês/.test(c)&&cols.mes==null)cols.mes=j; else if(/ano/.test(c))cols.ano=j; else if(/(data|compet|periodo)/.test(c)&&cols.data==null)cols.data=j;
-        else if(/total/.test(c))cols.total=j; else if(/valor/.test(c)&&cols.valor==null)cols.valor=j; else if(/saida/.test(c))cols.saidas=j; else if(/servic/.test(c))cols.servicos=j; else if(/outros/.test(c))cols.outros=j;
-        else if(/cliente|tomador|remet|razao|destinat/.test(c))cols.cliente=j; }); break; } }
-  if(hIdx<0) return out;
-  for(let i=hIdx+1;i<grid.length;i++){ const row=grid[i]||[]; const g=k=>cols[k]!=null?row[cols[k]]:'';
-    const mesRaw=norm(g('mes')); if(/total|totais/.test(mesRaw)) continue;
-    const totalV=num(g('total'))||num(g('valor'));
-    if(cols.mes!=null && MES[mesRaw]){ const mes=MES[mesRaw]; const am=String(g('ano')||'').match(/\d{4}/); const ano=am?am[0]:String(hoje().getFullYear());
-      const comp=ano+'-'+String(mes).padStart(2,'0'); const saidas=num(g('saidas')), servicos=num(g('servicos')), outros=num(g('outros')); const val=totalV||(saidas+servicos+outros); if(!val)continue;
-      out.push({ data:comp+'-01', cliente:'', valor:val, obs:'Faturamento '+_capitaliza(mesRaw)+'/'+ano+((saidas||servicos)?' — Saídas '+money(saidas)+' · Serviços '+money(servicos):'')+' (planilha do contador)', competencia:comp, saidas, servicos, outros, fonte:'contador', _tipo:'mensal' });
-    } else if(cols.data!=null){ const dISO=(typeof _impISO==='function')?_impISO(g('data')):''; if(!dISO||!totalV)continue;
-      out.push({ data:dISO, cliente:String(g('cliente')||'').trim(), valor:totalV, obs:'Importado da planilha do contador', fonte:'contador', _tipo:'nota' }); } }
-  return out;
-}
-
+   ⚠️ NENHUM DADO FOI APAGADO: `DB.faturamento` continua na base, nos
+   backups e na nuvem, como ficou combinado na v13.0. */
 function modalVale(id){
   const v=id?DB.vales.find(x=>x.id===id):{data:new Date().toISOString().slice(0,10),motoristaId:(DB.motoristas[0]||{}).id,tipo:'Vale',valor:'',obs:''};
   openModal(`<div class="m-h">${svg('wallet')}<h3>${id?'Editar lançamento':'Novo vale / pagamento'}</h3><button class="x" onclick="closeModal()">×</button></div>
@@ -9181,7 +8903,7 @@ function viewCtes(){
   return `
   <div class="banner">${svg('ctedoc')}<div><b>CT-e — Conhecimentos de Transporte</b><span>Controle dos CT-e emitidos, lançados, trocados e pagos. Importe os XML direto aqui. Filtre por situação e por mês.</span></div>
     <label class="btn no-print" style="margin-left:auto">${svg('import')} Importar XML<input type="file" accept=".xml,text/xml" multiple onchange="importarCteArquivos(event)" style="display:none"></label>
-    <button class="btn primary no-print" onclick="modalCte()">${svg('plus')} Novo CT-e</button><div class="no-print" style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${docBtn('CT-e')}</div></div>
+    <button class="btn primary no-print" onclick="modalCte()">${svg('plus')} Novo CT-e</button></div>
   <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     ${kpi('ctedoc','i-blue', total, 'CT-e registrados','')}
     ${kpi('money','i-green', money(valorTot), 'Valor total (válidos)','')}
@@ -9576,7 +9298,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.2';
+var PEX_VER = '14.3';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

@@ -67,7 +67,7 @@ cat assets/estilo.css assets/estilo2.css assets/estilo-claro.css > "$TMP/all.css
 # e nao entrar aqui, e o celular rodar um sistema diferente do site, sem aviso
 # (regra do dono: toda atualizacao vale em TODOS os locais).
 # Por isso agora existe a conferencia logo abaixo.
-cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/central.js assets/aniversarios.js assets/relatorios.js > "$TMP/all.js"
+cat assets/viagens.js assets/dados.js assets/alarmes.js assets/arquivos.js assets/importar.js assets/app.js assets/aniversarios.js assets/relatorios.js > "$TMP/all.js"
 
 # Confere: todo assets/*.js que o index.html carrega tem de estar no `cat` de
 # cima. (config-online.js e nuvem.js entram separados mais abaixo.)
