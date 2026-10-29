@@ -310,8 +310,41 @@ function loadDB(){
   try{ const sc=localStorage.getItem(CFG_KEY); if(sc){ DB.config=Object.assign(DB.config, JSON.parse(sc)); } }catch(e){}
   saveLocal();
 }
+/* ==================================================================
+   GRAVAÇÃO LOCAL — NUNCA EM SILÊNCIO (v14.5)
+   ------------------------------------------------------------------
+   Este `catch(e){}` vazio existia desde sempre e era uma bomba armada:
+   quando o `localStorage` enche, o navegador LANÇA erro, o catch
+   engolia, e o sistema seguia como se tivesse gravado. O cliente
+   cadastrava, via "Salvo", fechava — e no dia seguinte não estava lá.
+
+   Até agora o risco era teórico, porque a base é texto. Com a FOTO no
+   cadastro deixa de ser: cada foto são dezenas de KB dentro do mesmo
+   `localStorage` de ~5 MB. Não dá para adicionar o que enche o balde e
+   deixar o furo sem tampa.
+
+   Agora a falha aparece na tela, uma vez só (senão vira um aviso a
+   cada tecla), e diz o que fazer. O dado continua na memória e na
+   nuvem — o que falhou foi a cópia local.
+   ================================================================== */
+let _localCheio = false;
 function saveLocal(){
-  try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){}
+  try{
+    localStorage.setItem(KEY, JSON.stringify(DB));
+    _localCheio = false;
+  }catch(e){
+    if(!_localCheio){
+      _localCheio = true;
+      const online = (typeof nuvemAtiva==='function' && nuvemAtiva() && nuvemUser && nuvemUser());
+      try{
+        toast(online
+          ? 'A memória deste navegador encheu. O que você salvou foi para a NUVEM e está seguro, mas este aparelho parou de guardar cópia local. Remova fotos muito grandes ou limpe anexos antigos.'
+          : 'A memória deste navegador encheu e NÃO consegui gravar. Entre na sua conta para salvar na nuvem, ou remova fotos/anexos antigos antes de continuar.',
+          'err');
+      }catch(_){}
+      try{ console.error('[PEX] localStorage cheio:', e && e.name, e && e.message); }catch(_){}
+    }
+  }
   try{ localStorage.setItem(CFG_KEY, JSON.stringify(DB.config)); }catch(e){}
 }
 /* ⚠️ v10.4 — A ABA ABERTA APAGAVA O TRABALHO DE QUEM SALVOU DEPOIS.
@@ -1603,6 +1636,124 @@ function avatarFoto(m, size){ size=size||56;
   const st=`width:${size}px;height:${size}px;font-size:${size*0.34}px`;
   if(m.foto) return `<div class="avatar photo" style="${st}"><img src="${esc(m.foto)}" alt="" onerror="this.parentNode.classList.remove('photo');this.parentNode.textContent='${esc(initials(m.nome).toUpperCase())}'"></div>`;
   return `<div class="avatar" style="${st}">${esc(initials(m.nome).toUpperCase())}</div>`;
+}
+
+/* ==================================================================
+   FOTO NO CADASTRO — ESCOLHER DO COMPUTADOR (v14.5)
+   ------------------------------------------------------------------
+   Antes aqui havia um campo de TEXTO: "Caminho da foto", com a dica
+   "Ex.: assets/fotos/m1.png". Ou seja, para pôr a foto de um motorista
+   era preciso saber o caminho de um arquivo dentro da pasta do sistema
+   e digitá-lo à mão. Na prática ninguém usava — e não dava para usar,
+   porque a foto do cliente está no computador dele, não dentro da
+   pasta do site.
+
+   Agora é uma ÁREA CLICÁVEL com a foto atual (ou as iniciais). Clicar
+   abre o seletor de arquivos do computador.
+
+   ⚠️ POR QUE A IMAGEM É REDUZIDA, e não guardada como veio:
+   a foto fica DENTRO do cadastro (`motorista.foto`), que mora no
+   `localStorage` junto com todo o resto e sobe inteiro para a nuvem a
+   cada alteração. Uma foto de celular tem 3 a 6 MB; o localStorage
+   inteiro tem ~5 MB. DUAS fotos originais estouram a base e levam
+   junto viagens, vencimentos e tudo o mais.
+
+   Então toda imagem passa por: reduzir para 420px no maior lado →
+   JPEG → e, se ainda passar de ~160 KB, baixar a qualidade até caber.
+   O resultado fica em torno de 30–50 KB, que é o tamanho certo para um
+   retrato de 92px na tela. Ninguém vê diferença, e a base não incha.
+   ================================================================== */
+
+/* Reduz e converte para JPEG. Devolve a data URL pronta para guardar. */
+function _fotoReduzir(file, lado, qualidade){
+  lado = lado || 420;
+  return new Promise(function(ok, falhou){
+    const fr = new FileReader();
+    fr.onerror = function(){ falhou(new Error('Não consegui ler esse arquivo.')); };
+    fr.onload = function(){
+      const img = new Image();
+      img.onerror = function(){
+        /* o .HEIC do iPhone é o caso comum: o Chrome não abre */
+        falhou(new Error('O navegador não abre esse formato de imagem. Se a foto veio de iPhone (.HEIC), salve como JPG e tente de novo.'));
+      };
+      img.onload = function(){
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if(!w || !h){ falhou(new Error('Essa imagem veio vazia.')); return; }
+        const k = Math.min(1, lado / Math.max(w, h));
+        w = Math.max(1, Math.round(w * k));
+        h = Math.max(1, Math.round(h * k));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        /* fundo branco: PNG com transparência viraria PRETO no JPEG */
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = qualidade || 0.82;
+        let url = c.toDataURL('image/jpeg', q);
+        while(url.length > 160000 && q > 0.40){ q -= 0.12; url = c.toDataURL('image/jpeg', q); }
+        ok(url);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* O campo do formulário: prévia clicável + botões + o valor escondido. */
+function fotoCampo(id, valor, nome, rotulo){
+  const ini = esc((initials(nome || '') || '').toUpperCase());
+  return `<div class="field">
+    <label>${esc(rotulo || 'Foto')}</label>
+    <div class="fotopick">
+      <button type="button" class="fotopick-alvo ${valor ? 'tem' : ''}" id="${id}_alvo" data-ini="${ini || '+'}"
+              onclick="fotoEscolher('${id}')" title="Clique para escolher uma foto no computador">
+        ${valor ? `<img src="${esc(valor)}" alt="">` : `<span class="fotopick-ini">${ini || '+'}</span>`}
+        <span class="fotopick-cap">Trocar</span>
+      </button>
+      <div class="fotopick-lado">
+        <button type="button" class="btn sm" onclick="fotoEscolher('${id}')">${svg('upload')} Procurar no computador</button>
+        <button type="button" class="btn ghost sm" id="${id}_rm" style="${valor ? '' : 'display:none'}" onclick="fotoRemover('${id}')">${svg('trash')} Remover foto</button>
+        <div class="hint">JPG, PNG ou WEBP. A imagem é reduzida automaticamente — a foto original não precisa ser pequena.</div>
+      </div>
+    </div>
+    <input type="hidden" id="${id}" value="${esc(valor || '')}">
+  </div>`;
+}
+
+/* Abre o seletor do computador e põe a foto escolhida na prévia. */
+function fotoEscolher(id){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async function(e){
+    const f = (e.target.files || [])[0]; if(!f) return;
+    if(!/^image\//.test(f.type || '')){ toast('Escolha um arquivo de imagem (JPG, PNG ou WEBP).', 'err'); return; }
+    try{
+      const url = await _fotoReduzir(f);
+      const campo = document.getElementById(id); if(campo) campo.value = url;
+      const alvo = document.getElementById(id + '_alvo');
+      if(alvo){
+        alvo.classList.add('tem');
+        alvo.innerHTML = '<img src="' + url + '" alt=""><span class="fotopick-cap">Trocar</span>';
+      }
+      const rm = document.getElementById(id + '_rm'); if(rm) rm.style.display = '';
+      toast('Foto escolhida. Clique em Salvar para gravar no cadastro.');
+    }catch(err){
+      toast(err.message || 'Não consegui usar essa imagem.', 'err');
+    }
+  };
+  inp.click();
+}
+
+/* Tira a foto do cadastro. Volta a mostrar as iniciais. */
+function fotoRemover(id){
+  const campo = document.getElementById(id); if(campo) campo.value = '';
+  const alvo = document.getElementById(id + '_alvo');
+  if(alvo){
+    const ini = alvo.getAttribute('data-ini') || '+';
+    alvo.classList.remove('tem');
+    alvo.innerHTML = '<span class="fotopick-ini">' + esc(ini) + '</span><span class="fotopick-cap">Escolher</span>';
+  }
+  const rm = document.getElementById(id + '_rm'); if(rm) rm.style.display = 'none';
+  toast('Foto removida. Clique em Salvar para confirmar.');
 }
 
 /* ================================================================== */
@@ -3763,7 +3914,7 @@ function modalMotorista(id){
       <div class="field-row">${sel('UF','f_ufend',m.ufEnd||'',UFS)}${fld('Município','f_munend',m.municipioEnd)}</div>
 
       ${msec('Foto')}
-      ${fld('Caminho da foto','f_foto',m.foto,'text','Ex.: assets/fotos/m1.png (opcional)')}
+      ${fotoCampo('f_foto', m.foto, m.nome, 'Foto do motorista')}
     </div>
     <div class="m-f">${id?`<button class="btn danger" style="margin-right:auto" onclick="excluirMotorista('${id}')">${svg('trash')} Excluir</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -9266,7 +9417,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.4';
+var PEX_VER = '14.5';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

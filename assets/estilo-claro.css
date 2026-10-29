@@ -1928,3 +1928,20 @@
 :root[data-theme="claro"] #view .badge.warn{
   background:#A1620B !important; background-image:none !important;
   color:#FFFFFF !important; box-shadow:none !important }
+
+/* ==================================================================
+   FOTO NO CADASTRO — tema claro (v14.5)
+   No claro a área vazia precisa de contraste próprio: o tracejado em
+   `--line` fica fraco demais sobre o branco do formulário e a pessoa
+   não percebe que ali se clica. Aqui ele ganha peso, e o quadrado um
+   fundo levemente recuado para parecer um encaixe.
+   ================================================================== */
+:root[data-theme="claro"] .fotopick-alvo{
+  border:2px dashed rgba(0,0,0,.22) !important;
+  background:#F2F2F5 !important }
+:root[data-theme="claro"] .fotopick-alvo:hover{
+  border-color:#0071E3 !important; background:#ECF3FD !important }
+:root[data-theme="claro"] .fotopick-alvo.tem{
+  border:1px solid rgba(0,0,0,.12) !important; background:#FFFFFF !important }
+:root[data-theme="claro"] .fotopick-ini{ color:#86868B !important }
+:root[data-theme="claro"] .fotopick-lado .hint{ color:#5E5E63 !important }

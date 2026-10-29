@@ -3206,3 +3206,35 @@ tr.sel-on td{ background:rgba(var(--au3-rgb),.12)!important }
   --shadow-lg:0 16px 42px rgba(20,35,59,.14);
   color-scheme: light;
 }
+
+/* ==================================================================
+   FOTO NO CADASTRO (v14.5)
+   A área quadrada é um BOTÃO, não uma imagem decorativa: o cliente
+   precisa perceber que clicar ali faz alguma coisa. Por isso ela tem
+   borda tracejada quando está vazia (convite a preencher), vira borda
+   sólida quando tem foto, e mostra a legenda "Trocar" ao passar o
+   mouse — em celular a legenda fica sempre visível, porque lá não
+   existe passar o mouse.
+   ================================================================== */
+.fotopick{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap }
+.fotopick-alvo{
+  position:relative; width:104px; height:104px; flex:0 0 auto; padding:0;
+  border-radius:16px; overflow:hidden; cursor:pointer; font-family:inherit;
+  border:2px dashed var(--line); background:var(--surf2, rgba(127,127,127,.08));
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .15s, transform .15s, box-shadow .15s }
+.fotopick-alvo:hover{ border-color:var(--au); transform:translateY(-1px) }
+.fotopick-alvo:focus-visible{ outline:2px solid var(--au); outline-offset:2px }
+.fotopick-alvo.tem{ border-style:solid; border-color:var(--line) }
+.fotopick-alvo img{ width:100%; height:100%; object-fit:cover; display:block }
+.fotopick-ini{ font-size:30px; font-weight:800; letter-spacing:1px; color:var(--tx3, #8a8a90) }
+.fotopick-cap{
+  position:absolute; left:0; right:0; bottom:0; padding:5px 0;
+  font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+  background:rgba(0,0,0,.62); color:#fff; opacity:0; transition:opacity .15s }
+.fotopick-alvo:hover .fotopick-cap,
+.fotopick-alvo:focus-visible .fotopick-cap{ opacity:1 }
+.fotopick-lado{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; flex:1 }
+.fotopick-lado .hint{ margin:0 }
+@media(hover:none){ .fotopick-cap{ opacity:1 } }
+@media(max-width:520px){ .fotopick-lado{ flex:1 1 100% } }
