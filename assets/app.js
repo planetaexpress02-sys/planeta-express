@@ -1615,7 +1615,24 @@ function renderSidebar(rota){
          (rota 'abastecimento') porque a Contabilidade, a Central de Documentos
          e o relatório do período apontam para ela — só saiu do menu. */
     `<div class="group">Manutenção</div>`+ item('km')+ item('manutencao')+ item('pneus')+ item('baterias')+
-    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+ item('documentos')+
+    /* v14.6 — A ABA "DOCUMENTOS" SAIU DO MENU, a pedido do dono:
+       "remover a aba documentos... não quero uma central".
+
+       A TELA continua de pé (rota 'documentos'), pelo mesmo motivo de
+       'abastecimento' acima: ela é o ÚNICO lugar do sistema onde
+       aparecem os 13 documentos JURÍDICOS da empresa — Contrato
+       Social, Cartão CNPJ, inscrição estadual, certidões, Simples
+       Nacional, PGR, PCMSO, alvará sanitário e os certificados dos
+       responsáveis. Os arquivos de motorista e de veículo têm outra
+       casa (aparecem na ficha de cada um); os da EMPRESA não têm.
+
+       Apagar a tela junto com a aba deixaria o Contrato Social e os
+       alvarás sem nenhuma porta no sistema — e isso ele não pediu.
+       Então: fora do menu (que é o que ele vê e pediu), de pé por
+       dentro (para não sumir documento). Se ele disser onde esses 13
+       devem morar, a tela sai de vez.
+       ⚠️ Nenhum arquivo foi apagado: `DB.arquivos` está intacto. */
+    `<div class="group">Operação</div>`+ item('viagens')+ item('descargas')+ item('ctes')+ item('checklist')+ item('notas')+ item('pedagios')+ item('alarmes')+
     `<div class="group">Financeiro</div>`+ item('financeiro')+ item('seguros', c.seg?{n:c.seg, cls:'warn'}:null)+
     `<div class="group">Empresa</div>`+ item('socios')+ item('etica')+
     `<div class="group">Sistema</div>`+ item('config');
@@ -9417,7 +9434,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.5';
+var PEX_VER = '14.6';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
