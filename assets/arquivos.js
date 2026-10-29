@@ -50,19 +50,19 @@ const ARQUIVOS_EMPRESA = [
   {id:"t3",nome:"Cronotacógrafo IRU4G62.pdf",categoria:"Tacógrafo",entidade:"veiculo",refId:"v1",path:"../Certificados Tacógrafos/Cronotacógrafo IRU4G62.pdf"},
   {id:"t4",nome:"Cronotacógrafo JSX4D55.pdf",categoria:"Tacógrafo",entidade:"veiculo",refId:"v3",path:"../Certificados Tacógrafos/Cronotacógrafo JSX4D55.pdf"},
   {id:"t5",nome:"Cronotacógrafo QIO9J07.pdf",categoria:"Tacógrafo",entidade:"veiculo",refId:"v4",path:"../Certificados Tacógrafos/Cronotacógrafo QIO9J07.pdf"},
-  {id:"j1",nome:"Alvará e Vigilâcias Sanitárias 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Alvará e Vigilâcias Sanitárias 2026.pdf"},
-  {id:"j2",nome:"Cartão CNPJ.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Cartão CNPJ.pdf"},
-  {id:"j3",nome:"Cartão inscrição estadual.png",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Cartão inscrição estadual.png"},
-  {id:"j4",nome:"Certidão Simplificada-184290350.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Certidão Simplificada-184290350.pdf"},
-  {id:"j5",nome:"Certidão simplificada.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Certidão simplificada.pdf"},
-  {id:"j6",nome:"Certificado Responsável Técnico Uilian.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Certificado Responsável Técnico Uilian.pdf"},
-  {id:"j7",nome:"CNH Marcelo R Moreira.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/CNH Marcelo R Moreira.pdf"},
-  {id:"j8",nome:"CNH Uilian M Moreira.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/CNH Uilian M Moreira.pdf"},
-  {id:"j9",nome:"Consulta Regularidade do Empregador.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Consulta Regularidade do Empregador.pdf"},
-  {id:"j10",nome:"Contrato Social.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Contrato Social.pdf"},
-  {id:"j11",nome:"PCMSO 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PCMSO 2026.pdf"},
-  {id:"j12",nome:"PGR 2026.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/PGR 2026.pdf"},
-  {id:"j13",nome:"Simpes Nacional.pdf",categoria:"Jurídico",entidade:"empresa",refId:"empresa",path:"../Documentos Jurídicos/Simpes Nacional.pdf"},
+  {id:"j1",nome:"Alvará e Vigilâcias Sanitárias 2026.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic2",path:"../Documentos Jurídicos/Alvará e Vigilâcias Sanitárias 2026.pdf"},
+  {id:"j2",nome:"Cartão CNPJ.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic9",path:"../Documentos Jurídicos/Cartão CNPJ.pdf"},
+  {id:"j3",nome:"Cartão inscrição estadual.png",categoria:"Jurídico",entidade:"licenca",refId:"lic10",path:"../Documentos Jurídicos/Cartão inscrição estadual.png"},
+  {id:"j4",nome:"Certidão Simplificada-184290350.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic12",path:"../Documentos Jurídicos/Certidão Simplificada-184290350.pdf"},
+  {id:"j5",nome:"Certidão simplificada.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic12",path:"../Documentos Jurídicos/Certidão simplificada.pdf"},
+  {id:"j6",nome:"Certificado Responsável Técnico Uilian.pdf",categoria:"Jurídico",entidade:"motorista",refId:"m5",path:"../Documentos Jurídicos/Certificado Responsável Técnico Uilian.pdf"},
+  {id:"j7",nome:"CNH Marcelo R Moreira.pdf",categoria:"Jurídico",entidade:"motorista",refId:"m4",path:"../Documentos Jurídicos/CNH Marcelo R Moreira.pdf"},
+  {id:"j8",nome:"CNH Uilian M Moreira.pdf",categoria:"Jurídico",entidade:"motorista",refId:"m5",path:"../Documentos Jurídicos/CNH Uilian M Moreira.pdf"},
+  {id:"j9",nome:"Consulta Regularidade do Empregador.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic13",path:"../Documentos Jurídicos/Consulta Regularidade do Empregador.pdf"},
+  {id:"j10",nome:"Contrato Social.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic14",path:"../Documentos Jurídicos/Contrato Social.pdf"},
+  {id:"j11",nome:"PCMSO 2026.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic16",path:"../Documentos Jurídicos/PCMSO 2026.pdf"},
+  {id:"j12",nome:"PGR 2026.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic15",path:"../Documentos Jurídicos/PGR 2026.pdf"},
+  {id:"j13",nome:"Simpes Nacional.pdf",categoria:"Jurídico",entidade:"licenca",refId:"lic11",path:"../Documentos Jurídicos/Simpes Nacional.pdf"},
 
   /* Faturas Sem Parar (pedágios) */
   {id:"sp1",nome:"Fatura Sem Parar 26176725165 - 08-2026.pdf",categoria:"Pedágio",entidade:"empresa",refId:"empresa",path:"../Documentos Internos/Faturas Sem Parar/Fatura Sem Parar 26176725165 - 08-2026.pdf"},
@@ -71,5 +71,5 @@ const ARQUIVOS_EMPRESA = [
      no computador. NÃO é o mesmo que anexar a apólice pela tela de Seguros
      — aquilo sobe o PDF para a nuvem e abre também no celular. Os dois
      caminhos existem de propósito e não se substituem. */
-  {id:"sg1",nome:"Apólice - A5.pdf",categoria:"Seguro",entidade:"empresa",refId:"empresa",path:"../Apólice - A5.pdf"},
+  {id:"sg1",nome:"Apólice - A5.pdf",categoria:"Seguro",entidade:"seguro",refId:"s10",path:"../Apólice - A5.pdf"},
 ];

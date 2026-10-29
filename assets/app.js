@@ -59,6 +59,7 @@ function ensureCollections(){
   if(!Array.isArray(DB.motoristas)) DB.motoristas=clone(SEED.motoristas);
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
+  _pexReparoDocs();          /* v14.7 — cada documento na aba de quem é */
   corrigirRessurreicaoV691();
   carimbarFaturaPedagio();
   importarManutencaoPlanilhas();
@@ -175,7 +176,68 @@ const SEED_ENTREGAS = [
      18/10/2026 ("Apólice - A5.pdf"). Renova a s4, que vence em 06/11/2026.
      Vai junto o registro do PDF na pasta (sg1), que aparece em Documentos. */
   { v:'13.2', seguros:['s10'], arquivos:['sg1'] },
+  /* v14.7 — os documentos da EMPRESA saíram da aba "Documentos" (que foi
+     removida do menu na v14.6) e passaram a ter registro próprio em
+     Licenças e Alvarás. São oito: Cartão CNPJ, Inscrição Estadual,
+     Simples Nacional, Certidão Simplificada, Regularidade do Empregador,
+     Contrato Social, PGR e PCMSO.
+     Os ARQUIVOS deles não entram aqui: eles já existem na base do cliente
+     e só mudaram de dono — isso é feito pelo reparo `_pexReparoDocs()`,
+     porque entrega só ACRESCENTA, nunca corrige o que já está lá. */
+  { v:'14.7', licencas:['lic9','lic10','lic11','lic12','lic13','lic14','lic15','lic16'] },
 ];
+
+/* ==================================================================
+   REPARO ÚNICO — CADA DOCUMENTO NA ABA DE QUEM É (v14.7)
+   ------------------------------------------------------------------
+   Pedido do dono: *"cada lugar tenha seu documento na própria aba, e
+   não uma central com tudo jogado lá dentro"*.
+
+   Os 14 documentos que só apareciam na aba "Documentos" estavam
+   marcados como `entidade:"empresa"` — ou seja, sem dono. Mudei o
+   arquivo de origem (`arquivos.js`), mas ISSO SÓ VALE PARA BASE NOVA:
+   a base dele já tem os registros antigos, e a entrega de semente só
+   ACRESCENTA o que falta, nunca corrige o que já está lá. Sem este
+   reparo, o cliente continuaria sem ver nada — e o sistema estaria
+   "certo" no código e errado na tela dele.
+
+   O reparo roda UMA vez por base (carimbo em `DB.seedAplicado`) e só
+   mexe em registro que ainda esteja sem dono — se ele já tiver movido
+   algum à mão, fica como ele deixou.
+   ⚠️ Não apaga nada: só troca `entidade`/`refId`.
+   ================================================================== */
+const _DOCS_DONO = {
+  j1 :['licenca','lic2'],   /* Alvará e Vigilâncias Sanitárias 2026 */
+  j2 :['licenca','lic9'],   /* Cartão CNPJ                          */
+  j3 :['licenca','lic10'],  /* Cartão inscrição estadual            */
+  j4 :['licenca','lic12'],  /* Certidão Simplificada (protocolo)    */
+  j5 :['licenca','lic12'],  /* Certidão simplificada                */
+  j6 :['motorista','m5'],   /* Certificado Resp. Técnico — Uilian   */
+  j7 :['motorista','m4'],   /* CNH Marcelo R Moreira                */
+  j8 :['motorista','m5'],   /* CNH Uilian M Moreira                 */
+  j9 :['licenca','lic13'],  /* Consulta Regularidade do Empregador  */
+  j10:['licenca','lic14'],  /* Contrato Social                      */
+  j11:['licenca','lic16'],  /* PCMSO 2026                           */
+  j12:['licenca','lic15'],  /* PGR 2026                             */
+  j13:['licenca','lic11'],  /* Simples Nacional                     */
+  sg1:['seguro','s10']      /* Apólice - A5 (HDI vida em grupo)     */
+  /* sp1 (Fatura Sem Parar) NÃO entra: ela já é alcançada por
+     Pedágios, pelo campo `arquivo` da fatura. */
+};
+function _pexReparoDocs(){
+  const TAG='reparo-docs-14.7';
+  if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
+  if(DB.seedAplicado.indexOf(TAG)>=0) return;
+  let n=0;
+  (DB.arquivos||[]).forEach(function(f){
+    const dono=_DOCS_DONO[f.id];
+    if(!dono) return;
+    if(f.entidade!=='empresa') return;      /* ele já mexeu: respeita */
+    f.entidade=dono[0]; f.refId=dono[1]; n++;
+  });
+  DB.seedAplicado.push(TAG);
+  if(n){ try{ console.log('[PEX] v14.7: '+n+' documento(s) passaram para a aba de quem são.'); }catch(e){} }
+}
 function importarCadastroSeed(){
   if(!SEED) return;
   if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
@@ -189,6 +251,11 @@ function importarCadastroSeed(){
         coleções listadas. Como todas as outras, respeita o que ele apagou
         de propósito (segurosRemovidos). */
      ['seguros','segurosRemovidos'],
+     /* v14.7 — 'licencas' entrou pelo mesmo motivo que 'seguros' na v13.2:
+        os oito documentos da empresa que saíram da aba Documentos viraram
+        registros de licença, e sem esta linha eles nunca chegariam na base
+        que já existe. */
+     ['licencas','licencasRemovidos'],
      ['processos','processosRemovidos'],
      ['pedagios','pedagiosRemovidos'],
      ['pedFaturas','pedFaturasRemovidos'],
@@ -796,6 +863,35 @@ function arquivoPorId(id){ return todosArquivos().find(a=>a.id===id); }
 function filesDe(entidade, refId){ return todosArquivos().filter(f=>f.entidade===entidade && f.refId===refId); }
 function totalArquivos(){ return todosArquivos().length; }
 /* Procura um arquivo anexado (enviado na plataforma) de um tipo para um registro */
+/* ==================================================================
+   ARQUIVO DA PASTA, NA ABA DE QUEM É (v14.7)
+   ------------------------------------------------------------------
+   "o que eu quero é que cada lugar tenha seu documento na própria aba,
+   e não uma central com tudo jogado lá dentro".
+
+   Havia DOIS tipos de arquivo no sistema e eles não eram tratados
+   igual:
+     • ENVIADO pelo sistema (nuvem/IndexedDB) — `todosArquivos()`;
+     • REGISTRADO da pasta do cliente (`DB.arquivos`) — os documentos
+       que ele já tinha antes do sistema existir.
+
+   A ficha do motorista já mostrava os dois (v9.1). Licenças e Seguros
+   mostravam só os ENVIADOS — então o alvará e a apólice que ele já
+   tinha apareciam SÓ na aba Documentos. Era essa metade que sustentava
+   a central: os documentos não tinham onde mais aparecer.
+
+   Esta função devolve os arquivos REGISTRADOS de um dono qualquer,
+   para que cada tela mostre os seus. */
+function arquivosReaisDe(ent, ref){
+  return (DB.arquivos||[]).filter(function(f){ return f.entidade===ent && f.refId===ref; });
+}
+/* Selos clicáveis dos arquivos da pasta — abrem o arquivo no lugar. */
+function selosReais(ent, ref){
+  return arquivosReaisDe(ent, ref).map(function(d){
+    return `<span class="st ok" style="cursor:pointer" title="Abrir ${esc(d.nome)}"`
+      + ` onclick="event.stopPropagation();abrirReal('${esc(d.path)}')">${svg('clip')} ${esc(d.nome)}</span>`;
+  }).join(' ');
+}
 function anexoTipo(ent, ref, re){ return todosArquivos().find(f=>f.entidade===ent && f.refId===ref && re.test(((f.categoria||'')+' '+(f.name||'')))); }
 /* Selo "Anexado" (clicável p/ ver) OU botão "Anexar".
 
@@ -1164,7 +1260,6 @@ const ROTAS = {
   checklist:{t:'Check-list', s:'Inspeção de frota (cavalo e carreta)', ico:'check'},
   alarmes:{t:'Alarmes Thermo King', s:'Códigos, causas e soluções', ico:'alarm'},
   notas:{t:'Soma de Notas Fiscais', s:'Notas somadas por período', ico:'money'},
-  documentos:{t:'Documentos', s:'Arquivos da empresa — abrir e baixar', ico:'doc'},
   pedagios:{t:'Pedágios', s:'Passagens, custos, praças e concessionárias', ico:'toll'},
   seguros:{t:'Seguros', s:'Apólices, vigências, prêmios e renovações', ico:'umbrella'},
   socios:{t:'Quadro Societário', s:'Sócios, fotos e documentos', ico:'briefcase'},
@@ -1186,7 +1281,7 @@ const ROTAS = {
 };
 function go(h){ location.hash=h; }
 /* Rotas cujo argumento é um filtro da própria tela (ver limpeza no fim do router) */
-const _ROTA_FILTRO={vencimentos:1, km:1, documentos:1, pedagios:1, seguros:1, licencas:1};
+const _ROTA_FILTRO={vencimentos:1, km:1, pedagios:1, seguros:1, licencas:1};   /* 'documentos' saiu na v14.7 com a aba */
 /* v12.5: abertura de ficha agendada por endereço (#viagens/<id>). Todo
    redesenho cancela a que estiver pendente — senão ela abre depois, já
    sobre outra tela. */
@@ -1231,7 +1326,6 @@ function router(){
   else if(rota==='checklist') el.innerHTML=viewChecklist();
   else if(rota==='alarmes') el.innerHTML=viewAlarmes();
   else if(rota==='notas') el.innerHTML=viewNotas();
-  else if(rota==='documentos'){ if(arg) docFiltroEnt=arg; el.innerHTML=viewDocumentos(); }
   else if(rota==='pedagios'){ if(arg) pedFiltro=arg; el.innerHTML=viewPedagios(); }
   else if(rota==='seguros'){ if(arg) segFiltro=arg; el.innerHTML=viewSeguros(); }
   else if(rota==='antt') el.innerHTML=viewAntt();
@@ -1979,7 +2073,13 @@ function viewDashboard(){
   // Timeline dos próximos vencimentos
   const tlVenc = prox.map(x=>({ title:(x.v.tipo||'Documento')+(_vencNome(x.v)?' — '+_vencNome(x.v):''), sub:(x.s.dias<=0?'Vencido':'Vence em '+x.s.dias+' dia(s)'), when:fmtD(x.v.validade), cls:(x.s.ord===0?'crit':x.s.ord<=2?'warn':'ok'), hash:'#vencimentos' }));
 
+  /* v14.7 — o aviso "arquivo ainda não está na nuvem" morava na aba
+     Documentos. Com a aba fora, ele viria junto — e é um aviso que não
+     pode sumir: sem ele o cliente teria arquivo preso num aparelho só e
+     nunca saberia. Mudou de casa para o Painel, que é a tela de avisos
+     do sistema inteiro. */
   return `<div class="ini-cmd ini-dash">
+  ${_docAvisoPendentes()}
   <div class="ini-top">
     <div class="ini-brand"><div class="mk"><img src="assets/logo-marca.png" alt=""></div><div class="tx"><b>PAINEL DE CONTROLE</b><span>Visão geral da operação</span></div></div>
     <!-- "Operação ativa" + relógio saíram na v8.1 (o cliente não quis): o
@@ -3251,7 +3351,6 @@ function viewBateriasVeiculo(id){
 /* ================================================================== */
 /*  17. DOCUMENTOS (upload / download real)                            */
 /* ================================================================== */
-let docFiltroEnt='todos';
 function fileThumb(f){
   const t=(f.type||'')+' '+(f.name||'');
   if(/image|jpg|jpeg|png|webp|gif/i.test(t)) return '🖼️';
@@ -3306,62 +3405,24 @@ function _docAvisoPendentes(){
     ${on?`<button class="btn primary no-print" style="margin-left:auto" onclick="sincronizarArquivosPendentes()">${svg('upload')} Enviar agora</button>`:''}
   </div>`;
 }
-function viewDocumentos(){
-  const fb=(k,l)=>`<button class="${docFiltroEnt===k?'active':''}" onclick="docFiltroEnt='${k}';router()">${l}</button>`;
-  let ups=todosArquivos();
-  if(docFiltroEnt==='empresa') ups=ups.filter(f=>f.entidade==='empresa');
-  else if(docFiltroEnt==='motorista') ups=ups.filter(f=>f.entidade==='motorista');
-  else if(docFiltroEnt==='veiculo') ups=ups.filter(f=>f.entidade==='veiculo');
-  ups.sort((a,b)=>(b.uploadedAt||0)-(a.uploadedAt||0));
+/* ---------- A ABA "DOCUMENTOS" FOI REMOVIDA (v14.7) ----------
+   "o que eu quero é que cada lugar tenha seu documento na própria
+   aba, e não uma central com tudo jogado lá dentro".
 
-  const nomeVinc=(f)=> f.entidade==='motorista'?(motorista(f.refId)||{}).nome : f.entidade==='veiculo'?(veiculo(f.refId)||{}).placa : DB.empresa.nome;
-  const upRows=ups.map(f=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">${fileThumb(f)}</span><div><b>${esc(f.name)}</b><div class="muted" style="font-size:11.5px">${fileSize(f.size)} · ${new Date(f.uploadedAt).toLocaleDateString('pt-BR')}</div></div></div></td>
-    <td>${esc(f.categoria||'—')}</td>
-    <td>${esc(nomeVinc(f)||'—')}</td>
-    <td>${f.validade?stBadge(f.validade):'<span class="muted">—</span>'}</td>
-    <td class="no-print" style="text-align:right;white-space:nowrap">
-      <button class="btn ghost sm" onclick="verArquivo('${f.id}')">${svg('eye')}</button>
-      <button class="btn ghost sm" onclick="baixarArquivo('${f.id}')">${svg('download')}</button>
-      <button class="btn ghost sm" onclick="excluirArquivo('${f.id}')">${svg('trash')}</button></td></tr>`).join('');
+   A aba saiu do menu na v14.6; a TELA ficou de pé porque os 14
+   documentos da empresa só apareciam nela. Agora cada um tem dono:
+     • CNHs e certificado do responsável -> ficha do motorista;
+     • alvará sanitário -> a licença lic2;
+     • CNPJ, inscrição estadual, Simples, certidões, Contrato
+       Social, PGR e PCMSO -> registros próprios em Licenças;
+     • apólice -> o seguro s10, em Seguros;
+     • fatura Sem Parar -> já abria pela fatura, em Pedágios.
 
-  // Arquivos reais da pasta da empresa (abrir/baixar/excluir da lista)
-  const REG = DB.arquivos||[];
-  let reg=REG.slice();
-  if(docFiltroEnt==='empresa') reg=reg.filter(f=>f.entidade==='empresa');
-  else if(docFiltroEnt==='motorista') reg=reg.filter(f=>f.entidade==='motorista');
-  else if(docFiltroEnt==='veiculo') reg=reg.filter(f=>f.entidade==='veiculo');
-  const vincReal=(f)=> f.entidade==='motorista'?((motorista(f.refId)||{}).nome||'Motorista') : f.entidade==='veiculo'?((veiculo(f.refId)||{}).placa||'Veículo') : DB.empresa.nome;
-  const cats=[...new Set(reg.map(f=>f.categoria))].sort();
-  const regBlocos=cats.map(c=>{ const fs=reg.filter(f=>f.categoria===c);
-    return `<div class="card"><div class="card-h">${svg('folder')}<h3>${esc(c)}</h3><span class="sub">${fs.length}</span></div>
-      <div class="card-b p0"><div class="tbl-wrap"><table class="tbl"><tbody>${fs.map(f=>`<tr>
-        <td><div style="display:flex;align-items:center;gap:10px"><span style="font-size:19px">${fileThumb({name:f.nome})}</span>
-          <div style="min-width:0"><b style="display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">${esc(f.nome)}</b>
-          <div class="muted" style="font-size:11px">${esc(vincReal(f))}</div></div></div></td>
-        <td class="no-print" style="text-align:right;white-space:nowrap">
-          <button class="btn ghost sm" title="Abrir" onclick="abrirReal('${esc(f.path)}')">${svg('eye')}</button>
-          <button class="btn ghost sm" title="Baixar" onclick="baixarReal('${esc(f.path)}','${esc(f.nome)}')">${svg('download')}</button>
-          <button class="btn ghost sm" title="Excluir da lista" onclick="excluirArquivoReg('${f.id}')">${svg('trash')}</button></td></tr>`).join('')}</tbody></table></div></div></div>`;
-  }).join('');
-
-  return `
-  ${_docAvisoPendentes()}
-  <div class="banner">${svg('doc')}<div><b>Documentos da empresa</b><span>Todos os arquivos da pasta (CRLV, ASO, toxicológicos, CNH, jurídicos...) já ficam aqui para abrir e baixar. Você também pode enviar arquivos novos, que ficam guardados dentro do sistema.</span></div>
-    <label class="btn primary no-print" style="margin-left:auto">${svg('upload')} Enviar arquivo<input type="file" id="docFileInput" onchange="uploadGeral(event)" style="display:none" multiple></label></div>
-
-  <div class="toolbar"><div class="seg">${fb('todos','Todos')}${fb('empresa','Empresa')}${fb('motorista','Motoristas')}${fb('veiculo','Veículos')}</div>
-    <div class="spacer"></div><div class="muted">${REG.length} arquivo(s) na pasta · ${totalArquivos()} enviado(s)${_online()?' · ☁ sincronizado':''}</div></div>
-
-  ${ups.length?`<div class="card" style="margin-bottom:18px"><div class="card-h">${svg('upload')}<h3>Arquivos enviados no sistema</h3></div>
-    <div class="card-b p0"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Arquivo</th><th>Categoria</th><th>Vinculado a</th><th>Validade</th><th class="no-print"></th></tr></thead>
-      <tbody>${upRows}</tbody></table></div></div></div>`:''}
-
-  <h3 style="font-size:14px;margin:8px 0 12px;color:var(--text-soft)">Arquivos da pasta da empresa</h3>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">${regBlocos||emptyState('Nenhum arquivo neste filtro.')}</div>
-  <div class="hint" style="margin-top:12px">Obs.: os arquivos da pasta abrem quando você usa o sistema pelo computador (a partir do index.html). No celular (arquivo único), use os arquivos enviados.</div>`;
-}
+   Com todos com casa, a tela não tem mais o que mostrar e sai.
+   O aviso de "arquivo ainda não está na nuvem" mudou para o Painel.
+   ⚠️ NENHUM ARQUIVO FOI APAGADO: `DB.arquivos` e os anexos na nuvem
+   continuam inteiros — eles só passaram a aparecer na aba de quem
+   são, que era o pedido. */
 
 /* ---- upload / download handlers ---- */
 let _uploadCtx = {entidade:'empresa', refId:'empresa'};
@@ -5608,14 +5669,23 @@ async function _apoliceAnexar(){
 /* Selo do arquivo da apólice, direto na lista: verde "Anexado" (ver) + baixar +
    trocar + remover; ou botão "Anexar" quando ainda não tem arquivo. */
 function _segAnexo(s){
-  const f=anexoTipo('seguro', s.id, /./);
-  if(f){
+  /* v14.7 — o arquivo da PASTA (a apólice que ele já tinha antes do
+     sistema) também aparece aqui. Antes só o ENVIADO contava, e a
+     apólice registrada só existia na aba Documentos — foi um dos
+     motivos de a central parecer necessária.
+     ⚠️ Os dois podem existir ao mesmo tempo, e `f` pode ser nulo com
+     `reais` cheio: tudo que usa `f` abaixo está dentro do `if(f)`. */
+  const reais = selosReais('seguro', s.id);
+  const f = anexoTipo('seguro', s.id, /./);
+  if(f || reais){
     return `<span class="seg-anexo" onclick="event.stopPropagation()">`
-      +`<span class="st ok" title="Ver ${esc(f.name)}" style="cursor:pointer" onclick="verArquivo('${f.id}')">${svg('clip')} Anexado</span>`
-      +`<button class="btn ghost sm no-print" title="Baixar" onclick="baixarArquivo('${f.id}')">${svg('download')}</button>`
-      +`<button class="btn ghost sm no-print" title="Trocar arquivo" onclick="_segTrocarAnexo('${s.id}','${f.id}')">${svg('edit')}</button>`
-      +`<button class="btn ghost sm no-print" title="Remover" onclick="excluirArquivo('${f.id}')">${svg('trash')}</button>`
-    +`</span>`;
+      + reais
+      + (f? `<span class="st ok" title="Ver ${esc(f.name)}" style="cursor:pointer" onclick="verArquivo('${f.id}')">${svg('clip')} Anexado</span>`
+          + `<button class="btn ghost sm no-print" title="Baixar" onclick="baixarArquivo('${f.id}')">${svg('download')}</button>`
+          + `<button class="btn ghost sm no-print" title="Trocar arquivo" onclick="_segTrocarAnexo('${s.id}','${f.id}')">${svg('edit')}</button>`
+          + `<button class="btn ghost sm no-print" title="Remover" onclick="excluirArquivo('${f.id}')">${svg('trash')}</button>`
+        : `<button class="btn ghost sm no-print" onclick="uploadPara('seguro','${s.id}','Apólice')">${svg('upload')} Anexar</button>`)
+    + `</span>`;
   }
   return `<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('seguro','${s.id}','Apólice')">${svg('upload')} Anexar apólice</button>`;
 }
@@ -6205,6 +6275,11 @@ const LIC_CATS=[
   {k:'cadastro',  n:'Cadastro',                ico:'idcard', c:'#8ea3bf'},
   {k:'ambiental', n:'Licença Ambiental',       ico:'shield', c:'#4bd6a0'},
   {k:'bombeiros', n:'Bombeiros (AVCB)',        ico:'shield', c:'#f2686b'},
+  /* v14.7 — duas categorias novas para os documentos da empresa que
+     vieram da aba Documentos. Sem elas, Contrato Social e PGR/PCMSO
+     teriam de ser forçados numa categoria errada. */
+  {k:'societario', n:'Societário',        ico:'briefcase', c:'#5c99ff'},
+  {k:'sst',        n:'Saúde e Segurança', ico:'clinic',    c:'#4bd6a0'},
 ];
 function licCatInfo(k){ return LIC_CATS.find(c=>c.k===k) || {k:k||'outros', n:k||'Outros', ico:'doc', c:'#8ea3bf'}; }
 /* A quem a licença se aplica */
@@ -6302,7 +6377,12 @@ function viewLicencas(){
   const sanitarias=vivas.filter(l=>l.categoria==='sanitaria' && ['vigente','breve','renovacao','protocolada'].indexOf(licSit(l).k)>=0).length;
   const vencendo=cont('breve'), vencidas=cont('vencida');
   const protocolos=licRenovAbertas().length;
-  const anexados=todosArquivos().filter(f=>f.entidade==='licenca').length;
+  /* v14.7 — o cartão contava SÓ o arquivo enviado pelo sistema. Com os
+     documentos da empresa vindos da antiga aba Documentos, a tela passou
+     a mostrar 10 anexos e o cartão continuava dizendo 0 — número que não
+     bate com a tela que ele abre. Conta os dois tipos. */
+  const anexados=todosArquivos().filter(f=>f.entidade==='licenca').length
+                +(DB.arquivos||[]).filter(f=>f.entidade==='licenca').length;
 
   const kp=(ico,cor,valor,label,sub,filtro)=>{ const on=filtro&&licFiltro===filtro;
     return `<a class="kpi ${filtro?'link':''} ${on?'ativo':''}" ${filtro?`style="cursor:pointer" onclick="licSetFiltro('${on?'todos':filtro}')"`:''}>
@@ -6317,7 +6397,7 @@ function viewLicencas(){
   else if(licFiltro==='vencendo') lista=lista.filter(l=>licSit(l).k==='breve');
   else if(licFiltro==='vencidas') lista=lista.filter(l=>licSit(l).k==='vencida');
   else if(licFiltro==='protocolos') lista=lista.filter(l=>l.renov && l.renov.aberta);
-  else if(licFiltro==='anexados') lista=lista.filter(l=>anexoTipo('licenca',l.id,/./));
+  else if(licFiltro==='anexados') lista=lista.filter(l=>anexoTipo('licenca',l.id,/./) || arquivosReaisDe('licenca',l.id).length);
   else if(licFiltro==='arquivadas') lista=lista.filter(l=>l.situacao==='arquivada');
   else lista=lista.filter(l=>l.situacao!=='arquivada');
   if(licCat!=='todas') lista=lista.filter(l=>l.categoria===licCat);
@@ -6372,6 +6452,7 @@ function viewLicencas(){
       </div>
       <div class="lic-card-f">
         <span class="muted">${svg('user')} ${esc(l.responsavel||'—')}</span>
+        ${selosReais('licenca', l.id)}
         ${anx?`<span class="st ok" style="cursor:pointer" onclick="event.stopPropagation();verArquivo('${anx.id}')">${svg('clip')} Anexado</span>`
              :`<button class="btn ghost sm no-print" onclick="event.stopPropagation();uploadPara('licenca','${l.id}','Licença')">${svg('upload')} Anexar</button>`}
       </div></div>`; };
@@ -9257,7 +9338,18 @@ function pexSearch(q){
   (DB.licencas||[]).forEach(l=>{ if((typeof _licCasa==='function' && _licCasa(l,q)) || inck(l.numero) || inck(l.protocolo)){
     const ci=(typeof licCatInfo==='function')?licCatInfo(l.categoria):{n:'Licença',ico:'stamp'};
     add('Licença', ci.ico, l.nome||ci.n, (l.numero?'Nº '+l.numero+' · ':'')+[l.municipio,l.estado].filter(Boolean).join('/')+(l.validade?' · vence '+fmtD(l.validade):''), '#licencas'); } });
-  try{ (typeof todosArquivos==='function'?todosArquivos():[]).forEach(f=>{ const nome=f.name||f.nome||''; if(inc(nome)) add('Documento','doc',nome,f.categoria||'Arquivo','#documentos'); }); }catch(e){}
+  /* v14.7 — a busca levava TODO arquivo para '#documentos'. Com a aba
+     fora, o resultado tem de levar para a aba de QUEM É o arquivo:
+     a ficha do motorista, a do veículo, Licenças ou Seguros. */
+  try{ (typeof todosArquivos==='function'?todosArquivos():[]).forEach(f=>{
+    const nome=f.name||f.nome||''; if(!inc(nome)) return;
+    const alvo = f.entidade==='motorista'? '#motoristas/'+f.refId
+              : f.entidade==='veiculo'  ? '#frota/'+f.refId
+              : f.entidade==='licenca'  ? '#licencas'
+              : f.entidade==='seguro'   ? '#seguros'
+              : '#dashboard';   /* sem dono conhecido: cai no Painel, que é onde fica o aviso de arquivo */
+    add('Documento','doc',nome,f.categoria||'Arquivo',alvo);
+  }); }catch(e){}
   return R.slice(0,40);
 }
 /* ---- Ações rápidas (Novo…) ---- */
@@ -9434,7 +9526,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.6';
+var PEX_VER = '14.7';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }

@@ -450,6 +450,63 @@ const SEED = {
       obs:"Cadastro mobiliário do município (não tem data de validade). Número confirmado no alvará de funcionamento e nas 6 licenças sanitárias de 2026.",
       versoes:[], renov:{aberta:false},
       historico:[ {data:"2016-09-27", hora:"00:00", evento:"Início da atividade", detalhe:"Conforme alvará municipal", por:"Documento"} ] },
+
+    /* ---------------------------------------------------------------
+       v14.7 — OS DOCUMENTOS DA EMPRESA GANHARAM DONO.
+
+       Estes oito registros não são licenças novas que apareceram: são
+       os documentos que já existiam e que só apareciam na aba
+       "Documentos", a central que o dono mandou tirar ("cada lugar
+       tenha seu documento na própria aba"). Agora cada um tem um
+       registro aqui, na aba de Licenças e Alvarás — que é, pelo
+       próprio subtítulo dela, "alvarás, vigilância sanitária,
+       inscrições e certidões".
+
+       ⚠️ NÚMERO, ÓRGÃO E VALIDADE FICAM EM BRANCO de propósito. Eu
+       tenho o arquivo, não tenho o conteúdo dele — e número de
+       documento chutado é pior do que campo vazio: o vazio ele
+       preenche, o chute ele acredita. A tela já trata validade vazia
+       ("Sem validade"), então nada quebra.
+       --------------------------------------------------------------- */
+    { id:"lic9", nome:"Cartão CNPJ", categoria:"cadastro",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Documento da empresa. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic10", nome:"Inscrição Estadual", categoria:"estadual",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Documento da empresa. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic11", nome:"Simples Nacional", categoria:"cadastro",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Documento da empresa. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic12", nome:"Certidão Simplificada", categoria:"certidao",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Dois arquivos anexados. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic13", nome:"Regularidade do Empregador", categoria:"certidao",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Consulta de regularidade. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic14", nome:"Contrato Social", categoria:"societario",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Documento constitutivo da empresa. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic15", nome:"PGR — Programa de Gerenciamento de Riscos (2026)", categoria:"sst",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Renovação anual. Lance a validade quando tiver o documento em mãos. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
+
+    { id:"lic16", nome:"PCMSO — Programa de Controle Médico de Saúde Ocupacional (2026)", categoria:"sst",
+      numero:"", orgao:"", municipio:"Carambeí", estado:"PR", emissao:"", validade:"", responsavel:"",
+      situacao:"auto", escopo:"empresa", refId:"", titular:"", protocolo:"", hash:"",
+      obs:"Renovação anual. Lance a validade quando tiver o documento em mãos. Veio da antiga aba Documentos na v14.7.", versoes:[], renov:{aberta:false}, historico:[] },
   ],
 
   /* -------------------- MANUTENÇÃO / TROCAS DE ÓLEO -------------------- */
