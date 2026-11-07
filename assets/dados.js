@@ -24,6 +24,11 @@ const SEED = {
        CPF, RG, CNH, filiação, endereço e os documentos vêm da ficha
        .pexmot.json, que fica na pasta da empresa. */
     { id:"m8", nome:"Edson Carlos Barufo", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", foto:"assets/fotos/m8.png", pasta:"Documentos Motoristas/Edson Carlos Barufo" },
+    /* v14.8 — Thiago Nantes. Mesmo formato dos outros: nome, categoria,
+       funcao, status e foto. CPF, RG, numero da CNH, nascimento e filiacao
+       NAO entram aqui — o repositorio e publico e nenhum motorista tem
+       esses campos neste arquivo. Eles vao pela ficha, direto na base. */
+    { id:"m9", nome:"Thiago Nantes", categoria:"E", funcao:"Motorista", socio:false, status:"Ativo", pasta:"Documentos Motoristas/Thiago Nantes" },
 
   ],
 
@@ -65,6 +70,13 @@ const SEED = {
     { id:"c8", tipo:"CNH", entidade:"motorista", refId:"m8", emissao:"2025-08-03", validade:"2030-07-31", numero:"", orgao:"DETRAN-PR", obs:"Categoria E · EAR A" },
     { id:"t8", tipo:"Toxicológico", entidade:"motorista", refId:"m8", emissao:"2026-09-11", validade:"2029-03-11", numero:"", orgao:"Innovatox", obs:"Negativo em todas as substâncias" },
     { id:"a8", tipo:"ASO", entidade:"motorista", refId:"m8", emissao:"2026-09-11", validade:"2027-09-11", numero:"", orgao:"Genusclin", obs:"Admissional · Apto" },
+    /* v14.8 — vencimentos do Thiago Nantes, lidos dos documentos da pasta.
+       As validades do ASO (1 ano) e do toxicologico (2 anos) sao as que o
+       dono mandou aplicar; as outras duas estao impressas no documento. */
+    { id:"c9", tipo:"CNH", entidade:"motorista", refId:"m9", emissao:"2025-11-14", validade:"2035-10-30", numero:"", orgao:"DETRAN-PR", obs:"Categoria E · EAR (exerce atividade remunerada) · 1ª habilitação 01/12/2011" },
+    { id:"a9", tipo:"ASO", entidade:"motorista", refId:"m9", emissao:"2026-10-09", validade:"2027-10-09", numero:"", orgao:"Grupo Safe Work", obs:"Admissional · Dr. Vinicius Marcondes Silva (CRM 51786/PR) · validade de 1 ano" },
+    { id:"t9", tipo:"Toxicológico", entidade:"motorista", refId:"m9", emissao:"2026-07-31", validade:"2028-07-31", numero:"", orgao:"Toxicologia Pardini", obs:"Coleta 31/07/2026 · resultado negativo · validade de 2 anos" },
+    { id:"dd9", tipo:"Direção Defensiva", entidade:"motorista", refId:"m9", emissao:"2026-10-14", validade:"2027-10-14", numero:"", orgao:"CFC Atual (DETRAN 208/2023)", obs:"Curso de 16 horas, 13 e 14/10/2026" },
     { id:"a4", tipo:"ASO", entidade:"motorista", refId:"m2", emissao:"2026-03-18", validade:"2027-03-18", numero:"", orgao:"", obs:"" },
     { id:"a5", tipo:"ASO", entidade:"motorista", refId:"m3", emissao:"2026-03-13", validade:"2027-03-13", numero:"", orgao:"", obs:"" },
     { id:"of1", tipo:"Opentech Funcionário", entidade:"motorista", refId:"m1", emissao:"2026-07-10", validade:"2027-01-10", numero:"", orgao:"BRF", obs:"BRF" },

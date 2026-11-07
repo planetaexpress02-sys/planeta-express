@@ -185,6 +185,14 @@ const SEED_ENTREGAS = [
      e só mudaram de dono — isso é feito pelo reparo `_pexReparoDocs()`,
      porque entrega só ACRESCENTA, nunca corrige o que já está lá. */
   { v:'14.7', licencas:['lic9','lic10','lic11','lic12','lic13','lic14','lic15','lic16'] },
+  /* v14.8 — Thiago Nantes, admitido em 09/10/2026. Entra com o mesmo
+     conteúdo que os outros motoristas têm neste arquivo: nome, categoria,
+     função, status, foto e os vencimentos.
+     ⚠️ CPF, RG, número da CNH, nascimento e filiação ficam DE FORA, como
+     em todos os outros — o repositório é público. Esses campos entram
+     pela ficha (Motoristas → Importar ficha), direto na base do cliente,
+     atrás do login. */
+  { v:'14.8', motoristas:['m9'], vencimentos:['c9','a9','t9','dd9'] },
 ];
 
 /* ==================================================================
@@ -9526,7 +9534,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.7';
+var PEX_VER = '14.8';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
