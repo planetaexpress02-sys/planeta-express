@@ -60,6 +60,7 @@ function ensureCollections(){
   DB.motoristas.forEach(m=>{ if(m.endereco===undefined)m.endereco=''; if(m.socio===undefined)m.socio=false; });
   importarCadastroSeed();
   _pexReparoDocs();          /* v14.7 — cada documento na aba de quem é */
+  _pexJuntarMotoristasRepetidos();   /* v14.9 — dois cadastros do mesmo motorista viram um */
   corrigirRessurreicaoV691();
   carimbarFaturaPedagio();
   importarManutencaoPlanilhas();
@@ -232,6 +233,99 @@ const _DOCS_DONO = {
   /* sp1 (Fatura Sem Parar) NÃO entra: ela já é alcançada por
      Pedágios, pelo campo `arquivo` da fatura. */
 };
+
+/* ==================================================================
+   DOIS CADASTROS DO MESMO MOTORISTA — JUNTA (v14.9)
+   ------------------------------------------------------------------
+   Defeito meu, e o cliente viu antes de mim: a tela de Motoristas
+   ficou com DOIS "Thiago Nantes".
+
+   POR QUE ACONTECEU
+   A ficha que eu gerei para importar não trazia `id`. Sem id,
+   `motFichaGravar` só acha o cadastro existente por CPF ou por nome —
+   e naquele momento não existia nenhum, então ela CRIOU um (com foto e
+   com os documentos). Depois a entrega da semente trouxe `m9`, que é
+   outro id. Resultado: dois cartões do mesmo homem, cada um com
+   metade das coisas.
+
+   O QUE ESTE REPARO FAZ
+   Junta qualquer motorista repetido (mesmo nome, ou mesmo CPF) num
+   registro só:
+     • fica o mais COMPLETO — foto e CPF pesam mais, porque foi o que
+       ele pediu: "use o que já existia, com foto";
+     • todo campo vazio do que fica é preenchido pelo que sai;
+     • vencimentos, anexos e arquivos da pasta passam para o que fica;
+     • vencimento repetido do mesmo tipo não vira duplicata: o que fica
+       aproveita os campos que estiverem vazios e o outro sai;
+     • o id que saiu entra em `motoristasRemovidos`, senão a semente o
+       traz de volta no próximo carregamento.
+
+   ⚠️ NÃO PERDE DADO: nada é descartado sem antes ter o conteúdo
+   copiado para o registro que fica. Roda uma vez por base.
+   ================================================================== */
+function _pexJuntarMotoristasRepetidos(){
+  /* Roda a CADA carregamento, de propósito — não é carimbado como os
+     outros reparos. Um repetido pode nascer depois: basta outro
+     aparelho sincronizar um cadastro que daqui já saiu. Como ele só
+     preenche campo vazio, passar de novo não faz nada quando não há
+     repetido, e custa uma volta em meia dúzia de registros. */
+
+  const soDigito=function(s){ return String(s||'').replace(/\D/g,''); };
+  /* Agrupa SEMPRE pelo nome. Agrupar por CPF separava justamente o caso
+     que apareceu: um registro com CPF (veio da ficha) e outro sem CPF
+     (veio da semente) caíam em grupos diferentes e nunca se encontravam.
+     O CPF entra depois, como TRAVA: dois CPFs preenchidos e diferentes
+     são duas pessoas, e não se juntam por acaso de homonímia. */
+  const chave=function(m){ return _dnorm(m.nome); };
+  const conflita=function(a,b){
+    const x=soDigito(a.cpf), y=soDigito(b.cpf);
+    return x && y && x!==y;
+  };
+  const peso=function(m){ return (m.foto?4:0)+(m.cpf?3:0)+(m.cnh?2:0)+(m.nascimento?1:0)+(m.admissao?1:0); };
+
+  const grupos={};
+  (DB.motoristas||[]).forEach(function(m){
+    const k=chave(m); if(!k) return;
+    (grupos[k]=grupos[k]||[]).push(m);
+  });
+
+  let juntados=0;
+  Object.keys(grupos).forEach(function(k){
+    const g=grupos[k]; if(g.length<2) return;
+    g.sort(function(a,b){ return peso(b)-peso(a); });
+    const fica=g[0];
+    g.slice(1).forEach(function(sai){
+      if(conflita(fica, sai)) return;   /* CPFs diferentes: sao duas pessoas */
+      /* 1) campo vazio do que fica é preenchido pelo que sai */
+      Object.keys(sai).forEach(function(c){
+        if(c==='id') return;
+        const atual=fica[c];
+        if((atual===''||atual==null||atual===false) && sai[c]) fica[c]=sai[c];
+      });
+      /* 2) vencimentos passam; do mesmo tipo, funde e descarta o repetido */
+      (DB.vencimentos||[]).slice().forEach(function(v){
+        if(!(v.entidade==='motorista' && v.refId===sai.id)) return;
+        const gemeo=(DB.vencimentos||[]).find(function(x){
+          return x.entidade==='motorista' && x.refId===fica.id && x.tipo===v.tipo; });
+        if(!gemeo){ v.refId=fica.id; return; }
+        ['emissao','validade','numero','orgao','obs','anexoId'].forEach(function(c){
+          if((gemeo[c]===''||gemeo[c]==null) && v[c]) gemeo[c]=v[c]; });
+        marcarRemovido('vencimentosRemovidos', v.id);
+        DB.vencimentos=DB.vencimentos.filter(function(x){ return x.id!==v.id; });
+      });
+      /* 3) anexos da nuvem e arquivos da pasta apontam para o que fica */
+      (DB.anexos||[]).forEach(function(a){ if(a && a.refId===sai.id) a.refId=fica.id; });
+      (DB.arquivos||[]).forEach(function(a){ if(a && a.entidade==='motorista' && a.refId===sai.id) a.refId=fica.id; });
+      (DB.processos||[]).forEach(function(p){ if(p && p.entidade==='motorista' && p.refId===sai.id) p.refId=fica.id; });
+      /* 4) o repetido sai — e fica marcado, senão a semente o devolve */
+      marcarRemovido('motoristasRemovidos', sai.id);
+      DB.motoristas=DB.motoristas.filter(function(x){ return x.id!==sai.id; });
+      juntados++;
+    });
+  });
+
+  if(juntados){ try{ console.log('[PEX] v14.9: '+juntados+' cadastro(s) repetido(s) juntado(s).'); }catch(e){} }
+}
 function _pexReparoDocs(){
   const TAG='reparo-docs-14.7';
   if(!Array.isArray(DB.seedAplicado)) DB.seedAplicado=[];
@@ -9534,7 +9628,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.8';
+var PEX_VER = '14.9';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
