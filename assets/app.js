@@ -9628,7 +9628,7 @@ function updateUserBadge(){
    fixo no index.html e podia mentir se eu esquecesse de trocar (foi o
    que aconteceu entre a v10.3 e a v10.7: o rodapé ficou parado na
    v10.2 e ninguém sabia qual versão estava rodando). */
-var PEX_VER = '14.9';
+var PEX_VER = '15.0';
 var PEX_VERSAO = '';        /* preenchida SÓ no arquivo do celular, pelo build */
 function pexOndeRoda(){ return location.protocol==='file:' ? 'arquivo' : 'site'; }
 function pexVersaoAtual(){ return PEX_VERSAO || PEX_VER; }
@@ -9802,6 +9802,11 @@ async function pexConferirVersao(){
        site — e ficava mandando o dono "abrir a versão nova", que era a
        velha. Aviso errado ensina a ignorar aviso. Agora só avisa quando o
        site está mesmo na frente. */
+    /* v15.0 — ARQUIVADO: o arquivo do celular descobre aqui que o sistema
+       saiu do ar e se tranca na hora, sem depender de o dono aceitar
+       atualização. É este trecho que faz o pedido "em todos os
+       dispositivos" valer para o app instalado. */
+    if(j && j.arquivado){ try{ pexTelaArquivado(); }catch(e){} return; }
     if(!j || !j.versao) return;
     if(pexCompararVersao(j.versao, PEX_VERSAO) <= 0) return;
     _pexAvisarVersao(j.versao, j.site||'https://planetaexpress02-sys.github.io/planeta-express/');
@@ -10198,7 +10203,73 @@ async function bootOnline(){
   }
 }
 
+/* ==================================================================
+   SISTEMA ARQUIVADO — TRAVA DE ABERTURA (v15.0)
+   ------------------------------------------------------------------
+   Pedido do dono em 08/11/2026: *"tire do ar esse sistema, em todos os
+   dispositivos e para qualquer usuário, quero arquivá-lo, deixe
+   somente uma fonte para ativá-lo novamente sendo por aqui e sendo
+   por mim"*.
+
+   COMO FUNCIONA
+   Esta constante é a chave única. Com ela em `true` o sistema não
+   abre para ninguém — nem para quem já estava logado — e mostra o
+   aviso de arquivado no lugar.
+
+   POR QUE NÃO DESLIGUEI O SITE
+   Desligar o GitHub Pages pareceria mais definitivo, mas faria o
+   contrário do que ele pediu: o aplicativo INSTALADO no celular
+   descobre o estado do sistema consultando o `versao.json` do site.
+   Sem site, ele nunca fica sabendo e continuaria abrindo offline. O
+   site precisa continuar respondendo — justamente para conseguir
+   dizer "acabou" a todos os aparelhos.
+
+   ⚠️ LIMITE HONESTO: um celular que NUNCA mais tiver internet não tem
+   como ser avisado. Na primeira vez que tiver, ele trava.
+
+   ⚠️ NENHUM DADO FOI APAGADO. A base na nuvem, os anexos e a cópia de
+   cada aparelho continuam inteiros. Arquivar aqui é fechar a porta,
+   não esvaziar a casa.
+
+   PARA REATIVAR
+   Trocar `PEX_ARQUIVADO` para `false`, pôr `"arquivado": false` no
+   `versao.json`, subir a versão e publicar. Só quem tem acesso de
+   escrita ao repositório consegue — ou seja, ele, a partir daqui.
+   ================================================================== */
+const PEX_ARQUIVADO = true;
+const PEX_ARQUIVADO_EM = '08/11/2026';
+
+function pexTelaArquivado(){
+  document.body.setAttribute('data-trancado','1');
+  /* o conteudo sai do HTML, nao so da vista: arquivado e arquivado,
+     e nem no inspetor deve sobrar nome de motorista ou placa. */
+  ['view','overlay','pexCmd','nav'].forEach(function(id){
+    const e=document.getElementById(id); if(e){ e.innerHTML=''; e.classList && e.classList.remove('show'); }
+  });
+  const el=document.createElement('div');
+  el.id='pexArquivado';
+  el.setAttribute('style',
+    'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;'
+   +'background:#F5F5F7;color:#1D1D1F;'
+   +"font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;padding:24px");
+  el.innerHTML =
+    '<div style="max-width:430px;width:100%;text-align:center;background:#fff;border:1px solid rgba(0,0,0,.08);'
+   +'border-radius:18px;padding:40px 32px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06)">'
+   +'<div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#86868B">PLANETA EXPRESS</div>'
+   +'<div style="margin:22px 0 10px;font-size:23px;font-weight:700;letter-spacing:-.3px">Sistema arquivado</div>'
+   +'<div style="font-size:15px;line-height:1.5;color:#5E5E63">Fora de operação desde '+PEX_ARQUIVADO_EM+'.</div>'
+   +'<div style="margin-top:20px;padding-top:18px;border-top:1px solid rgba(0,0,0,.07);'
+   +'font-size:13.5px;line-height:1.55;color:#5E5E63">Os dados continuam guardados. Nada foi apagado.</div>'
+   +'</div>';
+  try{ const tb=document.querySelector('.topbar'); if(tb) tb.remove(); }catch(e){}
+  try{ const sb=document.querySelector('.sidebar'); if(sb) sb.remove(); }catch(e){}
+  document.body.appendChild(el);
+  try{ const s=document.getElementById('splash'); if(s) s.remove(); }catch(e){}
+  try{ const l=document.getElementById('loginScreen'); if(l) l.style.display='none'; }catch(e){}
+}
 async function init(){
+  /* v15.0 — arquivado: trava antes de carregar ou desenhar qualquer coisa */
+  if(typeof PEX_ARQUIVADO!=='undefined' && PEX_ARQUIVADO){ pexTelaArquivado(); return; }
   loadDB();
   /* ⚠️ v10.5 — a correção das baixas rodava SÓ depois do login na nuvem.
      Quando esse caminho falha (sessão vencida, Supabase fora do ar, CDN

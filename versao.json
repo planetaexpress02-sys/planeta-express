@@ -1,6 +1,9 @@
 {
-  "versao": "14.9",
-  "assets": "272",
+  "arquivado": true,
+  "arquivadoEm": "2026-11-08",
+  "aviso": "Sistema arquivado a pedido do dono. Nenhum dado foi apagado. Para reativar: PEX_ARQUIVADO=false em assets/app.js e arquivado=false aqui.",
+  "versao": "15.0",
+  "assets": "273",
   "site": "https://planetaexpress02-sys.github.io/planeta-express/",
   "nota": "Lido pelo arquivo unico do celular para saber se ele envelheceu. O build_celular.sh grava a MESMA versao dentro do arquivo; se as duas nao baterem, o celular oferece abrir a versao nova. Atualize junto com o rodape e o ?v= do index.html."
 }
